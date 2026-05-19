@@ -250,7 +250,7 @@ class TestCallbackEndpoint:
         client.get("/api/auth/callback?code=my-code&state=my-state")
 
         mock_auth_service.handle_callback.assert_called_once_with(
-            code="my-code", state="my-state"
+            code="my-code", state="my-state", code_verifier=""
         )
 
 

@@ -265,7 +265,7 @@ class TestHandleCallback:
                 "picture": "https://example.com/avatar.jpg",
             }
 
-            result = await auth_service.handle_callback("auth-code", "state-token")
+            result = await auth_service.handle_callback("auth-code", "state-token", "test-verifier")
 
         assert isinstance(result, AuthResult)
         assert result.access_token == "jwt-access-token"
@@ -283,7 +283,7 @@ class TestHandleCallback:
                 "name": "Test User",
             }
 
-            await auth_service.handle_callback("auth-code", "state-token")
+            await auth_service.handle_callback("auth-code", "state-token", "test-verifier")
 
         mock_jwt_utils.verify_state_token.assert_called_once_with("state-token")
 
@@ -292,7 +292,7 @@ class TestHandleCallback:
         mock_jwt_utils.verify_state_token.side_effect = InvalidStateError()
 
         with pytest.raises(InvalidStateError):
-            await auth_service.handle_callback("auth-code", "bad-state")
+            await auth_service.handle_callback("auth-code", "bad-state", "test-verifier")
 
     async def test_whitelist_check_denies_access(
         self, auth_service, mock_whitelist_service
@@ -308,7 +308,7 @@ class TestHandleCallback:
             }
 
             with pytest.raises(AccessDeniedError):
-                await auth_service.handle_callback("auth-code", "state-token")
+                await auth_service.handle_callback("auth-code", "state-token", "test-verifier")
 
     async def test_upserts_user(self, auth_service, mock_user_repository):
         """Callback should upsert the user from Google profile."""
@@ -320,7 +320,7 @@ class TestHandleCallback:
                 "picture": "https://example.com/avatar.jpg",
             }
 
-            await auth_service.handle_callback("auth-code", "state-token")
+            await auth_service.handle_callback("auth-code", "state-token", "test-verifier")
 
         mock_user_repository.upsert.assert_called_once()
         call_arg = mock_user_repository.upsert.call_args[0][0]
@@ -339,7 +339,7 @@ class TestHandleCallback:
                 "name": "Test User",
             }
 
-            await auth_service.handle_callback("auth-code", "state-token")
+            await auth_service.handle_callback("auth-code", "state-token", "test-verifier")
 
         # Verify encryption was called for both tokens
         mock_crypto.encrypt.assert_any_call("google-access-token")
@@ -357,7 +357,7 @@ class TestHandleCallback:
                 "name": "Test User",
             }
 
-            await auth_service.handle_callback("auth-code", "state-token")
+            await auth_service.handle_callback("auth-code", "state-token", "test-verifier")
 
         mock_token_service.revoke_user_tokens.assert_called_once()
 
@@ -372,7 +372,7 @@ class TestHandleCallback:
                 "name": "Test User",
             }
 
-            await auth_service.handle_callback("auth-code", "state-token")
+            await auth_service.handle_callback("auth-code", "state-token", "test-verifier")
 
         mock_refresh_token_repository.store.assert_called_once()
         call_kwargs = mock_refresh_token_repository.store.call_args[1]

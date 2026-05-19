@@ -24,6 +24,12 @@ from src.modules.identity.domain.entities import (  # noqa: E402, F401
     RefreshToken,
     User,
 )
+from src.modules.employee.domain.entities import (  # noqa: E402, F401
+    Department,
+    Employee,
+    EmployeeDocument,
+    Position,
+)
 
 target_metadata = SQLModel.metadata
 

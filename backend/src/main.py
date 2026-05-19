@@ -7,6 +7,8 @@ load_dotenv()
 
 from fastapi import FastAPI
 
+from src.modules.employee.api.error_handler import register_employee_error_handlers
+from src.modules.employee.api.router import router as employee_router
 from src.modules.identity.api.error_handler import register_auth_error_handlers
 from src.modules.identity.api.router import router as auth_router
 
@@ -18,9 +20,11 @@ app = FastAPI(
 
 # Register module routers.
 app.include_router(auth_router)
+app.include_router(employee_router)
 
 # Register exception handlers.
 register_auth_error_handlers(app)
+register_employee_error_handlers(app)
 
 
 @app.get("/health")
