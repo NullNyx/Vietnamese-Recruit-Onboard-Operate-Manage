@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 function GoogleIcon() {
   return (
@@ -35,42 +36,84 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 px-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-white p-8 shadow-lg">
-        <div className="flex flex-col items-center space-y-6">
+    <main className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4">
+      {/* Atmospheric gradient mesh background */}
+      <div
+        className="absolute inset-0 -z-10"
+        aria-hidden="true"
+        style={{
+          background: `
+            radial-gradient(ellipse at 20% 50%, hsl(168 65% 28% / 0.15) 0%, transparent 50%),
+            radial-gradient(ellipse at 80% 20%, hsl(168 50% 40% / 0.12) 0%, transparent 40%),
+            radial-gradient(ellipse at 60% 80%, hsl(35 90% 52% / 0.08) 0%, transparent 45%),
+            radial-gradient(ellipse at 40% 30%, hsl(180 30% 60% / 0.1) 0%, transparent 35%),
+            linear-gradient(to bottom, hsl(0 0% 99%), hsl(180 10% 96%))
+          `,
+        }}
+      />
+      {/* Dark mode background overlay */}
+      <div
+        className="absolute inset-0 -z-10 hidden dark:block"
+        aria-hidden="true"
+        style={{
+          background: `
+            radial-gradient(ellipse at 30% 50%, hsl(168 55% 45% / 0.08) 0%, transparent 50%),
+            radial-gradient(ellipse at 70% 30%, hsl(200 60% 30% / 0.06) 0%, transparent 40%),
+            radial-gradient(ellipse at 50% 70%, hsl(168 40% 35% / 0.05) 0%, transparent 45%),
+            linear-gradient(to bottom, hsl(210 20% 8%), hsl(210 22% 6%))
+          `,
+        }}
+      />
+
+      {/* Centered login card */}
+      <Card className="w-full max-w-sm border-border/50 shadow-lg backdrop-blur-sm">
+        <CardContent className="flex flex-col items-center space-y-6 p-8">
           {/* Logo */}
-          <div className="flex flex-col items-center space-y-2">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <span className="text-2xl font-bold">V</span>
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Vroom HR
-            </h1>
+          <div
+            className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground opacity-0 animate-fade-in"
+            style={{ animationDelay: "0ms", animationDuration: "400ms" }}
+          >
+            <span className="text-2xl font-bold">V</span>
           </div>
 
+          {/* Heading */}
+          <h1
+            className="font-heading text-2xl font-bold tracking-tight text-foreground opacity-0 animate-fade-in"
+            style={{ animationDelay: "100ms", animationDuration: "400ms" }}
+          >
+            Vroom HR
+          </h1>
+
           {/* Tagline */}
-          <p className="text-center text-sm text-muted-foreground">
-            Your HR Co-pilot, fast as a hum.
+          <p
+            className="text-center text-sm text-muted-foreground opacity-0 animate-fade-in"
+            style={{ animationDelay: "200ms", animationDuration: "400ms" }}
+          >
+            Hệ thống quản lý nhân sự thông minh
           </p>
 
-          {/* Login Button */}
+          {/* Google OAuth Button */}
           <Button
             onClick={handleLogin}
             size="lg"
-            className="w-full bg-[#4285F4] text-white hover:bg-[#3367D6]"
-            aria-label="Login with Google"
+            className="w-full bg-[#4285F4] text-white hover:bg-[#3367D6] opacity-0 animate-fade-in"
+            style={{ animationDelay: "300ms", animationDuration: "400ms" }}
+            aria-label="Đăng nhập bằng Google"
           >
             <GoogleIcon />
-            Login with Google
+            Đăng nhập bằng Google
           </Button>
 
           {/* Consent Notice */}
-          <p className="text-center text-xs text-muted-foreground">
-            By logging in, you agree to grant access to Gmail and Google
+          <p
+            className="text-center text-xs text-muted-foreground opacity-0 animate-fade-in"
+            style={{ animationDelay: "400ms", animationDuration: "400ms" }}
+          >
+            Đăng nhập đồng nghĩa bạn cho phép truy cập Gmail và Google
             Calendar.
           </p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </main>
   );
 }
