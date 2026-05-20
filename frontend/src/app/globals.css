@@ -4,22 +4,121 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    /* Background & Foreground */
+    --background: 0 0% 99%;
+    --foreground: 200 20% 12%;
+
+    /* Card */
+    --card: 0 0% 100%;
+    --card-foreground: 200 20% 12%;
+
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 20% 12%;
+
+    /* Primary — Deep Teal */
+    --primary: 168 65% 28%;
+    --primary-foreground: 0 0% 98%;
+
+    /* Secondary */
+    --secondary: 180 10% 94%;
+    --secondary-foreground: 200 20% 18%;
+
+    /* Muted */
+    --muted: 180 8% 95%;
+    --muted-foreground: 200 10% 45%;
+
+    /* Accent — Warm Amber */
+    --accent: 35 90% 52%;
+    --accent-foreground: 30 80% 10%;
+
+    /* Destructive */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Border, Input, Ring */
+    --border: 180 10% 90%;
+    --input: 180 10% 90%;
+    --ring: 168 65% 28%;
+
+    /* Sidebar */
+    --sidebar-background: 180 15% 97%;
+    --sidebar-foreground: 200 20% 18%;
+    --sidebar-border: 180 10% 90%;
+    --sidebar-accent: 168 65% 28%;
+    --sidebar-accent-foreground: 0 0% 98%;
+
+    /* Chart Colors */
+    --chart-1: 168 65% 28%;
+    --chart-2: 35 90% 52%;
+    --chart-3: 200 60% 45%;
+    --chart-4: 280 50% 55%;
+    --chart-5: 140 50% 40%;
+
+    /* Radius */
+    --radius: 0.625rem;
+    --radius-sm: 0.375rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+  }
+
+  .dark {
+    /* Background & Foreground */
+    --background: 210 20% 8%;
+    --foreground: 180 5% 92%;
+
+    /* Card */
+    --card: 210 18% 11%;
+    --card-foreground: 180 5% 92%;
+
+    /* Popover */
+    --popover: 210 18% 11%;
+    --popover-foreground: 180 5% 92%;
+
+    /* Primary — Brighter Teal */
+    --primary: 168 55% 45%;
+    --primary-foreground: 210 20% 8%;
+
+    /* Secondary */
+    --secondary: 210 15% 16%;
+    --secondary-foreground: 180 5% 88%;
+
+    /* Muted */
+    --muted: 210 15% 16%;
+    --muted-foreground: 200 8% 55%;
+
+    /* Accent — Brighter Amber */
+    --accent: 35 85% 55%;
+    --accent-foreground: 30 80% 10%;
+
+    /* Destructive */
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Border, Input, Ring */
+    --border: 210 12% 20%;
+    --input: 210 12% 20%;
+    --ring: 168 55% 45%;
+
+    /* Sidebar */
+    --sidebar-background: 210 20% 10%;
+    --sidebar-foreground: 180 5% 88%;
+    --sidebar-border: 210 12% 20%;
+    --sidebar-accent: 168 55% 45%;
+    --sidebar-accent-foreground: 210 20% 8%;
+
+    /* Chart Colors */
+    --chart-1: 168 55% 45%;
+    --chart-2: 35 85% 55%;
+    --chart-3: 200 55% 55%;
+    --chart-4: 280 45% 60%;
+    --chart-5: 140 45% 50%;
+
+    /* Radius (same as light) */
+    --radius: 0.625rem;
+    --radius-sm: 0.375rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
   }
 }
 
@@ -27,7 +126,58 @@
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Stagger Animation Utilities */
+@layer utilities {
+  .stagger-children > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+  .stagger-children > *:nth-child(2) {
+    animation-delay: 50ms;
+  }
+  .stagger-children > *:nth-child(3) {
+    animation-delay: 100ms;
+  }
+  .stagger-children > *:nth-child(4) {
+    animation-delay: 150ms;
+  }
+  .stagger-children > *:nth-child(5) {
+    animation-delay: 200ms;
+  }
+  .stagger-children > *:nth-child(6) {
+    animation-delay: 250ms;
+  }
+  .stagger-children > *:nth-child(7) {
+    animation-delay: 300ms;
+  }
+  .stagger-children > *:nth-child(8) {
+    animation-delay: 350ms;
+  }
+  .stagger-children > *:nth-child(9) {
+    animation-delay: 400ms;
+  }
+  .stagger-children > *:nth-child(10) {
+    animation-delay: 450ms;
+  }
+
+  .stagger-children > * {
+    animation-fill-mode: both;
+  }
+}
+
+/* Reduced Motion — disable animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

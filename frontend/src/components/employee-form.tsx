@@ -2,11 +2,56 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import { ArrowLeft, Loader2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import type { Employee, EmployeeCreateData, Department, Position } from "@/lib/api/types";
 import { listDepartments } from "@/lib/api/departments";
 import { listPositions } from "@/lib/api/positions";
+
+// --- Zod Schema ---
+
+const employeeSchema = z.object({
+  full_name: z.string().min(1, "Họ tên là bắt buộc"),
+  email: z.string().email("Email không hợp lệ"),
+  phone: z.string().optional(),
+  date_of_birth: z.string().optional(),
+  gender: z.string().optional(),
+  address: z.string().optional(),
+  department_id: z.string().optional(),
+  position_id: z.string().optional(),
+  start_date: z.string().optional(),
+  id_number: z.string().optional(),
+  tax_code: z.string().optional(),
+  contract_type: z.string().optional(),
+});
+
+type EmployeeFormValues = z.infer<typeof employeeSchema>;
+
+// --- Props ---
 
 interface EmployeeFormProps {
   initialData?: Employee;
@@ -15,26 +60,29 @@ interface EmployeeFormProps {
   submitLabel: string;
 }
 
+// --- Component ---
+
 export function EmployeeForm({ initialData, onSubmit, title, submitLabel }: EmployeeFormProps) {
   const router = useRouter();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<EmployeeCreateData>({
-    full_name: initialData?.full_name || "",
-    email: initialData?.email || "",
-    phone: initialData?.phone || "",
-    date_of_birth: initialData?.date_of_birth || "",
-    gender: initialData?.gender || "",
-    address: initialData?.address || "",
-    department_id: initialData?.department_id || "",
-    position_id: initialData?.position_id || "",
-    start_date: initialData?.start_date || "",
-    id_number: initialData?.id_number || "",
-    tax_code: initialData?.tax_code || "",
-    contract_type: initialData?.contract_type || "",
+  const form = useForm<EmployeeFormValues>({
+    resolver: zodResolver(employeeSchema),
+    defaultValues: {
+      full_name: initialData?.full_name || "",
+      email: initialData?.email || "",
+      phone: initialData?.phone || "",
+      date_of_birth: initialData?.date_of_birth || "",
+      gender: initialData?.gender || "",
+      address: initialData?.address || "",
+      department_id: initialData?.department_id || "",
+      position_id: initialData?.position_id || "",
+      start_date: initialData?.start_date || "",
+      id_number: initialData?.id_number || "",
+      tax_code: initialData?.tax_code || "",
+      contract_type: initialData?.contract_type || "",
+    },
   });
 
   useEffect(() => {
@@ -42,37 +90,9 @@ export function EmployeeForm({ initialData, onSubmit, title, submitLabel }: Empl
     listPositions().then(setPositions).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (initialData) {
-      setFormData({
-        full_name: initialData.full_name,
-        email: initialData.email,
-        phone: initialData.phone || "",
-        date_of_birth: initialData.date_of_birth || "",
-        gender: initialData.gender || "",
-        address: initialData.address || "",
-        department_id: initialData.department_id || "",
-        position_id: initialData.position_id || "",
-        start_date: initialData.start_date || "",
-        id_number: initialData.id_number || "",
-        tax_code: initialData.tax_code || "",
-        contract_type: initialData.contract_type || "",
-      });
-    }
-  }, [initialData]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-
+  const handleFormSubmit = async (values: EmployeeFormValues) => {
     // Clean up empty optional fields
-    const payload: EmployeeCreateData = { ...formData };
+    const payload: EmployeeCreateData = { ...values };
     Object.keys(payload).forEach((key) => {
       const k = key as keyof EmployeeCreateData;
       if (payload[k] === "") {
@@ -82,215 +102,252 @@ export function EmployeeForm({ initialData, onSubmit, title, submitLabel }: Empl
 
     try {
       await onSubmit(payload);
+      toast.success("Tạo thành công");
+      router.push("/employees");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setSubmitting(false);
+      const message = err instanceof Error ? err.message : "Đã xảy ra lỗi";
+      toast.error(`Lỗi: ${message}`);
     }
   };
 
-  const inputClass =
-    "h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50";
-  const labelClass = "block text-sm font-medium text-foreground mb-1.5";
-
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="mb-6 flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push("/employees")}>
-          <ArrowLeft className="h-4 w-4" />
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => router.push("/employees")} aria-label="Quay lại">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         </Button>
-        <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+        <h1 className="font-heading text-2xl font-bold">{title}</h1>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
       {/* Form */}
-      <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
-        {/* Personal Information */}
-        <div className="rounded-md border border-border bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">Personal Information</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="full_name" className={labelClass}>
-                Full Name <span className="text-destructive">*</span>
-              </label>
-              <input
-                id="full_name"
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="max-w-3xl space-y-6">
+          {/* Personal Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Thông tin cá nhân</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
                 name="full_name"
-                type="text"
-                required
-                value={formData.full_name}
-                onChange={handleChange}
-                className={inputClass}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Họ tên <span className="text-destructive">*</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nguyễn Văn A" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <label htmlFor="email" className={labelClass}>
-                Email <span className="text-destructive">*</span>
-              </label>
-              <input
-                id="email"
+              <FormField
+                control={form.control}
                 name="email"
-                type="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className={inputClass}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email <span className="text-destructive">*</span></FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="email@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <label htmlFor="phone" className={labelClass}>Phone</label>
-              <input
-                id="phone"
+              <FormField
+                control={form.control}
                 name="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={handleChange}
-                className={inputClass}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Số điện thoại</FormLabel>
+                    <FormControl>
+                      <Input type="tel" placeholder="0901234567" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <label htmlFor="date_of_birth" className={labelClass}>Date of Birth</label>
-              <input
-                id="date_of_birth"
+              <FormField
+                control={form.control}
                 name="date_of_birth"
-                type="date"
-                value={formData.date_of_birth}
-                onChange={handleChange}
-                className={inputClass}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ngày sinh</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <label htmlFor="gender" className={labelClass}>Gender</label>
-              <select
-                id="gender"
+              <FormField
+                control={form.control}
                 name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                className={inputClass}
-              >
-                <option value="">Select gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="id_number" className={labelClass}>ID Number</label>
-              <input
-                id="id_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Giới tính</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn giới tính" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="male">Nam</SelectItem>
+                        <SelectItem value="female">Nữ</SelectItem>
+                        <SelectItem value="other">Khác</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="id_number"
-                type="text"
-                value={formData.id_number}
-                onChange={handleChange}
-                className={inputClass}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Số CCCD/CMND</FormLabel>
+                    <FormControl>
+                      <Input placeholder="012345678901" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="address" className={labelClass}>Address</label>
-              <textarea
-                id="address"
+              <FormField
+                control={form.control}
                 name="address"
-                rows={2}
-                value={formData.address}
-                onChange={handleChange}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                render={({ field }) => (
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel>Địa chỉ</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" rows={2} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </div>
-        </div>
+            </CardContent>
+          </Card>
 
-        {/* Employment Information */}
-        <div className="rounded-md border border-border bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">Employment Information</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="department_id" className={labelClass}>Department</label>
-              <select
-                id="department_id"
+          {/* Employment Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Thông tin công việc</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
                 name="department_id"
-                value={formData.department_id}
-                onChange={handleChange}
-                className={inputClass}
-              >
-                <option value="">Select department</option>
-                {departments.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="position_id" className={labelClass}>Position</label>
-              <select
-                id="position_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phòng ban</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn phòng ban" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {departments.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="position_id"
-                value={formData.position_id}
-                onChange={handleChange}
-                className={inputClass}
-              >
-                <option value="">Select position</option>
-                {positions.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="start_date" className={labelClass}>Start Date</label>
-              <input
-                id="start_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Chức vụ</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn chức vụ" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {positions.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="start_date"
-                type="date"
-                value={formData.start_date}
-                onChange={handleChange}
-                className={inputClass}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ngày bắt đầu</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <label htmlFor="contract_type" className={labelClass}>Contract Type</label>
-              <select
-                id="contract_type"
+              <FormField
+                control={form.control}
                 name="contract_type"
-                value={formData.contract_type}
-                onChange={handleChange}
-                className={inputClass}
-              >
-                <option value="">Select contract type</option>
-                <option value="full_time">Full Time</option>
-                <option value="part_time">Part Time</option>
-                <option value="intern">Intern</option>
-                <option value="contractor">Contractor</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="tax_code" className={labelClass}>Tax Code</label>
-              <input
-                id="tax_code"
-                name="tax_code"
-                type="text"
-                value={formData.tax_code}
-                onChange={handleChange}
-                className={inputClass}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Loại hợp đồng</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn loại hợp đồng" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="full_time">Toàn thời gian</SelectItem>
+                        <SelectItem value="part_time">Bán thời gian</SelectItem>
+                        <SelectItem value="intern">Thực tập</SelectItem>
+                        <SelectItem value="contractor">Hợp đồng</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </div>
-        </div>
+              <FormField
+                control={form.control}
+                name="tax_code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mã số thuế</FormLabel>
+                    <FormControl>
+                      <Input placeholder="0123456789" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
 
-        {/* Actions */}
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "Saving..." : submitLabel}
-          </Button>
-          <Button type="button" variant="outline" onClick={() => router.push("/employees")}>
-            Cancel
-          </Button>
-        </div>
-      </form>
+          {/* Actions */}
+          <div className="flex items-center gap-3">
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+              )}
+              {submitLabel}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => router.push("/employees")}>
+              Huỷ
+            </Button>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 }
