@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import Link from "next/link";
+import { useParams, useNavigate } from "react-router-dom";
 import { ChevronLeft, Calculator, CheckCircle, XCircle, Download, Send } from "lucide-react";
 
 import {

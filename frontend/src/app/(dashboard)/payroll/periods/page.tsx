@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import Link from "next/link";
+import { useNavigate } from "react-router-dom";
 import { Plus, Calendar, ChevronLeft, ChevronRight, CheckCircle, XCircle } from "lucide-react";
 
 import { getPayrollPeriods, createPayrollPeriod } from "@/lib/api/payroll";

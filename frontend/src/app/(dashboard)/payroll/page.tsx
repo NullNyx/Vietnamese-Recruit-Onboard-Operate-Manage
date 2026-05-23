@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { Wallet, TrendingUp, TrendingDown, Calendar, Plus } from "lucide-react";
 
 import { getPayrollPeriods } from "@/lib/api/payroll";
