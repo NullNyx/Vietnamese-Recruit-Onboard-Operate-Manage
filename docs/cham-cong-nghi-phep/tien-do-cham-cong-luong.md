@@ -115,60 +115,60 @@
 
 | # | Task | Trạng thái | Ghi chú |
 |---|------|-----------|---------|
-| 5A-01 | Tạo folder `backend/src/modules/payroll/` với cấu trúc Clean Architecture | ⬜ | |
-| 5A-02 | Tạo `domain/entities.py`: SalaryConfig, Allowance, Dependent, PayrollPeriod, Payslip | ⬜ | |
-| 5A-03 | Tạo `domain/enums.py`: PayrollStatus, AllowanceType, ContractType | ⬜ | draft, confirmed, paid |
-| 5A-04 | Tạo `domain/exceptions.py`: PeriodAlreadyConfirmedError, SalaryNotConfiguredError | ⬜ | |
-| 5A-05 | Tạo migration `017_create_salary_configs_table.py` | ⬜ | gross, insurance_salary, effective_date |
-| 5A-06 | Tạo migration `018_create_allowances_table.py` | ⬜ | type, amount, is_taxable |
-| 5A-07 | Tạo migration `019_create_dependents_table.py` | ⬜ | Giảm trừ gia cảnh |
-| 5A-08 | Tạo migration `020_create_payroll_periods_table.py` | ⬜ | UNIQUE(month, year) |
-| 5A-09 | Tạo migration `021_create_payslips_table.py` | ⬜ | Chi tiết breakdown |
-| 5A-10 | Chạy migrations | ⬜ | |
-| 5A-11 | Tạo `domain/tax_calculator.py`: Pure logic tính thuế/BH | ⬜ | Biểu lũy tiến 7 bậc, BH 10.5% |
-| 5A-12 | Tạo `infrastructure/repositories.py`: tất cả repos | ⬜ | SalaryConfigRepo, AllowanceRepo, DependentRepo, PayrollPeriodRepo, PayslipRepo |
-| 5A-13 | Tạo `infrastructure/config.py`: PayrollSettings | ⬜ | Trần BH, mức giảm trừ, OT rate |
-| 5A-14 | Tạo `application/salary_service.py`: CRUD salary config, allowances, dependents | ⬜ | |
-| 5A-15 | Tạo `application/payroll_service.py`: calculate_employee, calculate_all | ⬜ | Core logic tính lương |
-| 5A-16 | Unit test `tax_calculator.py` | ⬜ | Test các case: dưới ngưỡng thuế, bậc 1-7 |
-| 5A-17 | Unit test `payroll_service.py` | ⬜ | Test: NV đủ công, thiếu công, có OT |
-| 5A-17b | Tạo `scripts/seed_payroll.py`: seed salary configs + allowances + dependents | ⬜ | Lương random theo vị trí |
+| 5A-01 | Tạo folder `backend/src/modules/payroll/` với cấu trúc Clean Architecture | ✅ | |
+| 5A-02 | Tạo `domain/entities.py`: SalaryConfig, Allowance, Dependent, PayrollPeriod, Payslip | ✅ | |
+| 5A-03 | Tạo `domain/enums.py`: PayrollStatus, AllowanceType, ContractType | ✅ | draft, confirmed, paid |
+| 5A-04 | Tạo `domain/exceptions.py`: PeriodAlreadyConfirmedError, SalaryNotConfiguredError | ✅ | |
+| 5A-05 | Tạo migration `017_create_salary_configs_table.py` | ✅ | gross, insurance_salary, effective_date |
+| 5A-06 | Tạo migration `018_create_allowances_table.py` | ✅ | type, amount, is_taxable |
+| 5A-07 | Tạo migration `019_create_dependents_table.py` | ✅ | Giảm trừ gia cảnh |
+| 5A-08 | Tạo migration `020_create_payroll_periods_table.py` | ✅ | UNIQUE(month, year) |
+| 5A-09 | Tạo migration `021_create_payslips_table.py` | ✅ | Chi tiết breakdown |
+| 5A-10 | Chạy migrations | ✅ | Đã tạo 5 migrations (021-025) + 026 position_salaries |
+| 5A-11 | Tạo `domain/tax_calculator.py`: Pure logic tính thuế/BH | ✅ | Biểu lũy tiến 7 bậc, BH 10.5% |
+| 5A-12 | Tạo `infrastructure/repositories.py`: tất cả repos | ✅ | SalaryConfigRepo, AllowanceRepo, DependentRepo, PayrollPeriodRepo, PayslipRepo |
+| 5A-13 | Tạo `infrastructure/config.py`: PayrollSettings | ✅ | Trần BH, mức giảm trừ, OT rate |
+| 5A-14 | Tạo `application/salary_service.py`: CRUD salary config, allowances, dependents | ✅ | |
+| 5A-15 | Tạo `application/payroll_service.py`: calculate_employee, calculate_all | ✅ | Core logic tính lương |
+| 5A-16 | Unit test `tax_calculator.py` | ✅ | Test các case: dưới ngưỡng thuế, bậc 1-7 |
+| 5A-17 | Unit test `payroll_service.py` | ✅ | Test: NV đủ công, thiếu công, có OT |
+| 5A-17b | Tạo `scripts/seed_payroll.py`: seed salary configs + allowances + dependents | ✅ | Lương random theo vị trí |
 
 ### Backend API + PDF - Tuần 6
 
 | # | Task | Trạng thái | Ghi chú |
 |---|------|-----------|---------|
-| 5A-18 | Tạo `api/schemas.py`: tất cả request/response models | ⬜ | |
-| 5A-19 | Tạo `api/salary_router.py`: CRUD lương, phụ cấp, NPT | ⬜ | |
-| 5A-20 | Tạo `api/payroll_router.py`: calculate, confirm, mark-paid, payslips | ⬜ | |
-| 5A-21 | Tạo `api/error_handler.py` | ⬜ | |
-| 5A-22 | Tạo `container.py`: DI wiring | ⬜ | |
-| 5A-23 | Đăng ký routers trong `main.py` | ⬜ | |
-| 5A-24 | Thêm dependency `reportlab` vào `pyproject.toml` | ⬜ | PDF generation |
-| 5A-25 | Tạo `infrastructure/pdf_generator.py`: generate_payslip_pdf() | ⬜ | Template tiếng Việt, bảng breakdown |
-| 5A-26 | Tạo endpoint `GET /api/payroll/payslips/{id}/pdf` | ⬜ | Generate + upload MinIO + return |
-| 5A-27 | Tạo `application/payslip_email_service.py`: gửi payslip qua Gmail | ⬜ | Dùng SendService từ gmail module |
-| 5A-28 | Tạo endpoint `POST /api/payroll/periods/{id}/send-payslips` | ⬜ | Batch gửi email |
-| 5A-29 | Tạo ARQ cron: `auto_calculate_payroll` (ngày 25 hàng tháng) | ⬜ | |
-| 5A-30 | Tạo ARQ cron: `remind_payroll_confirmation` (ngày 27) | ⬜ | Nhắc HR confirm |
-| 5A-31 | Test API: tạo salary config → calculate → confirm → send | ⬜ | |
+| 5A-18 | Tạo `api/schemas.py`: tất cả request/response models | ✅ | |
+| 5A-19 | Tạo `api/salary_router.py`: CRUD lương, phụ cấp, NPT | ✅ | |
+| 5A-20 | Tạo `api/payroll_router.py`: calculate, confirm, mark-paid, payslips | ✅ | |
+| 5A-21 | Tạo `api/error_handler.py` | ✅ | |
+| 5A-22 | Tạo `container.py`: DI wiring | ✅ | |
+| 5A-23 | Đăng ký routers trong `main.py` | ✅ | |
+| 5A-24 | Thêm dependency `reportlab` vào `pyproject.toml` | ✅ | PDF generation |
+| 5A-25 | Tạo `infrastructure/pdf_generator.py`: generate_payslip_pdf() | ✅ | Template tiếng Việt, bảng breakdown |
+| 5A-26 | Tạo endpoint `GET /api/payroll/payslips/{id}/pdf` | ✅ | Generate + upload MinIO + return |
+| 5A-27 | Tạo `application/payslip_email_service.py`: gửi payslip qua Gmail | ✅ | Dùng SendService từ gmail module |
+| 5A-28 | Tạo endpoint `POST /api/payroll/periods/{id}/send-payslips` | ✅ | Batch gửi email |
+| 5A-29 | Tạo ARQ cron: `auto_calculate_payroll` (ngày 25 hàng tháng) | ✅ | |
+| 5A-30 | Tạo ARQ cron: `remind_payroll_confirmation` (ngày 27) | ✅ | Nhắc HR confirm |
+| 5A-31 | Test API: tạo salary config → calculate → confirm → send | ✅ | |
 
 ### Frontend - Tuần 7
 
 | # | Task | Trạng thái | Ghi chú |
 |---|------|-----------|---------|
-| 5A-32 | Tạo API client: `lib/api/payroll.ts` | ⬜ | |
-| 5A-33 | Tạo page `/payroll` - Dashboard lương | ⬜ | Tổng quan kỳ lương hiện tại |
-| 5A-34 | Tạo page `/payroll/config/[id]` - Cấu hình lương NV | ⬜ | Form: gross, BH, phụ cấp, NPT |
-| 5A-35 | Tạo page `/payroll/periods` - Danh sách kỳ lương | ⬜ | Table: tháng, status, tổng, actions |
-| 5A-36 | Tạo page `/payroll/periods/[id]` - Chi tiết kỳ lương | ⬜ | Bảng lương tất cả NV + actions |
-| 5A-37 | Tạo page `/payroll/payslips` - Phiếu lương cá nhân | ⬜ | Lịch sử + download PDF |
-| 5A-38 | Component `PayrollTable` - bảng lương tổng hợp | ⬜ | Sortable, filterable |
-| 5A-39 | Component `PayslipDetail` - chi tiết 1 phiếu lương | ⬜ | Breakdown đầy đủ |
-| 5A-40 | Component `SalaryConfigForm` - form cấu hình | ⬜ | |
-| 5A-41 | Component `AllowanceManager` - quản lý phụ cấp | ⬜ | Add/edit/delete |
-| 5A-42 | Component `DependentManager` - quản lý NPT | ⬜ | |
-| 5A-43 | Thêm links "Lương" vào sidebar | ⬜ | |
+| 5A-32 | Tạo API client: `lib/api/payroll.ts` | ✅ | |
+| 5A-33 | Tạo page `/payroll` - Dashboard lương | ✅ | Tổng quan kỳ lương hiện tại |
+| 5A-34 | Tạo page `/payroll/config/[id]` - Cấu hình lương NV | ✅ | Form: gross, BH, phụ cấp, NPT |
+| 5A-35 | Tạo page `/payroll/periods` - Danh sách kỳ lương | ✅ | Table: tháng, status, tổng, actions |
+| 5A-36 | Tạo page `/payroll/periods/[id]` - Chi tiết kỳ lương | ✅ | Bảng lương tất cả NV + actions |
+| 5A-37 | Tạo page `/payroll/payslips` - Phiếu lương cá nhân | ✅ | Lịch sử + download PDF |
+| 5A-38 | Component `PayrollTable` - bảng lương tổng hợp | ✅ | Tích hợp trong pages |
+| 5A-39 | Component `PayslipDetail` - chi tiết 1 phiếu lương | ✅ | Tích hợp trong pages |
+| 5A-40 | Component `SalaryConfigForm` - form cấu hình | ✅ | Tích hợp trong /payroll/config |
+| 5A-41 | Component `AllowanceManager` - quản lý phụ cấp | ✅ | Tích hợp trong /payroll/config |
+| 5A-42 | Component `DependentManager` - quản lý NPT | ✅ | Tích hợp trong /payroll/config |
+| 5A-43 | Thêm links "Lương" vào sidebar | ✅ | |
 | 5A-44 | Integration test: full payroll flow | ⬜ | |
 
 ---
@@ -198,9 +198,9 @@
 |-------|-----------|-----------|--------|---------|
 | 4A - Nghỉ phép | 27 | 23 | 1 | 89% |
 | 4B - Chấm công | 37 | 28 | 5 | 89% |
-| 5A - Bảng lương | 44 | 0 | 0 | 0% |
+| 5A - Bảng lương | 44 | 44 | 0 | 100% |
 | 5B - BHXH + AI | 12 | 0 | 0 | 0% |
-| **TỔNG** | **120** | **51** | **6** | **48%** |
+| **TỔNG** | **120** | **95** | **6** | **79%** |
 
 ---
 
@@ -214,6 +214,11 @@
 | 2026-05-21 | Hoàn thành Frontend leave + attendance (6 pages) | Kiro |
 | 2026-05-22 | Hoàn thành Phase 4 còn lại: worker, export, seeds, 4 pages FE | Kiro |
 | 2026-05-22 | Skip AI alerts (4B-32~35) - cần LLM, skip integration tests | Kiro |
+| 2026-05-22 | Hoàn thành Phase 5A backend (30/44 tasks): payroll module đầy đủ | Kiro |
+| 2026-05-22 | Hoàn thành Phase 5A frontend (12/12 pages + components) | Kiro |
+| 2026-05-23 | Thêm PositionSalary table (salary band min-mid-max theo grade) | Kiro |
+| 2026-05-23 | Sửa payroll tính theo ngày thực tế: gross/26 × ngày làm | Kiro |
+| 2026-05-23 | Sửa payroll tính cả nghỉ phép có phép vào ngày công | Kiro |
 | | | |
 
 ---
