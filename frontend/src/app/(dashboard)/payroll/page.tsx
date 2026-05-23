@@ -60,7 +60,7 @@ export default function PayrollDashboardPage() {
           <p className="text-muted-foreground">Quản lý bảng lương và phiếu lương</p>
         </div>
         <Button asChild>
-          <Link to="/payroll/periods">
+          <Link href="/payroll/periods">
             <Plus className="mr-2 h-4 w-4" />
             Tạo kỳ lương
           </Link>
@@ -163,7 +163,7 @@ export default function PayrollDashboardPage() {
                     </div>
                     {getStatusBadge(period.status)}
                     <Button variant="outline" size="sm" asChild>
-                      <Link to={`/payroll/periods/${period.id}`}>Xem</Link>
+                      <Link href={`/payroll/periods/${period.id}`}>Xem</Link>
                     </Button>
                   </div>
                 </div>
@@ -173,7 +173,7 @@ export default function PayrollDashboardPage() {
           {periods.length > 6 && (
             <div className="mt-4 text-center">
               <Button variant="ghost" asChild>
-                <Link to="/payroll/periods">Xem tất cả ({periods.length})</Link>
+                <Link href="/payroll/periods">Xem tất cả ({periods.length})</Link>
               </Button>
             </div>
           )}

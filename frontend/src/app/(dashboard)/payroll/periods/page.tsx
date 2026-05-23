@@ -91,7 +91,7 @@ export default function PayrollPeriodsPage() {
         <div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" asChild>
-              <Link to="/payroll">
+              <Link href="/payroll">
                 <ChevronLeft className="h-5 w-5" />
               </Link>
             </Button>
@@ -153,7 +153,7 @@ export default function PayrollPeriodsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="outline" size="sm" asChild>
-                        <Link to={`/payroll/periods/${period.id}`}>Xem chi tiết</Link>
+                        <Link href={`/payroll/periods/${period.id}`}>Xem chi tiết</Link>
                       </Button>
                     </TableCell>
                   </TableRow>

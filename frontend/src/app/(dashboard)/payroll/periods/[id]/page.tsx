@@ -131,7 +131,7 @@ export default function PayrollPeriodDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" asChild>
-            <Link to="/payroll/periods">
+            <Link href="/payroll/periods">
               <ChevronLeft className="h-5 w-5" />
             </Link>
           </Button>
