@@ -16,7 +16,7 @@ from src.modules.payroll.application.payroll_service import PayrollService
 from src.modules.payroll.application.payslip_email_service import PayslipEmailService
 from src.modules.payroll.api import schemas
 
-router = APIRouter(prefix="/payroll", tags=["Payroll"])
+router = APIRouter(prefix="/api/payroll", tags=["Payroll"])
 
 
 def get_payroll_service(session: Session = Depends(get_session)) -> PayrollService:

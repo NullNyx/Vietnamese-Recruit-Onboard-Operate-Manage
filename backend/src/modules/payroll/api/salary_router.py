@@ -8,7 +8,7 @@ from src.database import get_session
 from src.modules.payroll.application.salary_service import SalaryService
 from src.modules.payroll.api import schemas
 
-router = APIRouter(prefix="/salary", tags=["Salary Config"])
+router = APIRouter(prefix="/api/payroll/salary", tags=["Salary Config"])
 
 
 def get_salary_service(session: Session = Depends(get_session)) -> SalaryService:
