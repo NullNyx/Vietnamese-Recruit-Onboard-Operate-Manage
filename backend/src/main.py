@@ -27,6 +27,8 @@ from src.modules.recruitment.api.candidate_router import candidate_router
 from src.modules.recruitment.api.cv_review_router import cv_review_router
 from src.modules.recruitment.api.error_handler import register_recruitment_error_handlers
 from src.modules.recruitment.api.metrics_router import metrics_router
+from src.modules.self_service.api.audit_middleware import ESSAuditMiddleware
+from src.modules.self_service.api.router import ess_router
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +85,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Register audit logging middleware for ESS endpoints (Requirement 12.4).
+app.add_middleware(ESSAuditMiddleware)
+
 # Register module routers.
 app.include_router(auth_router)
 app.include_router(admin_router)
@@ -95,6 +100,7 @@ app.include_router(leave_router)
 app.include_router(attendance_router)
 app.include_router(overtime_router)
 app.include_router(schedule_router)
+app.include_router(ess_router)
 
 # Register exception handlers.
 register_auth_error_handlers(app)
