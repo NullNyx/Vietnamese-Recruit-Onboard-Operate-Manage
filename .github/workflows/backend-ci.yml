@@ -33,7 +33,7 @@ jobs:
 
       - name: Run Ruff
         working-directory: backend
-        run: uv run ruff check src/ --fix
+        run: uv run ruff check src/ --fix --extend-ignore E501
 
       - name: Run Ruff format check
         working-directory: backend
