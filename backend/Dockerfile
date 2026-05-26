@@ -16,9 +16,11 @@ COPY src/ ./src/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
 COPY config/ ./config/
+COPY scripts/ ./scripts/
 
 # Expose port
 EXPOSE 8000
 
-# Run migrations then start server
+# Run migrations then start server (for local dev)
+# For production, use a Release Command: uv run alembic upgrade head
 CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn src.main:app --host 0.0.0.0 --port 8000"]
