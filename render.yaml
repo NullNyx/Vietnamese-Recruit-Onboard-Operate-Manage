@@ -5,9 +5,10 @@ services:
   # Backend Web Service
   - type: web
     name: vroom-hr-backend
-    env: python
+    env: docker
     region: singapore
-    rootDir: backend
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
     buildCommand: uv sync --frozen --no-dev
     startCommand: uvicorn src.main:app --host 0.0.0.0 --port 8000
     # Run migrations on each deploy
@@ -39,7 +40,7 @@ services:
         # Update this to your Render URL after deployment
         value: https://vroom-hr-backend.onrender.com/api/auth/callback
       - key: AUTH_WHITELIST_FILE_PATH
-        value: /app/config/whitelist.txt
+        value: /app/backend/config/whitelist.txt
       - key: AUTH_FRONTEND_URL
         # Update this to your frontend Render URL
         value: https://vroom-hr-frontend.onrender.com
