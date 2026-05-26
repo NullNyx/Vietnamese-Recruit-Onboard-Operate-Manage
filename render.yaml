@@ -67,7 +67,7 @@ services:
         value: "7"
 
   # PostgreSQL Database
-  - type: psql
+  - type: postgresql
     name: vroom-hr-db
     region: singapore
     plan: free
