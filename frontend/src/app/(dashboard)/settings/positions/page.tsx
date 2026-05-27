@@ -22,9 +22,14 @@ export default function PositionsPage() {
     isLoading: posLoading,
     error: posError,
   } = usePositions();
-  const { data: departments = [], isLoading: deptsLoading } = useDepartments();
+  const {
+    data: departments = [],
+    isLoading: deptsLoading,
+    error: deptsError,
+  } = useDepartments();
 
   const loading = posLoading || deptsLoading;
+  const error = posError ?? deptsError;
 
   const rows: PositionRow[] = useMemo(() => {
     if (!positions.length) return [];
@@ -77,7 +82,7 @@ export default function PositionsPage() {
         columns={columns}
         data={rows}
         loading={loading}
-        error={posError?.message ?? null}
+        error={error?.message ?? null}
         toolbar={
           <Button size="sm">
             <Plus className="mr-2 h-4 w-4" aria-hidden="true" />

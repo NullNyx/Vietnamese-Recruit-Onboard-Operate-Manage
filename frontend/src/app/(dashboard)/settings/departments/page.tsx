@@ -22,12 +22,17 @@ export default function DepartmentsPage() {
     isLoading: deptsLoading,
     error: deptsError,
   } = useDepartments();
-  const { data: employeesData, isLoading: empsLoading } = useEmployees({
+  const {
+    data: employeesData,
+    isLoading: empsLoading,
+    error: empsError,
+  } = useEmployees({
     page: 1,
     page_size: 100,
   });
 
   const loading = deptsLoading || empsLoading;
+  const error = deptsError ?? empsError;
 
   const rows: DepartmentRow[] = useMemo(() => {
     if (!departments.length) return [];
@@ -84,7 +89,7 @@ export default function DepartmentsPage() {
         columns={columns}
         data={rows}
         loading={loading}
-        error={deptsError?.message ?? null}
+        error={error?.message ?? null}
         toolbar={
           <Button size="sm">
             <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
