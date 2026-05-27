@@ -30,7 +30,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: backend
-        run: uv sync --frozen --no-dev
+        run: uv sync --frozen
 
       - name: Run Ruff
         working-directory: backend
@@ -47,6 +47,14 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    env:
+      GOOGLE_CLIENT_ID: "test-client-id"
+      GOOGLE_CLIENT_SECRET: "test-client-secret"
+      JWT_SECRET_KEY: "test-jwt-secret-key-for-ci-only"
+      OAUTH_TOKEN_ENCRYPTION_KEY: "dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcw=="
+      DATABASE_URL: "postgresql+asyncpg://postgres:postgres@localhost:5432/vroom_test"
+      SYNC_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/vroom_test"
+      REDIS_URL: "redis://localhost:6379/0"
     steps:
       - uses: actions/checkout@v4
 
@@ -61,7 +69,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: backend
-        run: uv sync --frozen --no-dev --all-extras
+        run: uv sync --frozen
 
       - name: Run pytest
         working-directory: backend
