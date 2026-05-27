@@ -2,8 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+<<<<<<< HEAD
 import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft, Calculator, CheckCircle, XCircle, Download, Send } from "lucide-react";
+=======
+import { useParams } from "next/navigation";
+import {
+  ChevronLeft,
+  Calculator,
+  CheckCircle,
+  XCircle,
+  Send,
+} from "lucide-react";
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
 
 import {
   getPayrollPeriod,
@@ -29,7 +40,10 @@ import {
 
 export default function PayrollPeriodDetailPage() {
   const { id } = useParams<{ id: string }>();
+<<<<<<< HEAD
   const router = useRouter();
+=======
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
   const { user } = useCurrentUser();
 
   const [period, setPeriod] = useState<PayrollPeriod | null>(null);
@@ -110,10 +124,23 @@ export default function PayrollPeriodDetailPage() {
   };
 
   const formatCurrency = (value: number) =>
+<<<<<<< HEAD
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+=======
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(value);
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
       draft: "secondary",
       calculating: "outline",
       confirmed: "default",
@@ -125,7 +152,15 @@ export default function PayrollPeriodDetailPage() {
       confirmed: "Đã duyệt",
       paid: "Đã chi trả",
     };
+<<<<<<< HEAD
     return <Badge variant={variants[status] || "outline"}>{labels[status] || status}</Badge>;
+=======
+    return (
+      <Badge variant={variants[status] || "outline"}>
+        {labels[status] || status}
+      </Badge>
+    );
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
   };
 
   if (loading || !period) {
@@ -137,9 +172,17 @@ export default function PayrollPeriodDetailPage() {
   }
 
   const canCalculate = period.status === "draft";
+<<<<<<< HEAD
   const canConfirm = period.status === "draft" || period.status === "calculating";
   const canMarkPaid = period.status === "confirmed";
   const canSendPayslips = period.status === "confirmed" || period.status === "paid";
+=======
+  const canConfirm =
+    period.status === "draft" || period.status === "calculating";
+  const canMarkPaid = period.status === "confirmed";
+  const canSendPayslips =
+    period.status === "confirmed" || period.status === "paid";
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
 
   return (
     <div className="space-y-6">
@@ -178,7 +221,15 @@ export default function PayrollPeriodDetailPage() {
             </Button>
           )}
           {canSendPayslips && (
+<<<<<<< HEAD
             <Button variant="outline" onClick={handleSendPayslips} disabled={processing}>
+=======
+            <Button
+              variant="outline"
+              onClick={handleSendPayslips}
+              disabled={processing}
+            >
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
               <Send className="mr-2 h-4 w-4" />
               G?i phi?u l??ng
             </Button>
@@ -192,7 +243,13 @@ export default function PayrollPeriodDetailPage() {
             <CardTitle className="text-sm font-medium">Tổng gross</CardTitle>
           </CardHeader>
           <CardContent>
+<<<<<<< HEAD
             <div className="text-xl font-bold">{formatCurrency(period.total_gross)}</div>
+=======
+            <div className="text-xl font-bold">
+              {formatCurrency(period.total_gross)}
+            </div>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
           </CardContent>
         </Card>
         <Card>
@@ -200,7 +257,13 @@ export default function PayrollPeriodDetailPage() {
             <CardTitle className="text-sm font-medium">Tổng thuế</CardTitle>
           </CardHeader>
           <CardContent>
+<<<<<<< HEAD
             <div className="text-xl font-bold">{formatCurrency(period.total_tax)}</div>
+=======
+            <div className="text-xl font-bold">
+              {formatCurrency(period.total_tax)}
+            </div>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
           </CardContent>
         </Card>
         <Card>
@@ -208,7 +271,13 @@ export default function PayrollPeriodDetailPage() {
             <CardTitle className="text-sm font-medium">Tổng BH</CardTitle>
           </CardHeader>
           <CardContent>
+<<<<<<< HEAD
             <div className="text-xl font-bold">{formatCurrency(period.total_insurance)}</div>
+=======
+            <div className="text-xl font-bold">
+              {formatCurrency(period.total_insurance)}
+            </div>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
           </CardContent>
         </Card>
         <Card>
@@ -251,11 +320,18 @@ export default function PayrollPeriodDetailPage() {
               <TableBody>
                 {employees.map((emp) => (
                   <TableRow key={emp.employee_id}>
+<<<<<<< HEAD
                     <TableCell className="font-medium">{emp.employee_code}</TableCell>
+=======
+                    <TableCell className="font-medium">
+                      {emp.employee_code}
+                    </TableCell>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                     <TableCell>{emp.full_name}</TableCell>
                     <TableCell>{emp.department_name || "-"}</TableCell>
                     <TableCell>{emp.position_name || "-"}</TableCell>
                     <TableCell className="text-right">
+<<<<<<< HEAD
                       {emp.payslip ? formatCurrency(emp.payslip.gross_salary) : "-"}
                     </TableCell>
                     <TableCell className="text-right">
@@ -272,6 +348,36 @@ export default function PayrollPeriodDetailPage() {
                     </TableCell>
                     <TableCell className="text-right font-medium text-green-600">
                       {emp.payslip ? formatCurrency(emp.payslip.net_salary) : "-"}
+=======
+                      {emp.payslip
+                        ? formatCurrency(emp.payslip.gross_salary)
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {emp.payslip
+                        ? formatCurrency(emp.payslip.total_allowances)
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {emp.payslip
+                        ? formatCurrency(emp.payslip.total_ot_amount)
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {emp.payslip
+                        ? formatCurrency(emp.payslip.income_tax)
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {emp.payslip
+                        ? formatCurrency(emp.payslip.insurance_premium)
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-green-600">
+                      {emp.payslip
+                        ? formatCurrency(emp.payslip.net_salary)
+                        : "-"}
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                     </TableCell>
                   </TableRow>
                 ))}

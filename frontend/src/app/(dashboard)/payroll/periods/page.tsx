@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+<<<<<<< HEAD
 import { useRouter } from "next/navigation";
 import { Plus, Calendar, ChevronLeft, ChevronRight, CheckCircle, XCircle } from "lucide-react";
+=======
+import { Plus, Calendar, ChevronLeft } from "lucide-react";
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
 
 import { getPayrollPeriods, createPayrollPeriod } from "@/lib/api/payroll";
 import type { PayrollPeriod } from "@/lib/api/payroll";
@@ -35,8 +39,11 @@ export default function PayrollPeriodsPage() {
   const [newMonth, setNewMonth] = useState(new Date().getMonth() + 1);
   const [newYear, setNewYear] = useState(new Date().getFullYear());
 
+<<<<<<< HEAD
   const router = useRouter();
 
+=======
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
   useEffect(() => {
     loadPeriods();
   }, []);
@@ -59,10 +66,23 @@ export default function PayrollPeriodsPage() {
   };
 
   const formatCurrency = (value: number) =>
+<<<<<<< HEAD
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+=======
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(value);
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
       draft: "secondary",
       calculating: "outline",
       confirmed: "default",
@@ -74,7 +94,15 @@ export default function PayrollPeriodsPage() {
       confirmed: "Đã duyệt",
       paid: "Đã chi trả",
     };
+<<<<<<< HEAD
     return <Badge variant={variants[status] || "outline"}>{labels[status] || status}</Badge>;
+=======
+    return (
+      <Badge variant={variants[status] || "outline"}>
+        {labels[status] || status}
+      </Badge>
+    );
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
   };
 
   if (loading) {
@@ -96,7 +124,13 @@ export default function PayrollPeriodsPage() {
               </Link>
             </Button>
             <div>
+<<<<<<< HEAD
               <h1 className="text-2xl font-bold tracking-tight">Danh sách kỳ lương</h1>
+=======
+              <h1 className="text-2xl font-bold tracking-tight">
+                Danh sách kỳ lương
+              </h1>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
               <p className="text-muted-foreground">Quản lý các kỳ tính lương</p>
             </div>
           </div>
@@ -140,20 +174,44 @@ export default function PayrollPeriodsPage() {
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(period.status)}</TableCell>
+<<<<<<< HEAD
                     <TableCell className="text-right">{formatCurrency(period.total_gross)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(period.total_tax)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(period.total_insurance)}</TableCell>
+=======
+                    <TableCell className="text-right">
+                      {formatCurrency(period.total_gross)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(period.total_tax)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(period.total_insurance)}
+                    </TableCell>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                     <TableCell className="text-right font-medium">
                       {formatCurrency(period.total_net)}
                     </TableCell>
                     <TableCell>
                       {period.confirmed_at
+<<<<<<< HEAD
                         ? new Date(period.confirmed_at).toLocaleDateString("vi-VN")
+=======
+                        ? new Date(period.confirmed_at).toLocaleDateString(
+                            "vi-VN",
+                          )
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                         : "-"}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="outline" size="sm" asChild>
+<<<<<<< HEAD
                         <Link href={`/payroll/periods/${period.id}`}>Xem chi tiết</Link>
+=======
+                        <Link href={`/payroll/periods/${period.id}`}>
+                          Xem chi tiết
+                        </Link>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -196,7 +254,14 @@ export default function PayrollPeriodsPage() {
             </div>
           </div>
           <DialogFooter>
+<<<<<<< HEAD
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+=======
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateDialog(false)}
+            >
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
               Hủy
             </Button>
             <Button onClick={handleCreatePeriod}>Tạo</Button>
@@ -205,4 +270,8 @@ export default function PayrollPeriodsPage() {
       </Dialog>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091

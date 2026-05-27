@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+<<<<<<< HEAD
 import { ChevronLeft, Download, FileText } from "lucide-react";
+=======
+import { ChevronLeft, Download } from "lucide-react";
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
 
 import { getEmployeePayslips, getPayslipPdf } from "@/lib/api/payroll";
 import type { Payslip } from "@/lib/api/payroll";
@@ -22,7 +26,11 @@ export default function EmployeePayslipsPage() {
   const { user } = useCurrentUser();
   const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [loading, setLoading] = useState(true);
+<<<<<<< HEAD
   const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
+=======
+  const [selectedPayslip] = useState<Payslip | null>(null);
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
 
   useEffect(() => {
     if (!user?.employee_id) return;
@@ -54,7 +62,14 @@ export default function EmployeePayslipsPage() {
   };
 
   const formatCurrency = (value: number) =>
+<<<<<<< HEAD
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
+=======
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(value);
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
 
   if (loading) {
     return (
@@ -73,7 +88,13 @@ export default function EmployeePayslipsPage() {
           </Link>
         </Button>
         <div>
+<<<<<<< HEAD
           <h1 className="text-2xl font-bold tracking-tight">Phiếu lương của tôi</h1>
+=======
+          <h1 className="text-2xl font-bold tracking-tight">
+            Phiếu lương của tôi
+          </h1>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
           <p className="text-muted-foreground">Lịch sử nhận lương</p>
         </div>
       </div>
@@ -116,9 +137,21 @@ export default function EmployeePayslipsPage() {
                         "-"
                       )}
                     </TableCell>
+<<<<<<< HEAD
                     <TableCell className="text-right">{formatCurrency(payslip.gross_salary)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(payslip.total_allowances)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(payslip.total_ot_amount)}</TableCell>
+=======
+                    <TableCell className="text-right">
+                      {formatCurrency(payslip.gross_salary)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(payslip.total_allowances)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(payslip.total_ot_amount)}
+                    </TableCell>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                     <TableCell className="text-right text-red-600">
                       -{formatCurrency(payslip.income_tax)}
                     </TableCell>
@@ -162,11 +195,23 @@ export default function EmployeePayslipsPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Phụ cấp:</span>
+<<<<<<< HEAD
                     <span>{formatCurrency(selectedPayslip.total_allowances)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Tiền OT:</span>
                     <span>{formatCurrency(selectedPayslip.total_ot_amount)}</span>
+=======
+                    <span>
+                      {formatCurrency(selectedPayslip.total_allowances)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tiền OT:</span>
+                    <span>
+                      {formatCurrency(selectedPayslip.total_ot_amount)}
+                    </span>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                   </div>
                   <div className="flex justify-between font-medium border-t pt-2">
                     <span>Tổng thu nhập:</span>
@@ -178,12 +223,27 @@ export default function EmployeePayslipsPage() {
                 <h4 className="font-medium mb-2">Khấu trừ</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
+<<<<<<< HEAD
                     <span className="text-muted-foreground">Giảm trừ cá nhân:</span>
                     <span>-{formatCurrency(selectedPayslip.personal_deduction)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Giảm trừ NPT:</span>
                     <span>-{formatCurrency(selectedPayslip.dependent_deduction)}</span>
+=======
+                    <span className="text-muted-foreground">
+                      Giảm trừ cá nhân:
+                    </span>
+                    <span>
+                      -{formatCurrency(selectedPayslip.personal_deduction)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Giảm trừ NPT:</span>
+                    <span>
+                      -{formatCurrency(selectedPayslip.dependent_deduction)}
+                    </span>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                   </div>
                   <div className="flex justify-between text-red-600">
                     <span>Thuế TNCN:</span>
@@ -191,13 +251,26 @@ export default function EmployeePayslipsPage() {
                   </div>
                   <div className="flex justify-between text-red-600">
                     <span>BHXH/BHYT/BHTN:</span>
+<<<<<<< HEAD
                     <span>-{formatCurrency(selectedPayslip.insurance_premium)}</span>
+=======
+                    <span>
+                      -{formatCurrency(selectedPayslip.insurance_premium)}
+                    </span>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                   </div>
                   <div className="flex justify-between font-medium border-t pt-2">
                     <span>Tổng khấu trừ:</span>
                     <span>
+<<<<<<< HEAD
                       -{formatCurrency(
                         selectedPayslip.income_tax + selectedPayslip.insurance_premium
+=======
+                      -
+                      {formatCurrency(
+                        selectedPayslip.income_tax +
+                          selectedPayslip.insurance_premium,
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                       )}
                     </span>
                   </div>
@@ -217,4 +290,8 @@ export default function EmployeePayslipsPage() {
       )}
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091

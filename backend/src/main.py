@@ -29,6 +29,8 @@ from src.modules.recruitment.api.error_handler import register_recruitment_error
 from src.modules.payroll.api.payroll_router import router as payroll_router
 from src.modules.payroll.api.salary_router import router as salary_router
 from src.modules.recruitment.api.metrics_router import metrics_router
+from src.modules.self_service.api.audit_middleware import ESSAuditMiddleware
+from src.modules.self_service.api.router import ess_router
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +87,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Register audit logging middleware for ESS endpoints (Requirement 12.4).
+app.add_middleware(ESSAuditMiddleware)
+
 # Register module routers.
 app.include_router(auth_router)
 app.include_router(admin_router)
@@ -97,6 +102,10 @@ app.include_router(leave_router)
 app.include_router(attendance_router)
 app.include_router(overtime_router)
 app.include_router(schedule_router)
+<<<<<<< HEAD
+=======
+app.include_router(ess_router)
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
 app.include_router(salary_router)
 app.include_router(payroll_router)
 

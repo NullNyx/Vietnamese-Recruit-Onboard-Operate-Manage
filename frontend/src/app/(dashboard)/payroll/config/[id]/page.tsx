@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+<<<<<<< HEAD
 import { useParams, useRouter } from "next/navigation";
+=======
+import { useParams } from "next/navigation";
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
 import { ChevronLeft, Save, Plus, Trash2 } from "lucide-react";
 
 import {
@@ -16,6 +20,7 @@ import {
   createDependent,
   deleteDependent,
 } from "@/lib/api/payroll";
+<<<<<<< HEAD
 import type {
   SalaryConfig,
   SalaryConfigCreate,
@@ -23,6 +28,16 @@ import type {
   Dependent,
 } from "@/lib/api/payroll";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+=======
+import type { SalaryConfig, Allowance, Dependent } from "@/lib/api/payroll";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,7 +59,10 @@ import {
 
 export default function SalaryConfigPage() {
   const { id } = useParams<{ id: string }>();
+<<<<<<< HEAD
   const router = useRouter();
+=======
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
 
   const [config, setConfig] = useState<SalaryConfig | null>(null);
   const [allowances, setAllowances] = useState<Allowance[]>([]);
@@ -132,7 +150,15 @@ export default function SalaryConfigPage() {
         ...newAllowance,
       });
       setShowAllowanceDialog(false);
+<<<<<<< HEAD
       setNewAllowance({ allowance_type: "telephone", amount: 0, is_taxable: true });
+=======
+      setNewAllowance({
+        allowance_type: "telephone",
+        amount: 0,
+        is_taxable: true,
+      });
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
       loadData();
     } catch (error) {
       console.error(error);
@@ -156,7 +182,16 @@ export default function SalaryConfigPage() {
         ...newDependent,
       });
       setShowDependentDialog(false);
+<<<<<<< HEAD
       setNewDependent({ name: "", relationship: "", date_of_birth: "", tax_dependent: true });
+=======
+      setNewDependent({
+        name: "",
+        relationship: "",
+        date_of_birth: "",
+        tax_dependent: true,
+      });
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
       loadData();
     } catch (error) {
       console.error(error);
@@ -173,7 +208,14 @@ export default function SalaryConfigPage() {
   };
 
   const formatCurrency = (value: number) =>
+<<<<<<< HEAD
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
+=======
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(value);
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
 
   if (loading) {
     return (
@@ -193,14 +235,26 @@ export default function SalaryConfigPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Cấu hình lương</h1>
+<<<<<<< HEAD
           <p className="text-muted-foreground">Thiết lập lương và phụ cấp cho nhân viên</p>
+=======
+          <p className="text-muted-foreground">
+            Thiết lập lương và phụ cấp cho nhân viên
+          </p>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
         </div>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Thông tin lương cơ bản</CardTitle>
+<<<<<<< HEAD
           <CardDescription>Lương gross, lương BH và loại hợp đồng</CardDescription>
+=======
+          <CardDescription>
+            Lương gross, lương BH và loại hợp đồng
+          </CardDescription>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
@@ -211,7 +265,14 @@ export default function SalaryConfigPage() {
                 type="number"
                 value={formData.gross_salary}
                 onChange={(e) =>
+<<<<<<< HEAD
                   setFormData({ ...formData, gross_salary: parseInt(e.target.value) || 0 })
+=======
+                  setFormData({
+                    ...formData,
+                    gross_salary: parseInt(e.target.value) || 0,
+                  })
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                 }
               />
             </div>
@@ -222,7 +283,14 @@ export default function SalaryConfigPage() {
                 type="number"
                 value={formData.insurance_salary}
                 onChange={(e) =>
+<<<<<<< HEAD
                   setFormData({ ...formData, insurance_salary: parseInt(e.target.value) || 0 })
+=======
+                  setFormData({
+                    ...formData,
+                    insurance_salary: parseInt(e.target.value) || 0,
+                  })
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                 }
               />
             </div>
@@ -234,7 +302,13 @@ export default function SalaryConfigPage() {
                 id="contract_type"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={formData.contract_type}
+<<<<<<< HEAD
                 onChange={(e) => setFormData({ ...formData, contract_type: e.target.value })}
+=======
+                onChange={(e) =>
+                  setFormData({ ...formData, contract_type: e.target.value })
+                }
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
               >
                 <option value="official">Chính thức</option>
                 <option value="probation">Thử việc</option>
@@ -247,7 +321,13 @@ export default function SalaryConfigPage() {
                 id="effective_date"
                 type="date"
                 value={formData.effective_date}
+<<<<<<< HEAD
                 onChange={(e) => setFormData({ ...formData, effective_date: e.target.value })}
+=======
+                onChange={(e) =>
+                  setFormData({ ...formData, effective_date: e.target.value })
+                }
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
               />
             </div>
           </div>
@@ -271,7 +351,13 @@ export default function SalaryConfigPage() {
         </CardHeader>
         <CardContent>
           {allowances.length === 0 ? (
+<<<<<<< HEAD
             <p className="text-center text-muted-foreground py-4">Chưa có phụ cấp nào</p>
+=======
+            <p className="text-center text-muted-foreground py-4">
+              Chưa có phụ cấp nào
+            </p>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
           ) : (
             <Table>
               <TableHeader>
@@ -286,9 +372,21 @@ export default function SalaryConfigPage() {
               <TableBody>
                 {allowances.map((allowance) => (
                   <TableRow key={allowance.id}>
+<<<<<<< HEAD
                     <TableCell className="font-medium">{allowance.allowance_type}</TableCell>
                     <TableCell className="text-right">{formatCurrency(allowance.amount)}</TableCell>
                     <TableCell>{allowance.is_taxable ? "Có" : "Không"}</TableCell>
+=======
+                    <TableCell className="font-medium">
+                      {allowance.allowance_type}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(allowance.amount)}
+                    </TableCell>
+                    <TableCell>
+                      {allowance.is_taxable ? "Có" : "Không"}
+                    </TableCell>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                     <TableCell>{allowance.effective_date}</TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -320,7 +418,13 @@ export default function SalaryConfigPage() {
         </CardHeader>
         <CardContent>
           {dependents.length === 0 ? (
+<<<<<<< HEAD
             <p className="text-center text-muted-foreground py-4">Chưa có người phụ thuộc</p>
+=======
+            <p className="text-center text-muted-foreground py-4">
+              Chưa có người phụ thuộc
+            </p>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
           ) : (
             <Table>
               <TableHeader>
@@ -335,10 +439,21 @@ export default function SalaryConfigPage() {
               <TableBody>
                 {dependents.map((dependent) => (
                   <TableRow key={dependent.id}>
+<<<<<<< HEAD
                     <TableCell className="font-medium">{dependent.name}</TableCell>
                     <TableCell>{dependent.relationship}</TableCell>
                     <TableCell>{dependent.date_of_birth || "-"}</TableCell>
                     <TableCell>{dependent.tax_dependent ? "Có" : "Không"}</TableCell>
+=======
+                    <TableCell className="font-medium">
+                      {dependent.name}
+                    </TableCell>
+                    <TableCell>{dependent.relationship}</TableCell>
+                    <TableCell>{dependent.date_of_birth || "-"}</TableCell>
+                    <TableCell>
+                      {dependent.tax_dependent ? "Có" : "Không"}
+                    </TableCell>
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
@@ -368,7 +483,14 @@ export default function SalaryConfigPage() {
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={newAllowance.allowance_type}
                 onChange={(e) =>
+<<<<<<< HEAD
                   setNewAllowance({ ...newAllowance, allowance_type: e.target.value })
+=======
+                  setNewAllowance({
+                    ...newAllowance,
+                    allowance_type: e.target.value,
+                  })
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                 }
               >
                 <option value="telephone">Điện thoại</option>
@@ -385,13 +507,27 @@ export default function SalaryConfigPage() {
                 type="number"
                 value={newAllowance.amount}
                 onChange={(e) =>
+<<<<<<< HEAD
                   setNewAllowance({ ...newAllowance, amount: parseInt(e.target.value) || 0 })
+=======
+                  setNewAllowance({
+                    ...newAllowance,
+                    amount: parseInt(e.target.value) || 0,
+                  })
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                 }
               />
             </div>
           </div>
           <DialogFooter>
+<<<<<<< HEAD
             <Button variant="outline" onClick={() => setShowAllowanceDialog(false)}>
+=======
+            <Button
+              variant="outline"
+              onClick={() => setShowAllowanceDialog(false)}
+            >
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
               Hủy
             </Button>
             <Button onClick={handleAddAllowance}>Thêm</Button>
@@ -409,7 +545,13 @@ export default function SalaryConfigPage() {
               <Label>Tên</Label>
               <Input
                 value={newDependent.name}
+<<<<<<< HEAD
                 onChange={(e) => setNewDependent({ ...newDependent, name: e.target.value })}
+=======
+                onChange={(e) =>
+                  setNewDependent({ ...newDependent, name: e.target.value })
+                }
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
               />
             </div>
             <div className="space-y-2">
@@ -417,13 +559,27 @@ export default function SalaryConfigPage() {
               <Input
                 value={newDependent.relationship}
                 onChange={(e) =>
+<<<<<<< HEAD
                   setNewDependent({ ...newDependent, relationship: e.target.value })
+=======
+                  setNewDependent({
+                    ...newDependent,
+                    relationship: e.target.value,
+                  })
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
                 }
               />
             </div>
           </div>
           <DialogFooter>
+<<<<<<< HEAD
             <Button variant="outline" onClick={() => setShowDependentDialog(false)}>
+=======
+            <Button
+              variant="outline"
+              onClick={() => setShowDependentDialog(false)}
+            >
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
               Hủy
             </Button>
             <Button onClick={handleAddDependent}>Thêm</Button>
@@ -432,4 +588,8 @@ export default function SalaryConfigPage() {
       </Dialog>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> f5aeb85f5b6ec0b64bb5157cf41fa7dec8199091
