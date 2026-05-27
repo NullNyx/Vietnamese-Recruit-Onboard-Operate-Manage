@@ -115,8 +115,7 @@ def validate_candidate_fields(parsed_cv: ParsedCV) -> list[dict]:
             {
                 "field": "email",
                 "reason": (
-                    "Email must contain exactly one '@'"
-                    " with non-empty local and domain parts"
+                    "Email must contain exactly one '@' with non-empty local and domain parts"
                 ),
             }
         )
