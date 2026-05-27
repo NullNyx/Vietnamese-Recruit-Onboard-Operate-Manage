@@ -4,4 +4,3 @@ export * as departmentsApi from "./departments";
 export * as positionsApi from "./positions";
 export * as gmailApi from "./gmail";
 export * as adminApi from "./admin";
-export * as essApi from "./ess";
