@@ -297,6 +297,10 @@ class EmailSyncService:
                 user_id=user_id, history_id=latest_history_id
             )
 
+        # Classify newly synced emails (async, non-blocking)
+        if email_entities and self._settings.classification_enabled:
+            await self._classify_new_emails(user_id, email_entities)
+
         return persisted_count
 
     async def _handle_token_refresh(self, user_id: UUID) -> str | None:
@@ -449,3 +453,59 @@ class EmailSyncService:
             label_ids=metadata.label_ids or [],
             has_attachments=metadata.has_attachments,
         )
+
+    async def _classify_new_emails(
+        self, user_id: UUID, emails: list[EmailMessage]
+    ) -> None:
+        """Classify newly synced emails using the two-tier classification pipeline.
+
+        Runs classification in a non-blocking manner. Individual email
+        classification failures are logged but do not affect the sync result.
+
+        Args:
+            user_id: The UUID of the user who owns the emails.
+            emails: List of EmailMessage entities to classify.
+        """
+        try:
+            from src.modules.gmail.application.classification_service import (
+                ClassificationService,
+            )
+            from src.modules.gmail.application.rules_classifier import RulesClassifier
+            from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
+
+            rules_classifier = RulesClassifier()
+            ai_classifier = AIClassifier(self._settings)
+
+            classification_service = ClassificationService(
+                rules_classifier=rules_classifier,
+                ai_classifier=ai_classifier,
+                email_repo=self._email_repo,
+                audit_logger=self._audit_logger,
+                settings=self._settings,
+                session=self._email_repo.session,
+            )
+
+            # Only classify emails that are still unprocessed
+            unprocessed = [
+                e for e in emails if e.processing_status == "unprocessed"
+            ]
+
+            if unprocessed:
+                classified_count = await classification_service.classify_batch(
+                    user_id=user_id, emails=unprocessed
+                )
+                logger.info(
+                    "Classified %d/%d new emails for user %s",
+                    classified_count,
+                    len(unprocessed),
+                    user_id,
+                )
+        except Exception as exc:
+            # Classification failure should never break the sync pipeline
+            logger.error(
+                "Email classification failed for user %s: %s",
+                user_id,
+                exc,
+                exc_info=True,
+            )
+
