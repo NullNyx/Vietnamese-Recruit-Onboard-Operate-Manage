@@ -24,9 +24,30 @@ class EmailCategory(StrEnum):
     """Classification category for emails processed by VroomHR.
 
     Used to assign Gmail labels (VroomHR/{category}) and track
-    email processing pipeline stage.
+    email processing pipeline stage. Designed for Vietnamese HR context.
     """
 
+    # Recruitment pipeline
     recruitment = "recruitment"
     interview = "interview"
+    offer = "offer"
     onboarding = "onboarding"
+
+    # Employee relations
+    leave_request = "leave_request"
+    payroll = "payroll"
+    employee_request = "employee_request"
+    resignation = "resignation"
+    complaint = "complaint"
+
+    # External
+    vendor = "vendor"
+    insurance = "insurance"
+
+    # Internal & compliance
+    internal = "internal"
+    compliance = "compliance"
+
+    # System
+    notification = "notification"
+    uncategorized = "uncategorized"
