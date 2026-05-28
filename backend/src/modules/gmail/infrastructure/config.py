@@ -31,6 +31,8 @@ class GmailSettings(BaseSettings):
         allowed_mime_types: List of MIME types accepted for attachments.
         label_prefix: Namespace prefix for VroomHR Gmail labels.
         required_labels: Label names (without prefix) to create on connection.
+        classification_batch_concurrency: Max simultaneous AI classification calls.
+        classification_request_timeout_seconds: Overall endpoint time budget in seconds.
         audit_retention_days: Days to retain audit log entries.
         audit_subject_max_length: Maximum subject length in audit logs.
     """
@@ -72,8 +74,43 @@ class GmailSettings(BaseSettings):
     # Labels
     label_prefix: str = Field(default="VroomHR/")
     required_labels: list[str] = Field(
-        default=["processed", "recruitment", "interview", "onboarding"]
+        default=[
+            "processed",
+            # Recruitment pipeline
+            "recruitment",
+            "interview",
+            "offer",
+            "onboarding",
+            # Employee relations
+            "leave_request",
+            "payroll",
+            "employee_request",
+            "resignation",
+            "complaint",
+            # External
+            "vendor",
+            "insurance",
+            # Internal & compliance
+            "internal",
+            "compliance",
+            # System
+            "notification",
+            "uncategorized",
+        ]
     )
+
+    # Classification (AI)
+    classification_llm_base_url: str = Field(default="https://token-plan-sgp.xiaomimimo.com/v1")
+    classification_llm_api_key: str = Field(default="")
+    classification_llm_model: str = Field(default="mimo-v2.5")
+    classification_llm_timeout_seconds: int = Field(default=15, gt=0)
+    classification_llm_max_retries: int = Field(default=3, ge=1)
+    classification_confidence_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
+    classification_enabled: bool = Field(default=True)
+    # Max simultaneous AI classification calls in a batch
+    classification_batch_concurrency: int = Field(default=3, ge=1, le=10)
+    # Overall endpoint time budget for the classify request
+    classification_request_timeout_seconds: int = Field(default=60, gt=0)
 
     # Audit
     audit_retention_days: int = Field(default=90)

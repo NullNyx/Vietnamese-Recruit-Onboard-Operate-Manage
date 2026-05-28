@@ -67,23 +67,17 @@ def label_service(
 class TestValidateNamespace:
     """Tests for LabelService.validate_namespace."""
 
-    def test_accepts_label_with_vroomhr_prefix(
-        self, label_service: LabelService
-    ) -> None:
+    def test_accepts_label_with_vroomhr_prefix(self, label_service: LabelService) -> None:
         """Labels starting with VroomHR/ are valid."""
         assert label_service.validate_namespace("VroomHR/processed") is True
 
-    def test_accepts_all_required_labels(
-        self, label_service: LabelService
-    ) -> None:
+    def test_accepts_all_required_labels(self, label_service: LabelService) -> None:
         """All required VroomHR labels pass validation."""
         assert label_service.validate_namespace("VroomHR/recruitment") is True
         assert label_service.validate_namespace("VroomHR/interview") is True
         assert label_service.validate_namespace("VroomHR/onboarding") is True
 
-    def test_rejects_label_without_prefix(
-        self, label_service: LabelService
-    ) -> None:
+    def test_rejects_label_without_prefix(self, label_service: LabelService) -> None:
         """Labels without VroomHR/ prefix are invalid."""
         assert label_service.validate_namespace("INBOX") is False
 
@@ -91,17 +85,13 @@ class TestValidateNamespace:
         """Empty string is invalid."""
         assert label_service.validate_namespace("") is False
 
-    def test_rejects_similar_prefix(
-        self, label_service: LabelService
-    ) -> None:
+    def test_rejects_similar_prefix(self, label_service: LabelService) -> None:
         """Labels with similar but incorrect prefix are invalid."""
         assert label_service.validate_namespace("VroomHR") is False
         assert label_service.validate_namespace("vroomhr/processed") is False
         assert label_service.validate_namespace("Vroom/processed") is False
 
-    def test_rejects_system_labels(
-        self, label_service: LabelService
-    ) -> None:
+    def test_rejects_system_labels(self, label_service: LabelService) -> None:
         """System Gmail labels are invalid."""
         assert label_service.validate_namespace("SENT") is False
         assert label_service.validate_namespace("TRASH") is False
@@ -118,29 +108,28 @@ class TestInitializeLabels:
         gmail_adapter: AsyncMock,
         label_repo: AsyncMock,
     ) -> None:
-        """Creates all 4 required labels when none exist on Gmail."""
+        """Creates all required labels when none exist on Gmail."""
         user_id = uuid4()
         gmail_adapter.list_labels.return_value = []
         gmail_adapter.create_label.return_value = "Label_new"
 
         await label_service.initialize_labels(user_id, "token_abc")
 
+        settings = GmailSettings()  # type: ignore[call-arg]
+        expected_count = len(settings.required_labels)
+
         assert gmail_adapter.list_labels.call_count == 1
-        assert gmail_adapter.create_label.call_count == 4
+        assert gmail_adapter.create_label.call_count == expected_count
         label_repo.upsert_mappings.assert_called_once()
 
-        # Verify all 4 labels were passed to upsert
+        # Verify all labels were passed to upsert
         call_args = label_repo.upsert_mappings.call_args
         assert call_args[0][0] == user_id
         mappings = call_args[0][1]
-        assert len(mappings) == 4
+        assert len(mappings) == expected_count
         label_names = {m["label_name"] for m in mappings}
-        assert label_names == {
-            "VroomHR/processed",
-            "VroomHR/recruitment",
-            "VroomHR/interview",
-            "VroomHR/onboarding",
-        }
+        expected_names = {f"VroomHR/{name}" for name in settings.required_labels}
+        assert label_names == expected_names
 
     @pytest.mark.asyncio
     async def test_reuses_existing_labels(
@@ -151,6 +140,8 @@ class TestInitializeLabels:
     ) -> None:
         """Reuses existing label IDs without creating duplicates."""
         user_id = uuid4()
+        settings = GmailSettings()  # type: ignore[call-arg]
+        expected_count = len(settings.required_labels)
 
         # Simulate 2 labels already existing
         existing_label_1 = MagicMock()
@@ -165,18 +156,16 @@ class TestInitializeLabels:
 
         await label_service.initialize_labels(user_id, "token_abc")
 
-        # Only 2 labels should be created (interview, onboarding)
-        assert gmail_adapter.create_label.call_count == 2
+        # Only non-existing labels should be created
+        assert gmail_adapter.create_label.call_count == expected_count - 2
 
         # Verify mappings include both existing and new
         call_args = label_repo.upsert_mappings.call_args
         mappings = call_args[0][1]
-        assert len(mappings) == 4
+        assert len(mappings) == expected_count
 
         # Check existing labels reuse their IDs
-        processed_mapping = next(
-            m for m in mappings if m["label_name"] == "VroomHR/processed"
-        )
+        processed_mapping = next(m for m in mappings if m["label_name"] == "VroomHR/processed")
         assert processed_mapping["gmail_label_id"] == "Label_existing_1"
 
     @pytest.mark.asyncio
@@ -188,13 +177,12 @@ class TestInitializeLabels:
     ) -> None:
         """Does not create any labels when all already exist."""
         user_id = uuid4()
+        settings = GmailSettings()  # type: ignore[call-arg]
 
         existing_labels = []
-        for i, name in enumerate(
-            ["VroomHR/processed", "VroomHR/recruitment", "VroomHR/interview", "VroomHR/onboarding"]
-        ):
+        for i, name in enumerate(settings.required_labels):
             label = MagicMock()
-            label.name = name
+            label.name = f"VroomHR/{name}"
             label.id = f"Label_{i}"
             existing_labels.append(label)
 
@@ -215,23 +203,26 @@ class TestInitializeLabels:
         """Retries label creation up to 3 times with exponential backoff."""
         user_id = uuid4()
         gmail_adapter.list_labels.return_value = []
+        settings = GmailSettings()  # type: ignore[call-arg]
+        expected_count = len(settings.required_labels)
 
-        # Fail twice, succeed on third attempt
-        gmail_adapter.create_label.side_effect = [
+        # Fail twice, succeed on third attempt for first label,
+        # remaining labels succeed immediately
+        side_effects: list = [
             GmailFetchError("API error"),
             GmailFetchError("API error"),
             "Label_success",
-            # Remaining 3 labels succeed immediately
-            "Label_2",
-            "Label_3",
-            "Label_4",
         ]
+        # Add successes for remaining labels
+        side_effects.extend(f"Label_{i}" for i in range(expected_count - 1))
+
+        gmail_adapter.create_label.side_effect = side_effects
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
             await label_service.initialize_labels(user_id, "token_abc")
 
-        # 2 failures + 1 success for first label + 3 successes for others = 6 calls
-        assert gmail_adapter.create_label.call_count == 6
+        # 2 failures + 1 success for first label + (expected_count - 1) successes
+        assert gmail_adapter.create_label.call_count == 2 + expected_count
 
     @pytest.mark.asyncio
     async def test_skips_label_after_all_retries_exhausted(
@@ -244,24 +235,26 @@ class TestInitializeLabels:
         """Skips a label and continues with others when all retries fail."""
         user_id = uuid4()
         gmail_adapter.list_labels.return_value = []
+        settings = GmailSettings()  # type: ignore[call-arg]
+        expected_count = len(settings.required_labels)
 
         # First label fails all 3 retries, rest succeed
-        gmail_adapter.create_label.side_effect = [
+        side_effects: list = [
             GmailFetchError("API error"),
             GmailFetchError("API error"),
             GmailFetchError("API error"),
-            "Label_2",
-            "Label_3",
-            "Label_4",
         ]
+        side_effects.extend(f"Label_{i}" for i in range(expected_count - 1))
+
+        gmail_adapter.create_label.side_effect = side_effects
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
             await label_service.initialize_labels(user_id, "token_abc")
 
-        # Only 3 labels should be in mappings (first one failed)
+        # Only (expected_count - 1) labels should be in mappings (first one failed)
         call_args = label_repo.upsert_mappings.call_args
         mappings = call_args[0][1]
-        assert len(mappings) == 3
+        assert len(mappings) == expected_count - 1
 
         # Audit should log with success=False
         audit_logger.log_operation.assert_called_once()
@@ -279,6 +272,8 @@ class TestInitializeLabels:
         user_id = uuid4()
         gmail_adapter.list_labels.return_value = []
         gmail_adapter.create_label.return_value = "Label_new"
+        settings = GmailSettings()  # type: ignore[call-arg]
+        expected_count = len(settings.required_labels)
 
         await label_service.initialize_labels(user_id, "token_abc")
 
@@ -287,7 +282,7 @@ class TestInitializeLabels:
         assert call_kwargs["operation_type"] == "label_initialize"
         assert call_kwargs["user_id"] == user_id
         assert call_kwargs["success"] is True
-        assert call_kwargs["message_count"] == 4
+        assert call_kwargs["message_count"] == expected_count
 
 
 class TestAddLabel:
@@ -304,9 +299,7 @@ class TestAddLabel:
         user_id = uuid4()
         label_repo.get_label_id_by_name.return_value = "Label_123"
 
-        await label_service.add_label(
-            user_id, "msg_abc", "VroomHR/processed", "token_xyz"
-        )
+        await label_service.add_label(user_id, "msg_abc", "VroomHR/processed", "token_xyz")
 
         gmail_adapter.modify_labels.assert_called_once_with(
             access_token="token_xyz",
@@ -325,9 +318,7 @@ class TestAddLabel:
         user_id = uuid4()
 
         with pytest.raises(LabelNamespaceViolationException):
-            await label_service.add_label(
-                user_id, "msg_abc", "INBOX", "token_xyz"
-            )
+            await label_service.add_label(user_id, "msg_abc", "INBOX", "token_xyz")
 
         gmail_adapter.modify_labels.assert_not_called()
 
@@ -343,9 +334,7 @@ class TestAddLabel:
         label_repo.get_label_id_by_name.return_value = None
 
         with pytest.raises(GmailFetchError):
-            await label_service.add_label(
-                user_id, "msg_abc", "VroomHR/processed", "token_xyz"
-            )
+            await label_service.add_label(user_id, "msg_abc", "VroomHR/processed", "token_xyz")
 
         gmail_adapter.modify_labels.assert_not_called()
 
@@ -358,9 +347,7 @@ class TestAddLabel:
         """Logs audit entry after successful label addition."""
         user_id = uuid4()
 
-        await label_service.add_label(
-            user_id, "msg_abc", "VroomHR/processed", "token_xyz"
-        )
+        await label_service.add_label(user_id, "msg_abc", "VroomHR/processed", "token_xyz")
 
         audit_logger.log_operation.assert_called_once()
         call_kwargs = audit_logger.log_operation.call_args[1]
@@ -382,9 +369,7 @@ class TestRemoveLabel:
         user_id = uuid4()
         label_repo.get_label_id_by_name.return_value = "Label_456"
 
-        await label_service.remove_label(
-            user_id, "msg_abc", "VroomHR/recruitment", "token_xyz"
-        )
+        await label_service.remove_label(user_id, "msg_abc", "VroomHR/recruitment", "token_xyz")
 
         gmail_adapter.modify_labels.assert_called_once_with(
             access_token="token_xyz",
@@ -403,9 +388,7 @@ class TestRemoveLabel:
         user_id = uuid4()
 
         with pytest.raises(LabelNamespaceViolationException):
-            await label_service.remove_label(
-                user_id, "msg_abc", "SENT", "token_xyz"
-            )
+            await label_service.remove_label(user_id, "msg_abc", "SENT", "token_xyz")
 
         gmail_adapter.modify_labels.assert_not_called()
 
@@ -421,9 +404,7 @@ class TestRemoveLabel:
         label_repo.get_label_id_by_name.return_value = None
 
         with pytest.raises(GmailFetchError):
-            await label_service.remove_label(
-                user_id, "msg_abc", "VroomHR/processed", "token_xyz"
-            )
+            await label_service.remove_label(user_id, "msg_abc", "VroomHR/processed", "token_xyz")
 
         gmail_adapter.modify_labels.assert_not_called()
 
@@ -436,9 +417,7 @@ class TestRemoveLabel:
         """Logs audit entry after successful label removal."""
         user_id = uuid4()
 
-        await label_service.remove_label(
-            user_id, "msg_abc", "VroomHR/processed", "token_xyz"
-        )
+        await label_service.remove_label(user_id, "msg_abc", "VroomHR/processed", "token_xyz")
 
         audit_logger.log_operation.assert_called_once()
         call_kwargs = audit_logger.log_operation.call_args[1]
@@ -461,9 +440,7 @@ class TestBatchAddLabel:
         message_ids = ["msg_1", "msg_2", "msg_3"]
         label_repo.get_label_id_by_name.return_value = "Label_789"
 
-        await label_service.batch_add_label(
-            user_id, message_ids, "VroomHR/processed", "token_xyz"
-        )
+        await label_service.batch_add_label(user_id, message_ids, "VroomHR/processed", "token_xyz")
 
         gmail_adapter.batch_modify_labels.assert_called_once_with(
             access_token="token_xyz",
@@ -481,9 +458,7 @@ class TestBatchAddLabel:
         """Returns early without API call for empty message list."""
         user_id = uuid4()
 
-        await label_service.batch_add_label(
-            user_id, [], "VroomHR/processed", "token_xyz"
-        )
+        await label_service.batch_add_label(user_id, [], "VroomHR/processed", "token_xyz")
 
         gmail_adapter.batch_modify_labels.assert_not_called()
 
@@ -497,9 +472,7 @@ class TestBatchAddLabel:
         user_id = uuid4()
 
         with pytest.raises(LabelNamespaceViolationException):
-            await label_service.batch_add_label(
-                user_id, ["msg_1"], "INBOX", "token_xyz"
-            )
+            await label_service.batch_add_label(user_id, ["msg_1"], "INBOX", "token_xyz")
 
         gmail_adapter.batch_modify_labels.assert_not_called()
 
@@ -531,9 +504,7 @@ class TestBatchAddLabel:
         user_id = uuid4()
         message_ids = [f"msg_{i}" for i in range(50)]
 
-        await label_service.batch_add_label(
-            user_id, message_ids, "VroomHR/processed", "token_xyz"
-        )
+        await label_service.batch_add_label(user_id, message_ids, "VroomHR/processed", "token_xyz")
 
         audit_logger.log_operation.assert_called_once()
         call_kwargs = audit_logger.log_operation.call_args[1]
