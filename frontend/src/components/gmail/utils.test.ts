@@ -158,7 +158,7 @@ describe("LABEL_COLORS", () => {
     });
   });
 
-  it("has all four label categories defined", () => {
-    expect(Object.keys(LABEL_COLORS)).toHaveLength(4);
+  it("has all label categories defined", () => {
+    expect(Object.keys(LABEL_COLORS).length).toBeGreaterThanOrEqual(16);
   });
 });
