@@ -1,13 +1,28 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Fraunces, Public_Sans, Space_Grotesk } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin", "latin-ext", "vietnamese"],
-  variable: "--font-inter",
-  weight: ["300", "400", "500", "600", "700"],
+const fraunces = Fraunces({
+  subsets: ["latin", "vietnamese"],
+  variable: "--font-fraunces",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const publicSans = Public_Sans({
+  subsets: ["latin", "vietnamese"],
+  variable: "--font-public-sans",
+  weight: ["300", "400", "500", "600"],
+  display: "swap",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin", "vietnamese"],
+  variable: "--font-space-grotesk",
+  weight: ["400", "500"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -21,13 +36,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi" suppressHydrationWarning className="dark">
-      <body
-        className={`${inter.variable} font-sans antialiased`}
-        style={{
-          fontFamily: "var(--font-inter), ui-sans-serif, system-ui, sans-serif",
-        }}
-      >
+    <html
+      lang="vi"
+      suppressHydrationWarning
+      className={`${fraunces.variable} ${publicSans.variable} ${spaceGrotesk.variable}`}
+    >
+      <body className="font-sans antialiased">
         <Providers>
           {children}
           <Toaster

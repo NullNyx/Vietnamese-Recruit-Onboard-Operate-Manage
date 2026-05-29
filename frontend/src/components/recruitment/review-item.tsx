@@ -50,12 +50,10 @@ const PROCESSING_STATUS_LABELS: Record<string, string> = {
 };
 
 const PROCESSING_STATUS_COLORS: Record<string, string> = {
-  needs_review:
-    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  failed: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-  completed:
-    "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  pending: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+  needs_review: "bg-yellow-50 text-yellow-600",
+  failed: "bg-red-100 text-red-700",
+  completed: "bg-green-100 text-green-700",
+  pending: "bg-muted text-muted-foreground",
 };
 
 // ---------------------------------------------------------------------------
@@ -66,7 +64,7 @@ export interface ReviewItemProps {
   item: CVReviewItem;
   onSubmitCorrection: (
     cvDocumentId: string,
-    data: ParsedCVInput
+    data: ParsedCVInput,
   ) => Promise<void>;
   onRetryParse: (cvDocumentId: string) => Promise<void>;
   onDismiss: (cvDocumentId: string) => Promise<void>;
@@ -93,13 +91,12 @@ export function ReviewItem({
     ValidationError[] | null
   >(null);
 
-  const candidateName =
-    item.parsed_cv_data?.name || "Không rõ tên";
+  const candidateName = item.parsed_cv_data?.name || "Không rõ tên";
   const statusLabel =
     PROCESSING_STATUS_LABELS[item.processing_status] ?? item.processing_status;
   const statusColor =
     PROCESSING_STATUS_COLORS[item.processing_status] ??
-    "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    "bg-muted text-muted-foreground";
 
   // --- Handlers ---
 
@@ -141,7 +138,7 @@ export function ReviewItem({
         (err as { body?: { errors?: ValidationError[] } }).body?.errors
       ) {
         setServerErrors(
-          (err as { body: { errors: ValidationError[] } }).body.errors
+          (err as { body: { errors: ValidationError[] } }).body.errors,
         );
       }
       throw err;
@@ -188,7 +185,7 @@ export function ReviewItem({
               <ChevronDown
                 className={cn(
                   "h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200",
-                  isOpen && "rotate-180"
+                  isOpen && "rotate-180",
                 )}
               />
             </button>
@@ -283,9 +280,7 @@ export function ReviewItem({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={dismissLoading}>
-              Hủy
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={dismissLoading}>Hủy</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDismiss}
               disabled={dismissLoading}

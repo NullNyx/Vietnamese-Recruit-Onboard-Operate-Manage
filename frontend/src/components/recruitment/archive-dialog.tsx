@@ -41,9 +41,9 @@ export function ArchiveDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-start gap-3 rounded-md border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-900 dark:bg-yellow-950">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-600 dark:text-yellow-400" />
-          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+        <div className="flex items-start gap-3 rounded-md border border-yellow-200 bg-yellow-50 p-3">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-600" />
+          <p className="text-sm text-yellow-800">
             Ứng viên sẽ được chuyển sang trạng thái lưu trữ. Bạn có thể khôi
             phục ứng viên sau nếu cần.
           </p>
