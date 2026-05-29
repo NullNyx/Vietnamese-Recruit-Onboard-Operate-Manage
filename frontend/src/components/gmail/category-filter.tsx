@@ -54,8 +54,8 @@ export function CategoryFilter({
         className={cn(
           "flex items-center justify-between rounded-md px-3 py-1.5 text-sm transition-colors",
           selectedCategory === null
-            ? "bg-white/[0.08] text-[#f7f8f8] font-medium"
-            : "text-[#8a8f98] hover:bg-white/[0.04] hover:text-[#c8cad0]",
+            ? "bg-primary/10 text-foreground font-medium"
+            : "text-muted-foreground hover:bg-accent hover:text-foreground",
         )}
       >
         <span className="flex items-center gap-2">
@@ -66,8 +66,8 @@ export function CategoryFilter({
           className={cn(
             "min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-xs",
             selectedCategory === null
-              ? "bg-white/[0.12] text-[#f7f8f8]"
-              : "bg-white/[0.06] text-[#62666d]",
+              ? "bg-primary/10 text-foreground"
+              : "bg-muted text-muted-foreground",
           )}
         >
           {totalCount}
@@ -84,7 +84,7 @@ export function CategoryFilter({
 
         return (
           <div key={group.label} className="mt-2">
-            <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#62666d]">
+            <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {group.label}
             </p>
             {groupCategories.map((category) => {
@@ -104,8 +104,8 @@ export function CategoryFilter({
                   className={cn(
                     "flex w-full items-center justify-between rounded-md px-3 py-1.5 text-sm transition-colors",
                     selectedCategory === category
-                      ? "bg-white/[0.08] text-[#f7f8f8] font-medium"
-                      : "text-[#8a8f98] hover:bg-white/[0.04] hover:text-[#c8cad0]",
+                      ? "bg-primary/10 text-foreground font-medium"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
                   <span className="flex items-center gap-2 min-w-0">
@@ -116,8 +116,8 @@ export function CategoryFilter({
                     className={cn(
                       "min-w-[20px] shrink-0 rounded-full px-1.5 py-0.5 text-center text-xs",
                       selectedCategory === category
-                        ? "bg-white/[0.12] text-[#f7f8f8]"
-                        : "bg-white/[0.06] text-[#62666d]",
+                        ? "bg-primary/10 text-foreground"
+                        : "bg-muted text-muted-foreground",
                     )}
                   >
                     {count}

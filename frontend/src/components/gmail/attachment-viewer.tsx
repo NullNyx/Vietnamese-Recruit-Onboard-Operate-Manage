@@ -35,7 +35,7 @@ function getMimeTypeIcon(mimeType: string) {
     // eslint-disable-next-line jsx-a11y/alt-text -- This is a Lucide icon component, not an <img> tag
     return <Image className="h-5 w-5 text-green-500" />;
   }
-  return <File className="h-5 w-5 text-gray-500" />;
+  return <File className="h-5 w-5 text-muted-foreground" />;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,8 +85,8 @@ export function AttachmentViewer({
   // Loading state
   if (loading) {
     return (
-      <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4">
-        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+      <div className="border-t border-border px-6 py-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>Đang tải tệp đính kèm...</span>
         </div>
@@ -97,13 +97,13 @@ export function AttachmentViewer({
   // Error state
   if (error) {
     return (
-      <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4">
+      <div className="border-t border-border px-6 py-4">
         <div className="flex flex-col items-start gap-2">
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          <p className="text-sm text-destructive">{error}</p>
           <button
             type="button"
             onClick={fetchAttachments}
-            className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-accent transition-colors"
           >
             Thử lại
           </button>
@@ -118,9 +118,9 @@ export function AttachmentViewer({
   }
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4">
+    <div className="border-t border-border px-6 py-4">
       {/* Header */}
-      <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+      <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
         <Paperclip className="h-4 w-4" />
         <span>Tệp đính kèm ({attachments.length})</span>
       </div>
@@ -132,14 +132,14 @@ export function AttachmentViewer({
             key={attachment.attachment_id}
             href={`/api/gmail/messages/${messageId}/attachments/${attachment.attachment_id}/download`}
             download={attachment.filename}
-            className="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 hover:bg-accent transition-colors"
           >
             {getMimeTypeIcon(attachment.mime_type)}
             <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+              <p className="truncate text-sm font-medium text-foreground">
                 {attachment.filename}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-muted-foreground">
                 {formatFileSize(attachment.size_bytes)}
               </p>
             </div>

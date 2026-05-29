@@ -40,17 +40,11 @@ function getValueColorClass(type: MetricType, rawValue?: number): string {
 
   switch (type) {
     case "success_rate":
-      return rawValue > 0.8
-        ? "text-green-600 dark:text-green-400"
-        : "";
+      return rawValue > 0.8 ? "text-green-600" : "";
     case "failure_rate":
-      return rawValue > 0.2
-        ? "text-red-600 dark:text-red-400"
-        : "";
+      return rawValue > 0.2 ? "text-red-600" : "";
     case "queue_depth":
-      return rawValue > 50
-        ? "text-amber-600 dark:text-amber-400"
-        : "";
+      return rawValue > 50 ? "text-amber-600" : "";
     default:
       return "";
   }

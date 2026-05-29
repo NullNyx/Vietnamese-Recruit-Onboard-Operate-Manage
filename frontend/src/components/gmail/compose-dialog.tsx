@@ -171,14 +171,14 @@ export function ComposeDialog({ open, onClose, replyTo }: ComposeDialogProps) {
       />
 
       {/* Dialog */}
-      <div className="relative z-10 flex max-h-[90vh] w-full flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl sm:max-w-[640px]">
+      <div className="relative z-10 flex max-h-[90vh] w-full flex-col rounded-lg bg-card shadow-xl sm:max-w-[640px]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             aria-label="Đóng"
           >
             <X className="h-5 w-5" />
@@ -191,7 +191,7 @@ export function ComposeDialog({ open, onClose, replyTo }: ComposeDialogProps) {
           <div>
             <label
               htmlFor="compose-to"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-sm font-medium text-foreground"
             >
               Đến <span className="text-red-500">*</span>
             </label>
@@ -201,7 +201,7 @@ export function ComposeDialog({ open, onClose, replyTo }: ComposeDialogProps) {
               value={to}
               onChange={(e) => setTo(e.target.value)}
               placeholder="email@example.com, email2@example.com"
-              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -209,7 +209,7 @@ export function ComposeDialog({ open, onClose, replyTo }: ComposeDialogProps) {
           <div>
             <label
               htmlFor="compose-cc"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-sm font-medium text-foreground"
             >
               CC
             </label>
@@ -219,7 +219,7 @@ export function ComposeDialog({ open, onClose, replyTo }: ComposeDialogProps) {
               value={cc}
               onChange={(e) => setCc(e.target.value)}
               placeholder="email@example.com"
-              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -227,7 +227,7 @@ export function ComposeDialog({ open, onClose, replyTo }: ComposeDialogProps) {
           <div>
             <label
               htmlFor="compose-subject"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-sm font-medium text-foreground"
             >
               Tiêu đề <span className="text-red-500">*</span>
             </label>
@@ -235,14 +235,12 @@ export function ComposeDialog({ open, onClose, replyTo }: ComposeDialogProps) {
               id="compose-subject"
               type="text"
               value={subject}
-              onChange={(e) =>
-                setSubject(e.target.value.slice(0, 500))
-              }
+              onChange={(e) => setSubject(e.target.value.slice(0, 500))}
               maxLength={500}
               placeholder="Tiêu đề email"
-              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
-            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               {subject.length}/500
             </p>
           </div>
@@ -251,7 +249,7 @@ export function ComposeDialog({ open, onClose, replyTo }: ComposeDialogProps) {
           <div>
             <label
               htmlFor="compose-body"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-sm font-medium text-foreground"
             >
               Nội dung
             </label>
@@ -261,17 +259,17 @@ export function ComposeDialog({ open, onClose, replyTo }: ComposeDialogProps) {
               onChange={(e) => setBody(e.target.value)}
               rows={8}
               placeholder="Nhập nội dung email..."
-              className="mt-1 block w-full resize-y rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
           {/* Quoted original in reply mode */}
           {replyTo && replyTo.snippet && (
             <div className="mt-2">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <p className="text-xs font-medium text-muted-foreground mb-1">
                 Email gốc:
               </p>
-              <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 italic">
+              <blockquote className="border-l-4 border-border bg-muted px-3 py-2 text-sm text-muted-foreground italic">
                 {replyTo.snippet}
               </blockquote>
             </div>
@@ -279,18 +277,18 @@ export function ComposeDialog({ open, onClose, replyTo }: ComposeDialogProps) {
 
           {/* Error message */}
           {error && (
-            <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-2">
-              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+            <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2">
+              <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 border-t border-gray-200 dark:border-gray-700 px-4 py-3">
+        <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors"
           >
             Hủy
           </button>
@@ -298,7 +296,7 @@ export function ComposeDialog({ open, onClose, replyTo }: ComposeDialogProps) {
             type="button"
             onClick={handleSend}
             disabled={!canSend}
-            className="flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+            className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
           >
             {sending ? (
               <Loader2 className="h-4 w-4 animate-spin" />

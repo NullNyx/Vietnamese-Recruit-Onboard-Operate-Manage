@@ -70,18 +70,18 @@ export function AIClassificationBanner({
     : stats.sortedCategories.slice(0, 5);
 
   return (
-    <div className="border-b border-white/[0.06] bg-gradient-to-r from-[#0f1115] to-[#12141a]">
+    <div className="bg-card border-b border-border">
       {/* AI Status Header */}
       <div className="flex items-center justify-between px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#e4f222]/10">
-            <Sparkles className="h-3.5 w-3.5 text-[#e4f222]" />
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium text-[#c8cad0]">
+            <span className="text-xs font-medium text-muted-foreground">
               AI phân loại
             </span>
-            <span className="rounded-full bg-[#e4f222]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#e4f222]">
+            <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
               {stats.classified}/{stats.total}
             </span>
           </div>
@@ -97,8 +97,8 @@ export function AIClassificationBanner({
               className={cn(
                 "flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
                 classifying
-                  ? "bg-[#e4f222]/5 text-[#e4f222]/50 cursor-not-allowed"
-                  : "bg-[#e4f222]/10 text-[#e4f222] hover:bg-[#e4f222]/20",
+                  ? "bg-primary/5 text-primary/50 cursor-not-allowed"
+                  : "bg-primary/10 text-primary hover:bg-primary/20",
               )}
             >
               <Sparkles
@@ -115,7 +115,7 @@ export function AIClassificationBanner({
             <button
               type="button"
               onClick={() => onCategoryChange(null)}
-              className="flex items-center gap-1 rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] font-medium text-[#c8cad0] hover:bg-white/[0.12] transition-colors"
+              className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-accent transition-colors"
             >
               ✕ Bỏ lọc
             </button>
@@ -133,8 +133,8 @@ export function AIClassificationBanner({
             className={cn(
               "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
               selectedCategory === null
-                ? "bg-white/[0.12] text-[#f7f8f8] ring-1 ring-white/[0.2]"
-                : "bg-white/[0.04] text-[#8a8f98] hover:bg-white/[0.08] hover:text-[#c8cad0]",
+                ? "bg-primary/10 text-foreground ring-1 ring-primary/20"
+                : "bg-muted text-muted-foreground hover:bg-accent",
             )}
           >
             Tất cả
@@ -158,8 +158,8 @@ export function AIClassificationBanner({
                 className={cn(
                   "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
                   selectedCategory === category
-                    ? "bg-white/[0.12] text-[#f7f8f8] ring-1 ring-white/[0.2]"
-                    : "bg-white/[0.04] text-[#8a8f98] hover:bg-white/[0.08] hover:text-[#c8cad0]",
+                    ? "bg-primary/10 text-foreground ring-1 ring-primary/20"
+                    : "bg-muted text-muted-foreground hover:bg-accent",
                 )}
               >
                 <span>{meta.icon}</span>
@@ -181,8 +181,8 @@ export function AIClassificationBanner({
               className={cn(
                 "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
                 selectedCategory === "uncategorized"
-                  ? "bg-white/[0.12] text-[#f7f8f8] ring-1 ring-white/[0.2]"
-                  : "bg-white/[0.04] text-[#8a8f98] hover:bg-white/[0.08] hover:text-[#c8cad0]",
+                  ? "bg-primary/10 text-foreground ring-1 ring-primary/20"
+                  : "bg-muted text-muted-foreground hover:bg-accent",
               )}
             >
               <span>❓</span>
@@ -198,7 +198,7 @@ export function AIClassificationBanner({
             <button
               type="button"
               onClick={() => setExpanded(!expanded)}
-              className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[11px] text-[#62666d] hover:text-[#8a8f98] transition-colors"
+              className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
               {expanded ? (
                 <>

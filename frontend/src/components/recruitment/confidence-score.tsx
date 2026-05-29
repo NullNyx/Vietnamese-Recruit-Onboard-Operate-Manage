@@ -17,7 +17,7 @@ function getProgressColor(percentage: number): string {
     return "bg-destructive";
   }
   if (percentage < 75) {
-    return "bg-yellow-500 dark:bg-yellow-400";
+    return "bg-yellow-500";
   }
   return "bg-primary";
 }

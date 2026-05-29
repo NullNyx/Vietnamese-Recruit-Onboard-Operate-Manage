@@ -27,12 +27,12 @@ export function SyncIndicator({
   const [syncing, setSyncing] = React.useState(false);
   const [cooldown, setCooldown] = React.useState(0);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(
-    null
+    null,
   );
 
   const cooldownRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const successTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null
+    null,
   );
 
   // Cleanup timers on unmount
@@ -88,7 +88,7 @@ export function SyncIndicator({
           startCooldown(cooldownSeconds);
           addToast(
             `Đồng bộ quá nhanh. Vui lòng đợi ${cooldownSeconds} giây.`,
-            "error"
+            "error",
           );
           return;
         }
@@ -142,23 +142,21 @@ export function SyncIndicator({
         className={cn(
           "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
           isDisabled
-            ? "cursor-not-allowed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500"
-            : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            ? "cursor-not-allowed border-border bg-muted text-muted-foreground"
+            : "border-border bg-card text-foreground hover:bg-accent",
         )}
         aria-label="Đồng bộ email"
       >
         {syncing ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          <RefreshCw
-            className={cn("h-4 w-4", syncing && "animate-spin")}
-          />
+          <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
         )}
         {cooldown > 0 ? `Đợi ${cooldown}s` : "Đồng bộ"}
       </button>
 
       {successMessage && (
-        <span className="text-sm text-green-600 dark:text-green-400">{successMessage}</span>
+        <span className="text-sm text-green-600">{successMessage}</span>
       )}
     </div>
   );
