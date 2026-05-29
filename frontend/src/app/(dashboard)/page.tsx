@@ -77,7 +77,7 @@ export default function DashboardPage() {
     <div className="space-y-8 max-w-[1440px] mx-auto overflow-x-hidden">
       {/* ─── Welcome ─────────────────────────────────────────────────────── */}
       <div>
-        <h1 className="font-heading text-[24px] font-medium text-[#1A1C1E]">
+        <h1 className="font-heading text-[24px] font-medium text-foreground">
           {greeting()}
           {user?.email ? `, ${user.email.split("@")[0]}` : ""}
         </h1>
@@ -110,7 +110,7 @@ export default function DashboardPage() {
 
       {/* ─── Quick Actions ───────────────────────────────────────────────── */}
       <div className="space-y-4">
-        <h2 className="font-heading text-lg font-medium text-[#1A1C1E]">
+        <h2 className="font-heading text-lg font-medium text-foreground">
           Quick Actions
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

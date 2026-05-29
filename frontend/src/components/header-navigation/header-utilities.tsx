@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { CurrentUser } from "@/hooks/use-current-user";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export interface HeaderUtilitiesProps {
   onSearchClick: () => void;
@@ -58,6 +59,9 @@ export function HeaderUtilities({
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>
+
+      {/* Theme toggle */}
+      <ThemeToggle />
 
       {/* Notifications indicator */}
       <Button
