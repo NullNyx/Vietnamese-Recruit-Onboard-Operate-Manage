@@ -13,7 +13,6 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { navItems, adminNavSection } from "@/lib/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -35,20 +34,23 @@ export function MobileNav() {
       <Button
         variant="ghost"
         size="icon"
-        className="min-h-[44px] min-w-[44px] md:hidden"
+        className="min-h-[44px] min-w-[44px] text-[#1A1C1E] hover:bg-[#F7F5F2] md:hidden"
         onClick={() => setOpen(true)}
         aria-label="Mở menu điều hướng"
       >
         <Menu className="h-6 w-6" aria-hidden="true" />
       </Button>
 
-      <SheetContent side="left" className="flex w-72 flex-col p-0">
+      <SheetContent
+        side="left"
+        className="flex w-72 flex-col border-r border-[#6C7278]/20 bg-white p-0"
+      >
         <SheetHeader className="px-4 pt-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#B8422E] text-sm font-bold text-white">
               V
             </div>
-            <SheetTitle className="text-lg font-semibold">
+            <SheetTitle className="text-lg font-semibold text-[#1A1C1E]">
               Vroom HR
             </SheetTitle>
           </div>
@@ -57,10 +59,13 @@ export function MobileNav() {
           </SheetDescription>
         </SheetHeader>
 
-        <Separator className="mt-4" />
+        <div className="mx-4 mt-4 h-px bg-[#6C7278]/10" />
 
         {/* Navigation links */}
-        <nav className="flex-1 space-y-1 px-2 py-4" aria-label="Điều hướng chính">
+        <nav
+          className="flex-1 space-y-0.5 px-2 py-4"
+          aria-label="Điều hướng chính"
+        >
           {navItems.map((item) => {
             const isActive =
               item.href === "/"
@@ -73,10 +78,10 @@ export function MobileNav() {
                 href={item.href}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "flex min-h-[44px] items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  "flex min-h-[44px] items-center gap-3 px-3 py-2 text-[13px] font-medium transition-colors rounded-none",
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-muted"
+                    ? "border-l-[3px] border-[#B8422E] text-[#1A1C1E] bg-[#F7F5F2]"
+                    : "border-l-[3px] border-transparent text-[#6C7278] hover:bg-[#F7F5F2] hover:text-[#1A1C1E]",
                 )}
               >
                 <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -88,10 +93,13 @@ export function MobileNav() {
           {/* Admin navigation section — only visible to admin users */}
           {isAdmin && (
             <>
-              <Separator className="my-3" />
-              <div className="flex items-center gap-2 px-3 py-1">
-                <adminNavSection.icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="my-3 h-px bg-[#6C7278]/10" />
+              <div className="flex items-center gap-2 px-3 py-1.5">
+                <adminNavSection.icon
+                  className="h-3.5 w-3.5 text-[#6C7278]"
+                  aria-hidden="true"
+                />
+                <span className="text-[10px] font-medium uppercase tracking-widest text-[#6C7278]">
                   {adminNavSection.title}
                 </span>
               </div>
@@ -104,13 +112,16 @@ export function MobileNav() {
                     href={item.href}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "flex min-h-[44px] items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                      "flex min-h-[44px] items-center gap-3 px-3 py-2 text-[13px] font-medium transition-colors rounded-none",
                       isActive
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : "text-sidebar-foreground hover:bg-muted"
+                        ? "border-l-[3px] border-[#B8422E] text-[#1A1C1E] bg-[#F7F5F2]"
+                        : "border-l-[3px] border-transparent text-[#6C7278] hover:bg-[#F7F5F2] hover:text-[#1A1C1E]",
                     )}
                   >
-                    <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                    <item.icon
+                      className="h-5 w-5 shrink-0"
+                      aria-hidden="true"
+                    />
                     <span>{item.label}</span>
                   </Link>
                 );
@@ -120,17 +131,25 @@ export function MobileNav() {
         </nav>
 
         {/* Bottom section */}
-        <div className="mt-auto px-2 pb-4">
-          <Separator className="mb-4" />
-          <Button
-            variant="ghost"
+        <div className="mt-auto border-t border-[#6C7278]/10 px-2 pb-4 pt-3">
+          {user && (
+            <div className="px-3 py-1.5 mb-2">
+              <p className="text-[12px] font-medium text-[#1A1C1E] truncate">
+                {user.email?.split("@")[0]}
+              </p>
+              <p className="text-[10px] text-[#6C7278] truncate">
+                {user.email}
+              </p>
+            </div>
+          )}
+          <button
             onClick={handleLogout}
-            className="min-h-[44px] w-full justify-start gap-3 text-sidebar-foreground hover:bg-muted"
+            className="flex min-h-[44px] w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-[#6C7278] transition-colors hover:bg-[#F7F5F2] hover:text-[#B8422E]"
             aria-label="Đăng xuất"
           >
             <LogOut className="h-5 w-5" aria-hidden="true" />
             <span>Đăng xuất</span>
-          </Button>
+          </button>
         </div>
       </SheetContent>
     </Sheet>
