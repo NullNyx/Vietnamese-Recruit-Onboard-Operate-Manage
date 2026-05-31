@@ -1,0 +1,99 @@
+"""ARQ worker configuration for the Onboarding event consumer.
+
+Defines the ARQ worker entrypoint that consumes ``candidate_accepted`` events
+enqueued by the recruitment-side publisher and drives the onboarding flow via
+:func:`~src.modules.onboarding.container.process_candidate_accepted`.
+
+Unlike the Gmail worker (a cron poller), this worker is a queue *consumer*: it
+registers the onboarding task functions returned by
+:func:`~src.modules.onboarding.container.get_arq_tasks` and lets ARQ deliver
+jobs to them. ``max_tries`` bounds the per-job retry count at 3 so transient
+failures are retried up to three times before the consumer records the final
+failure in the audit log (R1.7).
+
+Usage:
+    arq src.modules.onboarding.worker.OnboardingWorkerSettings
+"""
+
+from __future__ import annotations
+
+import logging
+
+from dotenv import load_dotenv
+
+# Load .env before any settings are instantiated (same pattern as main.py and
+# the Gmail worker).
+load_dotenv()
+
+from arq.connections import RedisSettings
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+
+from src.modules.onboarding.container import get_arq_tasks
+from src.modules.onboarding.infrastructure.config import OnboardingSettings
+
+logger = logging.getLogger(__name__)
+
+
+async def startup(ctx: dict) -> None:
+    """ARQ worker startup hook.
+
+    Builds the shared async database engine and session factory and stores them
+    in the worker context dict. The consumer task reads ``ctx["session_maker"]``
+    to open a fresh session per job (see ``process_candidate_accepted``).
+
+    Args:
+        ctx: The ARQ worker context dictionary.
+    """
+    onboarding_settings = OnboardingSettings()
+
+    engine = create_async_engine(onboarding_settings.database_url, echo=False)
+    session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    ctx["engine"] = engine
+    ctx["session_maker"] = session_maker
+    ctx["onboarding_settings"] = onboarding_settings
+
+    logger.info("Onboarding ARQ worker started successfully")
+
+
+async def shutdown(ctx: dict) -> None:
+    """ARQ worker shutdown hook.
+
+    Disposes the async database engine created at startup so its connection
+    pool is released cleanly.
+
+    Args:
+        ctx: The ARQ worker context dictionary.
+    """
+    engine: AsyncEngine | None = ctx.get("engine")
+    if engine:
+        await engine.dispose()
+
+    logger.info("Onboarding ARQ worker shut down")
+
+
+# Load settings for the Redis connection configuration.
+_onboarding_settings = OnboardingSettings()
+
+
+class OnboardingWorkerSettings:
+    """ARQ worker settings for the Onboarding event consumer.
+
+    Registers the onboarding task functions, configures the Redis connection
+    from the shared ``redis_url``, wires the worker lifecycle hooks
+    (startup/shutdown), and bounds per-job retries at 3 (R1.7).
+    """
+
+    functions = get_arq_tasks()
+
+    on_startup = startup
+    on_shutdown = shutdown
+
+    redis_settings = RedisSettings.from_dsn(_onboarding_settings.redis_url)
+
+    max_tries = 3

@@ -82,11 +82,14 @@ async def get_candidate_service(
     cv_document_repo = CVDocumentRepository(session)
     minio_client = _get_minio_client()
 
+    from src.modules.recruitment.container import get_event_publisher
+
     return CandidateService(
         candidate_repo=candidate_repo,
         cv_document_repo=cv_document_repo,
         minio_client=minio_client,
         session=session,
+        event_publisher=get_event_publisher(),
         user_id=current_user.id,
     )
 

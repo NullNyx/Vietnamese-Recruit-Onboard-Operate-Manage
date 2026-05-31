@@ -16,16 +16,18 @@ from __future__ import annotations
 from functools import lru_cache
 from uuid import UUID
 
+from arq.connections import RedisSettings
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.identity.container import get_current_user, get_db_session
+from src.modules.identity.container import get_current_user, get_db_session, get_settings
 from src.modules.identity.domain.entities import User
 from src.modules.recruitment.application.candidate_service import CandidateService
 from src.modules.recruitment.application.cv_processor import CVProcessorService
 from src.modules.recruitment.application.intent_classifier import IntentClassifierService
 from src.modules.recruitment.application.review_service import ReviewService
 from src.modules.recruitment.infrastructure.config import RecruitmentSettings
+from src.modules.recruitment.infrastructure.event_publisher import ArqDomainEventPublisher
 from src.modules.recruitment.infrastructure.llm_adapter import LLMAdapter
 from src.modules.recruitment.infrastructure.minio_client import RecruitmentMinIOClient
 from src.modules.recruitment.infrastructure.ocr_adapter import OCRAdapter
@@ -93,6 +95,23 @@ def get_pii_redactor() -> PIIRedactor:
     return PIIRedactor()
 
 
+@lru_cache
+def get_event_publisher() -> ArqDomainEventPublisher:
+    """Create and cache the ARQ-backed domain event publisher singleton.
+
+    The publisher enqueues ``process_candidate_accepted`` ARQ jobs for the
+    ``candidate_accepted`` domain event emitted by
+    ``CandidateService.accept_candidate``, bridging recruitment to the
+    onboarding consumer. The underlying ARQ Redis pool is created lazily on the
+    first publish, so constructing this singleton opens no connection.
+
+    Returns:
+        An ArqDomainEventPublisher configured with the shared Redis DSN.
+    """
+    redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
+    return ArqDomainEventPublisher(redis_settings=redis_settings)
+
+
 # ---------------------------------------------------------------------------
 # FastAPI dependency functions for services
 # ---------------------------------------------------------------------------
@@ -120,6 +139,7 @@ async def get_candidate_service(
         cv_document_repo=cv_document_repo,
         minio_client=minio_client,
         session=session,
+        event_publisher=get_event_publisher(),
         user_id=current_user.id,
     )
 
