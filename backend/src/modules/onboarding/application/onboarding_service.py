@@ -1,0 +1,818 @@
+"""Application service for the Onboarding module.
+
+Hosts :class:`OnboardingService`, the application service that drives an
+accepted Candidate through onboarding. This file implements the
+event-consumption creation flow (``start_from_event``) and the HR-facing task
+completion + automatic activation flow (``complete_task``); the read models are
+added by later tasks to the same class.
+
+Transaction ownership
+----------------------
+The repositories used here (``OnboardingProcessRepository``,
+``OnboardingTaskRepository``, ``OnboardingAuditRepository`` and the reused
+``EmployeeRepository``) ``add``/``flush`` but never ``commit``. This service
+owns the transaction boundary: ``start_from_event`` performs the whole
+new-process creation (employee + process + checklist + creation audit) in a
+single transaction and commits once, rolling back on any failure so no partial
+employee or process is ever persisted (R1.5). The duplicate-detection path
+writes its audit entry in its own committed transaction and returns the
+existing process unchanged (R1.3, R1.4, R2.7). ``complete_task`` locks the
+process row, marks the task ``done``, writes the status-change audit, and (when
+all tasks are done) completes the process and activates the employee with an
+activation audit entry — all in one transaction committed once, rolling back
+and raising on any failure (R5.5, R5.6, R8.2).
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from uuid import UUID
+
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.modules.employee.domain.entities import Employee
+from src.modules.employee.infrastructure.employee_repository import EmployeeRepository
+from src.modules.identity.domain.entities import User, UserRole
+from src.modules.onboarding.domain.entities import (
+    OnboardingAuditLog,
+    OnboardingProcess,
+    OnboardingTask,
+)
+from src.modules.onboarding.domain.enums import (
+    CHECKLIST_TEMPLATE,
+    OnboardingStatus,
+    OnboardingTaskStatus,
+)
+from src.modules.onboarding.domain.exceptions import (
+    AuditWriteError,
+    InvalidTaskStatusError,
+    OnboardingActivationError,
+    OnboardingAuthorizationError,
+    OnboardingError,
+    OnboardingProcessNotFoundError,
+    OnboardingTaskNotFoundError,
+)
+from src.modules.onboarding.infrastructure.audit_repository import OnboardingAuditRepository
+from src.modules.onboarding.infrastructure.process_repository import OnboardingProcessRepository
+from src.modules.onboarding.infrastructure.task_repository import OnboardingTaskRepository
+
+logger = logging.getLogger(__name__)
+
+# Number of attempts to allocate a unique ``NV-XXX`` employee code before
+# giving up. ``EmployeeRepository.get_next_code`` derives the next code from the
+# current MAX code; under a race two concurrent creations can derive the same
+# code and one INSERT loses on the ``employee_code`` unique constraint. Each
+# retry re-derives the code (the committed colliding row is now visible under
+# READ COMMITTED), so a small number of attempts is sufficient in practice.
+_EMPLOYEE_CODE_MAX_ATTEMPTS = 5
+
+# Audit operation types written by the creation flow.
+_OP_PROCESS_CREATED = "process_created"
+_OP_DUPLICATE_DETECTED = "duplicate_detected"
+
+# Audit operation types written by the completion / activation flow.
+_OP_TASK_COMPLETED = "task_completed"
+_OP_EMPLOYEE_ACTIVATED = "employee_activated"
+
+# Maximum number of OnboardingProcess records returned per list response (the
+# pagination cap, R6.2). Mirrors ``OnboardingSettings.list_page_size_max`` /
+# the design's ``ONBOARDING_LIST_PAGE_SIZE_MAX``; kept as a module constant so
+# the read model enforces the cap without changing the service constructor.
+_LIST_PAGE_SIZE_MAX = 50
+
+
+@dataclass(frozen=True)
+class ProcessListItem:
+    """A single onboarding process entry in the paginated list read model.
+
+    Projects one ``OnboardingProcess`` together with its checklist progress for
+    the list endpoint (R6.1). ``completed_count`` is the number of ``done``
+    tasks and ``total_count`` is the total number of tasks in the process's
+    checklist.
+
+    Attributes:
+        process_id: The OnboardingProcess identifier.
+        status: The process status (``in_progress`` or ``complete``).
+        employee_id: The linked Employee record identifier.
+        completed_count: Number of tasks with status ``done``.
+        total_count: Total number of tasks in the checklist.
+    """
+
+    process_id: UUID
+    status: str
+    employee_id: UUID
+    completed_count: int
+    total_count: int
+
+
+@dataclass(frozen=True)
+class PaginatedProcesses:
+    """A page of onboarding process list items plus pagination metadata.
+
+    ``items`` holds at most ``page_size`` (capped at 50, R6.2) list items for
+    the requested page, while ``total`` is the true count of processes matching
+    the request regardless of pagination, so callers can report accurate totals
+    even when a page is empty (an empty ``items`` list with ``total == 0`` when
+    nothing matches).
+
+    Attributes:
+        items: The list items for the requested page (length ``<= page_size``).
+        total: The true count of matching processes (ignoring pagination).
+        page: The 1-indexed page number that was requested.
+        page_size: The effective page size applied (capped at 50).
+    """
+
+    items: list[ProcessListItem]
+    total: int
+    page: int
+    page_size: int
+
+
+@dataclass(frozen=True)
+class ProcessTaskDetail:
+    """A single task projected for the process detail read model.
+
+    Attributes:
+        id: The OnboardingTask identifier.
+        name: The task's human-readable display name.
+        status: The task status (``pending`` or ``done``).
+        order_index: The task's position in the fixed checklist (0-based).
+    """
+
+    id: UUID
+    name: str
+    status: str
+    order_index: int
+
+
+@dataclass(frozen=True)
+class ProcessDetail:
+    """Full detail of one onboarding process including its checklist.
+
+    Exposes the same summary fields as :class:`ProcessListItem` plus the
+    ordered list of tasks (each with name and status) for the detail endpoint
+    (R6.3).
+
+    Attributes:
+        process_id: The OnboardingProcess identifier.
+        status: The process status (``in_progress`` or ``complete``).
+        employee_id: The linked Employee record identifier.
+        completed_count: Number of tasks with status ``done``.
+        total_count: Total number of tasks in the checklist.
+        tasks: The process's tasks ordered by ``order_index`` ascending.
+    """
+
+    process_id: UUID
+    status: str
+    employee_id: UUID
+    completed_count: int
+    total_count: int
+    tasks: list[ProcessTaskDetail]
+
+
+class OnboardingService:
+    """Creates and advances onboarding processes and employee activation.
+
+    This file implements the constructor, the event-driven creation flow
+    (:meth:`start_from_event`), and the HR-facing task completion + automatic
+    activation flow (:meth:`complete_task`). Read-model methods are added by
+    subsequent tasks.
+
+    Attributes:
+        process_repo: Repository for OnboardingProcess persistence.
+        task_repo: Repository for OnboardingTask persistence.
+        audit_repo: Append-only repository for OnboardingAuditLog entries.
+        employee_repo: Reused employee-module repository (Employee persistence
+            and ``NV-XXX`` code generation).
+        session: The shared async session whose transaction this service owns.
+    """
+
+    def __init__(
+        self,
+        process_repo: OnboardingProcessRepository,
+        task_repo: OnboardingTaskRepository,
+        audit_repo: OnboardingAuditRepository,
+        employee_repo: EmployeeRepository,
+        session: AsyncSession,
+    ) -> None:
+        """Initialize the service with its repositories and session.
+
+        Args:
+            process_repo: Repository for OnboardingProcess persistence.
+            task_repo: Repository for OnboardingTask persistence.
+            audit_repo: Append-only repository for OnboardingAuditLog entries.
+            employee_repo: Reused employee-module repository for Employee
+                persistence and ``NV-XXX`` employee code generation.
+            session: The shared :class:`~sqlalchemy.ext.asyncio.AsyncSession`
+                whose transaction boundary (commit/rollback) this service owns.
+        """
+        self.process_repo = process_repo
+        self.task_repo = task_repo
+        self.audit_repo = audit_repo
+        self.employee_repo = employee_repo
+        self.session = session
+
+    async def start_from_event(
+        self,
+        candidate_id: UUID,
+        full_name: str,
+        email: str,
+        event_id: str,
+    ) -> OnboardingProcess:
+        """Start an onboarding process for an accepted candidate.
+
+        Idempotent per ``candidate_id``. If a process already exists for the
+        candidate, this records a duplicate-detection audit entry in its own
+        committed transaction and returns the existing process unchanged,
+        creating no additional employee or process (R1.3, R1.4, R2.7). On a new
+        candidate, it creates — within a single transaction — an inactive
+        Employee (``is_active = false``, ``NV-XXX`` code with a uniqueness
+        retry), the OnboardingProcess (``in_progress``), the fixed four-task
+        checklist (all ``pending``), and the creation audit entry, then commits
+        once. Any failure during creation rolls back so no partial employee or
+        process remains, and the exception propagates to the caller (the
+        consumer records the failure / ARQ retries) (R1.5).
+
+        Args:
+            candidate_id: The originating candidate identifier (already parsed
+                and validated by the caller).
+            full_name: The candidate's full name (1-255 chars), used as the
+                Employee ``full_name``.
+            email: The candidate's syntactically valid email (1-320 chars).
+            event_id: The originating ``candidate_accepted`` event identifier,
+                recorded on the audit entry.
+
+        Returns:
+            The newly created OnboardingProcess, or the pre-existing
+            OnboardingProcess when the event is a duplicate.
+
+        Raises:
+            Exception: Propagates any error raised during creation after the
+                transaction is rolled back, so the caller can record the
+                failure and/or retry.
+        """
+        existing = await self.process_repo.get_by_candidate_id(candidate_id)
+        if existing is not None:
+            logger.info(
+                "Duplicate candidate_accepted event for candidate %s (event %s); "
+                "leaving existing process %s unchanged",
+                candidate_id,
+                event_id,
+                existing.id,
+            )
+            await self._record_duplicate(existing, candidate_id, event_id)
+            return existing
+
+        try:
+            process = await self._create_new_process(candidate_id, full_name, email, event_id)
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            logger.exception(
+                "Failed to start onboarding for candidate %s (event %s); rolled back",
+                candidate_id,
+                event_id,
+            )
+            raise
+
+        logger.info(
+            "Started onboarding process %s for candidate %s (event %s)",
+            process.id,
+            candidate_id,
+            event_id,
+        )
+        return process
+
+    async def _record_duplicate(
+        self,
+        existing: OnboardingProcess,
+        candidate_id: UUID,
+        event_id: str,
+    ) -> None:
+        """Append a duplicate-detection audit entry in its own transaction.
+
+        The existing process and its checklist are left untouched; only an audit
+        entry recording the duplicate (with the originating ``candidate_id`` and
+        ``event_id``) is written and committed (R1.4, R2.7).
+
+        Args:
+            existing: The pre-existing OnboardingProcess for the candidate.
+            candidate_id: The originating candidate identifier.
+            event_id: The originating event identifier.
+
+        Raises:
+            Exception: Propagates any error after rolling back the audit write.
+        """
+        entry = OnboardingAuditLog(
+            operation_type=_OP_DUPLICATE_DETECTED,
+            entity_type="process",
+            entity_id=existing.id,
+            candidate_id=candidate_id,
+            event_id=event_id,
+            success=True,
+            change_summary=(
+                f"Duplicate candidate_accepted event for candidate {candidate_id}; "
+                f"existing process {existing.id} left unchanged"
+            ),
+        )
+        try:
+            await self.audit_repo.append(entry)
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            logger.exception(
+                "Failed to record duplicate-detection audit for candidate %s (event %s)",
+                candidate_id,
+                event_id,
+            )
+            raise
+
+    async def _create_new_process(
+        self,
+        candidate_id: UUID,
+        full_name: str,
+        email: str,
+        event_id: str,
+    ) -> OnboardingProcess:
+        """Create the employee, process, checklist, and creation audit entry.
+
+        All writes participate in the caller's single transaction; the caller
+        (:meth:`start_from_event`) commits once on success or rolls back on any
+        failure so nothing partial persists.
+
+        Args:
+            candidate_id: The originating candidate identifier.
+            full_name: The Employee ``full_name``.
+            email: The Employee ``email``.
+            event_id: The originating event identifier (recorded on the audit).
+
+        Returns:
+            The created OnboardingProcess (flushed, with its id populated).
+        """
+        employee = await self._create_inactive_employee(candidate_id, full_name, email)
+
+        process = OnboardingProcess(
+            candidate_id=candidate_id,
+            employee_id=employee.id,
+            status=OnboardingStatus.IN_PROGRESS.value,
+        )
+        await self.process_repo.create(process)
+
+        tasks = [
+            OnboardingTask(
+                process_id=process.id,
+                task_key=task_key.value,
+                name=name,
+                status=OnboardingTaskStatus.PENDING.value,
+                order_index=order_index,
+            )
+            for order_index, task_key, name in CHECKLIST_TEMPLATE
+        ]
+        await self.task_repo.create_many(tasks)
+
+        creation_audit = OnboardingAuditLog(
+            operation_type=_OP_PROCESS_CREATED,
+            entity_type="process",
+            entity_id=process.id,
+            candidate_id=candidate_id,
+            event_id=event_id,
+            success=True,
+            new_value={
+                "process_id": str(process.id),
+                "employee_id": str(employee.id),
+                "candidate_id": str(candidate_id),
+                "employee_code": employee.employee_code,
+                "status": process.status,
+            },
+            change_summary=(
+                f"Onboarding process {process.id} created for candidate {candidate_id} "
+                f"(employee {employee.id})"
+            ),
+        )
+        await self.audit_repo.append(creation_audit)
+
+        return process
+
+    async def _create_inactive_employee(
+        self,
+        candidate_id: UUID,
+        full_name: str,
+        email: str,
+    ) -> Employee:
+        """Create the inactive Employee with a unique ``NV-XXX`` code.
+
+        The Employee starts inactive (``is_active = false``, R2.1/R2.5) and is
+        linked to the originating candidate (R2.3). The ``employee_code`` is
+        derived from :meth:`EmployeeRepository.get_next_code`; the insert is
+        wrapped in a SAVEPOINT so that a collision on the ``employee_code``
+        unique constraint can be retried with a freshly derived code without
+        poisoning the surrounding transaction (R2.4).
+
+        Args:
+            candidate_id: The originating candidate identifier (link, R2.3).
+            full_name: The Employee ``full_name``.
+            email: The Employee ``email``.
+
+        Returns:
+            The persisted (flushed) inactive Employee with its id and
+            ``employee_code`` populated.
+
+        Raises:
+            IntegrityError: If the ``employee_code`` (or other) unique
+                constraint still fails on the final attempt; re-raised so the
+                surrounding transaction rolls back.
+        """
+        for attempt in range(_EMPLOYEE_CODE_MAX_ATTEMPTS):
+            employee_code = await self.employee_repo.get_next_code()
+            employee = Employee(
+                employee_code=employee_code,
+                full_name=full_name,
+                email=email,
+                candidate_id=candidate_id,
+                is_active=False,
+            )
+            try:
+                async with self.session.begin_nested():
+                    await self.employee_repo.create(employee)
+            except IntegrityError:
+                is_last_attempt = attempt == _EMPLOYEE_CODE_MAX_ATTEMPTS - 1
+                logger.warning(
+                    "Employee code collision on %s (attempt %d/%d) for candidate %s%s",
+                    employee_code,
+                    attempt + 1,
+                    _EMPLOYEE_CODE_MAX_ATTEMPTS,
+                    candidate_id,
+                    "; giving up" if is_last_attempt else "; retrying",
+                )
+                if is_last_attempt:
+                    # Re-raise so the caller's transaction rolls back and the
+                    # failure propagates (consumer records failure / ARQ retries).
+                    raise
+                continue
+            return employee
+
+        # Unreachable: the final attempt either returns or re-raises above.
+        raise RuntimeError("employee code allocation loop exited unexpectedly")
+
+    async def complete_task(
+        self,
+        task_id: UUID,
+        actor: User,
+        status: str = OnboardingTaskStatus.DONE.value,
+    ) -> OnboardingTask:
+        """Mark an onboarding task done, activating the employee when complete.
+
+        This is the HR-facing mark-done path behind ``PATCH
+        /api/onboarding/tasks/{task_id}``. The checks are performed in the exact
+        order the requirements mandate:
+
+        1. **Status validity (R3.5):** the requested ``status`` must be one of
+           the defined values ``{pending, done}``; any other value is rejected
+           with :class:`InvalidTaskStatusError` naming the value, and no state
+           changes.
+        2. **Existence before authorization (R4.4):** the task is loaded first;
+           a missing task raises :class:`OnboardingTaskNotFoundError` (404) even
+           when the actor is not an admin.
+        3. **Authorization (R4.5):** an actor whose role is not ``admin`` is
+           rejected with :class:`OnboardingAuthorizationError` (403) and nothing
+           changes.
+        4. **Idempotent no-op (R4.3, R5.8):** a task that is already ``done``
+           (so a process that is already ``complete`` with its employee active)
+           returns unchanged with no audit entry.
+
+        Otherwise the task is currently ``pending``. ``complete_task`` only
+        advances a task to ``done`` — the sole transition the requirements and
+        the router contract define — so a ``pending`` target on a still-pending
+        task is a no-op. For the ``done`` target the service locks the process
+        row (``SELECT ... FOR UPDATE``) to serialize concurrent completions
+        (R5.5), sets the task ``done`` (with ``completed_at`` and
+        ``completed_by_user_id``), writes the status-change audit entry (R4.2,
+        R8.1), and — when every task in the process is now ``done`` and the
+        process has at least one task (R5.1, R5.2, R5.7) — sets the process
+        ``complete`` and the employee ``is_active = true`` with an activation
+        audit entry (R5.3, R5.4). All of this happens in one transaction
+        committed once. Any failure rolls the whole transaction back, leaving
+        the task, process, and employee unchanged, and raises
+        :class:`AuditWriteError` (audit append failed, R8.2) or
+        :class:`OnboardingActivationError` (any other completion/activation
+        failure, R5.6).
+
+        Args:
+            task_id: The identifier of the task to mark done.
+            actor: The authenticated user performing the action. Must have the
+                ``admin`` role to change onboarding state.
+            status: The requested task status from the PATCH body. Defaults to
+                ``done``; any value outside ``{pending, done}`` is rejected.
+
+        Returns:
+            The OnboardingTask in its resulting state (``done`` after a
+            successful completion, or unchanged for an idempotent no-op).
+
+        Raises:
+            InvalidTaskStatusError: If ``status`` is not ``pending`` or ``done``.
+            OnboardingTaskNotFoundError: If no task exists for ``task_id``.
+            OnboardingAuthorizationError: If ``actor`` is not an ``admin``.
+            AuditWriteError: If a mandatory audit append fails (state unchanged).
+            OnboardingActivationError: If any other completion/activation write
+                fails (state unchanged).
+        """
+        # Step 1: validate the requested status value (R3.5, Property 12).
+        valid_statuses = {OnboardingTaskStatus.PENDING.value, OnboardingTaskStatus.DONE.value}
+        if status not in valid_statuses:
+            raise InvalidTaskStatusError(status)
+
+        # Step 2: existence — checked before authorization (R4.4).
+        task = await self.task_repo.get_by_id(task_id)
+        if task is None:
+            raise OnboardingTaskNotFoundError()
+
+        # Step 3: authorization — admin only (R4.5).
+        if actor.role != UserRole.ADMIN:
+            raise OnboardingAuthorizationError()
+
+        # Step 4: idempotent no-op when the task is already done (R4.3, R5.8).
+        if task.status == OnboardingTaskStatus.DONE.value:
+            logger.info(
+                "Task %s is already done; no-op completion by %s",
+                task.id,
+                actor.email,
+            )
+            return task
+
+        # The task is pending. complete_task only advances pending -> done, so a
+        # pending target leaves the (already pending) task unchanged.
+        if status != OnboardingTaskStatus.DONE.value:
+            return task
+
+        # Step 5: locked, atomic completion + activation in a single transaction.
+        try:
+            process = await self.process_repo.get_for_update(task.process_id)
+            if process is None:
+                # Defensive: a task always references an existing process via FK.
+                raise OnboardingActivationError(
+                    f"Onboarding process {task.process_id} for task {task.id} not found"
+                )
+            updated_task = await self._mark_task_done(task, actor, process)
+            await self._activate_if_complete(process, actor)
+            await self.session.commit()
+        except OnboardingError:
+            await self.session.rollback()
+            logger.exception(
+                "Failed to complete task %s (actor %s); rolled back",
+                task_id,
+                actor.email,
+            )
+            raise
+        except Exception as exc:
+            await self.session.rollback()
+            logger.exception(
+                "Failed to complete task %s (actor %s); rolled back",
+                task_id,
+                actor.email,
+            )
+            raise OnboardingActivationError(f"Failed to complete task {task_id}") from exc
+
+        logger.info("Task %s marked done by %s", updated_task.id, actor.email)
+        return updated_task
+
+    async def _mark_task_done(
+        self,
+        task: OnboardingTask,
+        actor: User,
+        process: OnboardingProcess,
+    ) -> OnboardingTask:
+        """Set a pending task ``done`` and write its status-change audit entry.
+
+        Participates in the caller's locked transaction; the caller commits or
+        rolls back. Records the acting HR identity, the task id, the previous
+        and new status, and (via the audit entry's ``created_at``) the timestamp
+        of the change (R4.2, R8.1).
+
+        Args:
+            task: The pending OnboardingTask being completed.
+            actor: The acting admin user.
+            process: The locked OnboardingProcess owning the task (used for the
+                ``candidate_id`` recorded on the audit entry).
+
+        Returns:
+            The updated OnboardingTask (now ``done``).
+
+        Raises:
+            AuditWriteError: If appending the status-change audit entry fails.
+        """
+        now = datetime.now(UTC)
+        previous_status = task.status
+        updated_task = await self.task_repo.set_status(
+            task,
+            OnboardingTaskStatus.DONE,
+            completed_at=now,
+            completed_by_user_id=actor.id,
+        )
+        status_audit = OnboardingAuditLog(
+            user_id=actor.id,
+            actor_email=actor.email,
+            operation_type=_OP_TASK_COMPLETED,
+            entity_type="task",
+            entity_id=task.id,
+            candidate_id=process.candidate_id,
+            previous_value={"status": previous_status},
+            new_value={"status": OnboardingTaskStatus.DONE.value},
+            change_summary=f"Task {task.id} marked done by {actor.email}",
+            success=True,
+        )
+        await self._append_audit(status_audit)
+        return updated_task
+
+    async def _activate_if_complete(
+        self,
+        process: OnboardingProcess,
+        actor: User,
+    ) -> None:
+        """Activate the employee when every task in the process is ``done``.
+
+        Counts the process's tasks by status (the just-completed task is already
+        flushed, so it counts as ``done``). Activation happens if and only if
+        the process has at least one task and every task is ``done`` (R5.1,
+        R5.2, R5.7): a zero-task process never activates. On activation the
+        process is set ``complete``, the linked employee is set
+        ``is_active = true``, and an activation audit entry is written (R5.3,
+        R5.4) — all within the caller's locked transaction so it commits
+        atomically with the task completion (R5.5).
+
+        Args:
+            process: The locked OnboardingProcess being evaluated.
+            actor: The acting admin user (recorded on the activation audit).
+
+        Raises:
+            AuditWriteError: If appending the activation audit entry fails.
+            OnboardingActivationError: If the linked employee cannot be found.
+        """
+        counts = await self.task_repo.count_by_status(process.id)
+        total = sum(counts.values())
+        done = counts.get(OnboardingTaskStatus.DONE.value, 0)
+        if total == 0 or done != total:
+            # Incomplete (or zero-task): leave in_progress, employee inactive.
+            return
+
+        await self.process_repo.set_status(process, OnboardingStatus.COMPLETE)
+        employee = await self.employee_repo.update(process.employee_id, {"is_active": True})
+        if employee is None:
+            # Defensive: the process always references an existing employee.
+            raise OnboardingActivationError(
+                f"Employee {process.employee_id} for process {process.id} not found"
+            )
+        activation_audit = OnboardingAuditLog(
+            user_id=actor.id,
+            actor_email=actor.email,
+            operation_type=_OP_EMPLOYEE_ACTIVATED,
+            entity_type="employee",
+            entity_id=employee.id,
+            candidate_id=process.candidate_id,
+            previous_value={"is_active": False},
+            new_value={"is_active": True},
+            change_summary=(
+                f"Employee {employee.id} activated on completion of process {process.id}"
+            ),
+            success=True,
+        )
+        await self._append_audit(activation_audit)
+        logger.info(
+            "Employee %s activated on completion of onboarding process %s",
+            employee.id,
+            process.id,
+        )
+
+    async def _append_audit(self, entry: OnboardingAuditLog) -> None:
+        """Append a mandatory audit entry, mapping failures to ``AuditWriteError``.
+
+        The audit append participates in the caller's transaction; if it fails
+        the exception is converted to :class:`AuditWriteError` so the caller
+        rolls back and rejects the action with the state left unchanged (R8.2).
+
+        Args:
+            entry: The fully constructed audit entry to append.
+
+        Raises:
+            AuditWriteError: If the underlying audit append fails.
+        """
+        try:
+            await self.audit_repo.append(entry)
+        except Exception as exc:
+            raise AuditWriteError() from exc
+
+    async def list_processes(
+        self,
+        status: str | None,
+        page: int,
+        page_size: int,
+    ) -> PaginatedProcesses:
+        """List onboarding processes with progress, paginated and capped.
+
+        Read-only projection backing ``GET /api/onboarding/processes``. Returns
+        at most 50 items per response (the page size is clamped to
+        ``[1, 50]``) together with the true total of processes matching the
+        request, so callers can report accurate totals even when a page is
+        empty — yielding an empty ``items`` list with ``total == 0`` when
+        nothing matches (R6.2). When ``status`` is supplied it is passed through
+        to the repository, which returns only processes whose status is
+        identical to it (R6.4); ``None`` applies no filter. For each returned
+        process the checklist progress is computed from
+        :meth:`OnboardingTaskRepository.count_by_status`, exposing
+        ``completed_count`` (number of ``done`` tasks) out of ``total_count``
+        (total tasks) (R6.1).
+
+        Status filter *validation* (rejecting an undefined value with 422,
+        R6.5) is handled at the API/schema layer by typing the query parameter
+        as ``OnboardingStatus``; this method accepts ``status`` as ``str |
+        None`` and does not raise for ``None`` or for any value.
+
+        Args:
+            status: Optional status value to filter by (``in_progress`` or
+                ``complete``); ``None`` returns processes of every status.
+            page: The 1-indexed page number; values below 1 are clamped to 1.
+            page_size: Requested items per page; clamped to ``[1, 50]`` so the
+                response never exceeds the cap (R6.2).
+
+        Returns:
+            A :class:`PaginatedProcesses` with the page's list items, the true
+            matching total, and the effective page / page size.
+        """
+        effective_page = max(page, 1)
+        effective_page_size = max(1, min(page_size, _LIST_PAGE_SIZE_MAX))
+
+        processes, total = await self.process_repo.list(
+            status=status,
+            page=effective_page,
+            page_size=effective_page_size,
+        )
+
+        items: list[ProcessListItem] = []
+        for process in processes:
+            counts = await self.task_repo.count_by_status(process.id)
+            total_count = sum(counts.values())
+            completed_count = counts.get(OnboardingTaskStatus.DONE.value, 0)
+            items.append(
+                ProcessListItem(
+                    process_id=process.id,
+                    status=process.status,
+                    employee_id=process.employee_id,
+                    completed_count=completed_count,
+                    total_count=total_count,
+                )
+            )
+
+        return PaginatedProcesses(
+            items=items,
+            total=total,
+            page=effective_page,
+            page_size=effective_page_size,
+        )
+
+    async def get_process(self, process_id: UUID) -> ProcessDetail:
+        """Return one onboarding process with its full checklist.
+
+        Read-only projection backing ``GET
+        /api/onboarding/processes/{process_id}``. Loads the process by id and,
+        when found, projects its summary fields plus the ordered checklist —
+        each task's id, name, status, and order index (R6.3). The
+        ``completed_count`` / ``total_count`` progress is derived from the
+        loaded tasks so the detail is internally consistent with its checklist.
+
+        Args:
+            process_id: The identifier of the OnboardingProcess to load.
+
+        Returns:
+            A :class:`ProcessDetail` describing the process and its tasks
+            ordered by ``order_index`` ascending.
+
+        Raises:
+            OnboardingProcessNotFoundError: If no process exists for
+                ``process_id`` (R6.6).
+        """
+        process = await self.process_repo.get_by_id(process_id)
+        if process is None:
+            raise OnboardingProcessNotFoundError()
+
+        tasks = await self.task_repo.list_by_process(process_id)
+        task_details = [
+            ProcessTaskDetail(
+                id=task.id,
+                name=task.name,
+                status=task.status,
+                order_index=task.order_index,
+            )
+            for task in tasks
+        ]
+        completed_count = sum(1 for task in tasks if task.status == OnboardingTaskStatus.DONE.value)
+
+        return ProcessDetail(
+            process_id=process.id,
+            status=process.status,
+            employee_id=process.employee_id,
+            completed_count=completed_count,
+            total_count=len(tasks),
+            tasks=task_details,
+        )
