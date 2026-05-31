@@ -8,7 +8,8 @@ Requirements: 9.1-9.7, 10.1-10.8, 11.1-11.6, 12.1-12.5, 13.1-13.6
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -21,11 +22,14 @@ from src.modules.recruitment.application.candidate_service import (
 from src.modules.recruitment.domain.entities import Candidate
 from src.modules.recruitment.domain.enums import CandidateStatus
 from src.modules.recruitment.domain.exceptions import (
+    CalendarEventCreateFailedError,
+    CalendarGrantMissingError,
     CandidateNotFoundError,
     GmailNotConnectedError,
+    InterviewerNotFoundError,
     InvalidStatusTransitionError,
 )
-
+from src.modules.recruitment.domain.value_objects import CalendarEvent
 
 # ─── Fixtures ──────────────────────────────────────────────────────────
 
@@ -410,115 +414,359 @@ class TestArchiveCandidate:
 # ─── Schedule Interview Tests ─────────────────────────────────────────
 
 
+class _FakeGrantStatus:
+    """Minimal grant status carrying ``calendar_grant_valid``."""
+
+    def __init__(self, calendar_grant_valid: bool) -> None:
+        self.calendar_grant_valid = calendar_grant_valid
+
+
+class _FakeGrant:
+    """Minimal OAuth grant with scopes and an encrypted access token."""
+
+    def __init__(self, scopes: list[str], access_token_enc: str = "enc") -> None:
+        self.scopes = scopes
+        self.access_token_enc = access_token_enc
+
+
+class _FakeOAuthGrantRepo:
+    """Fake OAuthGrantRepository returning a scripted grant."""
+
+    def __init__(self, grant: _FakeGrant | None) -> None:
+        self._grant = grant
+
+    async def get_by_user_id(self, user_id):
+        return self._grant
+
+
+class _FakeOAuthService:
+    """Fake OAuthService computing grant status and refreshing tokens."""
+
+    def __init__(self, calendar_grant_valid: bool = True) -> None:
+        self._valid = calendar_grant_valid
+
+    def determine_grant_status(self, scopes):
+        return _FakeGrantStatus(self._valid)
+
+    async def refresh_google_token(self, user_id):
+        return None
+
+
+class _FakeCrypto:
+    """Fake CryptoUtils decrypting a stored token to a fixed plaintext."""
+
+    def decrypt(self, ciphertext: str) -> str:
+        return "access-token"
+
+
+class _FakeOrgSettingsRepo:
+    """Fake OrganizationSettingsRepository returning a fixed timezone."""
+
+    def __init__(self, timezone: str = "Asia/Ho_Chi_Minh") -> None:
+        self._timezone = timezone
+
+    async def get_timezone(self) -> str:
+        return self._timezone
+
+
+class _FakeCalendarPort:
+    """Fake CalendarPort recording create calls; returns or raises scripted."""
+
+    def __init__(self, event=None, error: Exception | None = None) -> None:
+        self._event = event
+        self._error = error
+        self.create_calls: list = []
+
+    async def create_event(self, access_token: str, spec):
+        self.create_calls.append((access_token, spec))
+        if self._error is not None:
+            raise self._error
+        return self._event
+
+    async def patch_event(self, access_token: str, event_id: str, spec):
+        raise NotImplementedError
+
+    async def delete_event(self, access_token: str, event_id: str) -> None:
+        raise NotImplementedError
+
+
+def _future_start() -> datetime:
+    """Return a tz-aware start safely in the future."""
+    return datetime.now(UTC) + timedelta(days=1)
+
+
+def _make_calendar_event() -> CalendarEvent:
+    """Build a CalendarEvent result with a Meet link and event id."""
+    return CalendarEvent(
+        event_id="evt-123",
+        html_link="https://calendar.example/evt-123",
+        meet_link="https://meet.example/abc-defg-hij",
+        invited_emails=("test@example.com",),
+    )
+
+
+def _set_interviewers(mock_session, employees) -> None:
+    """Configure ``session.execute`` to resolve the given employee objects."""
+    from unittest.mock import MagicMock
+
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = employees
+    mock_session.execute.return_value = mock_result
+
+
 class TestScheduleInterview:
-    """Tests for schedule_interview action."""
+    """Tests for the synchronous, atomic schedule_interview action (ADR-0008)."""
+
+    @pytest.fixture
+    def calendar_port(self):
+        """Fake CalendarPort returning a successful event by default."""
+        return _FakeCalendarPort(event=_make_calendar_event())
+
+    @pytest.fixture
+    def schedule_service(
+        self,
+        mock_candidate_repo,
+        mock_cv_document_repo,
+        mock_minio_client,
+        mock_session,
+        user_id,
+        calendar_port,
+    ):
+        """CandidateService wired with fake Calendar/OAuth dependencies."""
+        return CandidateService(
+            candidate_repo=mock_candidate_repo,
+            cv_document_repo=mock_cv_document_repo,
+            minio_client=mock_minio_client,
+            session=mock_session,
+            user_id=user_id,
+            calendar_port=calendar_port,
+            org_settings_repo=_FakeOrgSettingsRepo(),
+            oauth_grant_repo=_FakeOAuthGrantRepo(
+                _FakeGrant(scopes=["https://www.googleapis.com/auth/calendar.events"])
+            ),
+            oauth_service=_FakeOAuthService(calendar_grant_valid=True),
+            crypto=_FakeCrypto(),
+        )
 
     @pytest.mark.parametrize(
         "initial_status",
         [CandidateStatus.NEW, CandidateStatus.REVIEWING],
     )
     async def test_schedule_from_valid_statuses(
-        self, service, mock_candidate_repo, mock_session, initial_status
+        self, schedule_service, mock_candidate_repo, mock_session, initial_status
     ):
         """Should transition to interview_scheduled from new and reviewing."""
         candidate = _make_candidate(status=initial_status)
         mock_candidate_repo.get_by_id.return_value = candidate
 
-        # Mock employee validation - all IDs found
         interviewer_ids = [uuid4(), uuid4()]
-        from unittest.mock import MagicMock
-        mock_result = MagicMock()
-        mock_result.all.return_value = [(id,) for id in interviewer_ids]
-        mock_session.execute.return_value = mock_result
+        employees = [
+            SimpleNamespace(id=interviewer_ids[0], email="a@example.com"),
+            SimpleNamespace(id=interviewer_ids[1], email="b@example.com"),
+        ]
+        _set_interviewers(mock_session, employees)
 
-        result = await service.schedule_interview(
-            candidate_id=candidate.id,
+        result = await schedule_service.schedule_interview(
+            candidate.id,
+            start=_future_start(),
+            duration_minutes=60,
             interviewer_ids=interviewer_ids,
         )
 
         assert result.status == CandidateStatus.INTERVIEW_SCHEDULED
 
-    async def test_schedule_emits_domain_event(
-        self, service, mock_candidate_repo, mock_session, mock_event_publisher
+    async def test_schedule_persists_calendar_reference(
+        self, schedule_service, mock_candidate_repo, mock_session, calendar_port
     ):
-        """Should emit interview_scheduled domain event."""
+        """Should persist calendar_event_id, start, and timezone on success."""
         candidate = _make_candidate(status=CandidateStatus.NEW)
         mock_candidate_repo.get_by_id.return_value = candidate
 
-        interviewer_ids = [uuid4()]
-        from unittest.mock import MagicMock
-        mock_result = MagicMock()
-        mock_result.all.return_value = [(interviewer_ids[0],)]
-        mock_session.execute.return_value = mock_result
+        interviewer_id = uuid4()
+        _set_interviewers(
+            mock_session, [SimpleNamespace(id=interviewer_id, email="a@example.com")]
+        )
 
-        await service.schedule_interview(
-            candidate_id=candidate.id,
-            interviewer_ids=interviewer_ids,
-            date="2025-02-01",
-            time="10:00",
-            duration_minutes=60,
+        result = await schedule_service.schedule_interview(
+            candidate.id,
+            start=_future_start(),
+            duration_minutes=45,
+            interviewer_ids=[interviewer_id],
             notes="Technical interview",
         )
 
-        mock_event_publisher.publish.assert_called_once()
-        call_args = mock_event_publisher.publish.call_args
-        assert call_args.kwargs["event_type"] == "interview_scheduled"
+        assert result.calendar_event_id == "evt-123"
+        assert result.interview_timezone == "Asia/Ho_Chi_Minh"
+        assert result.interview_start_at is not None
+        # Calendar event created exactly once with end = start + duration.
+        assert len(calendar_port.create_calls) == 1
+        _, spec = calendar_port.create_calls[0]
+        assert (spec.end - spec.start).total_seconds() == 45 * 60
+        assert spec.request_meet_link is True
 
     async def test_schedule_validates_interviewer_ids(
-        self, service, mock_candidate_repo, mock_session
+        self, schedule_service, mock_candidate_repo, mock_session
     ):
-        """Should raise ValueError when interviewer IDs don't match employees."""
+        """Should raise InterviewerNotFoundError when an id has no employee."""
         candidate = _make_candidate(status=CandidateStatus.NEW)
         mock_candidate_repo.get_by_id.return_value = candidate
 
         valid_id = uuid4()
         invalid_id = uuid4()
-        from unittest.mock import MagicMock
-        mock_result = MagicMock()
-        mock_result.all.return_value = [(valid_id,)]  # Only one found
-        mock_session.execute.return_value = mock_result
+        # Only one employee resolves; the other id is unmatched.
+        _set_interviewers(mock_session, [SimpleNamespace(id=valid_id, email="a@example.com")])
 
-        with pytest.raises(ValueError, match="Invalid interviewer IDs"):
-            await service.schedule_interview(
-                candidate_id=candidate.id,
+        with pytest.raises(InterviewerNotFoundError):
+            await schedule_service.schedule_interview(
+                candidate.id,
+                start=_future_start(),
+                duration_minutes=60,
                 interviewer_ids=[valid_id, invalid_id],
             )
 
-    async def test_schedule_from_rejected_raises(
-        self, service, mock_candidate_repo
+    async def test_schedule_rejects_out_of_range_duration(
+        self, schedule_service, mock_candidate_repo
     ):
+        """Should raise ValueError for a duration outside 15-180 minutes."""
+        candidate = _make_candidate(status=CandidateStatus.NEW)
+        mock_candidate_repo.get_by_id.return_value = candidate
+
+        with pytest.raises(ValueError, match="duration_minutes"):
+            await schedule_service.schedule_interview(
+                candidate.id,
+                start=_future_start(),
+                duration_minutes=5,
+                interviewer_ids=[uuid4()],
+            )
+
+    async def test_schedule_rejects_past_start(self, schedule_service, mock_candidate_repo):
+        """Should raise ValueError for a start at or before now."""
+        candidate = _make_candidate(status=CandidateStatus.NEW)
+        mock_candidate_repo.get_by_id.return_value = candidate
+
+        with pytest.raises(ValueError, match="future"):
+            await schedule_service.schedule_interview(
+                candidate.id,
+                start=datetime.now(UTC) - timedelta(hours=1),
+                duration_minutes=60,
+                interviewer_ids=[uuid4()],
+            )
+
+    async def test_schedule_blocks_when_grant_missing(
+        self,
+        mock_candidate_repo,
+        mock_cv_document_repo,
+        mock_minio_client,
+        mock_session,
+        user_id,
+        calendar_port,
+    ):
+        """Should raise CalendarGrantMissingError and never call the adapter."""
+        candidate = _make_candidate(status=CandidateStatus.NEW)
+        mock_candidate_repo.get_by_id.return_value = candidate
+
+        service = CandidateService(
+            candidate_repo=mock_candidate_repo,
+            cv_document_repo=mock_cv_document_repo,
+            minio_client=mock_minio_client,
+            session=mock_session,
+            user_id=user_id,
+            calendar_port=calendar_port,
+            org_settings_repo=_FakeOrgSettingsRepo(),
+            oauth_grant_repo=_FakeOAuthGrantRepo(_FakeGrant(scopes=[])),
+            oauth_service=_FakeOAuthService(calendar_grant_valid=False),
+            crypto=_FakeCrypto(),
+        )
+
+        with pytest.raises(CalendarGrantMissingError):
+            await service.schedule_interview(
+                candidate.id,
+                start=_future_start(),
+                duration_minutes=60,
+                interviewer_ids=[uuid4()],
+            )
+        assert calendar_port.create_calls == []
+
+    async def test_schedule_rolls_back_on_calendar_failure(
+        self,
+        mock_candidate_repo,
+        mock_cv_document_repo,
+        mock_minio_client,
+        mock_session,
+        user_id,
+    ):
+        """Should roll back and raise CalendarEventCreateFailedError on failure."""
+        candidate = _make_candidate(status=CandidateStatus.NEW)
+        mock_candidate_repo.get_by_id.return_value = candidate
+
+        interviewer_id = uuid4()
+        _set_interviewers(
+            mock_session, [SimpleNamespace(id=interviewer_id, email="a@example.com")]
+        )
+
+        failing_port = _FakeCalendarPort(error=RuntimeError("calendar down"))
+        service = CandidateService(
+            candidate_repo=mock_candidate_repo,
+            cv_document_repo=mock_cv_document_repo,
+            minio_client=mock_minio_client,
+            session=mock_session,
+            user_id=user_id,
+            calendar_port=failing_port,
+            org_settings_repo=_FakeOrgSettingsRepo(),
+            oauth_grant_repo=_FakeOAuthGrantRepo(
+                _FakeGrant(scopes=["https://www.googleapis.com/auth/calendar.events"])
+            ),
+            oauth_service=_FakeOAuthService(calendar_grant_valid=True),
+            crypto=_FakeCrypto(),
+        )
+
+        with pytest.raises(CalendarEventCreateFailedError):
+            await service.schedule_interview(
+                candidate.id,
+                start=_future_start(),
+                duration_minutes=60,
+                interviewer_ids=[interviewer_id],
+            )
+        mock_session.rollback.assert_awaited()
+        assert candidate.calendar_event_id is None
+
+    async def test_schedule_from_rejected_raises(self, schedule_service, mock_candidate_repo):
         """Should raise InvalidStatusTransitionError from rejected status."""
         candidate = _make_candidate(status=CandidateStatus.REJECTED)
         mock_candidate_repo.get_by_id.return_value = candidate
 
         with pytest.raises(InvalidStatusTransitionError):
-            await service.schedule_interview(
-                candidate_id=candidate.id,
+            await schedule_service.schedule_interview(
+                candidate.id,
+                start=_future_start(),
+                duration_minutes=60,
                 interviewer_ids=[uuid4()],
             )
 
-    async def test_schedule_from_archived_raises(
-        self, service, mock_candidate_repo
-    ):
+    async def test_schedule_from_archived_raises(self, schedule_service, mock_candidate_repo):
         """Should raise InvalidStatusTransitionError from archived status."""
         candidate = _make_candidate(status=CandidateStatus.ARCHIVED)
         mock_candidate_repo.get_by_id.return_value = candidate
 
         with pytest.raises(InvalidStatusTransitionError):
-            await service.schedule_interview(
-                candidate_id=candidate.id,
+            await schedule_service.schedule_interview(
+                candidate.id,
+                start=_future_start(),
+                duration_minutes=60,
                 interviewer_ids=[uuid4()],
             )
 
     async def test_schedule_nonexistent_candidate_raises(
-        self, service, mock_candidate_repo
+        self, schedule_service, mock_candidate_repo
     ):
         """Should raise CandidateNotFoundError for nonexistent candidate."""
         mock_candidate_repo.get_by_id.return_value = None
 
         with pytest.raises(CandidateNotFoundError):
-            await service.schedule_interview(
-                candidate_id=uuid4(),
+            await schedule_service.schedule_interview(
+                uuid4(),
+                start=_future_start(),
+                duration_minutes=60,
                 interviewer_ids=[uuid4()],
             )
 

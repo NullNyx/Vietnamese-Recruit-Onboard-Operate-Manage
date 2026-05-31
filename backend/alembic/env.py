@@ -36,6 +36,12 @@ from src.modules.onboarding.domain.entities import (  # noqa: E402, F401
     OnboardingProcess,
     OnboardingTask,
 )
+from src.modules.recruitment.domain.entities import (  # noqa: E402, F401
+    Candidate,
+    CVDocument,
+    OrganizationSettings,
+    RecruitmentAuditLog,
+)
 
 target_metadata = SQLModel.metadata
 

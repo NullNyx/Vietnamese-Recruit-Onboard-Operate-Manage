@@ -4,7 +4,7 @@ Defines data transfer objects used by the recruitment router endpoints
 for structured data validation and serialization.
 """
 
-from datetime import date, datetime, time
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -44,16 +44,19 @@ class CandidateListParams(BaseModel):
 class ScheduleInterviewRequest(BaseModel):
     """Request schema for scheduling an interview with a candidate.
 
+    Carries the ADR-0008 contract: an exact ``start`` datetime plus a
+    ``duration_minutes`` value (replacing the previous loose ``date``/``time``
+    fields) so the Calendar event reflects a precise, unambiguous meeting time.
+
     Attributes:
-        date: Interview date (must be a future date).
-        time: Interview start time.
+        start: Interview start datetime. Future-validation happens in the
+            service against the current time (not a Pydantic validator).
         duration_minutes: Duration in minutes (15–180).
         interviewer_ids: List of employee UUIDs conducting the interview (1–10).
         notes: Optional notes for the interview (max 1000 chars).
     """
 
-    date: date
-    time: time
+    start: datetime
     duration_minutes: int = Field(ge=15, le=180)
     interviewer_ids: list[UUID] = Field(min_length=1, max_length=10)
     notes: str | None = Field(default=None, max_length=1000)
@@ -311,6 +314,10 @@ class CandidateResponse(BaseModel):
         archived_at: Archive timestamp.
         created_at: Creation timestamp.
         updated_at: Last update timestamp.
+        interview_start_at: Scheduled interview start datetime, if scheduled.
+        interview_timezone: IANA timezone applied to the interview, if scheduled.
+        calendar_event_id: Google Calendar event identifier, if scheduled.
+        meet_link: Google Meet link for the interview, if available.
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -328,6 +335,10 @@ class CandidateResponse(BaseModel):
     archived_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+    interview_start_at: datetime | None = None
+    interview_timezone: str | None = None
+    calendar_event_id: str | None = None
+    meet_link: str | None = None
 
 
 class CVPresignedUrlResponse(BaseModel):

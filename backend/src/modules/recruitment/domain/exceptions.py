@@ -5,6 +5,9 @@ module to represent business rule violations, resource errors, and external
 service failures.
 """
 
+from collections.abc import Sequence
+from uuid import UUID
+
 
 class RecruitmentError(Exception):
     """Base exception for the recruitment module.
@@ -17,21 +20,33 @@ class RecruitmentError(Exception):
         status_code: HTTP status code to return to the client.
         error_code: Machine-readable error identifier.
         message: Human-readable error description.
+        details: Optional structured payload with extra context for the
+            client (e.g. the unmatched interviewer identifiers).
     """
 
     status_code: int = 500
     error_code: str = "RECRUITMENT_ERROR"
     message: str = "A recruitment module error occurred"
+    details: dict[str, object] | None = None
 
-    def __init__(self, message: str | None = None) -> None:
+    def __init__(
+        self,
+        message: str | None = None,
+        *,
+        details: dict[str, object] | None = None,
+    ) -> None:
         """Initialize RecruitmentError.
 
         Args:
             message: Optional custom message override. If not provided,
                 the class-level default message is used.
+            details: Optional structured payload carried alongside the
+                error for the client. Defaults to ``None``.
         """
         if message is not None:
             self.message = message
+        if details is not None:
+            self.details = details
         super().__init__(self.message)
 
 
@@ -161,3 +176,110 @@ class LLMParseError(RecruitmentError):
     status_code = 502
     error_code = "LLM_PARSE_FAILED"
     message = "LLM CV parsing failed"
+
+
+class CalendarGrantMissingError(RecruitmentError):
+    """Acting HR user lacks a valid Google Calendar grant.
+
+    Raised before any Calendar call when the acting HR user's
+    ``calendar_grant_valid`` is false, so the user is directed to
+    re-consent to Calendar access (R9.1, R9.2).
+    """
+
+    status_code = 403
+    error_code = "CALENDAR_GRANT_MISSING"
+    message = "Google Calendar access is not granted; please re-consent to Calendar access"
+
+
+class InterviewerNotFoundError(RecruitmentError):
+    """One or more interviewer identifiers do not match an Employee.
+
+    Raised when a schedule request references interviewer Employee
+    identifiers that cannot be found, listing the unmatched identifiers
+    in ``details`` (R1.7).
+
+    Attributes:
+        unmatched_ids: The interviewer identifiers with no matching Employee.
+    """
+
+    status_code = 422
+    error_code = "INTERVIEWER_NOT_FOUND"
+    message = "One or more interviewers were not found"
+
+    def __init__(self, unmatched_ids: Sequence[UUID]) -> None:
+        """Initialize InterviewerNotFoundError.
+
+        Args:
+            unmatched_ids: The interviewer identifiers that do not correspond
+                to an existing Employee record.
+        """
+        self.unmatched_ids = list(unmatched_ids)
+        details: dict[str, object] = {
+            "unmatched_ids": [str(id_) for id_ in self.unmatched_ids],
+        }
+        super().__init__(details=details)
+
+
+class InterviewerMissingEmailError(RecruitmentError):
+    """An interviewer Employee has no email address.
+
+    Raised when a matched interviewer Employee lacks an email address,
+    so the meeting cannot invite a required participant. Identifies the
+    offending interviewer in ``details`` (R10.1).
+
+    Attributes:
+        interviewer_id: The identifier of the interviewer that cannot be invited.
+    """
+
+    status_code = 422
+    error_code = "INTERVIEWER_MISSING_EMAIL"
+    message = "An interviewer cannot be invited because they have no email address"
+
+    def __init__(self, interviewer_id: UUID) -> None:
+        """Initialize InterviewerMissingEmailError.
+
+        Args:
+            interviewer_id: The identifier of the interviewer Employee that
+                lacks an email address.
+        """
+        self.interviewer_id = interviewer_id
+        details: dict[str, object] = {"interviewer_id": str(interviewer_id)}
+        super().__init__(details=details)
+
+
+class CalendarEventCreateFailedError(RecruitmentError):
+    """Google Calendar event creation failed.
+
+    Raised when the Calendar event could not be created during a
+    schedule-interview request, after retries and a token refresh,
+    so the operation is rolled back atomically (R3.3).
+    """
+
+    status_code = 502
+    error_code = "CALENDAR_CREATE_FAILED"
+    message = "Failed to create the Google Calendar event"
+
+
+class CalendarEventUpdateFailedError(RecruitmentError):
+    """Google Calendar event update failed.
+
+    Raised when the existing Calendar event could not be patched during
+    a reschedule request, leaving the stored references unchanged (R7.4).
+    """
+
+    status_code = 502
+    error_code = "CALENDAR_UPDATE_FAILED"
+    message = "Failed to update the Google Calendar event"
+
+
+class NoInterviewToRescheduleError(RecruitmentError):
+    """Reschedule requested for a Candidate without a stored event.
+
+    Raised when a reschedule request targets a Candidate that has no
+    stored ``calendar_event_id``, so there is no interview to reschedule
+    (R7.5).
+    """
+
+    status_code = 409
+    error_code = "NO_INTERVIEW_TO_RESCHEDULE"
+    message = "No interview exists to reschedule for this candidate"

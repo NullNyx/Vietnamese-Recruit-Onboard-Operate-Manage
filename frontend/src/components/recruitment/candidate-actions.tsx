@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, Mail, XCircle, CheckCircle, Archive } from "lucide-react";
+import {
+  Calendar,
+  CalendarClock,
+  Mail,
+  XCircle,
+  CheckCircle,
+  Archive,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -15,12 +22,19 @@ import {
   type CandidateStatus,
 } from "@/lib/recruitment-utils";
 
-/** Action types that correspond to state transitions + email (non-transition). */
-export type ActionType = "schedule" | "email" | "reject" | "accept" | "archive";
+/** Action types that correspond to state transitions + email/reschedule (non-transition). */
+export type ActionType =
+  | "schedule"
+  | "reschedule"
+  | "email"
+  | "reject"
+  | "accept"
+  | "archive";
 
 export interface CandidateActionsProps {
   status: CandidateStatus;
   onScheduleInterview?: () => void;
+  onReschedule?: () => void;
   onSendEmail?: () => void;
   onReject?: () => void;
   onAccept?: () => void;
@@ -31,10 +45,10 @@ export interface CandidateActionsProps {
 
 /**
  * Maps action types to the target status they transition to.
- * "email" is not a state transition so it's excluded.
+ * "email" and "reschedule" are not state transitions so they're excluded.
  */
 const ACTION_TARGET_STATUS: Record<
-  Exclude<ActionType, "email">,
+  Exclude<ActionType, "email" | "reschedule">,
   CandidateStatus
 > = {
   schedule: "interview_scheduled",
@@ -46,6 +60,7 @@ const ACTION_TARGET_STATUS: Record<
 /** Vietnamese labels for each action button. */
 const ACTION_LABELS: Record<ActionType, string> = {
   schedule: "Lên lịch PV",
+  reschedule: "Đổi lịch PV",
   email: "Gửi email",
   reject: "Từ chối",
   accept: "Chấp nhận",
@@ -58,6 +73,7 @@ const ACTION_ICONS: Record<
   React.ComponentType<{ className?: string }>
 > = {
   schedule: Calendar,
+  reschedule: CalendarClock,
   email: Mail,
   reject: XCircle,
   accept: CheckCircle,
@@ -70,6 +86,7 @@ const ACTION_VARIANTS: Record<
   "default" | "destructive" | "outline" | "secondary" | "ghost"
 > = {
   schedule: "default",
+  reschedule: "default",
   email: "outline",
   reject: "destructive",
   accept: "default",
@@ -85,6 +102,7 @@ const ACTION_VARIANTS: Record<
 export function CandidateActions({
   status,
   onScheduleInterview,
+  onReschedule,
   onSendEmail,
   onReject,
   onAccept,
@@ -93,6 +111,7 @@ export function CandidateActions({
 }: CandidateActionsProps) {
   const [, setDialogOpen] = useState<Record<ActionType, boolean>>({
     schedule: false,
+    reschedule: false,
     email: false,
     reject: false,
     accept: false,
@@ -102,7 +121,9 @@ export function CandidateActions({
   const validTargetStatuses = getValidActions(status);
 
   /** Check if a transition action is valid for the current status. */
-  function isActionValid(action: Exclude<ActionType, "email">): boolean {
+  function isActionValid(
+    action: Exclude<ActionType, "email" | "reschedule">,
+  ): boolean {
     const targetStatus = ACTION_TARGET_STATUS[action];
     return validTargetStatuses.includes(targetStatus);
   }
@@ -119,6 +140,9 @@ export function CandidateActions({
       case "schedule":
         onScheduleInterview?.();
         break;
+      case "reschedule":
+        onReschedule?.();
+        break;
       case "email":
         onSendEmail?.();
         break;
@@ -134,13 +158,16 @@ export function CandidateActions({
     }
   }
 
-  /** All transition actions (excluding email). */
-  const transitionActions: Exclude<ActionType, "email">[] = [
+  /** All transition actions (excluding email and reschedule). */
+  const transitionActions: Exclude<ActionType, "email" | "reschedule">[] = [
     "schedule",
     "reject",
     "accept",
     "archive",
   ];
+
+  /** Reschedule is offered only once an interview is already scheduled. */
+  const canReschedule = status === "interview_scheduled";
 
   return (
     <TooltipProvider>
@@ -192,6 +219,19 @@ export function CandidateActions({
             </Tooltip>
           );
         })}
+
+        {/* "Đổi lịch PV" button — shown only when an interview is scheduled */}
+        {canReschedule && (
+          <Button
+            variant={ACTION_VARIANTS.reschedule}
+            size="sm"
+            onClick={() => handleAction("reschedule")}
+            disabled={disabled}
+          >
+            <CalendarClock className="h-4 w-4" />
+            {ACTION_LABELS.reschedule}
+          </Button>
+        )}
 
         {/* "Gửi email" button — always shown regardless of status */}
         <Button
