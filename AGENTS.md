@@ -65,9 +65,6 @@ Build the answer from these sources of truth (not from memory):
   routers are wired in (currently: identity/auth + admin, employee, gmail,
   recruitment [candidate, cv-review, metrics], onboarding). A module existing on
   disk but not registered there is not live.
-- **What's in flight** — scan `.kiro/specs/*/`. Each spec's `tasks.md` checkboxes
-  are the progress signal (done vs pending); `requirements.md` / `design.md` /
-  `bugfix.md` give scope. Report per-spec completion from the checkbox ratio.
 - **Why things are the way they are** — `docs/decisions/` ADRs (e.g. scope is the
   recruit→onboard Backbone Flow; attendance/payroll/self-service were shelved).
 - **Open work** — GitHub Issues via `gh issue list` (filter by label/state).
@@ -76,7 +73,7 @@ Build the answer from these sources of truth (not from memory):
 Then answer in the shape the user asked for:
 
 - **Status / progress** → a short per-area table: area · state (shipped / in spec /
-  shelved) · evidence (router wired, spec `N/M` tasks done, ADR). Call out the
+  shelved) · evidence (router wired, ADR). Call out the
   Backbone Flow's completeness specifically.
 - **Feature map** → group live capabilities by module, tied to registered routers.
 - **Flow trace** → pick the flow and walk it end to end across modules using
