@@ -2,6 +2,18 @@
 
 Vietnamese Recruit-Onboard-Operate-Manage — HRM platform for Vietnamese businesses.
 
+## Project status & features
+
+This repo keeps no static progress doc on purpose — status would rot. To see where
+things stand, ask your AI agent: "tiến độ dự án tới đâu rồi?", "dự án có những tính
+năng gì?", or "tìm hiểu luồng tuyển dụng giúp tôi". It reports live from the wired
+routers in `backend/src/main.py`, the specs under `.kiro/specs/`, the ADRs in
+`docs/decisions/`, and open GitHub Issues.
+
+Start with [`CONTEXT.md`](./CONTEXT.md) for the domain language (Organization,
+Candidate, Onboarding, Backbone Flow...). For contribution conventions (skills
+workflow, git/branch/commit/PR), see [`AGENTS.md`](./AGENTS.md).
+
 ## Tech Stack
 
 - **Backend**: FastAPI + SQLModel + PostgreSQL 15 + Redis 7
@@ -75,12 +87,12 @@ NEXT_PUBLIC_NEXTAUTH_URL=http://localhost:3000
 
 ## Modules
 
-| Module         | Description                                      |
-| -------------- | ------------------------------------------------ |
-| `identity`     | Auth, OAuth, JWT, roles, whitelist, audit        |
-| `employee`     | Employee CRUD, departments, positions, documents |
-| `recruitment`  | Candidate pipeline, CV processing (AI)           |
-| `gmail`        | Gmail connection, sending, sync metadata         |
+| Module        | Description                                      |
+| ------------- | ------------------------------------------------ |
+| `identity`    | Auth, OAuth, JWT, roles, whitelist, audit        |
+| `employee`    | Employee CRUD, departments, positions, documents |
+| `recruitment` | Candidate pipeline, CV processing (AI)           |
+| `gmail`       | Gmail connection, sending, sync metadata         |
 
 Archived specs exist for `attendance`, `payroll`, and `self_service`, but those
 modules are not active in the current backend after migration

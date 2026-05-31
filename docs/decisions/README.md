@@ -3,7 +3,9 @@
 Decision records explain why important product or architecture choices were
 made.
 
-Use `docs/templates/decision.md` when adding a new decision.
+Use the ADR format from the `grill-with-docs` skill when adding a new decision:
+a short title plus 1–3 sentences (context, what was decided, why). Number files
+sequentially (`0008-slug.md`, ...).
 
 Add a decision when:
 

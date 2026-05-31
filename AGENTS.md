@@ -1,158 +1,177 @@
-# Agent Instructions
+# Agent Instructions — Vroom HR
 
-## Project: Vroom HR
+You are working on Vroom HR: a self-hosted HRM platform for Vietnamese companies
+(Recruit-Onboard-Operate-Manage). One deployment serves exactly one company.
+Users prompt in Vietnamese or English; detect intent in either language.
 
-Nền tảng quản lý nhân sự cho doanh nghiệp Việt Nam (Recruit-Onboard-Operate-Manage).
+Stack: FastAPI + SQLModel + PostgreSQL 15 + Redis 7 (Python 3.11+, MyPy strict,
+Ruff line-length 100) · Next.js 14 + TypeScript + pnpm + Tailwind + shadcn/ui ·
+cookie-based JWT auth · MinIO storage · pytest+Hypothesis / Vitest+fast-check.
 
-### Trước khi làm việc
+## Always do first
 
-1. Đọc `docs/product/overview.md` — tổng quan project, modules, tech stack
-2. Đọc `docs/product/tech-stack.md` — commands, conventions, patterns
-3. Đọc `docs/ARCHITECTURE.md` — architecture rules
-4. Tuân thủ module architecture: `api/ → application/ → domain/ → infrastructure/`
+1. Read `CONTEXT.md` (root). Use its canonical terms verbatim; never substitute a
+   synonym it lists under `_Avoid_`.
+2. Read the ADRs in `docs/decisions/` that touch the area you are about to change.
+   If your work contradicts an ADR, surface it explicitly — do not silently override.
+3. Read `docs/agents/` for issue-tracker, triage-label, and domain-doc rules.
 
-### Tech Stack
+## How skills work (read this — it changes how you respond)
 
-- **Backend:** Python 3.11+, FastAPI, SQLModel, PostgreSQL 15, Redis 7
-- **Frontend:** Next.js 14 (App Router), TypeScript, pnpm, Tailwind, shadcn/ui
-- **Auth:** Cookie-based JWT (KHÔNG dùng Bearer headers)
-- **Storage:** MinIO (documents, CVs, payslips)
-- **Linting:** Ruff (line-length=100), MyPy strict
-- **Testing:** pytest + Hypothesis (backend), Vitest + fast-check (frontend)
+On every user message:
 
----
+1. Detect intent and match it against the trigger table below.
+2. If a skill matches, activate it and follow its process for the rest of the task.
+   Do not improvise a substitute for a skill that exists.
+3. Announce in one line which skill you are running (e.g. "Running `diagnose`.").
+4. If two skills could match, prefer the more specific one; if genuinely ambiguous,
+   ask one short question.
+5. If no skill matches, proceed normally.
 
-## ⛔ QUY TẮC BẮT BUỘC — ĐỌC TRƯỚC KHI LÀM BẤT CỨ GÌ
+Trigger → skill (triggers are illustrative, not exhaustive; match on meaning):
 
-### 1. KHÔNG tạo docs tùy tiện
+| User intent (VI / EN)                                                                                                   | Skill                                                           |
+| ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| "grill me", "quay tôi", "phản biện plan", stress-test a design                                                          | `grill-me`                                                      |
+| same, but check against project's language/decisions and update docs                                                    | `grill-with-docs`                                               |
+| "viết PRD", "tạo PRD từ context", turn this conversation into a PRD                                                     | `to-prd`                                                        |
+| "chia issue", "tách thành ticket", break a plan/PRD into issues                                                         | `to-issues`                                                     |
+| "triage", "phân loại issue", label/route incoming bugs or requests                                                      | `triage`                                                        |
+| "làm theo TDD", "test trước", build a feature/fix bug test-first                                                        | `tdd`                                                           |
+| "debug cái này", "bug", "lỗi", "chậm/regression", diagnose a hard failure                                               | `diagnose`                                                      |
+| "cải thiện kiến trúc", "refactor", find deepening/coupling opportunities                                                | `improve-codebase-architecture`                                 |
+| explore code structure: repo map, symbols, callers/callees, impact                                                      | `srcwalk` (run `srcwalk guide` first; use before raw read/grep) |
+| "zoom out", "bức tranh lớn", unfamiliar with how code fits together                                                     | `zoom-out`                                                      |
+| "prototype", "thử nghiệm", sanity-check a data model / state machine / UI                                               | `prototype`                                                     |
+| "handoff", "bàn giao", compact this session for a successor agent                                                       | `handoff`                                                       |
+| "có skill nào cho…", "find a skill", need a capability you don't have                                                   | `find-skills`                                                   |
+| "tiến độ tới đâu", "có tính năng gì", "trạng thái dự án", "tìm hiểu luồng X", project status / feature map / flow trace | Project status routine (below)                                  |
 
-Thư mục `docs/` có cấu trúc cố định. KHÔNG tạo thư mục hoặc file ngoài cấu trúc sau:
+Default flow for a fresh feature: `grill-with-docs` → `to-prd` → `to-issues` →
+`triage` → (`tdd` / `diagnose`). Don't force every step; enter at the stage that
+matches what the user already has.
+
+## Reporting project status, features, and flows
+
+Trigger: the user asks where the project stands, what features exist, or wants to
+understand a specific flow ("tiến độ tới đâu rồi", "dự án có những tính năng gì",
+"trạng thái hiện tại", "tìm hiểu luồng tuyển dụng/onboarding", "how does X work",
+"trace the X flow"). This is read-only reporting — synthesize from the repo's live
+state, never from a static progress doc, and never write progress into `docs/`.
+
+Build the answer from these sources of truth (not from memory):
+
+- **What's actually shipped** — read `backend/src/main.py` to see which module
+  routers are wired in (currently: identity/auth + admin, employee, gmail,
+  recruitment [candidate, cv-review, metrics], onboarding). A module existing on
+  disk but not registered there is not live.
+- **Why things are the way they are** — `docs/decisions/` ADRs (e.g. scope is the
+  recruit→onboard Backbone Flow; attendance/payroll/self-service were shelved).
+- **Open work** — GitHub Issues via `gh issue list` (filter by label/state).
+- **Recent activity** — `git log --oneline -n 20` and merged PRs for momentum.
+
+Then answer in the shape the user asked for:
+
+- **Status / progress** → a short per-area table: area · state (shipped / in spec /
+  shelved) · evidence (router wired, ADR). Call out the
+  Backbone Flow's completeness specifically.
+- **Feature map** → group live capabilities by module, tied to registered routers.
+- **Flow trace** → pick the flow and walk it end to end across modules using
+  `srcwalk` for the call path; name each step with the `CONTEXT.md` term.
+
+Use canonical terms from `CONTEXT.md`. If a spec contradicts what's wired in code,
+trust the code and flag the drift.
+
+## Documentation rules
+
+Create docs lazily — only when there is something real to record.
+
+- A domain term is settled → update `CONTEXT.md`. Keep it a glossary only: no
+  implementation details, no spec, no scratch notes.
+- A decision that is hard to reverse AND surprising without context AND the result
+  of a real trade-off → add an ADR to `docs/decisions/` (next sequential number,
+  short title + 1–3 sentences).
+- Issues, PRDs, and progress/task lists go to GitHub Issues, never into markdown
+  under `docs/`.
+
+Allowed layout — do not create anything outside it:
 
 ```
-docs/
-├── product/          ← Product docs (overview, guides, feature specs)
-├── technical/        ← Cross-cutting technical references
-├── decisions/        ← Architecture Decision Records (ADRs)
-├── templates/        ← Templates (KHÔNG SỬA)
-├── ARCHITECTURE.md   ← Architecture rules
-└── README.md         ← Documentation map
+/CONTEXT.md            glossary
+/docs/agents/          skill config (issue-tracker, triage-labels, domain)
+/docs/decisions/       ADRs
 ```
 
-**Ví dụ SAI:**
+## Git: branch, commit, push, PR
 
-- ❌ `docs/cham-cong-nghi-phep/` — thư mục tùy tiện
-- ❌ `docs/my-feature-notes.md` — notes không theo format
-- ❌ `docs/tien-do-xxx.md` — tiến độ viết bằng markdown
+Trigger: when the user says "commit", "push", "đẩy code", "tạo branch", "mở PR",
+"tạo pull request" (or equivalent), run this full workflow autonomously end-to-end
+without asking for confirmation at each step. Constraints that always hold:
 
-**Ví dụ ĐÚNG:**
+- Never commit or push to `main`. Always work on a branch.
+- Only create commits when the user asks for it (the trigger above counts as asking).
+- Never run destructive git (`push --force`, `reset --hard`, `clean -f`, branch -D)
+  unless the user explicitly requests it.
+- Flag any file that looks like it holds secrets (`.env`, credentials) before staging.
 
-- ✅ `docs/product/payroll-guide.md` — hướng dẫn sử dụng
-- ✅ `docs/product/attendance-checkin.md` — feature spec
-- ✅ `docs/decisions/0006-payroll-tax-formula.md` — ADR
-
-### 2. PHẢI tuân thủ module architecture
-
-Mọi code mới trong backend PHẢI theo cấu trúc:
-
-```
-backend/src/modules/<module_name>/
-├── api/
-│   ├── router.py          # FastAPI endpoints
-│   ├── schemas.py         # Pydantic request/response
-│   └── error_handler.py   # Exception → HTTP mapping
-├── application/
-│   └── <name>_service.py  # Business logic
-├── domain/
-│   ├── entities.py        # SQLModel tables
-│   ├── enums.py           # Enumerations
-│   └── exceptions.py      # Domain exceptions
-├── infrastructure/
-│   ├── config.py          # Pydantic Settings
-│   └── <name>_repository.py
-└── container.py           # DI wiring (FastAPI Depends)
-```
-
-### 3. Git Branch & Commit Convention
-
-**Branch format:** `<type>/<short-description-in-english>`
-
-```
-feature/payroll-tax-calculator       ← tính năng mới
-fix/overtime-hours-query             ← sửa bug
-chore/update-ruff-config             ← config, CI, deps
-refactor/extract-tax-service         ← refactor
-docs/add-payroll-guide               ← chỉ docs
-hotfix/login-cookie-expired          ← fix khẩn cấp
-```
-
-- ✅ Tiếng Anh, lowercase, dấu `-` ngăn cách
-- ❌ KHÔNG dùng tên người (`nguyen`), tiếng Việt (`feat/Ting_luong`), underscore
-
-**Commit format:** `<type>(<scope>): <description in English>`
-
-```
-feat(payroll): add tax calculation for dependents
-fix(attendance): correct overtime hours query
-docs(product): add payroll user guide
-refactor(identity): extract token validation logic
-test(payroll): add regression tests for tax formula
-chore(infra): update docker compose for redis 7
-```
-
-Scopes: `identity`, `employee`, `gmail`, `recruitment`, `attendance`, `payroll`,
-`self-service`, `frontend`, `ui`, `infra`, `migrations`
-
-- ✅ Tiếng Anh, imperative mood ("add" not "added"), dưới 72 ký tự
-- ❌ KHÔNG viết tiếng Việt, KHÔNG trộn type (`feat/ fix ...`)
-
-### 4. GitHub Workflow
+Branch — always cut from fresh `main`:
 
 ```bash
-# 1. LUÔN pull main mới nhất trước khi bắt đầu
-git checkout main
-git pull origin main
-
-# 2. Tạo branch từ main
-git checkout -b feature/my-feature-name
-
-# 3. Code & commit atomic (mỗi commit = 1 thay đổi logic)
-git add <files>
-git commit -m "feat(module): description"
-
-# 4. Trước khi push, rebase lại main (tránh conflict)
-git fetch origin main
-git rebase origin/main
-
-# 5. Push branch
-git push -u origin feature/my-feature-name
-
-# 6. Tạo Pull Request
-gh pr create --title "feat(module): description" --body "What/Why/How"
-# Hoặc tạo PR trên GitHub UI
-
-# 7. Sau khi merge, cleanup
-git checkout main
-git pull origin main
-git branch -d feature/my-feature-name
+git checkout main && git pull origin main
+git checkout -b <type>/<short-english-desc>
 ```
 
-**PR Rules:**
+`<type>` ∈ `feature|fix|chore|refactor|docs|hotfix`. Name: lowercase English,
+`-`-separated, 2–4 words. No personal names, Vietnamese, underscores, or capitals.
 
-- Title theo commit format: `feat(payroll): implement salary calculation`
-- Description: mô tả what/why/how
-- Cần ít nhất 1 approval + pass CI
-- Merge strategy: **Squash merge**
-- KHÔNG push trực tiếp vào `main`
+Commit — atomic, stage explicit files (avoid `git add .`):
 
----
+```bash
+git add <files>
+git commit -m "<type>(<scope>): <imperative english summary>"
+```
 
-## Key Conventions
+`<type>` ∈ `feat|fix|docs|refactor|chore|test|perf|style`. `<scope>` ∈
+`identity|employee|gmail|recruitment|attendance|payroll|self-service|frontend|ui|infra|migrations|decisions`.
+Summary: imperative, lowercase, < 72 chars. E.g. `feat(payroll): add tax calc for dependents`.
 
-- Tất cả API routes bắt đầu bằng `/api/`
-- Auth dùng httpOnly secure cookies (access_token, refresh_token)
-- Soft delete cho employees (`is_active` flag)
-- Mọi admin action phải có audit log
-- OAuth tokens encrypted AES-256-GCM
-- Vietnamese tax: personal deduction 11M VND/month, dependent 4.4M/person
-- Insurance: employee 10.5% (BHXH 8% + BHYT 1.5% + BHTN 1%)
-- Work days per month: 26 (for salary calculation)
+Push + PR — rebase first, set upstream, open PR with What/Why/Testing:
+
+```bash
+git fetch origin main && git rebase origin/main
+git push -u origin <branch>
+gh pr create --title "<type>(<scope>): <summary>" --body "## What
+- ...
+## Why
+- ...
+## Testing
+- ..."
+```
+
+PR title uses the commit format. Squash merge. Requires ≥1 approval + passing CI.
+
+## Domain invariants
+
+- All API routes are prefixed `/api/`.
+- Auth uses httpOnly secure cookies (`access_token`, `refresh_token`), not Bearer headers.
+- Employees are soft-deleted via the `is_active` flag.
+- Every admin action must write an audit log.
+- OAuth tokens are encrypted AES-256-GCM.
+- Vietnamese tax: personal deduction 11M VND/month, dependent 4.4M/person.
+- Insurance (employee): 10.5% = BHXH 8% + BHYT 1.5% + BHTN 1%.
+- Salary uses 26 work days/month.
+
+## Backend & dev environment
+
+- Backend must run inside WSL (PostgreSQL/Redis are Docker containers in WSL2;
+  asyncpg over WSL2 port-forwarding is unreliable). Follow the dev-environment
+  steering for the exact run/restart/recovery commands. Never run the backend on
+  native Windows.
+- New backend code follows the module layout `api/ → application/ → domain/ →
+infrastructure/` with `container.py` for DI, matching existing modules.
+
+## Agent skills config
+
+- Issue tracker: GitHub Issues via `gh` CLI → `docs/agents/issue-tracker.md`.
+- Triage labels: five canonical roles, default strings → `docs/agents/triage-labels.md`.
+- Domain docs: single-context, `CONTEXT.md` + `docs/decisions/` → `docs/agents/domain.md`.

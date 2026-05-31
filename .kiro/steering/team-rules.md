@@ -7,34 +7,31 @@ inclusion: always
 ## ⛔ KHÔNG được làm
 
 1. **KHÔNG tạo file docs tùy tiện** trong `docs/`. Thư mục `docs/` có cấu trúc cố định:
-   - `docs/product/` — Product contract (overview, tech-stack, guides, module specs)
-   - `docs/technical/` — Cross-cutting technical references (migrations, seed data, error codes)
+   - `docs/agents/` — Agent skill config (issue tracker, triage labels, domain docs)
    - `docs/decisions/` — Architecture Decision Records (ADRs)
-   - `docs/templates/` — Templates (không sửa)
-   - `docs/ARCHITECTURE.md` — Architecture rules
+   - `CONTEXT.md` (root) — Domain glossary (canonical terms)
 
 2. **KHÔNG tạo thư mục mới** trong `docs/` mà không có lý do rõ ràng.
    - ❌ `docs/cham-cong-nghi-phep/` — SAI (không theo format)
    - ❌ `docs/my-feature-notes/` — SAI
-   - ✅ `docs/product/attendance-checkin.md` — ĐÚNG
-   - ✅ `docs/decisions/0006-payroll-tax-formula.md` — ĐÚNG
+   - ✅ `docs/decisions/0008-payroll-tax-formula.md` — ĐÚNG
 
 3. **KHÔNG viết tiến độ/task list** lan man vào markdown files trong `docs/`.
    - ❌ Tạo file `tien-do-xxx.md` với checklist
-   - ✅ Theo dõi công việc bằng issue tracker / PR
+   - ✅ Theo dõi công việc bằng issue tracker (GitHub Issues) / PR
 
-4. **KHÔNG viết hướng dẫn sử dụng** lung tung. Đó là product docs:
-   - ❌ `docs/cham-cong-nghi-phep/huong-dan-payroll.md`
-   - ✅ `docs/product/payroll-guide.md` (nếu cần user guide)
+4. **KHÔNG nhồi implementation details / hướng dẫn sử dụng vào `CONTEXT.md`.**
+   `CONTEXT.md` chỉ là glossary — định nghĩa term, không phải spec hay scratch pad.
 
 ## ✅ PHẢI làm
 
-1. **Khi tạo docs mới**, đặt đúng chỗ:
-   - Feature spec/guide → `docs/product/<feature-name>.md`
-   - Technical reference → `docs/technical/<topic>.md`
-   - Decision → `docs/decisions/<NNNN>-<slug>.md` (dùng `docs/templates/decision.md`)
+1. **Khi cần ghi lại quyết định kiến trúc**, tạo ADR:
+   - Decision → `docs/decisions/<NNNN>-<slug>.md`
+   - Chỉ tạo ADR khi quyết định: khó đảo ngược + gây bất ngờ nếu thiếu context + là kết quả của một trade-off thật.
 
-2. **Tuân thủ module architecture** khi tạo code mới:
+2. **Khi một domain term được chốt**, cập nhật `CONTEXT.md` (root) — một từ cho một khái niệm.
+
+3. **Tuân thủ module architecture** khi tạo code mới:
 
    ```
    backend/src/modules/<module>/
@@ -45,30 +42,28 @@ inclusion: always
    └── container.py
    ```
 
-3. **Commit message** phải rõ ràng:
+4. **Commit message** phải rõ ràng:
    - `feat(payroll): add tax calculation for dependents`
    - `fix(attendance): correct overtime hours query`
-   - `docs(product): add payroll user guide`
+   - `docs(decisions): add adr for payroll tax formula`
 
 ## 📁 Cấu trúc docs/ hợp lệ
 
 ```
-docs/
-├── product/          ← Product docs (overview, guides, module specs)
-├── technical/        ← Cross-cutting technical references
-├── decisions/        ← ADRs (architecture decisions)
-├── templates/        ← Templates (KHÔNG SỬA)
-├── ARCHITECTURE.md   ← Architecture rules
-└── README.md         ← Documentation map
+/
+├── CONTEXT.md        ← Domain glossary (canonical terms)
+└── docs/
+    ├── agents/       ← Agent skill config (issue tracker, triage labels, domain docs)
+    └── decisions/    ← ADRs (architecture decisions)
 ```
 
 Bất kỳ thư mục/file nào ngoài cấu trúc trên đều cần được di chuyển hoặc xóa.
 
-## 🔧 Xử lý docs cũ không đúng format
+## 🔧 Workflow docs (Matt Pocock skills)
 
-Nếu gặp thư mục docs sai format (ví dụ `docs/cham-cong-nghi-phep/`), nội dung
-hữu ích trong đó cần được:
+Project dùng bộ engineering skills (`grill-me`, `grill-with-docs`, `to-issues`,
+`triage`, ...). Docs được tạo **lazily** trong lúc grilling:
 
-- Hướng dẫn sử dụng → Di chuyển sang `docs/product/`
-- Feature specs → Di chuyển sang `docs/product/`
-- Technical notes → Di chuyển sang `docs/technical/`
+- Term được chốt → cập nhật `CONTEXT.md`
+- Quyết định kiến trúc thật sự → tạo ADR trong `docs/decisions/`
+- Issue / PRD → GitHub Issues (xem `docs/agents/issue-tracker.md`)
