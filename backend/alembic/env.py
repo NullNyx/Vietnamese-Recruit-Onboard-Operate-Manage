@@ -4,10 +4,11 @@ import asyncio
 import os
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
+
+from alembic import context
 
 # this is the Alembic Config object
 config = context.config
@@ -19,16 +20,21 @@ if config.config_file_name is not None:
 # Import SQLModel metadata so Alembic can detect tables
 from sqlmodel import SQLModel  # noqa: E402
 
-from src.modules.identity.domain.entities import (  # noqa: E402, F401
-    OAuthGrant,
-    RefreshToken,
-    User,
-)
 from src.modules.employee.domain.entities import (  # noqa: E402, F401
     Department,
     Employee,
     EmployeeDocument,
     Position,
+)
+from src.modules.identity.domain.entities import (  # noqa: E402, F401
+    OAuthGrant,
+    RefreshToken,
+    User,
+)
+from src.modules.onboarding.domain.entities import (  # noqa: E402, F401
+    OnboardingAuditLog,
+    OnboardingProcess,
+    OnboardingTask,
 )
 
 target_metadata = SQLModel.metadata
