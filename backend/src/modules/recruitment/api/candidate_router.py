@@ -35,6 +35,7 @@ from src.modules.recruitment.application.candidate_service import (
     CandidateService,
     PaginatedCandidates,
 )
+from src.modules.recruitment.container import get_candidate_service
 from src.modules.recruitment.domain.enums import CandidateStatus, ProcessingStatus
 from src.modules.recruitment.domain.exceptions import (
     CandidateNotFoundError,
@@ -63,35 +64,6 @@ def _get_minio_client() -> RecruitmentMinIOClient:
 
     settings = get_recruitment_settings()
     return RecruitmentMinIOClient(settings)
-
-
-async def get_candidate_service(
-    session: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(get_current_user),
-) -> CandidateService:
-    """Provide a CandidateService instance with all dependencies.
-
-    Args:
-        session: The async database session from DI.
-        current_user: The authenticated user.
-
-    Returns:
-        A fully configured CandidateService.
-    """
-    candidate_repo = CandidateRepository(session)
-    cv_document_repo = CVDocumentRepository(session)
-    minio_client = _get_minio_client()
-
-    from src.modules.recruitment.container import get_event_publisher
-
-    return CandidateService(
-        candidate_repo=candidate_repo,
-        cv_document_repo=cv_document_repo,
-        minio_client=minio_client,
-        session=session,
-        event_publisher=get_event_publisher(),
-        user_id=current_user.id,
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -376,11 +348,56 @@ async def schedule_interview(
         ValueError: If interviewer IDs are invalid.
     """
     candidate = await candidate_service.schedule_interview(
-        candidate_id=candidate_id,
-        interviewer_ids=body.interviewer_ids,
-        date=body.date.isoformat() if body.date else None,
-        time=body.time.isoformat() if body.time else None,
+        candidate_id,
+        start=body.start,
         duration_minutes=body.duration_minutes,
+        interviewer_ids=body.interviewer_ids,
+        notes=body.notes,
+    )
+
+    return CandidateResponse.model_validate(candidate)
+
+
+# ---------------------------------------------------------------------------
+# Reschedule interview
+# ---------------------------------------------------------------------------
+
+
+@candidate_router.post(
+    "/{candidate_id}/reschedule-interview",
+    response_model=CandidateResponse,
+)
+async def reschedule_interview(
+    candidate_id: UUID,
+    body: ScheduleInterviewRequest,
+    current_user: CurrentUserDep,
+    candidate_service: CandidateServiceDep,
+) -> CandidateResponse:
+    """Reschedule an existing interview for a candidate.
+
+    Patches the existing Google Calendar event in place with the new time
+    window, preserving the Meet link. Requires the candidate to already have
+    a scheduled interview.
+
+    Args:
+        candidate_id: UUID of the candidate.
+        body: Interview scheduling parameters (new start, duration, etc.).
+        current_user: The authenticated user.
+        candidate_service: The candidate service.
+
+    Returns:
+        The updated candidate record.
+
+    Raises:
+        CandidateNotFoundError: If the candidate doesn't exist.
+        NoInterviewToRescheduleError: If no interview exists to reschedule.
+        ValueError: If interviewer IDs are invalid.
+    """
+    candidate = await candidate_service.reschedule_interview(
+        candidate_id,
+        start=body.start,
+        duration_minutes=body.duration_minutes,
+        interviewer_ids=body.interviewer_ids,
         notes=body.notes,
     )
 

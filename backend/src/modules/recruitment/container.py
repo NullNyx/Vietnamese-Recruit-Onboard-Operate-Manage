@@ -16,21 +16,33 @@ from __future__ import annotations
 from functools import lru_cache
 from uuid import UUID
 
+import httpx
 from arq.connections import RedisSettings
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.identity.container import get_current_user, get_db_session, get_settings
+from src.modules.identity.application.oauth_service import OAuthService
+from src.modules.identity.container import (
+    get_crypto_utils,
+    get_current_user,
+    get_db_session,
+    get_settings,
+)
 from src.modules.identity.domain.entities import User
+from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
 from src.modules.recruitment.application.candidate_service import CandidateService
 from src.modules.recruitment.application.cv_processor import CVProcessorService
 from src.modules.recruitment.application.intent_classifier import IntentClassifierService
 from src.modules.recruitment.application.review_service import ReviewService
+from src.modules.recruitment.infrastructure.calendar_adapter import CalendarAdapter
 from src.modules.recruitment.infrastructure.config import RecruitmentSettings
 from src.modules.recruitment.infrastructure.event_publisher import ArqDomainEventPublisher
 from src.modules.recruitment.infrastructure.llm_adapter import LLMAdapter
 from src.modules.recruitment.infrastructure.minio_client import RecruitmentMinIOClient
 from src.modules.recruitment.infrastructure.ocr_adapter import OCRAdapter
+from src.modules.recruitment.infrastructure.org_settings_repository import (
+    OrganizationSettingsRepository,
+)
 from src.modules.recruitment.infrastructure.pii_redactor import PIIRedactor
 from src.modules.recruitment.infrastructure.repositories import (
     CandidateRepository,
@@ -96,6 +108,32 @@ def get_pii_redactor() -> PIIRedactor:
 
 
 @lru_cache
+def get_calendar_http_client() -> httpx.AsyncClient:
+    """Create and cache the shared httpx.AsyncClient for the Calendar adapter.
+
+    A single long-lived async client is reused across requests so connection
+    pools are not torn down per request. This is safe for a long-lived app and
+    mirrors how the other Google adapters obtain their HTTP client.
+
+    Returns:
+        A cached httpx.AsyncClient for Google Calendar API calls.
+    """
+    return httpx.AsyncClient()
+
+
+@lru_cache
+def get_calendar_adapter() -> CalendarAdapter:
+    """Create and cache the CalendarAdapter singleton.
+
+    Returns:
+        A CalendarAdapter built with the shared httpx client and recruitment
+        settings.
+    """
+    settings = get_recruitment_settings()
+    return CalendarAdapter(settings=settings, http_client=get_calendar_http_client())
+
+
+@lru_cache
 def get_event_publisher() -> ArqDomainEventPublisher:
     """Create and cache the ARQ-backed domain event publisher singleton.
 
@@ -123,6 +161,15 @@ async def get_candidate_service(
 ) -> CandidateService:
     """Provide a CandidateService instance with all dependencies.
 
+    Wires the Calendar scheduling dependencies (per ADR-0008) so the
+    synchronous schedule/reschedule/cancel flows work end-to-end: the
+    ``CalendarAdapter`` (shared httpx client), the
+    ``OrganizationSettingsRepository`` (interview timezone), and the identity
+    ``OAuthService``/``OAuthGrantRepository``/``CryptoUtils`` stack used to read
+    the acting HR user's grant status and refresh their Google token. The
+    OAuth/crypto wiring mirrors the Gmail container and the
+    ``arq_process_cv_from_email`` task in this module.
+
     Args:
         session: The async database session from DI.
         current_user: The authenticated user.
@@ -134,6 +181,16 @@ async def get_candidate_service(
     cv_document_repo = CVDocumentRepository(session)
     minio_client = get_minio_client()
 
+    # Calendar scheduling dependencies (ADR-0008).
+    org_settings_repo = OrganizationSettingsRepository(session, get_recruitment_settings())
+    oauth_grant_repo = OAuthGrantRepository(session)
+    crypto = get_crypto_utils()
+    oauth_service = OAuthService(
+        settings=get_settings(),
+        crypto=crypto,
+        grant_repository=oauth_grant_repo,
+    )
+
     return CandidateService(
         candidate_repo=candidate_repo,
         cv_document_repo=cv_document_repo,
@@ -141,6 +198,11 @@ async def get_candidate_service(
         session=session,
         event_publisher=get_event_publisher(),
         user_id=current_user.id,
+        calendar_port=get_calendar_adapter(),
+        org_settings_repo=org_settings_repo,
+        oauth_grant_repo=oauth_grant_repo,
+        oauth_service=oauth_service,
+        crypto=crypto,
     )
 
 

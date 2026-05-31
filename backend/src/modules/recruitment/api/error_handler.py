@@ -42,7 +42,7 @@ def register_recruitment_error_handlers(app: FastAPI) -> None:
             content={
                 "error_code": exc.error_code,
                 "message": exc.message,
-                "details": None,
+                "details": exc.details,
             },
         )
 

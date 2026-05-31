@@ -1,9 +1,14 @@
-"""Domain value objects for the Recruitment CV Pipeline module.
+"""Domain value objects for the Recruitment module.
 
-Defines Pydantic BaseModel classes representing structured data
-extracted from CVs. These are immutable value objects used throughout
-the application layer for data transfer and validation.
+Defines immutable value objects used throughout the application layer
+for data transfer and validation. CV-pipeline data is modelled with
+Pydantic ``BaseModel`` classes, while the calendar-scheduling I/O types
+(``CalendarEventSpec`` and ``CalendarEvent``) are frozen dataclasses
+per ADR-0008.
 """
+
+from dataclasses import dataclass
+from datetime import datetime
 
 from pydantic import BaseModel, Field
 
@@ -49,3 +54,70 @@ class ParsedCV(BaseModel):
     experience: list[ExperienceItem] = Field(default_factory=list, max_length=20)
     education: list[EducationItem] = Field(default_factory=list, max_length=10)
     summary: str = Field(default="", max_length=500)
+
+
+@dataclass(frozen=True)
+class CalendarEventSpec:
+    """Input to the Calendar adapter (pure, timezone-resolved).
+
+    Describes the Google Calendar event the Scheduling_System wants to
+    create or patch. ``end`` is always derived by the service as
+    ``start + timedelta(minutes=duration_minutes)``, so the invariant
+    ``end == start + duration`` holds and, for the valid duration range
+    (15-180 minutes), ``end`` is strictly after ``start``.
+
+    Attributes:
+        summary: Event title shown on the calendar.
+        description: Optional event description (interview notes).
+        start: Timezone-aware interview start datetime.
+        end: Timezone-aware interview end datetime (``start + duration``).
+        timezone: IANA timezone name applied to the event (e.g.
+            ``"Asia/Ho_Chi_Minh"``).
+        attendee_emails: De-duplicated attendee email addresses
+            (Candidate + interviewer Employees).
+        request_meet_link: Whether to request a Google Meet conferencing
+            link for the event.
+    """
+
+    summary: str
+    description: str | None
+    start: datetime
+    end: datetime
+    timezone: str
+    attendee_emails: tuple[str, ...]
+    request_meet_link: bool = True
+
+    def __post_init__(self) -> None:
+        """Validate the event time-window invariant.
+
+        Raises:
+            ValueError: If ``start`` or ``end`` is not timezone-aware, or
+                if ``end`` is not strictly after ``start``.
+        """
+        if self.start.tzinfo is None or self.start.utcoffset() is None:
+            raise ValueError("CalendarEventSpec.start must be timezone-aware")
+        if self.end.tzinfo is None or self.end.utcoffset() is None:
+            raise ValueError("CalendarEventSpec.end must be timezone-aware")
+        if self.end <= self.start:
+            raise ValueError("CalendarEventSpec.end must be after start")
+
+
+@dataclass(frozen=True)
+class CalendarEvent:
+    """Result returned by the Calendar adapter after a create or patch.
+
+    Models the relevant parts of the Google Calendar API response so the
+    Scheduling_System can persist the event reference on the Candidate.
+
+    Attributes:
+        event_id: Google Calendar event identifier (stored as
+            ``calendar_event_id`` on the Candidate).
+        html_link: Link to view the event in Google Calendar, if returned.
+        meet_link: Google Meet conferencing link, if one was generated.
+        invited_emails: Attendee emails that Google accepted on the event.
+    """
+
+    event_id: str
+    html_link: str | None
+    meet_link: str | None
+    invited_emails: tuple[str, ...]

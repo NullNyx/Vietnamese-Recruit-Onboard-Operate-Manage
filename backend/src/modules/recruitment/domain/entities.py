@@ -8,7 +8,7 @@ pipeline management.
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, Index, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -23,6 +23,14 @@ class Candidate(SQLModel, table=True):
     """
 
     __tablename__ = "candidates"
+    __table_args__ = (
+        Index(
+            "ix_candidates_calendar_event_id",
+            "calendar_event_id",
+            unique=True,
+            postgresql_where=text("calendar_event_id IS NOT NULL"),
+        ),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     name: str = Field(max_length=255, nullable=False)
@@ -40,6 +48,11 @@ class Candidate(SQLModel, table=True):
     rejected_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     accepted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     archived_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    calendar_event_id: str | None = Field(default=None, max_length=1024)
+    interview_start_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True))
+    )
+    interview_timezone: str | None = Field(default=None, max_length=64)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -115,4 +128,26 @@ class RecruitmentAuditLog(SQLModel, table=True):
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )
+
+
+class OrganizationSettings(SQLModel, table=True):
+    """Single-row settings for the Organization (the company deployment).
+
+    Holds the canonical IANA timezone used to interpret and render
+    interview times on Google Calendar events. The repository enforces
+    single-row semantics, seeding the configured default on first access.
+    """
+
+    __tablename__ = "organization_settings"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    timezone: str = Field(default="Asia/Ho_Chi_Minh", max_length=64, nullable=False)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )

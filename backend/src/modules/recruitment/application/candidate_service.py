@@ -11,23 +11,36 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from typing import Protocol, runtime_checkable
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Protocol, TypeVar, runtime_checkable
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import col, select
 
 from src.modules.employee.domain.entities import Employee
 from src.modules.recruitment.domain.entities import Candidate, CVDocument
 from src.modules.recruitment.domain.enums import CandidateStatus
 from src.modules.recruitment.domain.exceptions import (
+    CalendarEventCreateFailedError,
+    CalendarEventUpdateFailedError,
+    CalendarGrantMissingError,
     CandidateNotFoundError,
     GmailNotConnectedError,
+    InterviewerMissingEmailError,
+    InterviewerNotFoundError,
     InvalidStatusTransitionError,
+    NoInterviewToRescheduleError,
 )
-from src.modules.recruitment.domain.value_objects import ParsedCV
+from src.modules.recruitment.domain.value_objects import (
+    CalendarEvent,
+    CalendarEventSpec,
+    ParsedCV,
+)
 from src.modules.recruitment.infrastructure.audit_repository import log_audit
 from src.modules.recruitment.infrastructure.minio_client import RecruitmentMinIOClient
 from src.modules.recruitment.infrastructure.repositories import (
@@ -35,7 +48,17 @@ from src.modules.recruitment.infrastructure.repositories import (
     CVDocumentRepository,
 )
 
+if TYPE_CHECKING:
+    from src.modules.identity.api.schemas import GoogleTokens, GrantStatus
+    from src.modules.identity.domain.entities import OAuthGrant
+    from src.modules.recruitment.infrastructure.org_settings_repository import (
+        OrganizationSettingsRepository,
+    )
+
 logger = logging.getLogger(__name__)
+
+# Return type for adapter calls executed through ``_with_calendar_token``.
+_CalendarResultT = TypeVar("_CalendarResultT")
 
 
 # ─── State Machine Definition ──────────────────────────────────────────
@@ -180,6 +203,77 @@ class DomainEventPublisher(Protocol):
         ...
 
 
+@runtime_checkable
+class CalendarPort(Protocol):
+    """Protocol for Google Calendar event operations.
+
+    Abstracts the recruitment ``CalendarAdapter`` so the service can be
+    exercised against an in-memory fake, mirroring the ``GmailSendProtocol``
+    seam. Each method takes the acting HR user's OAuth ``access_token`` (with
+    the ``calendar.events`` scope) and operates on the user's primary calendar.
+    """
+
+    async def create_event(self, access_token: str, spec: CalendarEventSpec) -> CalendarEvent:
+        """Create a Calendar event from the given specification."""
+        ...
+
+    async def patch_event(
+        self, access_token: str, event_id: str, spec: CalendarEventSpec
+    ) -> CalendarEvent:
+        """Patch an existing Calendar event identified by ``event_id``."""
+        ...
+
+    async def delete_event(self, access_token: str, event_id: str) -> None:
+        """Delete (cancel) the Calendar event identified by ``event_id``."""
+        ...
+
+
+@runtime_checkable
+class OAuthGrantReader(Protocol):
+    """Protocol for reading a user's stored OAuth grant.
+
+    Abstracts the identity module's ``OAuthGrantRepository`` so the
+    recruitment service can read the acting HR user's granted scopes and
+    encrypted access token without a hard cross-module dependency.
+    """
+
+    async def get_by_user_id(self, user_id: UUID) -> OAuthGrant | None:
+        """Return the active OAuth grant for the user, or ``None``."""
+        ...
+
+
+@runtime_checkable
+class CalendarGrantChecker(Protocol):
+    """Protocol for computing grant status and refreshing Google tokens.
+
+    Abstracts the identity module's ``OAuthService`` to compute
+    ``calendar_grant_valid`` from granted scopes (R9) and to refresh an
+    expired access token during the 401 retry flow.
+    """
+
+    def determine_grant_status(self, scopes: list[str]) -> GrantStatus:
+        """Compute the Gmail/Calendar grant status from granted scopes."""
+        ...
+
+    async def refresh_google_token(self, user_id: UUID) -> GoogleTokens | None:
+        """Refresh the user's Google access token, or ``None`` if revoked."""
+        ...
+
+
+@runtime_checkable
+class TokenCipher(Protocol):
+    """Protocol for decrypting stored OAuth tokens.
+
+    Abstracts the identity module's ``CryptoUtils`` (AES-256-GCM) so the
+    recruitment service can decrypt the stored access token before calling
+    the Calendar adapter.
+    """
+
+    def decrypt(self, ciphertext: str) -> str:
+        """Decrypt a stored ciphertext into plaintext."""
+        ...
+
+
 @dataclass
 class CVDocumentDetail:
     """CV document metadata with an optional presigned download URL.
@@ -253,6 +347,11 @@ class CandidateService:
         gmail_label_service: Optional protocol-based Gmail label service.
         access_token_provider: Optional callable returning the current OAuth token.
         user_id_provider: Optional callable returning the current user UUID.
+        calendar_port: Optional Calendar adapter (protocol) for event operations.
+        org_settings_repo: Optional Organization settings repository (timezone).
+        oauth_grant_repo: Optional OAuth grant repository for token lookup/refresh.
+        oauth_service: Optional OAuth service computing grant status and refresh.
+        crypto: Optional AES-256-GCM utilities for decrypting the access token.
     """
 
     def __init__(
@@ -268,6 +367,11 @@ class CandidateService:
         access_token_provider: object | None = None,
         user_id_provider: object | None = None,
         user_id: UUID | None = None,
+        calendar_port: CalendarPort | None = None,
+        org_settings_repo: OrganizationSettingsRepository | None = None,
+        oauth_grant_repo: OAuthGrantReader | None = None,
+        oauth_service: CalendarGrantChecker | None = None,
+        crypto: TokenCipher | None = None,
     ) -> None:
         self._candidate_repo = candidate_repo
         self._cv_document_repo = cv_document_repo
@@ -280,6 +384,11 @@ class CandidateService:
         self._access_token_provider = access_token_provider
         self._user_id_provider = user_id_provider
         self._user_id = user_id
+        self._calendar_port = calendar_port
+        self._org_settings_repo = org_settings_repo
+        self._oauth_grant_repo = oauth_grant_repo
+        self._oauth_service = oauth_service
+        self._crypto = crypto
 
     # ─── Create / Update (CandidateCreator protocol) ───────────────────
 
@@ -697,6 +806,12 @@ class CandidateService:
         Validates the transition, stores the rejection reason and
         rejected_at timestamp, and logs an audit entry.
 
+        When the Candidate has a stored ``calendar_event_id``, the interview's
+        Google Calendar event is cancelled as a best-effort side-effect AFTER
+        the terminal transition has committed, so a cancellation failure can
+        never undo the rejection (R8.1, R8.4, R8.6, R12.3). When no event is
+        stored, no Calendar call is made (R8.3).
+
         Args:
             candidate_id: UUID of the candidate to reject.
             reason: Optional rejection reason (max 1000 characters).
@@ -733,6 +848,11 @@ class CandidateService:
             new_value={"status": CandidateStatus.REJECTED},
             change_summary=(f"Candidate rejected: {reason[:200] if reason else 'no reason'}"),
         )
+
+        # Best-effort: cancel the interview event AFTER the terminal transition
+        # has committed (R8.1, R8.4, R8.6, R12.3). A failure here cannot undo
+        # the already-committed rejection.
+        await self._cancel_interview_event(candidate, trigger="reject")
 
         return candidate
 
@@ -796,6 +916,12 @@ class CandidateService:
         Not allowed from accepted status. Idempotent for already-archived
         candidates (returns existing record without modification).
 
+        When the Candidate has a stored ``calendar_event_id``, the interview's
+        Google Calendar event is cancelled as a best-effort side-effect AFTER
+        the terminal transition has committed, so a cancellation failure can
+        never undo the archive (R8.2, R8.5, R8.6, R12.3). When no event is
+        stored, no Calendar call is made (R8.3).
+
         Args:
             candidate_id: UUID of the candidate to archive.
 
@@ -836,106 +962,643 @@ class CandidateService:
             change_summary=f"Candidate archived from status '{previous_status}'",
         )
 
+        # Best-effort: cancel the interview event AFTER the terminal transition
+        # has committed (R8.2, R8.5, R8.6, R12.3). A failure here cannot undo
+        # the already-committed archive.
+        await self._cancel_interview_event(candidate, trigger="archive")
+
         return candidate
 
     async def schedule_interview(
         self,
         candidate_id: UUID,
+        *,
+        start: datetime,
+        duration_minutes: int,
         interviewer_ids: list[UUID],
-        date: str | None = None,
-        time: str | None = None,
-        duration_minutes: int | None = None,
         notes: str | None = None,
     ) -> Candidate:
-        """Schedule an interview for a candidate.
+        """Schedule an interview by creating a Google Calendar event atomically.
 
-        Validates the status transition (not from rejected/archived),
-        validates interviewer_ids against employee records, updates
-        status to interview_scheduled, emits domain event, and logs audit.
+        Implements the synchronous, atomic scheduling contract from ADR-0008.
+        The Calendar event is created on the acting HR user's calendar **before**
+        the database transaction commits; only on Calendar success does the
+        Candidate transition to ``interview_scheduled`` and persist the event
+        reference, the scheduled start, and the applied timezone. A Calendar
+        failure rolls back all database changes and leaves the Candidate
+        untouched. Attendee and Meet sub-failures are non-fatal: a created event
+        succeeds even without a Meet link or with some attendees dropped.
+
+        Steps (in order):
+
+        1. Validate the request fields (duration 15-180, 1-10 interviewers,
+           future ``start``, notes <= 1000) — R1.2-R1.5.
+        2. Load the Candidate and validate the transition to
+           ``interview_scheduled``; no Calendar event is created on an invalid
+           transition — R2.4.
+        3. Assert the acting HR user's Calendar grant before any Calendar call —
+           R9.
+        4. Resolve interviewer Employees and their emails — R1.7, R10.
+        5. Resolve the Organization timezone, compute ``end = start + duration``,
+           build the attendee list, and assemble the (tz-aware) event spec —
+           R2.2, R5, R6, R11.
+        6. Create the Calendar event via ``_with_calendar_token`` (401 → refresh
+           → retry once) before committing — R2.1.
+        7. On success, persist the event reference, start, timezone, and status,
+           then commit — R2.3, R4.1-R4.3.
+        8. On Calendar failure, roll back, write a failure audit entry, and raise
+           ``CalendarEventCreateFailedError`` — R3.1-R3.4, R12.4.
+        9. Write a success audit entry recording the schedule action — R12.1.
 
         Args:
-            candidate_id: UUID of the candidate.
-            interviewer_ids: List of employee UUIDs to be interviewers.
-            date: Optional interview date string.
-            time: Optional interview time string.
-            duration_minutes: Optional duration in minutes.
-            notes: Optional notes for the interview.
+            candidate_id: UUID of the Candidate.
+            start: Interview start datetime (tz-aware preferred; a naive value is
+                interpreted in the Organization timezone).
+            duration_minutes: Interview duration in minutes (15-180 inclusive).
+            interviewer_ids: Interviewer Employee identifiers (1-10).
+            notes: Optional interview notes (<= 1000 characters).
 
         Returns:
-            The updated Candidate entity.
+            The updated Candidate entity with the stored Calendar reference.
 
         Raises:
+            ValueError: If a request field violates its bounds (mapped to 422).
             CandidateNotFoundError: If the candidate doesn't exist.
             InvalidStatusTransitionError: If the transition is not allowed.
-            ValueError: If any interviewer_id doesn't match an employee.
+            CalendarGrantMissingError: If the acting HR user's Calendar grant is
+                missing or invalid.
+            InterviewerNotFoundError: If any interviewer id has no Employee.
+            InterviewerMissingEmailError: If a matched interviewer has no email.
+            CalendarEventCreateFailedError: If the Calendar event creation fails.
         """
+        if self._calendar_port is None:
+            raise RuntimeError("Calendar port is not configured")
+        if self._user_id is None:
+            raise RuntimeError("Acting HR user id is not configured")
+        calendar_port = self._calendar_port
+        user_id = self._user_id
+
+        # Step 1: validate the request fields (re-asserted for direct-call safety).
+        self._validate_schedule_request(
+            start=start,
+            duration_minutes=duration_minutes,
+            interviewer_ids=interviewer_ids,
+            notes=notes,
+        )
+
+        # Step 2: load the candidate and validate the transition (R2.4). An
+        # invalid transition raises here, before any Calendar call.
         candidate = await self._get_candidate_or_raise(candidate_id)
         previous_status = candidate.status
-
         self._validate_transition(
             current_status=candidate.status,
             target_status=CandidateStatus.INTERVIEW_SCHEDULED,
             action="schedule_interview",
         )
 
-        # Validate interviewer_ids against employee records
-        invalid_ids = await self._validate_interviewer_ids(interviewer_ids)
-        if invalid_ids:
-            raise ValueError(f"Invalid interviewer IDs: {[str(id) for id in invalid_ids]}")
+        # Step 3: assert the Calendar grant before any Calendar call (R9).
+        await self._assert_calendar_grant(user_id)
 
+        # Step 4: resolve interviewer Employees and their emails (R1.7, R10).
+        resolved = await self._resolve_interviewers(interviewer_ids)
+        interviewer_emails = [email for _, email in resolved]
+
+        # Step 5: timezone, end, attendees, and the tz-aware event spec.
+        timezone = await self._get_org_timezone()
+        tz = ZoneInfo(timezone)
+        start_resolved = start.replace(tzinfo=tz) if start.tzinfo is None else start.astimezone(tz)
+        end_resolved = start_resolved + timedelta(minutes=duration_minutes)
+        attendee_emails = self._build_attendees(candidate, interviewer_emails)
+        spec = CalendarEventSpec(
+            summary=f"Interview with {candidate.name}",
+            description=notes,
+            start=start_resolved,
+            end=end_resolved,
+            timezone=timezone,
+            attendee_emails=tuple(attendee_emails),
+            request_meet_link=True,
+        )
+
+        # Step 6: create the Calendar event BEFORE committing (R2.1). On failure
+        # roll back, audit the failure, and raise (R3.1-R3.4, R12.4).
+        try:
+            event = await self._with_calendar_token(
+                user_id,
+                lambda token: calendar_port.create_event(token, spec),
+            )
+        except Exception as exc:
+            await self._session.rollback()
+            await log_audit(
+                session=self._session,
+                operation_type="interview_schedule_failed",
+                entity_type="candidate",
+                entity_id=candidate_id,
+                user_id=user_id,
+                new_value={
+                    "attempted_action": "schedule_interview",
+                    "candidate_id": str(candidate_id),
+                    "error": str(exc),
+                },
+                change_summary="Interview schedule failed: Calendar event creation error",
+                success=False,
+            )
+            await self._session.commit()
+            raise CalendarEventCreateFailedError() from exc
+
+        # Step 7: persist the event reference, start, timezone, and status, then
+        # commit (R2.3, R4.1-R4.3). Attendee/Meet sub-failures are non-fatal: the
+        # event exists, so the schedule succeeds even without a Meet link (R5.3,
+        # R6.2, R6.3).
         candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
+        candidate.calendar_event_id = event.event_id
+        candidate.interview_start_at = start_resolved
+        candidate.interview_timezone = timezone
         candidate = await self._candidate_repo.update(candidate)
         await self._session.commit()
 
-        # Emit domain event for interview module
-        if self._event_publisher:
-            await self._event_publisher.publish(
-                event_type="interview_scheduled",
-                payload={
-                    "candidate_id": str(candidate.id),
-                    "candidate_name": candidate.name,
-                    "candidate_email": candidate.email,
-                    "interviewer_ids": [str(id) for id in interviewer_ids],
-                    "date": date,
-                    "time": time,
-                    "duration_minutes": duration_minutes,
-                    "notes": notes,
-                },
-            )
-
+        # Step 9: success audit (R12.1). Audit failure never rolls back (R12.5):
+        # ``log_audit`` swallows its own failures.
         await log_audit(
             session=self._session,
-            operation_type="schedule_interview",
+            operation_type="interview_scheduled",
             entity_type="candidate",
             entity_id=candidate.id,
-            user_id=self._user_id,
+            user_id=user_id,
             previous_value={"status": previous_status},
             new_value={
                 "status": CandidateStatus.INTERVIEW_SCHEDULED,
-                "interviewer_ids": [str(id) for id in interviewer_ids],
+                "calendar_event_id": event.event_id,
+                "candidate_id": str(candidate.id),
+                "start": start_resolved.isoformat(),
+                "timezone": timezone,
+                "interviewer_ids": [str(id_) for id_ in interviewer_ids],
             },
-            change_summary=(f"Interview scheduled with {len(interviewer_ids)} interviewer(s)"),
+            change_summary=(
+                f"Interview scheduled with {len(interviewer_ids)} interviewer(s); "
+                f"event {event.event_id}"
+            ),
+            success=True,
         )
+        await self._session.commit()
+
+        if event.meet_link is not None:
+            logger.info("Interview scheduled for candidate %s with Meet link", candidate.id)
 
         return candidate
 
-    async def _validate_interviewer_ids(self, interviewer_ids: list[UUID]) -> list[UUID]:
-        """Validate that all interviewer IDs correspond to existing employees.
+    async def reschedule_interview(
+        self,
+        candidate_id: UUID,
+        *,
+        start: datetime,
+        duration_minutes: int,
+        interviewer_ids: list[UUID],
+        notes: str | None = None,
+    ) -> Candidate:
+        """Reschedule an interview by patching the existing Calendar event.
+
+        Implements the reschedule contract from ADR-0008 (R7). The existing
+        Google Calendar event identified by the Candidate's stored
+        ``calendar_event_id`` is patched in place with the new time window; a
+        new event is never created and the existing Google Meet link is
+        preserved (the patch spec sets ``request_meet_link=False``). Only the
+        stored scheduled ``start`` (and applied timezone) is updated on success;
+        the ``calendar_event_id`` is left unchanged. A patch failure leaves the
+        stored references untouched and raises ``CalendarEventUpdateFailedError``.
+
+        Steps (in order):
+
+        1. Load the Candidate and require an existing ``calendar_event_id``;
+           when absent, raise ``NoInterviewToRescheduleError`` before any
+           Calendar call — R7.5.
+        2. Assert the acting HR user's Calendar grant before any Calendar call —
+           R9.2, R9.3.
+        3. Validate the request fields (duration 15-180, 1-10 interviewers,
+           future ``start``, notes <= 1000) — R1.2-R1.5.
+        4. Resolve the Organization timezone, compute ``end = start + duration``,
+           resolve interviewers, build attendees, and assemble the (tz-aware)
+           patch spec with ``request_meet_link=False`` so the Meet link is
+           preserved — R7.2, R11.1, R11.2.
+        5. Patch the EXACT existing event via ``_with_calendar_token`` (401 →
+           refresh → retry once); a new event is never created — R7.1.
+        6. On success, update only the stored ``start`` and timezone, leaving the
+           ``calendar_event_id`` unchanged, then commit — R7.1, R7.3.
+        7. On patch failure, roll back any staged change, write a failure audit
+           entry, and raise ``CalendarEventUpdateFailedError`` — R7.4, R12.4.
+        8. Write a reschedule audit entry recording the previous and new start —
+           R12.2.
 
         Args:
-            interviewer_ids: List of employee UUIDs to validate.
+            candidate_id: UUID of the Candidate.
+            start: New interview start datetime (tz-aware preferred; a naive
+                value is interpreted in the Organization timezone).
+            duration_minutes: Interview duration in minutes (15-180 inclusive).
+            interviewer_ids: Interviewer Employee identifiers (1-10).
+            notes: Optional interview notes (<= 1000 characters).
 
         Returns:
-            List of invalid IDs that don't match any employee record.
+            The updated Candidate entity with the new scheduled start.
+
+        Raises:
+            ValueError: If a request field violates its bounds (mapped to 422).
+            CandidateNotFoundError: If the candidate doesn't exist.
+            NoInterviewToRescheduleError: If the Candidate has no stored event.
+            CalendarGrantMissingError: If the acting HR user's Calendar grant is
+                missing or invalid.
+            InterviewerNotFoundError: If any interviewer id has no Employee.
+            InterviewerMissingEmailError: If a matched interviewer has no email.
+            CalendarEventUpdateFailedError: If the Calendar event patch fails.
         """
-        if not interviewer_ids:
-            return []
+        if self._calendar_port is None:
+            raise RuntimeError("Calendar port is not configured")
+        if self._user_id is None:
+            raise RuntimeError("Acting HR user id is not configured")
+        calendar_port = self._calendar_port
+        user_id = self._user_id
 
-        statement = select(Employee.id).where(Employee.id.in_(interviewer_ids))  # type: ignore[union-attr]
+        # Step 1: load the Candidate and require an existing event (R7.5). When
+        # absent, raise before any Calendar call.
+        candidate = await self._get_candidate_or_raise(candidate_id)
+        event_id = candidate.calendar_event_id
+        if event_id is None:
+            raise NoInterviewToRescheduleError()
+
+        # Step 2: assert the Calendar grant before any Calendar call (R9.2, R9.3).
+        await self._assert_calendar_grant(user_id)
+
+        # Step 3: validate the request fields (re-asserted for direct-call safety).
+        self._validate_schedule_request(
+            start=start,
+            duration_minutes=duration_minutes,
+            interviewer_ids=interviewer_ids,
+            notes=notes,
+        )
+
+        # Step 4: timezone, end, attendees, and the tz-aware patch spec. The patch
+        # must NOT request a new Meet link so the existing one is preserved (R7.2).
+        resolved = await self._resolve_interviewers(interviewer_ids)
+        interviewer_emails = [email for _, email in resolved]
+        timezone = await self._get_org_timezone()
+        tz = ZoneInfo(timezone)
+        start_resolved = start.replace(tzinfo=tz) if start.tzinfo is None else start.astimezone(tz)
+        end_resolved = start_resolved + timedelta(minutes=duration_minutes)
+        attendee_emails = self._build_attendees(candidate, interviewer_emails)
+        spec = CalendarEventSpec(
+            summary=f"Interview with {candidate.name}",
+            description=notes,
+            start=start_resolved,
+            end=end_resolved,
+            timezone=timezone,
+            attendee_emails=tuple(attendee_emails),
+            request_meet_link=False,
+        )
+
+        # Capture the previous start before any mutation (R12.2).
+        previous_start = candidate.interview_start_at
+
+        # Step 5: patch the EXACT existing event BEFORE committing (R7.1). On
+        # failure, roll back, audit, and raise; references stay unchanged (R7.4,
+        # R12.4).
+        try:
+            await self._with_calendar_token(
+                user_id,
+                lambda token: calendar_port.patch_event(token, event_id, spec),
+            )
+        except Exception as exc:
+            await self._session.rollback()
+            await log_audit(
+                session=self._session,
+                operation_type="interview_reschedule_failed",
+                entity_type="candidate",
+                entity_id=candidate_id,
+                user_id=user_id,
+                new_value={
+                    "attempted_action": "reschedule_interview",
+                    "candidate_id": str(candidate_id),
+                    "calendar_event_id": event_id,
+                    "error": str(exc),
+                },
+                change_summary="Interview reschedule failed: Calendar event patch error",
+                success=False,
+            )
+            await self._session.commit()
+            raise CalendarEventUpdateFailedError() from exc
+
+        # Step 6: update only the stored start and timezone, leaving the
+        # calendar_event_id unchanged, then commit (R7.1, R7.3).
+        candidate.interview_start_at = start_resolved
+        candidate.interview_timezone = timezone
+        candidate = await self._candidate_repo.update(candidate)
+        await self._session.commit()
+
+        # Step 8: reschedule audit recording previous/new start (R12.2). Audit
+        # failure never rolls back (R12.5): log_audit swallows its own failures.
+        previous_start_iso = previous_start.isoformat() if previous_start is not None else None
+        await log_audit(
+            session=self._session,
+            operation_type="interview_rescheduled",
+            entity_type="candidate",
+            entity_id=candidate.id,
+            user_id=user_id,
+            previous_value={"start": previous_start_iso},
+            new_value={
+                "previous_start": previous_start_iso,
+                "new_start": start_resolved.isoformat(),
+                "calendar_event_id": event_id,
+                "candidate_id": str(candidate.id),
+                "timezone": timezone,
+            },
+            change_summary=(
+                f"Interview rescheduled to {start_resolved.isoformat()}; event {event_id}"
+            ),
+            success=True,
+        )
+        await self._session.commit()
+
+        return candidate
+
+    def _validate_schedule_request(
+        self,
+        *,
+        start: datetime,
+        duration_minutes: int,
+        interviewer_ids: list[UUID],
+        notes: str | None,
+    ) -> None:
+        """Validate schedule/reschedule request fields (R1.2-R1.5).
+
+        Re-asserts the request bounds in the service even though Pydantic also
+        validates them at the API boundary, so direct service calls are safe.
+        The future-``start`` rule (R1.4) is enforced here against the current
+        time rather than as a bare Pydantic validator.
+
+        Args:
+            start: Interview start datetime; must be strictly in the future.
+            duration_minutes: Must be within 15-180 inclusive.
+            interviewer_ids: Must contain between 1 and 10 identifiers inclusive.
+            notes: When present, must be at most 1000 characters.
+
+        Raises:
+            ValueError: If any field violates its bound. The API layer maps this
+                to a 422 response.
+        """
+        if not 15 <= duration_minutes <= 180:
+            raise ValueError("duration_minutes must be between 15 and 180 inclusive")
+        if not 1 <= len(interviewer_ids) <= 10:
+            raise ValueError("interviewer_ids must contain between 1 and 10 interviewers")
+        if notes is not None and len(notes) > 1000:
+            raise ValueError("notes must be at most 1000 characters")
+
+        now = datetime.now(UTC)
+        start_for_check = start if start.tzinfo is not None else start.replace(tzinfo=UTC)
+        if start_for_check <= now:
+            raise ValueError("start must be strictly in the future")
+
+    # ─── Calendar scheduling helpers ───────────────────────────────────
+
+    async def _assert_calendar_grant(self, user_id: UUID) -> None:
+        """Assert the acting HR user has a valid Google Calendar grant.
+
+        Reuses ``OAuthService.determine_grant_status`` against the user's
+        stored ``OAuthGrant.scopes``. Raises before any Calendar call when the
+        grant is missing or ``calendar_grant_valid`` is false, directing the
+        user to re-consent to Calendar access (R9).
+
+        Args:
+            user_id: The acting HR user's identifier.
+
+        Raises:
+            CalendarGrantMissingError: If no grant exists or the Calendar scope
+                is not currently granted.
+        """
+        if self._oauth_grant_repo is None or self._oauth_service is None:
+            raise RuntimeError("Calendar grant dependencies are not configured")
+
+        grant = await self._oauth_grant_repo.get_by_user_id(user_id)
+        if grant is None:
+            raise CalendarGrantMissingError()
+
+        grant_status = self._oauth_service.determine_grant_status(grant.scopes)
+        if not grant_status.calendar_grant_valid:
+            raise CalendarGrantMissingError()
+
+    async def _resolve_interviewers(
+        self, interviewer_ids: list[UUID]
+    ) -> list[tuple[Employee, str]]:
+        """Resolve interviewer identifiers to Employees with usable emails.
+
+        Loads the Employee records for the given identifiers, then enforces
+        two rules in order:
+
+        1. Every identifier must match an existing Employee, otherwise an
+           :class:`InterviewerNotFoundError` is raised listing the unmatched
+           identifiers (R1.7).
+        2. Every matched Employee must have a non-blank email, otherwise an
+           :class:`InterviewerMissingEmailError` is raised identifying the
+           first interviewer that cannot be invited (R10).
+
+        Args:
+            interviewer_ids: The interviewer Employee identifiers from the
+                request (order preserved in the result).
+
+        Returns:
+            List of ``(Employee, email)`` tuples in request order, with each
+            email stripped of surrounding whitespace.
+
+        Raises:
+            InterviewerNotFoundError: If any identifier has no matching Employee.
+            InterviewerMissingEmailError: If a matched Employee has a blank email.
+        """
+        statement = select(Employee).where(col(Employee.id).in_(interviewer_ids))
         result = await self._session.execute(statement)
-        found_ids = {row[0] for row in result.all()}
+        employees_by_id = {employee.id: employee for employee in result.scalars().all()}
 
-        return [id for id in interviewer_ids if id not in found_ids]
+        unmatched = [id_ for id_ in interviewer_ids if id_ not in employees_by_id]
+        if unmatched:
+            raise InterviewerNotFoundError(unmatched)
+
+        resolved: list[tuple[Employee, str]] = []
+        for id_ in interviewer_ids:
+            employee = employees_by_id[id_]
+            email = (employee.email or "").strip()
+            if not email:
+                raise InterviewerMissingEmailError(employee.id)
+            resolved.append((employee, email))
+        return resolved
+
+    async def _get_org_timezone(self) -> str:
+        """Return the Organization's configured IANA timezone.
+
+        Delegates to ``OrganizationSettingsRepository.get_timezone()``, which
+        seeds the configured default on first access (R11).
+
+        Returns:
+            The IANA timezone string applied to interview events.
+        """
+        if self._org_settings_repo is None:
+            raise RuntimeError("Organization settings repository is not configured")
+        return await self._org_settings_repo.get_timezone()
+
+    def _build_attendees(self, candidate: Candidate, interviewer_emails: list[str]) -> list[str]:
+        """Build the de-duplicated attendee email list for an interview.
+
+        Combines the Candidate's email with every interviewer email (R5.1,
+        R5.2), preserving first-seen order and removing case-insensitive
+        duplicates and blank entries.
+
+        Args:
+            candidate: The Candidate being interviewed.
+            interviewer_emails: Interviewer Employee emails (already resolved).
+
+        Returns:
+            Ordered, de-duplicated list of attendee email addresses.
+        """
+        attendees: list[str] = []
+        seen: set[str] = set()
+        for email in [candidate.email, *interviewer_emails]:
+            normalized = (email or "").strip()
+            if not normalized:
+                continue
+            key = normalized.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            attendees.append(normalized)
+        return attendees
+
+    async def _cancel_interview_event(self, candidate: Candidate, *, trigger: str) -> None:
+        """Best-effort cancellation of a Candidate's interview Calendar event.
+
+        Invoked AFTER a terminal transition (reject/archive) has already
+        committed, so this method never raises: a cancellation failure must not
+        undo the committed transition (R8.4, R8.5). Behavior:
+
+        - When no Calendar dependencies are configured (``calendar_port`` or the
+          acting ``user_id`` is absent), do nothing — this preserves the legacy
+          behavior for callers constructed without Calendar wiring.
+        - When the Candidate has no stored ``calendar_event_id``, make no
+          Calendar call (R8.3).
+        - Otherwise delete the EXACT stored event via ``_with_calendar_token``.
+          On success, write an ``interview_event_cancelled`` audit entry
+          recording the acting HR user, the Candidate id, the cancelled
+          ``calendar_event_id``, and the trigger (R12.3). On any failure, swallow
+          the error and write an ``interview_cancel_failed`` audit entry
+          (``success=False``) recording the action and the ``calendar_event_id``
+          (R8.6).
+
+        Args:
+            candidate: The Candidate whose interview event should be cancelled.
+            trigger: The terminal action that triggered the cancellation
+                (``"reject"`` or ``"archive"``).
+        """
+        # No Calendar wiring → preserve legacy transition-only behavior (R8.3).
+        if self._calendar_port is None or self._user_id is None:
+            return
+
+        event_id = candidate.calendar_event_id
+        if event_id is None:
+            # No interview event to cancel (R8.3).
+            return
+
+        calendar_port = self._calendar_port
+        user_id = self._user_id
+
+        try:
+            await self._with_calendar_token(
+                user_id,
+                lambda token: calendar_port.delete_event(token, event_id),
+            )
+        except Exception as exc:
+            # Cancellation failure must NOT block the already-committed terminal
+            # transition (R8.4, R8.5). Record a failed-cancellation audit entry
+            # capturing the action and the calendar_event_id (R8.6).
+            logger.warning(
+                "Calendar event cancellation failed for candidate %s (event %s) on %s: %s",
+                candidate.id,
+                event_id,
+                trigger,
+                exc,
+            )
+            await log_audit(
+                session=self._session,
+                operation_type="interview_cancel_failed",
+                entity_type="candidate",
+                entity_id=candidate.id,
+                user_id=user_id,
+                new_value={
+                    "attempted_action": f"{trigger}_cancel_interview",
+                    "candidate_id": str(candidate.id),
+                    "calendar_event_id": event_id,
+                    "trigger": trigger,
+                    "success": False,
+                    "error": str(exc),
+                },
+                change_summary=(f"Interview cancellation failed on {trigger}; event {event_id}"),
+                success=False,
+            )
+            await self._session.commit()
+            return
+
+        # Successful cancellation audit (R12.3).
+        await log_audit(
+            session=self._session,
+            operation_type="interview_event_cancelled",
+            entity_type="candidate",
+            entity_id=candidate.id,
+            user_id=user_id,
+            new_value={
+                "candidate_id": str(candidate.id),
+                "calendar_event_id": event_id,
+                "trigger": trigger,
+            },
+            change_summary=(f"Interview event cancelled on {trigger}; event {event_id}"),
+            success=True,
+        )
+        await self._session.commit()
+
+    async def _with_calendar_token(
+        self,
+        user_id: UUID,
+        fn: Callable[[str], Awaitable[_CalendarResultT]],
+    ) -> _CalendarResultT:
+        """Run a Calendar adapter call, refreshing the token once on 401.
+
+        Decrypts the acting HR user's stored access token and invokes ``fn``
+        with it. If the adapter raises an ``httpx`` ``401``, the token is
+        refreshed via ``OAuthService``/``OAuthGrantRepository`` and ``fn`` is
+        retried exactly once, mirroring the Gmail ``SendService`` pattern.
+
+        Args:
+            user_id: The acting HR user's identifier.
+            fn: An async callable that performs the adapter call given a valid
+                access token.
+
+        Returns:
+            The result of the adapter call.
+
+        Raises:
+            CalendarGrantMissingError: If no grant exists or the token refresh
+                fails (the grant was revoked).
+            httpx.HTTPStatusError: For non-401 HTTP errors from the adapter.
+        """
+        if self._oauth_grant_repo is None or self._crypto is None or self._oauth_service is None:
+            raise RuntimeError("Calendar token dependencies are not configured")
+
+        grant = await self._oauth_grant_repo.get_by_user_id(user_id)
+        if grant is None:
+            raise CalendarGrantMissingError()
+
+        access_token = self._crypto.decrypt(grant.access_token_enc)
+
+        try:
+            return await fn(access_token)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code != 401:
+                raise
+            tokens = await self._oauth_service.refresh_google_token(user_id)
+            if tokens is None:
+                raise CalendarGrantMissingError() from exc
+            return await fn(tokens.access_token)
 
     async def send_email_to_candidate(
         self,
