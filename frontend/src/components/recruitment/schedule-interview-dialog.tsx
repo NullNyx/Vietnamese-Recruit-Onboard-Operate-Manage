@@ -21,17 +21,34 @@ export interface Interviewer {
   name: string;
 }
 
+/** Payload emitted on confirm — matches the ADR-0008 schedule contract. */
+export interface ScheduleInterviewFormData {
+  /** ISO 8601 datetime string for the interview start. */
+  start: string;
+  durationMinutes: number;
+  interviewerIds: string[];
+  notes?: string;
+}
+
+const DURATION_MIN = 15;
+const DURATION_MAX = 180;
+const DEFAULT_DURATION = 60;
+const NOTES_MAX = 1000;
+const MAX_INTERVIEWERS = 10;
+
 export interface ScheduleInterviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (data: {
-    date: string;
-    time: string;
-    interviewerIds: string[];
-    notes?: string;
-  }) => void;
+  onConfirm: (data: ScheduleInterviewFormData) => void;
   loading?: boolean;
   interviewers?: Interviewer[];
+  /** "schedule" (default) creates a new interview; "reschedule" updates it. */
+  mode?: "schedule" | "reschedule";
+}
+
+/** Convert a `datetime-local` value (local time) to an ISO 8601 string. */
+function toIsoStart(localValue: string): string {
+  return new Date(localValue).toISOString();
 }
 
 export function ScheduleInterviewDialog({
@@ -40,48 +57,82 @@ export function ScheduleInterviewDialog({
   onConfirm,
   loading = false,
   interviewers = [],
+  mode = "schedule",
 }: ScheduleInterviewDialogProps) {
-  const [date, setDate] = React.useState("");
-  const [time, setTime] = React.useState("");
+  const [start, setStart] = React.useState("");
+  const [duration, setDuration] = React.useState(String(DEFAULT_DURATION));
   const [selectedInterviewers, setSelectedInterviewers] = React.useState<
     string[]
   >([]);
   const [notes, setNotes] = React.useState("");
   const [touched, setTouched] = React.useState(false);
 
-  const dateTimeError = React.useMemo(() => {
-    if (!date || !time) return null;
-    const selectedDateTime = new Date(`${date}T${time}`);
-    const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000);
-    if (selectedDateTime < oneHourFromNow) {
-      return "Thời gian phỏng vấn phải cách hiện tại ít nhất 1 giờ";
+  const isReschedule = mode === "reschedule";
+  const title = isReschedule ? "Đổi lịch phỏng vấn" : "Lên lịch phỏng vấn";
+  const description = isReschedule
+    ? "Chọn thời gian mới cho buổi phỏng vấn của ứng viên."
+    : "Chọn thời gian và người phỏng vấn cho ứng viên.";
+  const confirmLabel = isReschedule
+    ? "Đổi lịch phỏng vấn"
+    : "Lên lịch phỏng vấn";
+
+  const startError = React.useMemo(() => {
+    if (!start) return null;
+    const selected = new Date(start);
+    if (Number.isNaN(selected.getTime())) {
+      return "Thời gian phỏng vấn không hợp lệ";
+    }
+    if (selected.getTime() <= Date.now()) {
+      return "Thời gian phỏng vấn phải ở tương lai";
     }
     return null;
-  }, [date, time]);
+  }, [start]);
+
+  const durationError = React.useMemo(() => {
+    const value = Number(duration);
+    if (!duration || Number.isNaN(value)) {
+      return "Vui lòng nhập thời lượng phỏng vấn";
+    }
+    if (!Number.isInteger(value)) {
+      return "Thời lượng phải là số nguyên (phút)";
+    }
+    if (value < DURATION_MIN || value > DURATION_MAX) {
+      return `Thời lượng phải từ ${DURATION_MIN} đến ${DURATION_MAX} phút`;
+    }
+    return null;
+  }, [duration]);
 
   const interviewerError = React.useMemo(() => {
     if (selectedInterviewers.length < 1) {
       return "Vui lòng chọn ít nhất 1 người phỏng vấn";
     }
-    if (selectedInterviewers.length > 10) {
-      return "Tối đa 10 người phỏng vấn";
+    if (selectedInterviewers.length > MAX_INTERVIEWERS) {
+      return `Tối đa ${MAX_INTERVIEWERS} người phỏng vấn`;
     }
     return null;
   }, [selectedInterviewers]);
 
+  const notesError = React.useMemo(() => {
+    if (notes.length > NOTES_MAX) {
+      return `Ghi chú tối đa ${NOTES_MAX} ký tự`;
+    }
+    return null;
+  }, [notes]);
+
   const isValid =
-    date !== "" &&
-    time !== "" &&
-    !dateTimeError &&
+    start !== "" &&
+    !startError &&
+    !durationError &&
     !interviewerError &&
+    !notesError &&
     selectedInterviewers.length >= 1;
 
   function handleConfirm() {
     setTouched(true);
     if (isValid) {
       onConfirm({
-        date,
-        time,
+        start: toIsoStart(start),
+        durationMinutes: Number(duration),
         interviewerIds: selectedInterviewers,
         notes: notes || undefined,
       });
@@ -90,8 +141,8 @@ export function ScheduleInterviewDialog({
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && !loading) {
-      setDate("");
-      setTime("");
+      setStart("");
+      setDuration(String(DEFAULT_DURATION));
       setSelectedInterviewers([]);
       setNotes("");
       setTouched(false);
@@ -104,7 +155,7 @@ export function ScheduleInterviewDialog({
       if (prev.includes(id)) {
         return prev.filter((i) => i !== id);
       }
-      if (prev.length >= 10) return prev;
+      if (prev.length >= MAX_INTERVIEWERS) return prev;
       return [...prev, id];
     });
   }
@@ -117,48 +168,49 @@ export function ScheduleInterviewDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Lên lịch phỏng vấn</DialogTitle>
-          <DialogDescription>
-            Chọn thời gian và người phỏng vấn cho ứng viên.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Date input */}
+          {/* Start datetime input */}
           <div className="space-y-2">
-            <Label htmlFor="interview-date">Ngày phỏng vấn</Label>
+            <Label htmlFor="interview-start">Thời gian bắt đầu</Label>
             <Input
-              id="interview-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              aria-invalid={touched && !date}
+              id="interview-start"
+              type="datetime-local"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              aria-invalid={touched && (!start || !!startError)}
             />
-            {touched && !date && (
+            {touched && !start && (
               <p className="text-xs text-destructive" role="alert">
-                Vui lòng chọn ngày phỏng vấn
+                Vui lòng chọn thời gian phỏng vấn
+              </p>
+            )}
+            {touched && startError && (
+              <p className="text-xs text-destructive" role="alert">
+                {startError}
               </p>
             )}
           </div>
 
-          {/* Time input */}
+          {/* Duration input */}
           <div className="space-y-2">
-            <Label htmlFor="interview-time">Giờ phỏng vấn</Label>
+            <Label htmlFor="interview-duration">Thời lượng (phút)</Label>
             <Input
-              id="interview-time"
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              aria-invalid={touched && !time}
+              id="interview-duration"
+              type="number"
+              min={DURATION_MIN}
+              max={DURATION_MAX}
+              step={5}
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              aria-invalid={touched && !!durationError}
             />
-            {touched && !time && (
+            {touched && durationError && (
               <p className="text-xs text-destructive" role="alert">
-                Vui lòng chọn giờ phỏng vấn
-              </p>
-            )}
-            {touched && dateTimeError && (
-              <p className="text-xs text-destructive" role="alert">
-                {dateTimeError}
+                {durationError}
               </p>
             )}
           </div>
@@ -202,7 +254,7 @@ export function ScheduleInterviewDialog({
                 <div className="space-y-1">
                   {interviewers.map((interviewer) => {
                     const isSelected = selectedInterviewers.includes(
-                      interviewer.id
+                      interviewer.id,
                     );
                     return (
                       <button
@@ -240,7 +292,13 @@ export function ScheduleInterviewDialog({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
+              aria-invalid={touched && !!notesError}
             />
+            {touched && notesError && (
+              <p className="text-xs text-destructive" role="alert">
+                {notesError}
+              </p>
+            )}
           </div>
         </div>
 
@@ -254,7 +312,7 @@ export function ScheduleInterviewDialog({
           </Button>
           <Button onClick={handleConfirm} disabled={loading || !isValid}>
             {loading && <Loader2 className="animate-spin" />}
-            Lên lịch phỏng vấn
+            {confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -95,6 +95,12 @@ export interface CandidateDetail {
   created_at: string;
   updated_at: string;
   cv_documents: CVDocument[];
+  // Interview calendar fields (ADR-0008). Optional/nullable so the UI degrades
+  // gracefully when the backend response does not yet include them.
+  interview_start_at?: string | null; // ISO 8601 datetime
+  interview_timezone?: string | null; // IANA timezone (e.g. "Asia/Ho_Chi_Minh")
+  calendar_event_id?: string | null;
+  meet_link?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -168,8 +174,8 @@ export interface CandidateListParams {
 }
 
 export interface ScheduleInterviewRequest {
-  date: string; // YYYY-MM-DD
-  time: string; // HH:mm
+  /** ISO 8601 datetime for the interview start (ADR-0008 contract). */
+  start: string;
   duration_minutes: number;
   interviewer_ids: string[];
   notes?: string;
@@ -208,7 +214,7 @@ export interface CVPresignedUrlResponse {
 
 async function fetchWithTimeout(
   url: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -236,9 +242,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     const message =
-      body?.detail ||
-      body?.error?.message ||
-      `Yêu cầu thất bại: ${res.status}`;
+      body?.detail || body?.error?.message || `Yêu cầu thất bại: ${res.status}`;
     const errorCode = body?.error_code || body?.error?.code || "UNKNOWN_ERROR";
     throw new ApiError(res.status, errorCode, message, body);
   }
@@ -254,7 +258,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
  * List candidates with pagination, search, and filters.
  */
 export async function listCandidates(
-  params: CandidateListParams = {}
+  params: CandidateListParams = {},
 ): Promise<CandidateListResponse> {
   const searchParams = new URLSearchParams();
 
@@ -292,10 +296,10 @@ export async function getCandidate(id: string): Promise<CandidateDetail> {
  */
 export async function getCVPresignedUrl(
   candidateId: string,
-  documentId: string
+  documentId: string,
 ): Promise<CVPresignedUrlResponse> {
   const res = await fetchWithTimeout(
-    `${BASE}/candidates/${candidateId}/cv/${documentId}`
+    `${BASE}/candidates/${candidateId}/cv/${documentId}`,
   );
   return handleResponse<CVPresignedUrlResponse>(res);
 }
@@ -305,7 +309,7 @@ export async function getCVPresignedUrl(
  */
 export async function scheduleInterview(
   id: string,
-  data: ScheduleInterviewRequest
+  data: ScheduleInterviewRequest,
 ): Promise<void> {
   const res = await fetchWithTimeout(
     `${BASE}/candidates/${id}/schedule-interview`,
@@ -313,7 +317,26 @@ export async function scheduleInterview(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    }
+    },
+  );
+  await handleResponse<unknown>(res);
+}
+
+/**
+ * Reschedule an existing interview for a candidate. Patches the existing
+ * Google Calendar event (preserving the Meet link) per ADR-0008.
+ */
+export async function rescheduleInterview(
+  id: string,
+  data: ScheduleInterviewRequest,
+): Promise<void> {
+  const res = await fetchWithTimeout(
+    `${BASE}/candidates/${id}/reschedule-interview`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    },
   );
   await handleResponse<unknown>(res);
 }
@@ -323,7 +346,7 @@ export async function scheduleInterview(
  */
 export async function sendEmail(
   id: string,
-  data: SendEmailRequest
+  data: SendEmailRequest,
 ): Promise<void> {
   const res = await fetchWithTimeout(`${BASE}/candidates/${id}/send-email`, {
     method: "POST",
@@ -338,7 +361,7 @@ export async function sendEmail(
  */
 export async function rejectCandidate(
   id: string,
-  data: RejectRequest
+  data: RejectRequest,
 ): Promise<void> {
   const res = await fetchWithTimeout(`${BASE}/candidates/${id}/reject`, {
     method: "POST",
@@ -372,7 +395,7 @@ export async function archiveCandidate(id: string): Promise<void> {
  * List CV documents in the review queue.
  */
 export async function listReviewQueue(
-  params: { page?: number; page_size?: number } = {}
+  params: { page?: number; page_size?: number } = {},
 ): Promise<CVReviewListResponse> {
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.set("page", String(params.page));
@@ -389,7 +412,7 @@ export async function listReviewQueue(
  */
 export async function submitCorrection(
   cvDocumentId: string,
-  data: ParsedCVInput
+  data: ParsedCVInput,
 ): Promise<void> {
   const res = await fetchWithTimeout(`${BASE}/cv-review/${cvDocumentId}`, {
     method: "PUT",
@@ -407,7 +430,7 @@ export async function retryParse(cvDocumentId: string): Promise<CVReviewItem> {
     `${BASE}/cv-review/${cvDocumentId}/retry`,
     {
       method: "POST",
-    }
+    },
   );
   return handleResponse<CVReviewItem>(res);
 }
@@ -420,7 +443,7 @@ export async function dismissReview(cvDocumentId: string): Promise<void> {
     `${BASE}/cv-review/${cvDocumentId}/dismiss`,
     {
       method: "DELETE",
-    }
+    },
   );
   await handleResponse<void>(res);
 }

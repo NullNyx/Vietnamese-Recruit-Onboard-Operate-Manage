@@ -17,10 +17,12 @@ import { RejectDialog } from "@/components/recruitment/reject-dialog";
 import { AcceptDialog } from "@/components/recruitment/accept-dialog";
 import { ArchiveDialog } from "@/components/recruitment/archive-dialog";
 import { ScheduleInterviewDialog } from "@/components/recruitment/schedule-interview-dialog";
+import type { ScheduleInterviewFormData } from "@/components/recruitment/schedule-interview-dialog";
 import { SendEmailDialog } from "@/components/recruitment/send-email-dialog";
 import {
   getCandidate,
   scheduleInterview,
+  rescheduleInterview,
   sendEmail,
   rejectCandidate,
   acceptCandidate,
@@ -37,7 +39,14 @@ import { formatDate, type CandidateStatus } from "@/lib/recruitment-utils";
 // Types
 // ---------------------------------------------------------------------------
 
-type DialogType = "reject" | "accept" | "archive" | "schedule" | "email" | null;
+type DialogType =
+  | "reject"
+  | "accept"
+  | "archive"
+  | "schedule"
+  | "reschedule"
+  | "email"
+  | null;
 
 type PageState =
   | { kind: "loading" }
@@ -106,11 +115,9 @@ export default function CandidateDetailPage() {
 
   function handleActionError(err: unknown) {
     if (err instanceof ApiError && err.statusCode === 409) {
-      toast.error(
-        "Không thể thực hiện hành động này với trạng thái hiện tại"
-      );
+      toast.error("Không thể thực hiện hành động này với trạng thái hiện tại");
       setErrorAnnouncement(
-        "Không thể thực hiện hành động này với trạng thái hiện tại"
+        "Không thể thực hiện hành động này với trạng thái hiện tại",
       );
       setActiveDialog(null);
     } else {
@@ -156,23 +163,33 @@ export default function CandidateDetailPage() {
     }
   }
 
-  async function handleScheduleInterview(data: {
-    date: string;
-    time: string;
-    interviewerIds: string[];
-    notes?: string;
-  }) {
+  async function handleScheduleInterview(data: ScheduleInterviewFormData) {
     setActionLoading(true);
     try {
       const request: ScheduleInterviewRequest = {
-        date: data.date,
-        time: data.time,
-        duration_minutes: 60,
+        start: data.start,
+        duration_minutes: data.durationMinutes,
         interviewer_ids: data.interviewerIds,
         notes: data.notes,
       };
       await scheduleInterview(id, request);
       await handleActionSuccess("Đã lên lịch phỏng vấn thành công");
+    } catch (err) {
+      handleActionError(err);
+    }
+  }
+
+  async function handleRescheduleInterview(data: ScheduleInterviewFormData) {
+    setActionLoading(true);
+    try {
+      const request: ScheduleInterviewRequest = {
+        start: data.start,
+        duration_minutes: data.durationMinutes,
+        interviewer_ids: data.interviewerIds,
+        notes: data.notes,
+      };
+      await rescheduleInterview(id, request);
+      await handleActionSuccess("Đã đổi lịch phỏng vấn thành công");
     } catch (err) {
       handleActionError(err);
     }
@@ -254,9 +271,7 @@ export default function CandidateDetailPage() {
   if (pageState.kind === "not_found") {
     return (
       <div className="flex flex-col items-center justify-center p-12 space-y-4">
-        <p className="text-lg text-muted-foreground">
-          Không tìm thấy ứng viên
-        </p>
+        <p className="text-lg text-muted-foreground">Không tìm thấy ứng viên</p>
         <Link href="/recruitment">
           <Button variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -336,6 +351,7 @@ export default function CandidateDetailPage() {
         <CandidateActions
           status={candidate.status as CandidateStatus}
           onScheduleInterview={() => setActiveDialog("schedule")}
+          onReschedule={() => setActiveDialog("reschedule")}
           onSendEmail={() => setActiveDialog("email")}
           onReject={() => setActiveDialog("reject")}
           onAccept={() => setActiveDialog("accept")}
@@ -401,6 +417,16 @@ export default function CandidateDetailPage() {
           if (!open) setActiveDialog(null);
         }}
         onConfirm={handleScheduleInterview}
+        loading={actionLoading}
+      />
+
+      <ScheduleInterviewDialog
+        mode="reschedule"
+        open={activeDialog === "reschedule"}
+        onOpenChange={(open) => {
+          if (!open) setActiveDialog(null);
+        }}
+        onConfirm={handleRescheduleInterview}
         loading={actionLoading}
       />
 
