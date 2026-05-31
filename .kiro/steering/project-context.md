@@ -79,6 +79,6 @@ docker compose up -d                 # full stack
 
 ## Docs Reference
 
-- #[[file:docs/product/overview.md]] — Full product overview
-- #[[file:docs/product/tech-stack.md]] — Tech stack & commands
-- #[[file:docs/ARCHITECTURE.md]] — Architecture rules
+- #[[file:CONTEXT.md]] — Domain glossary (canonical terms)
+- #[[file:docs/decisions/README.md]] — Architecture Decision Records index
+- #[[file:docs/agents/domain.md]] — How agent skills consume domain docs
