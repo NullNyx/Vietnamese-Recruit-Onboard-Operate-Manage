@@ -69,12 +69,6 @@ export default function OnboardingPage() {
   const processes = data?.items ?? [];
   
   // Compute counts for badge
-  const counts = {
-    all: data?.total ?? 0,
-    in_progress: filter === "in_progress" ? processes.length : (data?.total ?? 0),
-    complete: filter === "complete" ? processes.length : 0,
-  };
-
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
       {/* Left panel: list */}

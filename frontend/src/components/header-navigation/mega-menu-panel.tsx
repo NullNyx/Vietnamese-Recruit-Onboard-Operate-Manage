@@ -55,7 +55,7 @@ export function MegaMenuPanel({
 
   return (
     <div
-      className="absolute left-0 top-full z-50 mt-1 min-w-[220px] rounded-lg border border-[#6C7278]/20 bg-white p-2 shadow-lg"
+      className="absolute left-0 top-full z-50 mt-1 min-w-[220px] rounded-lg border border-border/20 bg-card p-2 shadow-lg"
       role="menu"
       aria-label={`${group.label} submenu`}
     >
@@ -77,10 +77,10 @@ export function MegaMenuPanel({
             onKeyDown={(e) => handleKeyDown(e, index)}
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors outline-none",
-              "focus-visible:ring-2 focus-visible:ring-[#B8422E]/50",
+              "focus-visible:ring-2 focus-visible:ring-primary/50",
               isActive
-                ? "bg-[#F7F5F2] font-semibold text-[#1A1C1E]"
-                : "text-[#6C7278] hover:bg-[#F7F5F2] hover:text-[#1A1C1E]",
+                ? "bg-secondary font-semibold text-foreground"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
             )}
           >
             {Icon && <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />}

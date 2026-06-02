@@ -42,7 +42,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-[#F7F5F2] overflow-hidden">
+    <div className="relative flex min-h-screen items-center justify-center bg-background overflow-hidden">
       {/* ─── Login Panel ─────────────────────────────────────────────────── */}
       <div
         className={`flex w-full items-center justify-center p-6 sm:p-8 transition-all duration-700 ${
@@ -52,32 +52,32 @@ export default function LoginPage() {
         <div className="w-full max-w-[400px] space-y-8">
           {/* Logo */}
           <div className="flex items-center justify-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#B8422E]">
-              <span className="text-[15px] font-bold text-white">V</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+              <span className="text-sm font-bold text-white">V</span>
             </div>
-            <span className="text-[15px] font-semibold text-[#1A1C1E]">
+            <span className="text-sm font-semibold text-foreground">
               Vroom HR
             </span>
           </div>
 
           {/* Login header */}
           <div className="space-y-2 text-center">
-            <h2 className="text-[24px] font-semibold tracking-[-0.3px] text-[#1A1C1E]">
+            <h2 className="text-2xl font-semibold tracking-[-0.3px] text-foreground">
               Đăng nhập vào Workspace
             </h2>
-            <p className="text-[14px] text-[#6C7278]">
+            <p className="text-sm text-muted-foreground">
               Truy cập hệ thống quản lý nhân sự của tổ chức
             </p>
           </div>
 
           {/* Login card */}
-          <div className="rounded-lg border border-[#6C7278]/20 bg-white p-6">
+          <div className="rounded-lg border border-border bg-card p-6">
             <div className="space-y-6">
               {/* Google OAuth Button — Primary */}
               <button
                 onClick={handleLogin}
                 disabled={loading}
-                className="flex w-full items-center justify-center gap-3 rounded-lg bg-[#B8422E] px-4 py-3.5 text-[14px] font-semibold text-white transition-colors hover:bg-[#9C3726] focus:outline-none focus:ring-2 focus:ring-[#B8422E]/50 focus:ring-offset-2 focus:ring-offset-[#F7F5F2] disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex w-full items-center justify-center gap-3 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-60 disabled:cursor-not-allowed"
                 aria-label="Đăng nhập bằng Google"
               >
                 {loading ? (
@@ -92,9 +92,9 @@ export default function LoginPage() {
 
               {/* Divider */}
               <div className="flex items-center gap-3">
-                <div className="h-px flex-1 bg-[#6C7278]/20" />
-                <span className="text-[11px] text-[#6C7278]">hoặc</span>
-                <div className="h-px flex-1 bg-[#6C7278]/20" />
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[10px] text-muted-foreground">hoặc</span>
+                <div className="h-px flex-1 bg-border" />
               </div>
 
               {/* Email/Password form */}
@@ -102,7 +102,7 @@ export default function LoginPage() {
                 <div className="space-y-1.5">
                   <label
                     htmlFor="email"
-                    className="text-[12px] font-medium text-[#6C7278]"
+                    className="text-xs font-medium text-muted-foreground"
                   >
                     Email
                   </label>
@@ -110,7 +110,7 @@ export default function LoginPage() {
                     id="email"
                     type="email"
                     placeholder="name@company.com"
-                    className="w-full rounded-lg border border-[#6C7278]/20 bg-white px-4 py-3 text-[14px] text-[#1A1C1E] placeholder:text-[#6C7278]/60 transition-colors focus:border-[#B8422E]/50 focus:outline-none focus:ring-1 focus:ring-[#B8422E]/20"
+                    className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 transition-colors focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
                     disabled
                   />
                 </div>
@@ -118,13 +118,13 @@ export default function LoginPage() {
                   <div className="flex items-center justify-between">
                     <label
                       htmlFor="password"
-                      className="text-[12px] font-medium text-[#6C7278]"
+                      className="text-xs font-medium text-muted-foreground"
                     >
                       Mật khẩu
                     </label>
                     <button
                       type="button"
-                      className="text-[11px] text-[#6C7278] hover:text-[#B8422E] transition-colors"
+                      className="text-[10px] text-muted-foreground hover:text-primary transition-colors"
                       disabled
                     >
                       Quên mật khẩu?
@@ -134,7 +134,7 @@ export default function LoginPage() {
                     id="password"
                     type="password"
                     placeholder="••••••••"
-                    className="w-full rounded-lg border border-[#6C7278]/20 bg-white px-4 py-3 text-[14px] text-[#1A1C1E] placeholder:text-[#6C7278]/60 transition-colors focus:border-[#B8422E]/50 focus:outline-none focus:ring-1 focus:ring-[#B8422E]/20"
+                    className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 transition-colors focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
                     disabled
                   />
                 </div>
@@ -144,12 +144,12 @@ export default function LoginPage() {
                   <input
                     id="remember"
                     type="checkbox"
-                    className="h-3.5 w-3.5 rounded border-[#6C7278]/20 bg-white"
+                    className="h-3.5 w-3.5 rounded border-border bg-card"
                     disabled
                   />
                   <label
                     htmlFor="remember"
-                    className="text-[12px] text-[#6C7278]"
+                    className="text-xs text-muted-foreground"
                   >
                     Ghi nhớ phiên đăng nhập
                   </label>
@@ -159,14 +159,14 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled
-                  className="w-full rounded-lg border border-[#6C7278]/20 bg-[#F7F5F2] px-4 py-3 text-[13px] font-medium text-[#6C7278] cursor-not-allowed transition-colors"
+                  className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm font-medium text-muted-foreground cursor-not-allowed transition-colors"
                 >
                   Đăng nhập bằng Email
                 </button>
               </form>
 
               {/* Note */}
-              <p className="text-center text-[11px] text-[#6C7278] leading-relaxed">
+              <p className="text-center text-[10px] text-muted-foreground leading-relaxed">
                 Hiện tại hỗ trợ Google Workspace. Email/Password sẽ available
                 trong phiên bản tiếp theo.
               </p>
@@ -174,13 +174,13 @@ export default function LoginPage() {
           </div>
 
           {/* Bottom trust */}
-          <p className="text-center text-[11px] text-[#6C7278] leading-relaxed">
+          <p className="text-center text-[10px] text-muted-foreground leading-relaxed">
             Đăng nhập đồng nghĩa bạn đồng ý với{" "}
-            <span className="text-[#1A1C1E] hover:text-[#B8422E] cursor-pointer transition-colors">
+            <span className="text-foreground hover:text-primary cursor-pointer transition-colors">
               Điều khoản sử dụng
             </span>{" "}
             và{" "}
-            <span className="text-[#1A1C1E] hover:text-[#B8422E] cursor-pointer transition-colors">
+            <span className="text-foreground hover:text-primary cursor-pointer transition-colors">
               Chính sách bảo mật
             </span>
           </p>
