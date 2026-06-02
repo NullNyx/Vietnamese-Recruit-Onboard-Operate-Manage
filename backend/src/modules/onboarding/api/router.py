@@ -48,9 +48,11 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.employee.infrastructure.employee_repository import EmployeeRepository
 from src.modules.identity.api.admin_router import require_admin
-from src.modules.identity.container import get_current_user
+from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User
 from src.modules.onboarding.api.schemas import (
     OnboardingProcessDetailResponse,
@@ -88,6 +90,7 @@ onboarding_router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 async def list_processes(
     _admin: AdminUserDep,
     onboarding_service: OnboardingServiceDep,
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
     status: OnboardingStatus | None = Query(
         default=None, description="Filter by process status (in_progress or complete)"
     ),
@@ -120,17 +123,26 @@ async def list_processes(
         page_size=page_size,
     )
 
-    return OnboardingProcessListResponse(
-        items=[
+    # Enrich with employee data
+    emp_repo = EmployeeRepository(db_session)
+    items = []
+    for item in result.items:
+        employee = await emp_repo.get_by_id(item.employee_id)
+        items.append(
             OnboardingProcessListItem(
                 id=item.process_id,
                 status=OnboardingStatus(item.status),
                 employee_id=item.employee_id,
+                employee_full_name=employee.full_name if employee else "",
+                employee_email=employee.email if employee else "",
+                employee_code=employee.employee_code if employee else None,
                 completed_count=item.completed_count,
                 total_count=item.total_count,
             )
-            for item in result.items
-        ],
+        )
+
+    return OnboardingProcessListResponse(
+        items=items,
         total=result.total,
         page=result.page,
         page_size=result.page_size,
@@ -150,6 +162,7 @@ async def get_process(
     process_id: UUID,
     _admin: AdminUserDep,
     onboarding_service: OnboardingServiceDep,
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> OnboardingProcessDetailResponse:
     """Get one onboarding process with its full checklist.
 
@@ -172,10 +185,17 @@ async def get_process(
     """
     detail = await onboarding_service.get_process(process_id)
 
+    # Enrich with employee data
+    emp_repo = EmployeeRepository(db_session)
+    employee = await emp_repo.get_by_id(detail.employee_id)
+
     return OnboardingProcessDetailResponse(
         id=detail.process_id,
         status=OnboardingStatus(detail.status),
         employee_id=detail.employee_id,
+        employee_full_name=employee.full_name if employee else "",
+        employee_email=employee.email if employee else "",
+        employee_code=employee.employee_code if employee else None,
         completed_count=detail.completed_count,
         total_count=detail.total_count,
         tasks=[

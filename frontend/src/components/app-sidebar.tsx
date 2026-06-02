@@ -34,18 +34,18 @@ export function AppSidebar({ className }: AppSidebarProps) {
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "flex h-screen flex-col border-r border-[#6C7278]/20 bg-white transition-[width] duration-200 ease-out overflow-hidden shrink-0",
+          "flex h-screen flex-col border-r border-border/20 bg-card transition-[width] duration-200 ease-out overflow-hidden shrink-0",
           collapsed ? "w-[60px]" : "w-[240px]",
           className,
         )}
       >
         {/* Logo section */}
-        <div className="flex h-14 items-center gap-3 px-4 border-b border-[#6C7278]/10">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#B8422E]">
-            <span className="text-[12px] font-bold text-white">V</span>
+        <div className="flex h-14 items-center gap-3 px-4 border-b border-border/10">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary">
+            <span className="text-xs font-bold text-white">V</span>
           </div>
           {!collapsed && (
-            <span className="text-[14px] font-semibold tracking-tight text-[#1A1C1E]">
+            <span className="text-sm font-semibold tracking-tight text-foreground">
               Vroom
             </span>
           )}
@@ -66,10 +66,10 @@ export function AppSidebar({ className }: AppSidebarProps) {
               <NavLink
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 text-[13px] font-medium transition-all rounded-none",
+                  "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all rounded-none",
                   isActive
-                    ? "border-l-[3px] border-[#B8422E] text-[#1A1C1E] bg-[#F7F5F2]"
-                    : "border-l-[3px] border-transparent text-[#6C7278] hover:bg-[#F7F5F2] hover:text-[#1A1C1E]",
+                    ? "border-l-[3px] border-primary text-foreground bg-secondary"
+                    : "border-l-[3px] border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground",
                   collapsed && "justify-center px-2",
                 )}
               >
@@ -87,7 +87,7 @@ export function AppSidebar({ className }: AppSidebarProps) {
                   <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
                   <TooltipContent
                     side="right"
-                    className="bg-[#1A1C1E] text-white border-[#6C7278]/20"
+                    className="bg-foreground text-white border-border/20"
                   >
                     {item.label}
                   </TooltipContent>
@@ -101,14 +101,14 @@ export function AppSidebar({ className }: AppSidebarProps) {
           {/* Admin section */}
           {isAdmin && (
             <>
-              <div className="my-3 h-px bg-[#6C7278]/10" />
+              <div className="my-3 h-px bg-border/10" />
               {!collapsed && (
                 <div className="flex items-center gap-2 px-3 py-1.5">
                   <adminNavSection.icon
-                    className="h-3.5 w-3.5 text-[#6C7278]"
+                    className="h-3.5 w-3.5 text-muted-foreground"
                     aria-hidden="true"
                   />
-                  <span className="text-[10px] font-medium uppercase tracking-widest text-[#6C7278]">
+                  <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
                     {adminNavSection.title}
                   </span>
                 </div>
@@ -120,10 +120,10 @@ export function AppSidebar({ className }: AppSidebarProps) {
                   <NavLink
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 text-[13px] font-medium transition-all rounded-none",
+                      "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all rounded-none",
                       isActive
-                        ? "border-l-[3px] border-[#B8422E] text-[#1A1C1E] bg-[#F7F5F2]"
-                        : "border-l-[3px] border-transparent text-[#6C7278] hover:bg-[#F7F5F2] hover:text-[#1A1C1E]",
+                        ? "border-l-[3px] border-primary text-foreground bg-secondary"
+                        : "border-l-[3px] border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground",
                       collapsed && "justify-center px-2",
                     )}
                   >
@@ -141,7 +141,7 @@ export function AppSidebar({ className }: AppSidebarProps) {
                       <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
                       <TooltipContent
                         side="right"
-                        className="bg-[#1A1C1E] text-white border-[#6C7278]/20"
+                        className="bg-foreground text-white border-border/20"
                       >
                         {item.label}
                       </TooltipContent>
@@ -158,17 +158,17 @@ export function AppSidebar({ className }: AppSidebarProps) {
         {/* Bottom section */}
         <div
           className={cn(
-            "mt-auto border-t border-[#6C7278]/10 py-3 space-y-1",
+            "mt-auto border-t border-border/10 py-3 space-y-1",
             collapsed ? "px-1" : "px-2",
           )}
         >
           {/* User info */}
           {!collapsed && user && (
             <div className="px-3 py-1.5">
-              <p className="text-[12px] font-medium text-[#1A1C1E] truncate">
+              <p className="text-xs font-medium text-foreground truncate">
                 {user.email?.split("@")[0]}
               </p>
-              <p className="text-[10px] text-[#6C7278] truncate">
+              <p className="text-[10px] text-muted-foreground truncate">
                 {user.email}
               </p>
             </div>
@@ -180,7 +180,7 @@ export function AppSidebar({ className }: AppSidebarProps) {
               <button
                 onClick={toggle}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 text-[13px] text-[#6C7278] transition-all hover:bg-[#F7F5F2] hover:text-[#1A1C1E] rounded-md",
+                  "flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground transition-all hover:bg-secondary hover:text-foreground rounded-md",
                   collapsed ? "mx-auto justify-center px-2 w-full" : "w-full",
                 )}
                 aria-label={collapsed ? "Mở rộng" : "Thu gọn"}
@@ -204,7 +204,7 @@ export function AppSidebar({ className }: AppSidebarProps) {
             {collapsed && (
               <TooltipContent
                 side="right"
-                className="bg-[#1A1C1E] text-white border-[#6C7278]/20"
+                className="bg-foreground text-white border-border/20"
               >
                 Mở rộng
               </TooltipContent>
@@ -217,7 +217,7 @@ export function AppSidebar({ className }: AppSidebarProps) {
               <button
                 onClick={handleLogout}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 text-[13px] text-[#6C7278] transition-all hover:bg-[#F7F5F2] hover:text-[#B8422E] rounded-md",
+                  "flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground transition-all hover:bg-secondary hover:text-primary rounded-md",
                   collapsed ? "mx-auto justify-center px-2 w-full" : "w-full",
                 )}
                 aria-label="Đăng xuất"
@@ -229,7 +229,7 @@ export function AppSidebar({ className }: AppSidebarProps) {
             {collapsed && (
               <TooltipContent
                 side="right"
-                className="bg-[#1A1C1E] text-white border-[#6C7278]/20"
+                className="bg-foreground text-white border-border/20"
               >
                 Đăng xuất
               </TooltipContent>

@@ -100,6 +100,9 @@ class OnboardingProcessListItem(BaseModel):
     id: UUID
     status: OnboardingStatus
     employee_id: UUID
+    employee_full_name: str
+    employee_email: str
+    employee_code: str | None
     completed_count: int
     total_count: int
 
@@ -144,6 +147,9 @@ class OnboardingProcessDetailResponse(BaseModel):
     id: UUID
     status: OnboardingStatus
     employee_id: UUID
+    employee_full_name: str
+    employee_email: str
+    employee_code: str | None
     completed_count: int
     total_count: int
     tasks: list[OnboardingTaskResponse] = Field(default_factory=list)
