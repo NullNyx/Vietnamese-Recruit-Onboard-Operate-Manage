@@ -2,7 +2,7 @@
 
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const BASE = "/api/onboarding";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ export type ProcessFilter = "all" | "in_progress" | "complete";
 // ─── API Helpers ────────────────────────────────────────────────────────────
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     ...init,
@@ -69,14 +69,14 @@ export async function listOnboardingProcesses(
   filter: ProcessFilter = "all"
 ): Promise<OnboardingProcessListResponse> {
   const params = filter !== "all" ? `?status=${filter}` : "";
-  return apiFetch<OnboardingProcessListResponse>(`/api/onboarding/processes${params}`);
+  return apiFetch<OnboardingProcessListResponse>(`/processes${params}`);
 }
 
 /** GET /api/onboarding/processes/{process_id} */
 export async function getOnboardingProcess(
   processId: string
 ): Promise<OnboardingProcess> {
-  return apiFetch<OnboardingProcess>(`/api/onboarding/processes/${processId}`);
+  return apiFetch<OnboardingProcess>(`/processes/${processId}`);
 }
 
 /** PATCH /api/onboarding/tasks/{task_id} */
@@ -84,7 +84,7 @@ export async function updateTaskStatus(
   taskId: string,
   status: OnboardingTaskStatus
 ): Promise<OnboardingTask> {
-  return apiFetch<OnboardingTask>(`/api/onboarding/tasks/${taskId}`, {
+  return apiFetch<OnboardingTask>(`/tasks/${taskId}`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
   });
