@@ -26,6 +26,7 @@ export const navItems: NavItem[] = [
   { href: "/settings/positions", label: "Chức vụ", icon: Briefcase },
   { href: "/gmail", label: "Gmail", icon: Mail },
   { href: "/recruitment", label: "Tuyển dụng", icon: UserSearch },
+  { href: "/onboarding", label: "Onboarding", icon: ListChecks },
 ];
 
 export interface AdminNavSection {
