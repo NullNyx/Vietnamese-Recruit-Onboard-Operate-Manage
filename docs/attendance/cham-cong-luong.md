@@ -810,11 +810,13 @@ docker compose -f docker-compose.prod.yml up -d
 Mục tiêu: HR và nhân viên dùng được ngay, tính công + lương cơ bản.
 
 - [ ] Auth: đăng nhập, phân quyền 3 role (hr, manager, employee)
-- [ ] HR Settings: phương thức (Web), mô hình giờ Fixed, ngày nghỉ tuần
+- [ ] HR Settings: phương thức (Web + QR), mô hình giờ Fixed, ngày nghỉ tuần
 - [ ] Web Check-in / Check-out
+- [ ] QR Check-in / Check-out
 - [ ] Tính công: work_hours, late_minutes, early_minutes
 - [ ] Employee xem lịch sử chấm công
 - [ ] HR xem & sửa record thủ công + audit log
+- [ ] Settings: late_tolerance, early_leave_tolerance, weekly_off_day
 - [ ] Tính lương cơ bản: gross → BH → thuế → net
 - [ ] Employee xem phiếu lương
 - [ ] HR export Excel bảng công + bảng lương
@@ -825,8 +827,8 @@ Mục tiêu: HR và nhân viên dùng được ngay, tính công + lương cơ b
 - [ ] Đăng ký & duyệt OT
 - [ ] Tính OT tự động theo tỷ lệ
 - [ ] Ngày lễ VN tự động
-- [ ] QR Check-in
-- [ ] Cảnh báo (alert qua email)
+- [ ] Holiday calendar config
+- [ ] Alert/notification qua email
 - [ ] Duyệt timesheet cuối tháng
 
 ### Giai đoạn 3 — Mở rộng (3–4 tuần)
@@ -849,36 +851,11 @@ Mục tiêu: HR và nhân viên dùng được ngay, tính công + lương cơ b
 
 ---
 
-## 10. Câu hỏi cần xác nhận trước khi implement
-
-### Chấm công
-
-| # | Câu hỏi | Ảnh hưởng |
-|---|---------|-----------|
-| 1 | Giai đoạn 1 cần ca (Shift) ngay không, hay Fixed là đủ? | Scope MVP |
-| 2 | Device integration (vân tay/face) có cần trong 3 tháng đầu không? | Độ phức tạp |
-| 3 | Quên check-in: HR sửa thẳng hay cần employee xin → HR duyệt? | Workflow |
-| 4 | OT: tự động tính từ giờ check-out hay bắt buộc đăng ký trước? | Logic tính công |
-
-### Tính lương
-
-| # | Câu hỏi | Ảnh hưởng |
-|---|---------|-----------|
-| 5 | Công ty dùng Gross hay Net? Hay cần hỗ trợ cả hai? | Công thức tính |
-| 6 | Trả lương 1 lần hay 2 lần / tháng? | Chu kỳ |
-| 7 | Phụ cấp ăn trưa / đi lại tính theo ngày công hay cố định / tháng? | Công thức |
-| 8 | Đi muộn / về sớm có trừ lương không? | Logic tính |
-
-### Hệ thống
-
-| # | Câu hỏi | Ảnh hưởng |
-|---|---------|-----------|
-| 9 | Employee dùng web hay cần app mobile? | Frontend scope |
-| 10 | Notification trong app hay chỉ email? | Infrastructure |
-| 11 | Kế toán có role riêng hay HR kiêm luôn? | Phân quyền |
-| 12 | Deploy lên VPS (cloud) hay server nội bộ công ty? | Network, HTTPS |
-
 ---
 
-*File này là living document — cập nhật theo từng giai đoạn phát triển.*
-*Version: 1.0 · Stack: FastAPI · PostgreSQL · Redis · React · Docker Compose*
+## Related Decisions
+
+- **ADR 0009**: Attendance & Payroll Default Decisions — rationale for all
+  defaults listed in Section 10.
+
+*Version: 1.1*

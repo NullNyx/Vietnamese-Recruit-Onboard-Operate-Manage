@@ -20,6 +20,15 @@ if config.config_file_name is not None:
 # Import SQLModel metadata so Alembic can detect tables
 from sqlmodel import SQLModel  # noqa: E402
 
+from src.modules.attendance.domain.entities import (  # noqa: E402, F401
+    Allowance,
+    AttendanceRecord,
+    AttendanceSettings,
+    OvertimeConfig,
+    PayrollRecord,
+    SalaryConfig,
+    WorkShift,
+)
 from src.modules.employee.domain.entities import (  # noqa: E402, F401
     Department,
     Employee,

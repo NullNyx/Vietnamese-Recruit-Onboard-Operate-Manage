@@ -30,6 +30,7 @@ from src.modules.onboarding.api.error_handler import (  # noqa: E402
     register_onboarding_error_handlers,
 )
 from src.modules.onboarding.api.router import onboarding_router  # noqa: E402
+from src.modules.attendance.api.router import router as attendance_router  # noqa: E402
 from src.modules.recruitment.api.candidate_router import candidate_router  # noqa: E402
 from src.modules.recruitment.api.cv_review_router import cv_review_router  # noqa: E402
 from src.modules.recruitment.api.error_handler import (  # noqa: E402
@@ -101,6 +102,7 @@ app.include_router(candidate_router)
 app.include_router(cv_review_router)
 app.include_router(metrics_router)
 app.include_router(onboarding_router)
+app.include_router(attendance_router)
 
 # Register exception handlers.
 register_auth_error_handlers(app)

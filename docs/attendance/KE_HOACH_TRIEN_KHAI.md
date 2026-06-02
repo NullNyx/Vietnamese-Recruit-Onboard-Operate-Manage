@@ -30,6 +30,8 @@ Dựa trên `cham-cong-luong.md`, triển khai thành 4 giai đoạn với 14 tu
 | 1.8 | GET /api/v1/attendance/history | ✅ | - |
 | 1.9 | HR: PUT /api/v1/attendance/records/{id} (sửa thủ công) | ✅ | - |
 | 1.10 | Audit log cho mọi thay đổi | ✅ | - |
+| 1.11 | QR Code generation + validation | ✅ | ✅ |
+| 1.12 | POST /api/v1/attendance/qr-checkin | ✅ | - |
 
 ### Tuần 3: Tính công cơ bản
 
@@ -50,7 +52,7 @@ Dựa trên `cham-cong-luong.md`, triển khai thành 4 giai đoạn với 14 tu
 | 1.18 | Export Excel bảng lương | ✅ | - |
 | 1.19 | Đăng ký router vào main.py | ✅ | - |
 
-**MVP hoàn chỉnh**: Web Check-in + Fixed hours + Tính công + Gross → Net
+**MVP hoàn chỉnh**: Web + QR Check-in + Fixed hours + Tính công + Gross → Net
 
 ---
 
@@ -74,14 +76,14 @@ Dựa trên `cham-cong-luong.md`, triển khai thành 4 giai đoạn với 14 tu
 | 2.7 | Tự động tính OT: 1.5x T2-T6, 2x T7-CN, 3x lễ | ✅ | - |
 | 2.8 | Cấu hình OT max/ngày, max/tháng | ✅ | ✅ |
 
-### Tuần 8: Ngày nghỉ & QR
+### Tuần 8: Ngày nghỉ & Alerts
 
 | Task | Mô tả | Backend | Frontend |
 |------|-------|---------|----------|
 | 2.9 | Load lịch lễ VN (Tết âm lịch) | ✅ | ✅ |
-| 2.10 | QR code generation | ✅ | ✅ |
-| 2.11 | GET /api/v1/attendance/qr/{qr_code_id} | ✅ | - |
-| 2.12 | Alert/notification | ✅ | ✅ |
+| 2.10 | Alert/notification (email) | ✅ | ✅ |
+| 2.11 | Weekly off day config (T7/CN) | ✅ | ✅ |
+| 2.12 | Late/early tolerance config | ✅ | ✅ |
 
 ---
 
@@ -128,17 +130,14 @@ Dựa trên `cham-cong-luong.md`, triển khai thành 4 giai đoạn với 14 tu
 
 ---
 
-## Câu hỏi cần xác nhận trước Giai đoạn 1
+## Defaults
 
-| # | Câu hỏi | Ảnh hưởng |
-|---|---------|-----------|
-| 1 | Giai đoạn 1 cần ca (Shift) ngay không? | Nếu có → gộp vào tuần 2-3 |
-| 2 | Device integration có cần trong 3 tháng đầu? | Nếu không → bỏ qua Giai đoạn 4 |
-| 3 | Quên check-in: HR sửa thẳng hay cần employee xin → HR duyệt? | Workflow khác nhau |
-| 4 | OT: tự động tính hay bắt buộc đăng ký trước? | Logic khác nhau |
-| 5 | Công ty dùng Gross hay Net? | Công thức tính |
-| 6 | Trả lương 1 lần hay 2 lần / tháng? | Chu kỳ payroll |
-| 7 | Đi muộn / về sớm có trừ lương không? | Logic tính |
+All implementation defaults are documented in **ADR 0009**.
+HR can override every default at runtime via Settings → Attendance / Payroll.
+
+> **Self-Hosted:** The platform is designed so HR never needs developer help
+> to adapt the system to their company. Every workflow question is a setting,
+> not a code branch.
 
 ---
 
@@ -401,7 +400,7 @@ services:
 
 ### Trước khi bắt đầu Phase 1
 
-- [ ] Xác nhận 7 câu hỏi trong phần "Câu hỏi cần xác nhận"
+
 - [ ] Dev environment chạy được (docker compose up)
 - [ ] Database migration chạy được (alembic upgrade)
 - [ ] Seed data chạy được
