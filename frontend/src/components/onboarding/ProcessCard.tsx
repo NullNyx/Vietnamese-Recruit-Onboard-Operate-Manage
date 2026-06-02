@@ -22,8 +22,8 @@ function Progress({ value }: { value: number }) {
 
 function Badge({ status }: { status: OnboardingProcess["status"] }) {
   const styles = {
-    in_progress: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    complete: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+    in_progress: "bg-blue-100 text-blue-700 ",
+    complete: "bg-emerald-100 text-emerald-700 ",
   } as const;
 
   const labels = { in_progress: "Đang làm", complete: "Hoàn thành" } as const;
