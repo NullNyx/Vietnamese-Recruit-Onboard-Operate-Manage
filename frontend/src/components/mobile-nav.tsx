@@ -34,7 +34,7 @@ export function MobileNav() {
       <Button
         variant="ghost"
         size="icon"
-        className="min-h-[44px] min-w-[44px] text-[#1A1C1E] hover:bg-[#F7F5F2] md:hidden"
+        className="min-h-[44px] min-w-[44px] text-foreground hover:bg-secondary md:hidden"
         onClick={() => setOpen(true)}
         aria-label="Mở menu điều hướng"
       >
@@ -43,14 +43,14 @@ export function MobileNav() {
 
       <SheetContent
         side="left"
-        className="flex w-72 flex-col border-r border-[#6C7278]/20 bg-white p-0"
+        className="flex w-72 flex-col border-r border-border/20 bg-card p-0"
       >
         <SheetHeader className="px-4 pt-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#B8422E] text-sm font-bold text-white">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
               V
             </div>
-            <SheetTitle className="text-lg font-semibold text-[#1A1C1E]">
+            <SheetTitle className="text-lg font-semibold text-foreground">
               Vroom HR
             </SheetTitle>
           </div>
@@ -59,7 +59,7 @@ export function MobileNav() {
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mx-4 mt-4 h-px bg-[#6C7278]/10" />
+        <div className="mx-4 mt-4 h-px bg-border/50" />
 
         {/* Navigation links */}
         <nav
@@ -78,10 +78,10 @@ export function MobileNav() {
                 href={item.href}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "flex min-h-[44px] items-center gap-3 px-3 py-2 text-[13px] font-medium transition-colors rounded-none",
+                  "flex min-h-[44px] items-center gap-3 px-3 py-2 text-sm font-medium transition-colors rounded-none",
                   isActive
-                    ? "border-l-[3px] border-[#B8422E] text-[#1A1C1E] bg-[#F7F5F2]"
-                    : "border-l-[3px] border-transparent text-[#6C7278] hover:bg-[#F7F5F2] hover:text-[#1A1C1E]",
+                    ? "border-l-[3px] border-primary text-foreground bg-secondary"
+                    : "border-l-[3px] border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground",
                 )}
               >
                 <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -93,13 +93,13 @@ export function MobileNav() {
           {/* Admin navigation section — only visible to admin users */}
           {isAdmin && (
             <>
-              <div className="my-3 h-px bg-[#6C7278]/10" />
+              <div className="my-3 h-px bg-border/50" />
               <div className="flex items-center gap-2 px-3 py-1.5">
                 <adminNavSection.icon
-                  className="h-3.5 w-3.5 text-[#6C7278]"
+                  className="h-3.5 w-3.5 text-muted-foreground"
                   aria-hidden="true"
                 />
-                <span className="text-[10px] font-medium uppercase tracking-widest text-[#6C7278]">
+                <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
                   {adminNavSection.title}
                 </span>
               </div>
@@ -112,10 +112,10 @@ export function MobileNav() {
                     href={item.href}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "flex min-h-[44px] items-center gap-3 px-3 py-2 text-[13px] font-medium transition-colors rounded-none",
+                      "flex min-h-[44px] items-center gap-3 px-3 py-2 text-sm font-medium transition-colors rounded-none",
                       isActive
-                        ? "border-l-[3px] border-[#B8422E] text-[#1A1C1E] bg-[#F7F5F2]"
-                        : "border-l-[3px] border-transparent text-[#6C7278] hover:bg-[#F7F5F2] hover:text-[#1A1C1E]",
+                        ? "border-l-[3px] border-primary text-foreground bg-secondary"
+                        : "border-l-[3px] border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground",
                     )}
                   >
                     <item.icon
@@ -131,20 +131,20 @@ export function MobileNav() {
         </nav>
 
         {/* Bottom section */}
-        <div className="mt-auto border-t border-[#6C7278]/10 px-2 pb-4 pt-3">
+        <div className="mt-auto border-t border-border/10 px-2 pb-4 pt-3">
           {user && (
             <div className="px-3 py-1.5 mb-2">
-              <p className="text-[12px] font-medium text-[#1A1C1E] truncate">
+              <p className="text-xs font-medium text-foreground truncate">
                 {user.email?.split("@")[0]}
               </p>
-              <p className="text-[10px] text-[#6C7278] truncate">
+              <p className="text-[10px] text-muted-foreground truncate">
                 {user.email}
               </p>
             </div>
           )}
           <button
             onClick={handleLogout}
-            className="flex min-h-[44px] w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-[#6C7278] transition-colors hover:bg-[#F7F5F2] hover:text-[#B8422E]"
+            className="flex min-h-[44px] w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
             aria-label="Đăng xuất"
           >
             <LogOut className="h-5 w-5" aria-hidden="true" />

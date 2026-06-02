@@ -11,6 +11,8 @@ import {
   ArrowUpRight,
   Target,
   Mail,
+  UserCheck,
+  Clock,
 } from "lucide-react";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -22,11 +24,13 @@ function QuickAction({
   title,
   href,
   icon: Icon,
+  description,
   variant = "default",
 }: {
   title: string;
   href: string;
   icon: React.ElementType;
+  description?: string;
   variant?: "default" | "primary";
 }) {
   const isPrimary = variant === "primary";
@@ -34,31 +38,64 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className={`group flex items-center gap-3 rounded-lg p-3.5 transition-colors ${
+      className={`group flex items-start gap-4 rounded-xl p-4 transition-all ${
         isPrimary
-          ? "bg-[#B8422E] text-white"
-          : "border border-[#6C7278]/20 bg-white text-[#1A1C1E] hover:border-[#6C7278]/40"
+          ? "bg-primary text-primary-foreground"
+          : "border border-border/50 bg-card text-foreground hover:border-border hover:shadow-sm"
       }`}
     >
       <div
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-          isPrimary ? "bg-white/20" : "bg-[#F7F5F2]"
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+          isPrimary ? "bg-primary-foreground/20" : "bg-secondary"
         }`}
       >
         <Icon
-          className={`h-4 w-4 ${isPrimary ? "text-white" : "text-[#6C7278]"}`}
+          className={`h-5 w-5 ${isPrimary ? "text-primary-foreground" : "text-muted-foreground"}`}
           aria-hidden="true"
         />
       </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="text-[13px] font-medium">{title}</h3>
+      <div className="flex-1 min-w-0 space-y-0.5">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        {description && (
+          <p
+            className={`text-xs ${isPrimary ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+          >
+            {description}
+          </p>
+        )}
       </div>
       <ArrowUpRight
-        className={`h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity ${
-          isPrimary ? "text-white/70" : "text-[#6C7278]"
+        className={`mt-1 h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 ${
+          isPrimary ? "text-primary-foreground/70" : "text-muted-foreground"
         }`}
       />
     </Link>
+  );
+}
+
+// ─── Empty State Panel ──────────────────────────────────────────────────────
+function EmptyPanel({
+  title,
+  icon: Icon,
+}: {
+  title: string;
+  icon: React.ElementType;
+}) {
+  return (
+    <div className="rounded-xl border border-border/30 bg-card p-6">
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {title}
+      </h3>
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
+          <Icon className="h-5 w-5 text-muted-foreground/60" aria-hidden="true" />
+        </div>
+        <p className="text-sm text-muted-foreground">Chưa có dữ liệu</p>
+        <p className="mt-1 text-xs text-muted-foreground/60">
+          Dữ liệu sẽ hiển thị khi có hoạt động mới
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -70,81 +107,115 @@ function getGreeting() {
   return "Chào buổi tối";
 }
 
+function formatDate() {
+  return new Date().toLocaleDateString("vi-VN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 // ─── Main Dashboard ─────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { data: stats, isLoading: loading } = useDashboardStats();
   const { user } = useCurrentUser();
   const [greeting, setGreeting] = React.useState("");
+  const [dateStr, setDateStr] = React.useState("");
 
   React.useEffect(() => {
     setGreeting(getGreeting());
+    setDateStr(formatDate());
   }, []);
 
   return (
-    <div className="space-y-8 max-w-[1440px] mx-auto overflow-x-hidden">
+    <div className="space-y-10 max-w-[1440px] mx-auto overflow-x-hidden">
       {/* ─── Welcome ─────────────────────────────────────────────────────── */}
       <div>
-        <h1 className="font-heading text-[24px] font-medium text-[#1A1C1E]">
+        <h1 className="font-heading text-2xl font-semibold text-foreground">
           {greeting}
           {user?.email ? `, ${user.email.split("@")[0]}` : ""}
         </h1>
-        <p className="mt-1 font-sans text-base leading-[1.6] text-[#6C7278]">
-          Tổng quan hoạt động hôm nay
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{dateStr}</p>
       </div>
 
       {/* ─── Stats Grid ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title="Nhân viên"
-          value={stats?.employees ?? 0}
-          icon={Users}
-          loading={loading}
-        />
-        <StatCard
-          title="Phòng ban"
-          value={stats?.departments ?? 0}
-          icon={Building2}
-          loading={loading}
-        />
-        <StatCard
-          title="Chức vụ"
-          value={stats?.positions ?? 0}
-          icon={Briefcase}
-          loading={loading}
-        />
+      <div>
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          Tổng quan
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard
+            title="Nhân viên"
+            value={stats?.employees ?? 0}
+            icon={Users}
+            loading={loading}
+          />
+          <StatCard
+            title="Phòng ban"
+            value={stats?.departments ?? 0}
+            icon={Building2}
+            loading={loading}
+          />
+          <StatCard
+            title="Chức vụ"
+            value={stats?.positions ?? 0}
+            icon={Briefcase}
+            loading={loading}
+          />
+        </div>
       </div>
 
       {/* ─── Quick Actions ───────────────────────────────────────────────── */}
-      <div className="space-y-4">
-        <h2 className="font-heading text-lg font-medium text-[#1A1C1E]">
-          Quick Actions
+      <div>
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          Thao tác nhanh
         </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <QuickAction
             title="Thêm nhân viên"
             href="/employees/new"
             icon={UserPlus}
+            description="Nhập thông tin nhân viên mới"
             variant="primary"
           />
           <QuickAction
             title="Import Excel"
             href="/employees/import"
             icon={FileText}
+            description="Nhập hàng loạt từ file"
           />
-          <QuickAction title="Tuyển dụng" href="/recruitment" icon={Target} />
+          <QuickAction
+            title="Tuyển dụng"
+            href="/recruitment"
+            icon={Target}
+            description="Quản lý ứng viên và phỏng vấn"
+          />
           <QuickAction
             title="Phòng ban"
             href="/settings/departments"
             icon={Building2}
+            description="Cơ cấu tổ chức"
           />
           <QuickAction
             title="Chức vụ"
             href="/settings/positions"
             icon={Briefcase}
+            description="Danh sách vị trí"
           />
-          <QuickAction title="Gmail" href="/gmail" icon={Mail} />
+          <QuickAction
+            title="Gmail"
+            href="/gmail"
+            icon={Mail}
+            description="Hộp thư kết nối"
+          />
         </div>
+      </div>
+
+      {/* ─── Bottom Panels ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <EmptyPanel title="Hoạt động gần đây" icon={Clock} />
+        <EmptyPanel title="Nhân viên mới tháng này" icon={UserCheck} />
       </div>
     </div>
   );
