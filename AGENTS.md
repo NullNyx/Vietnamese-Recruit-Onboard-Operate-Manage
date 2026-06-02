@@ -41,6 +41,8 @@ Trigger → skill (triggers are illustrative, not exhaustive; match on meaning):
 | "debug cái này", "bug", "lỗi", "chậm/regression", diagnose a hard failure                                               | `diagnose`                                                      |
 | "cải thiện kiến trúc", "refactor", find deepening/coupling opportunities                                                | `improve-codebase-architecture`                                 |
 | explore code structure: repo map, symbols, callers/callees, impact                                                      | `srcwalk` (run `srcwalk guide` first; use before raw read/grep) |
+| "codegraph", "trace bằng codegraph", static call graph / symbol impact                                                  | Codegraph workflow (below)                                      |
+| "tasteskill", "taste skill", improve frontend taste / redesign UI                                                       | Taste Skill workflow (below)                                    |
 | "zoom out", "bức tranh lớn", unfamiliar with how code fits together                                                     | `zoom-out`                                                      |
 | "prototype", "thử nghiệm", sanity-check a data model / state machine / UI                                               | `prototype`                                                     |
 | "handoff", "bàn giao", compact this session for a successor agent                                                       | `handoff`                                                       |
@@ -81,6 +83,51 @@ Then answer in the shape the user asked for:
 
 Use canonical terms from `CONTEXT.md`. If a spec contradicts what's wired in code,
 trust the code and flag the drift.
+
+## Codegraph workflow
+
+Use Codegraph for static code-intelligence tasks when available, especially when
+the user asks how a flow works, where a symbol is used, or what a refactor will
+affect. Codegraph complements `srcwalk`: use `srcwalk` when the trigger table
+activates that skill, and use Codegraph for call graph, symbol context, and impact
+queries after the repo context is clear.
+
+- Start with `codegraph_context` for architecture, bug, or "how does X work"
+  questions. It returns entry points, related symbols, and key code in one call.
+- Use `codegraph_trace` for "how does A reach B" flow questions. Prefer one trace
+  over chaining many raw file reads.
+- Use `codegraph_callers` / `codegraph_callees` for local call graph questions.
+- Use `codegraph_impact` before refactoring a shared symbol or changing a public
+  application service API.
+- Use `codegraph_files` / `codegraph_search` to orient quickly, then read only the
+  files needed for exact edits.
+- Do not commit `.codegraph/`. It is a local generated index; regenerate it from
+  source when stale.
+
+For project status or feature-map answers, still trust `backend/src/main.py` for
+what is live. A symbol existing in Codegraph does not mean its router is wired.
+
+## Taste Skill workflow
+
+Taste Skill is optional frontend guidance for visual quality. Use the installed
+skills only on frontend UI work, and only where they fit this product's HRM nature.
+
+- Use `minimalist-ui` for Vroom HR product surfaces: dashboard, Candidate review,
+  Onboarding Task lists, Employee management, forms, and dense operational views.
+  Keep the UI calm, scannable, accessible, and consistent with shadcn/ui.
+- Use `redesign-existing-projects` when improving an existing screen. Audit first:
+  layout, spacing, hierarchy, content density, responsive behavior, and existing
+  design tokens. Preserve route structure, copy intent, form field names, and data
+  contracts unless the user asks to change them.
+- Do not use Taste Skill's landing-page-heavy defaults for admin/product screens.
+  Avoid cinematic heroes, oversized decorative motion, random GSAP, and marketing
+  composition inside the HRM app.
+- For any frontend implementation, keep this repo's frontend rules higher priority:
+  Next.js 14, TypeScript, Tailwind, shadcn/ui, lucide icons when already used, no
+  card-in-card layouts, stable responsive dimensions, and no overlapping text.
+- Before finishing UI work, run the app when feasible and verify desktop/mobile
+  layouts visually; fix text overflow, contrast failures, broken spacing, and
+  unexpected horizontal scroll.
 
 ## Documentation rules
 
