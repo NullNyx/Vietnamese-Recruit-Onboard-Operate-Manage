@@ -247,6 +247,7 @@ async def get_auth_service(
     refresh_token_repo: RefreshTokenRepository = Depends(get_refresh_token_repository),
     oauth_service: OAuthService = Depends(get_oauth_service),
     token_service: TokenService = Depends(get_token_service),
+    domain_gate_service: DomainGateService = Depends(get_domain_gate_service),
     session: AsyncSession = Depends(get_db_session),
 ) -> AuthService:
     """Provide an AuthService instance with all dependencies.
@@ -257,6 +258,7 @@ async def get_auth_service(
         refresh_token_repo: The refresh token repository from DI.
         oauth_service: The OAuth service from DI.
         token_service: The token service from DI.
+        domain_gate_service: The domain gate service from DI.
         session: The async database session for employee lookup.
 
     Returns:
@@ -274,6 +276,7 @@ async def get_auth_service(
         oauth_grant_repository=oauth_grant_repo,
         refresh_token_repository=refresh_token_repo,
         employee_repository=employee_repo,
+        domain_gate_service=domain_gate_service,
     )
 
 

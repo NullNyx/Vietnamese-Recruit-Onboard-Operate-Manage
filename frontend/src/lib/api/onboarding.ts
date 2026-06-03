@@ -35,6 +35,12 @@ export interface OnboardingProcessListResponse {
   page_size: number;
 }
 
+export interface OnboardingCounts {
+  total: number;
+  in_progress: number;
+  complete: number;
+}
+
 export type ProcessFilter = "all" | "in_progress" | "complete";
 
 // ─── API Helpers ────────────────────────────────────────────────────────────
@@ -60,6 +66,7 @@ export const onboardingKeys = {
   list: (filter: ProcessFilter) => [...onboardingKeys.lists(), filter] as const,
   details: () => [...onboardingKeys.all, "detail"] as const,
   detail: (id: string) => [...onboardingKeys.details(), id] as const,
+  counts: () => [...onboardingKeys.all, "counts"] as const,
 };
 
 // ─── API Functions ────────────────────────────────────────────────────────────
@@ -77,6 +84,11 @@ export async function getOnboardingProcess(
   processId: string
 ): Promise<OnboardingProcess> {
   return apiFetch<OnboardingProcess>(`/processes/${processId}`);
+}
+
+/** GET /api/onboarding/counts */
+export async function getOnboardingCounts(): Promise<OnboardingCounts> {
+  return apiFetch<OnboardingCounts>("/counts");
 }
 
 /** PATCH /api/onboarding/tasks/{task_id} */

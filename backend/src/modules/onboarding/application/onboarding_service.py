@@ -816,3 +816,23 @@ class OnboardingService:
             total_count=len(tasks),
             tasks=task_details,
         )
+
+    async def get_counts(self) -> dict[str, int]:
+        """Return process counts grouped by status for tab badges.
+
+        Read-only projection backing ``GET /api/onboarding/counts``.
+        Delegates to the process repository's ``counts_by_status`` and
+        adds a ``total`` key summing all statuses.
+
+        Returns:
+            A dict with keys ``total``, ``in_progress``, and ``complete``.
+            Missing statuses default to 0.
+        """
+        counts = await self.process_repo.counts_by_status()
+        in_progress = counts.get(OnboardingStatus.IN_PROGRESS.value, 0)
+        complete = counts.get(OnboardingStatus.COMPLETE.value, 0)
+        return {
+            "total": in_progress + complete,
+            "in_progress": in_progress,
+            "complete": complete,
+        }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { listOnboardingProcesses, onboardingKeys, type ProcessFilter, type OnboardingProcess } from "@/lib/api/onboarding";
+import { listOnboardingProcesses, getOnboardingCounts, onboardingKeys, type ProcessFilter, type OnboardingProcess } from "@/lib/api/onboarding";
 import { ProcessCard } from "@/components/onboarding/ProcessCard";
 import { OnboardingDetail } from "@/components/onboarding/OnboardingDetail";
 import { Users, AlertCircle } from "lucide-react";
@@ -66,9 +66,12 @@ export default function OnboardingPage() {
     queryFn: () => listOnboardingProcesses(filter),
   });
 
+  const { data: counts } = useQuery({
+    queryKey: onboardingKeys.counts(),
+    queryFn: getOnboardingCounts,
+  });
+
   const processes = data?.items ?? [];
-  
-  // Compute counts for badge
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
       {/* Left panel: list */}
@@ -109,11 +112,11 @@ export default function OnboardingPage() {
                       variant="secondary"
                       className="text-[10px] px-1.5 py-0 h-4 font-normal"
                     >
-                      {tab.value === "all" 
-                        ? (processes.length > 0 ? data.total : 0)
+                      {tab.value === "all"
+                        ? (counts?.total ?? 0)
                         : tab.value === "in_progress"
-                          ? processes.filter((p: OnboardingProcess) => p.status === "in_progress").length
-                          : processes.filter((p: OnboardingProcess) => p.status === "complete").length}
+                          ? (counts?.in_progress ?? 0)
+                          : (counts?.complete ?? 0)}
                     </Badge>
                   )}
                 </TabsTrigger>

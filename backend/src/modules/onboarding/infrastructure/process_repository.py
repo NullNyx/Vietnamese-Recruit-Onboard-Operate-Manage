@@ -55,6 +55,23 @@ class OnboardingProcessRepository:
         await self.session.flush()
         return process
 
+    async def counts_by_status(self) -> dict[str, int]:
+        """Count processes grouped by status.
+
+        Returns a mapping of status value to count for each status that has
+        at least one process.  Used by the badge-count endpoint so the
+        frontend can display accurate per-tab totals without loading items.
+
+        Returns:
+            A dict mapping status string to its process count.
+        """
+        statement = (
+            select(OnboardingProcess.status, func.count())
+            .group_by(OnboardingProcess.status)
+        )
+        result = await self.session.execute(statement)
+        return {str(status): int(count) for status, count in result.all()}
+
     async def get_by_id(self, process_id: UUID) -> OnboardingProcess | None:
         """Retrieve an onboarding process by its unique identifier.
 
