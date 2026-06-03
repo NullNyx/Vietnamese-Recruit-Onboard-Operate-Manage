@@ -56,7 +56,7 @@ async def _bootstrap_super_admin() -> None:
 
     settings = get_settings()
     super_admin_email = settings.super_admin_email
-    if super_admin_email is None and settings.auto_seed_sample_data:
+    if super_admin_email is None and settings.auto_seed_sample_data is True:
         super_admin_email = DEFAULT_DEMO_SUPER_ADMIN_EMAIL
 
     session_maker = _get_async_session_maker()
