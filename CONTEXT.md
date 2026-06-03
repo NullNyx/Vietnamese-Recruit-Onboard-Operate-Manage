@@ -11,8 +11,9 @@ so the team uses one word per concept across specs, code, and docs.
 **Organization**:
 The single company that owns a given deployment. It is a singleton — there is
 exactly one Organization per running instance. Holds company-level settings
-(name, tax code, timezone, holidays). It is NOT a data-isolation boundary,
-because a deployment never contains more than one company.
+(name, tax code, timezone, holidays, allowed email domains). It is NOT a
+data-isolation boundary, because a deployment never contains more than one
+company.
 _Avoid_: Company, Tenant, Account, Client
 
 **Tenant**:
@@ -36,6 +37,11 @@ onboarding in progress). When onboarding completes, the Employee becomes
 inactive Employee = accepted, onboarding; active Employee = onboarding done.
 Active Employees use the self-service side of the system.
 _Avoid_: User (User is the auth-account concept; an Employee is the HR concept)
+
+**Employee Self-Service**:
+The employee-facing side of the system for active Employees. It is distinct
+from the HR admin side and is used for employee-owned views and actions.
+_Avoid_: Portal, Employee dashboard, User area
 
 ## AI Capabilities
 
