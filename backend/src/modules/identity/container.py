@@ -20,12 +20,12 @@ from src.modules.employee.infrastructure.employee_repository import (
 )
 from src.modules.identity.application.audit_service import AuditService
 from src.modules.identity.application.auth_service import AuthService
+from src.modules.identity.application.domain_gate_service import DomainGateService
 from src.modules.identity.application.oauth_config_manager import OAuthConfigManager
 from src.modules.identity.application.oauth_service import OAuthService
 from src.modules.identity.application.role_service import RoleService
 from src.modules.identity.application.token_service import TokenService
 from src.modules.identity.application.whitelist_manager import WhitelistManager
-from src.modules.identity.application.domain_gate_service import DomainGateService
 from src.modules.identity.application.whitelist_service import WhitelistService
 from src.modules.identity.domain.entities import User
 from src.modules.identity.domain.exceptions import InvalidTokenError

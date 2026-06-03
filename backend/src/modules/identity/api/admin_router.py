@@ -48,7 +48,6 @@ from src.modules.identity.application.whitelist_manager import WhitelistManager
 from src.modules.identity.container import (
     get_current_user,
     get_db_session,
-    get_domain_gate_service,
     get_oauth_config_manager,
     get_settings,
     get_whitelist_manager,

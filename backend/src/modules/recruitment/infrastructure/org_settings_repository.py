@@ -125,7 +125,10 @@ class OrganizationSettingsRepository:
     # Allowed domains
     # ------------------------------------------------------------------
 
-    _DOMAIN_RE = re.compile(r'^[a-z0-9]([a-z0-9-]*[a-z0-9])?\.[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$')
+    _DOMAIN_RE = re.compile(
+        r'^[a-z0-9]([a-z0-9-]*[a-z0-9])?\.[a-z0-9]'
+        r'([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$'
+    )
     _MAX_DOMAINS = 50
 
     async def get_allowed_domains(self) -> list[str]:
