@@ -10,6 +10,7 @@ import {
   KeyRound,
   UserCog,
   ScrollText,
+  Bot,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -27,6 +28,7 @@ export const navItems: NavItem[] = [
   { href: "/gmail", label: "Gmail", icon: Mail },
   { href: "/recruitment", label: "Tuyển dụng", icon: UserSearch },
   { href: "/onboarding", label: "Onboarding", icon: ListChecks },
+  { href: "/assistant", label: "Trợ lý AI", icon: Bot },
 ];
 
 export interface AdminNavSection {

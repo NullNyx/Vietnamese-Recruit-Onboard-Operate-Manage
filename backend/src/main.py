@@ -17,6 +17,10 @@ from src.modules.attendance.api.error_handler import (  # noqa: E402
     register_attendance_error_handlers,
 )
 from src.modules.attendance.api.router import attendance_router  # noqa: E402
+from src.modules.assistant.api.error_handler import (  # noqa: E402
+    register_assistant_error_handlers,
+)
+from src.modules.assistant.api.router import router as assistant_router  # noqa: E402
 from src.modules.employee.api.error_handler import (  # noqa: E402
     register_employee_error_handlers,
 )
@@ -43,7 +47,6 @@ from src.modules.recruitment.api.metrics_router import metrics_router  # noqa: E
 from src.modules.recruitment.api.runtime_router import runtime_router  # noqa: E402
 
 logger = logging.getLogger(__name__)
-
 
 async def _bootstrap_super_admin() -> None:
     """Bootstrap the super admin user at application startup.
@@ -110,7 +113,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
     # Shutdown (nothing to clean up currently)
 
-
 app = FastAPI(
     title="Vroom HR",
     description="Vietnamese Recruit-Onboard-Operate-Manage platform",
@@ -129,6 +131,7 @@ app.include_router(metrics_router)
 app.include_router(onboarding_router)
 app.include_router(attendance_router)
 app.include_router(runtime_router)
+app.include_router(assistant_router)
 
 # Register exception handlers.
 register_auth_error_handlers(app)
@@ -137,7 +140,7 @@ register_gmail_error_handlers(app)
 register_recruitment_error_handlers(app)
 register_onboarding_error_handlers(app)
 register_attendance_error_handlers(app)
-
+register_assistant_error_handlers(app)
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
