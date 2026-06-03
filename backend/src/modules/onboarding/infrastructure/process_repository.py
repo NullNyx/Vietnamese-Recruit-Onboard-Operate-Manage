@@ -65,9 +65,8 @@ class OnboardingProcessRepository:
         Returns:
             A dict mapping status string to its process count.
         """
-        statement = (
-            select(OnboardingProcess.status, func.count())
-            .group_by(OnboardingProcess.status)
+        statement = select(OnboardingProcess.status, func.count()).group_by(
+            OnboardingProcess.status
         )
         result = await self.session.execute(statement)
         return {str(status): int(count) for status, count in result.all()}
