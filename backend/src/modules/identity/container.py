@@ -25,6 +25,7 @@ from src.modules.identity.application.oauth_service import OAuthService
 from src.modules.identity.application.role_service import RoleService
 from src.modules.identity.application.token_service import TokenService
 from src.modules.identity.application.whitelist_manager import WhitelistManager
+from src.modules.identity.application.domain_gate_service import DomainGateService
 from src.modules.identity.application.whitelist_service import WhitelistService
 from src.modules.identity.domain.entities import User
 from src.modules.identity.domain.exceptions import InvalidTokenError
@@ -138,6 +139,26 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
         except Exception:
             await session.rollback()
             raise
+
+async def get_domain_gate_service(
+    session: AsyncSession = Depends(get_db_session),
+) -> DomainGateService:
+    """Provide a DomainGateService instance.
+
+    Reads the Organization's allowed_domains from the database and
+    checks whether a given email domain is permitted.
+
+    Args:
+        session: The async database session from DI.
+
+    Returns:
+        A DomainGateService bound to the current session.
+    """
+    from src.modules.recruitment.infrastructure.org_settings_repository import (
+        OrganizationSettingsRepository,
+    )
+    repo = OrganizationSettingsRepository(session)
+    return DomainGateService(org_settings_repository=repo)
 
 
 async def get_user_repository(

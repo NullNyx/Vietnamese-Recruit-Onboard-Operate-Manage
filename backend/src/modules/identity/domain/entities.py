@@ -170,6 +170,7 @@ class AuditActionType(str, Enum):
     WHITELIST_REMOVE = "whitelist_remove"
     OAUTH_UPDATE = "oauth_update"
     ROLE_CHANGE = "role_change"
+    ORG_DOMAIN_UPDATE = "org_domain_update"
 
 
 class AuditLog(SQLModel, table=True):

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Loader2, AlertCircle } from "lucide-react";
 
 // ─── Google Icon ────────────────────────────────────────────────────────────
 function GoogleIcon() {
@@ -31,6 +32,8 @@ function GoogleIcon() {
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
 
   useEffect(() => {
     setMounted(true);
@@ -59,6 +62,30 @@ export default function LoginPage() {
               Vroom HR
             </span>
           </div>
+
+          {/* Error Alert */}
+          {error === "DOMAIN_NOT_ALLOWED" && (
+            <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+              <AlertCircle className="mt-0.5 h-4 w-4 text-destructive shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-destructive">Tên miền chưa được ủy quyền</p>
+                <p className="mt-1 text-destructive/80">
+                  Email domain của bạn chưa được phép đăng nhập. Liên hệ quản trị viên HR để được hỗ trợ.
+                </p>
+              </div>
+            </div>
+          )}
+          {error === "AUTH_ACCESS_DENIED" && (
+            <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+              <AlertCircle className="mt-0.5 h-4 w-4 text-destructive shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-destructive">Truy cập bị từ chối</p>
+                <p className="mt-1 text-destructive/80">
+                  Tài khoản của bạn chưa được phép đăng nhập. Liên hệ quản trị viên HR.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Login header */}
           <div className="space-y-2 text-center">

@@ -8,7 +8,8 @@ pipeline management.
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, Index, text
+from sqlalchemy import Column, DateTime, Index, String, text
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -143,6 +144,9 @@ class OrganizationSettings(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     timezone: str = Field(default="Asia/Ho_Chi_Minh", max_length=64, nullable=False)
+    allowed_domains: list[str] = Field(
+        sa_column=Column(ARRAY(String), nullable=False, server_default="{}"),
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

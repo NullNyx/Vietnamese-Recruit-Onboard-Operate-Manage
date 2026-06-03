@@ -1,6 +1,7 @@
 import {
   Users,
   Building2,
+  Globe,
   Briefcase,
   FileText,
   Upload,
@@ -85,6 +86,7 @@ export const adminNavConfig: HeaderNavConfig = {
         { href: "/admin/users", label: "Users", icon: UserCog },
         { href: "/admin/whitelist", label: "Whitelist", icon: ListChecks },
         { href: "/admin/oauth", label: "OAuth", icon: KeyRound },
+        { href: "/admin/domains", label: "Domains", icon: Globe },
         { href: "/admin/audit-logs", label: "Audit logs", icon: ScrollText },
         { href: "/gmail", label: "Gmail", icon: Mail },
       ],

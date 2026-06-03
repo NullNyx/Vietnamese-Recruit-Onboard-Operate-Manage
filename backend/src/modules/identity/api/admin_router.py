@@ -18,6 +18,10 @@ from sqlmodel import select
 from src.modules.identity.api.admin_schemas import (
     AdminUserResponse,
     AuditLogResponse,
+    DomainAddRequest,
+    DomainListResponse,
+    DomainRemoveResponse,
+    DomainReplaceRequest,
     PaginatedAuditLogsResponse,
     RoleUpdateRequest,
 )
@@ -44,6 +48,7 @@ from src.modules.identity.application.whitelist_manager import WhitelistManager
 from src.modules.identity.container import (
     get_current_user,
     get_db_session,
+    get_domain_gate_service,
     get_oauth_config_manager,
     get_settings,
     get_whitelist_manager,
@@ -456,3 +461,150 @@ async def update_oauth_config(
         updated_at=config.updated_at,
         source=config.source,
     )
+
+
+# --- Organization Domain Endpoints ---
+
+async def get_org_settings_repo(
+    session: AsyncSession = Depends(get_db_session),
+):
+    """Provide an OrganizationSettingsRepository instance.
+
+    Args:
+        session: The async database session from DI.
+
+    Returns:
+        An OrganizationSettingsRepository bound to the current session.
+    """
+    from src.modules.recruitment.infrastructure.org_settings_repository import (
+        OrganizationSettingsRepository,
+    )
+    return OrganizationSettingsRepository(session)
+
+
+@admin_router.get("/organization/domains", response_model=DomainListResponse)
+async def list_domains(
+    admin_user: AdminUserDep,
+    org_repo=Depends(get_org_settings_repo),
+) -> DomainListResponse:
+    """List the Organization's allowed login domains.
+
+    Returns the current list of email domains that are permitted for
+    employee login.  An empty list means no domain restriction.
+
+    Args:
+        admin_user: The authenticated admin user.
+        org_repo: Repository for Organization settings.
+
+    Returns:
+        The list of allowed domain strings.
+    """
+    domains = await org_repo.get_allowed_domains()
+    return DomainListResponse(allowed_domains=domains)
+
+
+@admin_router.post("/organization/domains", response_model=DomainListResponse, status_code=200)
+async def add_domains(
+    body: DomainAddRequest,
+    admin_user: AdminUserDep,
+    org_repo=Depends(get_org_settings_repo),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> DomainListResponse:
+    """Add one or more domains to the allowed list.
+
+    Domains are normalized to lowercase.  Duplicates are rejected.
+
+    Args:
+        body: Request containing the domains to add.
+        admin_user: The authenticated admin user.
+        org_repo: Repository for Organization settings.
+        audit_service: Service for audit logging.
+
+    Returns:
+        The updated full list of allowed domains.
+
+    Raises:
+        HTTPException: 400 if domains are invalid or duplicates.
+    """
+    try:
+        updated = await org_repo.add_domains(body.domains)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail={"code": "DOMAIN_ERROR", "message": str(exc)})
+
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_DOMAIN_UPDATE,
+        details={"action": "add", "domains": body.domains},
+    )
+
+    return DomainListResponse(allowed_domains=updated)
+
+
+@admin_router.put("/organization/domains", response_model=DomainListResponse)
+async def replace_domains(
+    body: DomainReplaceRequest,
+    admin_user: AdminUserDep,
+    org_repo=Depends(get_org_settings_repo),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> DomainListResponse:
+    """Replace the entire allowed domains list.
+
+    Args:
+        body: Request containing the new complete list of domains.
+        admin_user: The authenticated admin user.
+        org_repo: Repository for Organization settings.
+        audit_service: Service for audit logging.
+
+    Returns:
+        The new list of allowed domains.
+
+    Raises:
+        HTTPException: 400 if any domain is invalid.
+    """
+    try:
+        updated = await org_repo.set_allowed_domains(body.domains)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail={"code": "DOMAIN_ERROR", "message": str(exc)})
+
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_DOMAIN_UPDATE,
+        details={"action": "replace", "domains": body.domains},
+    )
+
+    return DomainListResponse(allowed_domains=updated)
+
+
+@admin_router.delete("/organization/domains/{domain}", response_model=DomainRemoveResponse)
+async def remove_domain(
+    domain: str,
+    admin_user: AdminUserDep,
+    org_repo=Depends(get_org_settings_repo),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> DomainRemoveResponse:
+    """Remove a single domain from the allowed list.
+
+    Args:
+        domain: The domain string to remove.
+        admin_user: The authenticated admin user.
+        org_repo: Repository for Organization settings.
+        audit_service: Service for audit logging.
+
+    Returns:
+        The removed domain and the updated list.
+
+    Raises:
+        HTTPException: 400 if the domain is not in the list.
+    """
+    try:
+        updated = await org_repo.remove_domain(domain)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail={"code": "DOMAIN_ERROR", "message": str(exc)})
+
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_DOMAIN_UPDATE,
+        details={"action": "remove", "domain": domain},
+    )
+
+    return DomainRemoveResponse(removed=domain, allowed_domains=updated)
