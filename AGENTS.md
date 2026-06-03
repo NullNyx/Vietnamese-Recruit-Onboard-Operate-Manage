@@ -222,3 +222,17 @@ infrastructure/` with `container.py` for DI, matching existing modules.
 - Issue tracker: GitHub Issues via `gh` CLI → `docs/agents/issue-tracker.md`.
 - Triage labels: five canonical roles, default strings → `docs/agents/triage-labels.md`.
 - Domain docs: single-context, `CONTEXT.md` + `docs/decisions/` → `docs/agents/domain.md`.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues via `gh`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical roles; labels use the default strings. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo: root `CONTEXT.md` + `docs/decisions/`. See `docs/agents/domain.md`.
