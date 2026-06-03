@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2, AlertCircle } from "lucide-react";
 
@@ -28,8 +28,8 @@ function GoogleIcon() {
   );
 }
 
-// ─── Main Login Page ────────────────────────────────────────────────────────
-export default function LoginPage() {
+// ─── Login Content (uses useSearchParams, must be in Suspense) ──────────────
+function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const searchParams = useSearchParams();
@@ -45,174 +45,188 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-background overflow-hidden">
-      {/* ─── Login Panel ─────────────────────────────────────────────────── */}
-      <div
-        className={`flex w-full items-center justify-center p-6 sm:p-8 transition-all duration-700 ${
-          mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-        }`}
-      >
-        <div className="w-full max-w-[400px] space-y-8">
-          {/* Logo */}
-          <div className="flex items-center justify-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <span className="text-sm font-bold text-white">V</span>
-            </div>
-            <span className="text-sm font-semibold text-foreground">
-              Vroom HR
-            </span>
+    <div
+      className={`flex w-full items-center justify-center p-6 sm:p-8 transition-all duration-700 ${
+        mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      }`}
+    >
+      <div className="w-full max-w-[400px] space-y-8">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+            <span className="text-sm font-bold text-white">V</span>
           </div>
+          <span className="text-sm font-semibold text-foreground">
+            Vroom HR
+          </span>
+        </div>
 
-          {/* Error Alert */}
-          {error === "DOMAIN_NOT_ALLOWED" && (
-            <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-              <AlertCircle className="mt-0.5 h-4 w-4 text-destructive shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-destructive">Tên miền chưa được ủy quyền</p>
-                <p className="mt-1 text-destructive/80">
-                  Email domain của bạn chưa được phép đăng nhập. Liên hệ quản trị viên HR để được hỗ trợ.
-                </p>
-              </div>
-            </div>
-          )}
-          {error === "AUTH_ACCESS_DENIED" && (
-            <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-              <AlertCircle className="mt-0.5 h-4 w-4 text-destructive shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-destructive">Truy cập bị từ chối</p>
-                <p className="mt-1 text-destructive/80">
-                  Tài khoản của bạn chưa được phép đăng nhập. Liên hệ quản trị viên HR.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Login header */}
-          <div className="space-y-2 text-center">
-            <h2 className="text-2xl font-semibold tracking-[-0.3px] text-foreground">
-              Đăng nhập vào Workspace
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Truy cập hệ thống quản lý nhân sự của tổ chức
-            </p>
-          </div>
-
-          {/* Login card */}
-          <div className="rounded-lg border border-border bg-card p-6">
-            <div className="space-y-6">
-              {/* Google OAuth Button — Primary */}
-              <button
-                onClick={handleLogin}
-                disabled={loading}
-                className="flex w-full items-center justify-center gap-3 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-60 disabled:cursor-not-allowed"
-                aria-label="Đăng nhập bằng Google"
-              >
-                {loading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <GoogleIcon />
-                )}
-                <span>
-                  {loading ? "Đang kết nối..." : "Đăng nhập bằng Google"}
-                </span>
-              </button>
-
-              {/* Divider */}
-              <div className="flex items-center gap-3">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-[10px] text-muted-foreground">hoặc</span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-
-              {/* Email/Password form */}
-              <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="email"
-                    className="text-xs font-medium text-muted-foreground"
-                  >
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="name@company.com"
-                    className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 transition-colors focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
-                    disabled
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label
-                      htmlFor="password"
-                      className="text-xs font-medium text-muted-foreground"
-                    >
-                      Mật khẩu
-                    </label>
-                    <button
-                      type="button"
-                      className="text-[10px] text-muted-foreground hover:text-primary transition-colors"
-                      disabled
-                    >
-                      Quên mật khẩu?
-                    </button>
-                  </div>
-                  <input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 transition-colors focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
-                    disabled
-                  />
-                </div>
-
-                {/* Remember me */}
-                <div className="flex items-center gap-2">
-                  <input
-                    id="remember"
-                    type="checkbox"
-                    className="h-3.5 w-3.5 rounded border-border bg-card"
-                    disabled
-                  />
-                  <label
-                    htmlFor="remember"
-                    className="text-xs text-muted-foreground"
-                  >
-                    Ghi nhớ phiên đăng nhập
-                  </label>
-                </div>
-
-                {/* Email login button */}
-                <button
-                  type="submit"
-                  disabled
-                  className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm font-medium text-muted-foreground cursor-not-allowed transition-colors"
-                >
-                  Đăng nhập bằng Email
-                </button>
-              </form>
-
-              {/* Note */}
-              <p className="text-center text-[10px] text-muted-foreground leading-relaxed">
-                Hiện tại hỗ trợ Google Workspace. Email/Password sẽ available
-                trong phiên bản tiếp theo.
+        {/* Error Alert */}
+        {error === "DOMAIN_NOT_ALLOWED" && (
+          <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+            <AlertCircle className="mt-0.5 h-4 w-4 text-destructive shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-destructive">Tên miền chưa được ủy quyền</p>
+              <p className="mt-1 text-destructive/80">
+                Email domain của bạn chưa được phép đăng nhập. Liên hệ quản trị viên HR để được hỗ trợ.
               </p>
             </div>
           </div>
+        )}
+        {error === "AUTH_ACCESS_DENIED" && (
+          <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+            <AlertCircle className="mt-0.5 h-4 w-4 text-destructive shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-destructive">Truy cập bị từ chối</p>
+              <p className="mt-1 text-destructive/80">
+                Tài khoản của bạn chưa được phép đăng nhập. Liên hệ quản trị viên HR.
+              </p>
+            </div>
+          </div>
+        )}
 
-          {/* Bottom trust */}
-          <p className="text-center text-[10px] text-muted-foreground leading-relaxed">
-            Đăng nhập đồng nghĩa bạn đồng ý với{" "}
-            <span className="text-foreground hover:text-primary cursor-pointer transition-colors">
-              Điều khoản sử dụng
-            </span>{" "}
-            và{" "}
-            <span className="text-foreground hover:text-primary cursor-pointer transition-colors">
-              Chính sách bảo mật
-            </span>
+        {/* Login header */}
+        <div className="space-y-2 text-center">
+          <h2 className="text-2xl font-semibold tracking-[-0.3px] text-foreground">
+            Đăng nhập vào Workspace
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Truy cập hệ thống quản lý nhân sự của tổ chức
           </p>
         </div>
+
+        {/* Login card */}
+        <div className="rounded-lg border border-border bg-card p-6">
+          <div className="space-y-6">
+            {/* Google OAuth Button — Primary */}
+            <button
+              onClick={handleLogin}
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-3 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-label="Đăng nhập bằng Google"
+            >
+              {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <GoogleIcon />
+              )}
+              <span>
+                {loading ? "Đang kết nối..." : "Đăng nhập bằng Google"}
+              </span>
+            </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-[10px] text-muted-foreground">hoặc</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            {/* Email/Password form */}
+            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="email"
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="name@company.com"
+                  className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 transition-colors focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
+                  disabled
+                />
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="password"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Mật khẩu
+                  </label>
+                  <button
+                    type="button"
+                    className="text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                    disabled
+                  >
+                    Quên mật khẩu?
+                  </button>
+                </div>
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 transition-colors focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
+                  disabled
+                />
+              </div>
+
+              {/* Remember me */}
+              <div className="flex items-center gap-2">
+                <input
+                  id="remember"
+                  type="checkbox"
+                  className="h-3.5 w-3.5 rounded border-border bg-card"
+                  disabled
+                />
+                <label
+                  htmlFor="remember"
+                  className="text-xs text-muted-foreground"
+                >
+                  Ghi nhớ phiên đăng nhập
+                </label>
+              </div>
+
+              {/* Email login button */}
+              <button
+                type="submit"
+                disabled
+                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm font-medium text-muted-foreground cursor-not-allowed transition-colors"
+              >
+                Đăng nhập bằng Email
+              </button>
+            </form>
+
+            {/* Note */}
+            <p className="text-center text-[10px] text-muted-foreground leading-relaxed">
+              Hiện tại hỗ trợ Google Workspace. Email/Password sẽ available
+              trong phiên bản tiếp theo.
+            </p>
+          </div>
+        </div>
+
+        {/* Bottom trust */}
+        <p className="text-center text-[10px] text-muted-foreground leading-relaxed">
+          Đăng nhập đồng nghĩa bạn đồng ý với{" "}
+          <span className="text-foreground hover:text-primary cursor-pointer transition-colors">
+            Điều khoản sử dụng
+          </span>{" "}
+          và{" "}
+          <span className="text-foreground hover:text-primary cursor-pointer transition-colors">
+            Chính sách bảo mật
+          </span>
+        </p>
       </div>
+    </div>
+  );
+}
+
+// ─── Main Login Page ────────────────────────────────────────────────────────
+export default function LoginPage() {
+  return (
+    <div className="relative flex min-h-screen items-center justify-center bg-background overflow-hidden">
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        }
+      >
+        <LoginContent />
+      </Suspense>
     </div>
   );
 }

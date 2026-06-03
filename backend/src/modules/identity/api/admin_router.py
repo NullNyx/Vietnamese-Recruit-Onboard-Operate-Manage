@@ -464,6 +464,7 @@ async def update_oauth_config(
 
 # --- Organization Domain Endpoints ---
 
+
 async def get_org_settings_repo(
     session: AsyncSession = Depends(get_db_session),
 ):
@@ -478,6 +479,7 @@ async def get_org_settings_repo(
     from src.modules.recruitment.infrastructure.org_settings_repository import (
         OrganizationSettingsRepository,
     )
+
     return OrganizationSettingsRepository(session)
 
 

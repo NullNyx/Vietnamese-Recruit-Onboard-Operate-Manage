@@ -98,12 +98,12 @@ export default function DomainsPage() {
       </div>
 
       {/* Info */}
-      <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
+      <Card className="border-blue-200 bg-blue-50/50">
         <CardContent className="flex items-start gap-3 py-4">
-          <Globe className="mt-0.5 h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
-          <div className="text-sm text-blue-800 dark:text-blue-200">
+          <Globe className="mt-0.5 h-4 w-4 text-blue-600 shrink-0" />
+          <div className="text-sm text-blue-800">
             <p className="font-medium">Cách hoạt động</p>
-            <p className="mt-1 text-blue-700 dark:text-blue-300">
+            <p className="mt-1 text-blue-700">
               Khi danh sách trống, mọi email đều được phép đăng nhập. Khi có
               domain trong danh sách, chỉ email thuộc các domain được phép mới
               có thể đăng nhập.

@@ -86,6 +86,7 @@ class PaginatedAuditLogsResponse(BaseModel):
 
 # --- Admin Organization Domain Schemas ---
 
+
 class DomainListResponse(BaseModel):
     """Response schema for listing allowed Organization domains.
 

@@ -120,14 +120,13 @@ class OrganizationSettingsRepository:
         await self.session.flush()
         return settings_row
 
-
     # ------------------------------------------------------------------
     # Allowed domains
     # ------------------------------------------------------------------
 
     _DOMAIN_RE = re.compile(
-        r'^[a-z0-9]([a-z0-9-]*[a-z0-9])?\.[a-z0-9]'
-        r'([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$'
+        r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?\.[a-z0-9]"
+        r"([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$"
     )
     _MAX_DOMAINS = 50
 
@@ -190,8 +189,7 @@ class OrganizationSettingsRepository:
         combined = current + new_normalized
         if len(combined) > self._MAX_DOMAINS:
             raise ValueError(
-                f"Too many domains (max {self._MAX_DOMAINS}, "
-                f"would have {len(combined)})"
+                f"Too many domains (max {self._MAX_DOMAINS}, would have {len(combined)})"
             )
         return await self.set_allowed_domains(combined)
 

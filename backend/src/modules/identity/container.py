@@ -140,6 +140,7 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
             await session.rollback()
             raise
 
+
 async def get_domain_gate_service(
     session: AsyncSession = Depends(get_db_session),
 ) -> DomainGateService:
@@ -157,6 +158,7 @@ async def get_domain_gate_service(
     from src.modules.recruitment.infrastructure.org_settings_repository import (
         OrganizationSettingsRepository,
     )
+
     repo = OrganizationSettingsRepository(session)
     return DomainGateService(org_settings_repository=repo)
 
