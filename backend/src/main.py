@@ -13,6 +13,10 @@ load_dotenv()
 
 from fastapi import FastAPI  # noqa: E402
 
+from src.modules.assistant.api.error_handler import (  # noqa: E402
+    register_assistant_error_handlers,
+)
+from src.modules.assistant.api.router import router as assistant_router  # noqa: E402
 from src.modules.employee.api.error_handler import (  # noqa: E402
     register_employee_error_handlers,
 )
@@ -38,7 +42,6 @@ from src.modules.recruitment.api.error_handler import (  # noqa: E402
 from src.modules.recruitment.api.metrics_router import metrics_router  # noqa: E402
 
 logger = logging.getLogger(__name__)
-
 
 async def _bootstrap_super_admin() -> None:
     """Bootstrap the super admin user at application startup.
@@ -75,7 +78,6 @@ async def _bootstrap_super_admin() -> None:
                     "the first administrator."
                 )
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler for startup and shutdown events."""
@@ -83,7 +85,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await _bootstrap_super_admin()
     yield
     # Shutdown (nothing to clean up currently)
-
 
 app = FastAPI(
     title="Vroom HR",
@@ -101,6 +102,7 @@ app.include_router(candidate_router)
 app.include_router(cv_review_router)
 app.include_router(metrics_router)
 app.include_router(onboarding_router)
+app.include_router(assistant_router)
 
 # Register exception handlers.
 register_auth_error_handlers(app)
@@ -108,7 +110,7 @@ register_employee_error_handlers(app)
 register_gmail_error_handlers(app)
 register_recruitment_error_handlers(app)
 register_onboarding_error_handlers(app)
-
+register_assistant_error_handlers(app)
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
