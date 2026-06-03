@@ -20,6 +20,7 @@ from src.modules.employee.infrastructure.employee_repository import (
 )
 from src.modules.identity.application.audit_service import AuditService
 from src.modules.identity.application.auth_service import AuthService
+from src.modules.identity.application.domain_gate_service import DomainGateService
 from src.modules.identity.application.oauth_config_manager import OAuthConfigManager
 from src.modules.identity.application.oauth_service import OAuthService
 from src.modules.identity.application.role_service import RoleService
@@ -140,6 +141,28 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
             raise
 
 
+async def get_domain_gate_service(
+    session: AsyncSession = Depends(get_db_session),
+) -> DomainGateService:
+    """Provide a DomainGateService instance.
+
+    Reads the Organization's allowed_domains from the database and
+    checks whether a given email domain is permitted.
+
+    Args:
+        session: The async database session from DI.
+
+    Returns:
+        A DomainGateService bound to the current session.
+    """
+    from src.modules.recruitment.infrastructure.org_settings_repository import (
+        OrganizationSettingsRepository,
+    )
+
+    repo = OrganizationSettingsRepository(session)
+    return DomainGateService(org_settings_repository=repo)
+
+
 async def get_user_repository(
     session: AsyncSession = Depends(get_db_session),
 ) -> UserRepository:
@@ -224,6 +247,7 @@ async def get_auth_service(
     refresh_token_repo: RefreshTokenRepository = Depends(get_refresh_token_repository),
     oauth_service: OAuthService = Depends(get_oauth_service),
     token_service: TokenService = Depends(get_token_service),
+    domain_gate_service: DomainGateService = Depends(get_domain_gate_service),
     session: AsyncSession = Depends(get_db_session),
 ) -> AuthService:
     """Provide an AuthService instance with all dependencies.
@@ -234,6 +258,7 @@ async def get_auth_service(
         refresh_token_repo: The refresh token repository from DI.
         oauth_service: The OAuth service from DI.
         token_service: The token service from DI.
+        domain_gate_service: The domain gate service from DI.
         session: The async database session for employee lookup.
 
     Returns:
@@ -251,6 +276,7 @@ async def get_auth_service(
         oauth_grant_repository=oauth_grant_repo,
         refresh_token_repository=refresh_token_repo,
         employee_repository=employee_repo,
+        domain_gate_service=domain_gate_service,
     )
 
 

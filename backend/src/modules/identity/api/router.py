@@ -27,7 +27,11 @@ from src.modules.identity.container import (
     get_token_service,
 )
 from src.modules.identity.domain.entities import User
-from src.modules.identity.domain.exceptions import InvalidTokenError, RateLimitExceededError
+from src.modules.identity.domain.exceptions import (
+    DomainAccessDeniedError,
+    InvalidTokenError,
+    RateLimitExceededError,
+)
 from src.modules.identity.infrastructure.config import AuthSettings
 from src.modules.identity.infrastructure.rate_limiter import RateLimiter
 
@@ -146,9 +150,15 @@ async def callback(
     # Retrieve the PKCE code_verifier from the cookie set during login.
     code_verifier = request.cookies.get("code_verifier", "")
 
-    auth_result = await auth_service.handle_callback(
-        code=code, state=state, code_verifier=code_verifier
-    )
+    try:
+        auth_result = await auth_service.handle_callback(
+            code=code, state=state, code_verifier=code_verifier
+        )
+    except DomainAccessDeniedError as exc:
+        return RedirectResponse(
+            url=f"{settings.frontend_url}/login?error={exc.error_code}",
+            status_code=302,
+        )
 
     response = RedirectResponse(url=settings.frontend_url, status_code=302)
 

@@ -55,6 +55,7 @@ from src.modules.identity.api.admin_router import require_admin
 from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User
 from src.modules.onboarding.api.schemas import (
+    OnboardingCountsResponse,
     OnboardingProcessDetailResponse,
     OnboardingProcessListItem,
     OnboardingProcessListResponse,
@@ -84,6 +85,28 @@ onboarding_router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 # ---------------------------------------------------------------------------
 # List onboarding processes
 # ---------------------------------------------------------------------------
+
+
+@onboarding_router.get("/counts", response_model=OnboardingCountsResponse)
+async def get_counts(
+    _admin: AdminUserDep,
+    onboarding_service: OnboardingServiceDep,
+) -> OnboardingCountsResponse:
+    """Return aggregate process counts by status for tab badges.
+
+    Read-only endpoint returning the true totals for each status so the
+    frontend can render accurate badge counts on filter tabs without
+    loading any process items.
+
+    Args:
+        _admin: The authenticated admin user (admin-only).
+        onboarding_service: The onboarding application service.
+
+    Returns:
+        Counts for total, in_progress, and complete.
+    """
+    counts = await onboarding_service.get_counts()
+    return OnboardingCountsResponse(**counts)
 
 
 @onboarding_router.get("/processes", response_model=OnboardingProcessListResponse)

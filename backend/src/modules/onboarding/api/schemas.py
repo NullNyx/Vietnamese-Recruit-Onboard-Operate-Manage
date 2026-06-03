@@ -34,7 +34,25 @@ __all__ = [
     "OnboardingStatus",
     "OnboardingTaskResponse",
     "TaskStatusUpdate",
+    "OnboardingCountsResponse",
 ]
+
+
+class OnboardingCountsResponse(BaseModel):
+    """Aggregate process counts by status for tab badges.
+
+    Returns the true total per status so the frontend can display accurate
+    badge counts on filter tabs regardless of which page is loaded.
+
+    Attributes:
+        total: Total number of processes across all statuses.
+        in_progress: Number of processes with status ``in_progress``.
+        complete: Number of processes with status ``complete``.
+    """
+
+    total: int
+    in_progress: int
+    complete: int
 
 
 # ---------------------------------------------------------------------------

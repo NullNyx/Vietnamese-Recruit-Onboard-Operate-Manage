@@ -70,6 +70,19 @@ class AccessDeniedError(AuthError):
     message = "Access denied. Contact administrator."
 
 
+class DomainAccessDeniedError(AuthError):
+    """Email domain is not in the Organization's allowed list.
+
+    Raised when a user authenticates successfully with Google but
+    their email domain is not present in the Organization's
+    allowed_domains configuration.
+    """
+
+    status_code = 403
+    error_code = "DOMAIN_NOT_ALLOWED"
+    message = "Email domain is not authorized for this Organization."
+
+
 class InsufficientScopeError(AuthError):
     """User did not grant all required OAuth scopes.
 

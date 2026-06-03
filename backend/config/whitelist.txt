@@ -4,3 +4,4 @@
 
 # Add authorized HR emails below:
 admin@vroom.local
+hoangxuannguyen1234@gmail.com
