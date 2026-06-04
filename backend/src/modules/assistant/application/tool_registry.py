@@ -89,11 +89,7 @@ class ToolRegistry:
         return False
 
     async def _count_candidates_by_status(self, args: dict[str, Any]) -> dict:
-        """Read-Tool: count candidates grouped by status.
-
-        If status filter provided, returns count for that single status.
-        Otherwise returns counts for all statuses.
-        """
+        """Read-Tool: count candidates grouped by status."""
         status_filter = args.get("status")
 
         if status_filter:
@@ -105,7 +101,6 @@ class ToolRegistry:
             )
             return {"status": status_filter, "count": result.total_count}
 
-        # Count all statuses
         counts = {}
         for s in sorted(_VALID_STATUSES):
             result = await self._candidate_service.list_candidates(
@@ -154,10 +149,7 @@ class ToolRegistry:
         return {"candidates": candidates, "total": result.total_count}
 
     async def _draft_email(self, args: dict[str, Any]) -> dict:
-        """Draft-Tool: returns a Draft Action for email sending.
-
-        Does NOT execute any write. Returns structured proposal for HR review.
-        """
+        """Draft-Tool: returns a Draft Action for email sending."""
         to = args.get("to", [])
         subject = args.get("subject", "")
         body_html = args.get("body_html", "")
@@ -169,7 +161,6 @@ class ToolRegistry:
         if not body_html:
             return {"error": "Body is required"}
 
-        # Build recipient list string for preview
         to_str = ", ".join(to)
 
         draft = DraftAction(

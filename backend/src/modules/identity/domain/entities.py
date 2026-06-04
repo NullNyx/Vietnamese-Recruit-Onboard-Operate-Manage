@@ -175,6 +175,7 @@ class AuditActionType(str, Enum):
     ATTENDANCE_NETWORK_UPDATE = "attendance_network_update"
     ATTENDANCE_NETWORK_ADD = "attendance_network_add"
     ATTENDANCE_NETWORK_REMOVE = "attendance_network_remove"
+    ASSISTANT_TOOL_CONFIG = "assistant_tool_config"
 
 
 class AuditLog(SQLModel, table=True):

@@ -160,12 +160,20 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
 ]
 
 
-def get_openai_tools() -> list[dict]:
+def get_openai_tools(enabled_names: set[str] | None = None) -> list[dict]:
     """Convert TOOL_DEFINITIONS to OpenAI function-calling format.
+
+    Args:
+        enabled_names: If provided, only include tools whose name is in this set.
+            If None, all tools are included (backwards compatible).
 
     Returns:
         List of tool dicts in the format expected by the chat completions API.
     """
+    tools = TOOL_DEFINITIONS
+    if enabled_names is not None:
+        tools = [t for t in TOOL_DEFINITIONS if t.name in enabled_names]
+
     return [
         {
             "type": "function",
@@ -175,5 +183,5 @@ def get_openai_tools() -> list[dict]:
                 "parameters": t.parameters,
             },
         }
-        for t in TOOL_DEFINITIONS
+        for t in tools
     ]

@@ -260,3 +260,35 @@ export async function removeDomain(domain: string): Promise<DomainRemoveResponse
   });
   return handleResponse<DomainRemoveResponse>(res);
 }
+
+// ---------------------------------------------------------------------------
+// Assistant Tool Config Endpoints
+// ---------------------------------------------------------------------------
+
+export interface AssistantToolConfig {
+  tool_name: string;
+  description: string;
+  kind: string;
+  enabled: boolean;
+  updated_at: string | null;
+}
+
+export interface AssistantToolConfigListResponse {
+  tools: AssistantToolConfig[];
+}
+
+export async function listAssistantTools(): Promise<AssistantToolConfigListResponse> {
+  const res = await fetch(`${BASE}/assistant-tools`);
+  return handleResponse<AssistantToolConfigListResponse>(res);
+}
+
+export async function updateAssistantTools(
+  tools: Record<string, boolean>
+): Promise<AssistantToolConfigListResponse> {
+  const res = await fetch(`${BASE}/assistant-tools`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tools }),
+  });
+  return handleResponse<AssistantToolConfigListResponse>(res);
+}

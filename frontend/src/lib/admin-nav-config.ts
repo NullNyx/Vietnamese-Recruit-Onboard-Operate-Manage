@@ -23,6 +23,7 @@ import {
   ScrollText,
   Mail,
   Shield,
+  Bot,
 } from "lucide-react";
 import type { HeaderNavConfig } from "./header-nav-config";
 
@@ -89,6 +90,7 @@ export const adminNavConfig: HeaderNavConfig = {
         { href: "/admin/oauth", label: "OAuth", icon: KeyRound },
         { href: "/admin/domains", label: "Domains", icon: Globe },
         { href: "/admin/audit-logs", label: "Audit logs", icon: ScrollText },
+        { href: "/admin/assistant-tools", label: "AI Tools", icon: Bot },
         { href: "/gmail", label: "Gmail", icon: Mail },
         { href: "/settings/organization", label: "Cấu hình mạng", icon: Shield },
       ],
