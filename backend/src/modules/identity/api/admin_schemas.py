@@ -82,3 +82,42 @@ class PaginatedAuditLogsResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+
+class AssistantToolConfigResponse(BaseModel):
+    """Response schema for a single assistant tool config entry.
+
+    Attributes:
+        tool_name: The tool's machine-readable name.
+        description: Human-readable description for the LLM.
+        kind: Tool kind (read or draft).
+        enabled: Whether the tool is currently active.
+        updated_at: When the tool config was last changed.
+    """
+
+    tool_name: str
+    description: str
+    kind: str
+    enabled: bool
+    updated_at: datetime | None = None
+
+
+class AssistantToolConfigListResponse(BaseModel):
+    """Response schema for the list of all assistant tool configs.
+
+    Attributes:
+        tools: All tools with their enabled status.
+    """
+
+    tools: list[AssistantToolConfigResponse]
+
+
+class AssistantToolConfigUpdateRequest(BaseModel):
+    """Request schema for PUT /api/admin/assistant-tools.
+
+    Attributes:
+        tools: Mapping of tool_name to enabled status.
+    """
+
+    tools: dict[str, bool]

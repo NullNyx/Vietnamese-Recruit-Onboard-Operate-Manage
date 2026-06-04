@@ -17,6 +17,9 @@ from sqlmodel import select
 
 from src.modules.identity.api.admin_schemas import (
     AdminUserResponse,
+    AssistantToolConfigListResponse,
+    AssistantToolConfigResponse,
+    AssistantToolConfigUpdateRequest,
     AuditLogResponse,
     PaginatedAuditLogsResponse,
     RoleUpdateRequest,
@@ -41,6 +44,9 @@ from src.modules.identity.application.role_service import (
     UserNotFoundError,
 )
 from src.modules.identity.application.whitelist_manager import WhitelistManager
+from src.modules.assistant.infrastructure.tool_config_repository import (
+    ToolConfigRepository,
+)
 from src.modules.identity.container import (
     get_current_user,
     get_db_session,
@@ -456,3 +462,91 @@ async def update_oauth_config(
         updated_at=config.updated_at,
         source=config.source,
     )
+
+
+
+# ---------------------------------------------------------------------------
+# Assistant Tool Config Endpoints
+# ---------------------------------------------------------------------------
+
+async def get_tool_config_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> ToolConfigRepository:
+    """Provide a ToolConfigRepository for the current session."""
+    return ToolConfigRepository(session)
+
+
+@admin_router.get(
+    "/assistant-tools",
+    response_model=AssistantToolConfigListResponse,
+)
+async def list_assistant_tools(
+    admin_user: AdminUserDep,
+    tool_config_repo: ToolConfigRepository = Depends(get_tool_config_repository),
+) -> AssistantToolConfigListResponse:
+    """List all assistant tools with their enabled status.
+
+    Returns tools from TOOL_DEFINITIONS merged with DB config.
+    Tools not yet in DB default to enabled=True.
+    """
+    from src.modules.assistant.domain.tools import TOOL_DEFINITIONS, ToolKind
+
+    db_configs = {c.tool_name: c for c in await tool_config_repo.get_all()}
+
+    tools = []
+    for t in TOOL_DEFINITIONS:
+        db_config = db_configs.get(t.name)
+        tools.append(
+            AssistantToolConfigResponse(
+                tool_name=t.name,
+                description=t.description,
+                kind=t.kind.value,
+                enabled=db_config.enabled if db_config else True,
+                updated_at=db_config.updated_at if db_config else None,
+            )
+        )
+
+    return AssistantToolConfigListResponse(tools=tools)
+
+
+@admin_router.put(
+    "/assistant-tools",
+    response_model=AssistantToolConfigListResponse,
+)
+async def update_assistant_tools(
+    body: AssistantToolConfigUpdateRequest,
+    admin_user: AdminUserDep,
+    tool_config_repo: ToolConfigRepository = Depends(get_tool_config_repository),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> AssistantToolConfigListResponse:
+    """Batch update assistant tool configs (Apply button).
+
+    Upserts all tool configs from the request, then returns the updated list.
+    Creates an audit log entry for the change.
+    """
+    from src.modules.assistant.domain.tools import TOOL_DEFINITIONS
+
+    # Validate: all tool_names in request must exist in TOOL_DEFINITIONS
+    valid_names = {t.name for t in TOOL_DEFINITIONS}
+    invalid = set(body.tools.keys()) - valid_names
+    if invalid:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "INVALID_TOOL_NAMES",
+                "message": f"Unknown tools: {sorted(invalid)}",
+            },
+        )
+
+    # Upsert configs
+    await tool_config_repo.upsert_many(body.tools)
+
+    # Audit log
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ASSISTANT_TOOL_CONFIG,
+        details={"tools": body.tools},
+    )
+
+    # Return updated list
+    return await list_assistant_tools(admin_user, tool_config_repo)

@@ -106,11 +106,13 @@ class AssistantService:
     async def chat(
         self,
         messages: list[ChatMessage],
+        enabled_tool_names: set[str] | None = None,
     ) -> ChatResponse:
         """Process a user message through the tool-calling loop.
 
         Args:
             messages: Full conversation history including the new user message.
+            enabled_tool_names: If provided, only these tools are sent to the LLM.
 
         Returns:
             ChatResponse with updated messages and optional draft_action.
@@ -125,7 +127,7 @@ class AssistantService:
         for _iteration in range(_MAX_TOOL_ITERATIONS):
             response = await self._llm_client.chat(
                 messages=openai_messages,
-                tools=get_openai_tools(),
+                tools=get_openai_tools(enabled_tool_names),
             )
 
             # No tool calls → LLM is done, return text response

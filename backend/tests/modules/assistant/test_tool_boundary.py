@@ -8,6 +8,7 @@ These tests verify that:
 1. All defined tools are either Read-Tool or Draft-Tool
 2. No tool has write capabilities
 3. The OpenAI tool definitions sent to the LLM contain no write operations
+4. Tool filtering preserves safety boundaries
 """
 
 from __future__ import annotations
@@ -96,3 +97,37 @@ class TestToolBoundary:
             "list_in_progress_onboarding",
             "search_candidates",
         }
+
+
+class TestFilteredToolBoundary:
+    """Verify filtered tool sets still maintain safety boundaries."""
+
+    def test_filtered_tools_are_read_or_draft(self) -> None:
+        """Any subset of tools must still be Read-Tool or Draft-Tool."""
+        all_names = {t.name for t in TOOL_DEFINITIONS}
+        for name in all_names:
+            filtered = get_openai_tools(enabled_names={name})
+            assert len(filtered) == 1
+            # The remaining tool must still be safe
+            tool_name = filtered[0]["function"]["name"]
+            tool_def = next(t for t in TOOL_DEFINITIONS if t.name == tool_name)
+            assert tool_def.kind in (ToolKind.READ, ToolKind.DRAFT)
+
+    def test_filtered_tools_preserve_kind(self) -> None:
+        """Filtering doesn't change tool kinds."""
+        # Filter to only draft tools
+        draft_names = {t.name for t in TOOL_DEFINITIONS if t.kind == ToolKind.DRAFT}
+        filtered = get_openai_tools(enabled_names=draft_names)
+        assert len(filtered) == 1
+        assert filtered[0]["function"]["name"] == "draft_email"
+
+    def test_empty_filter_returns_no_tools(self) -> None:
+        """Empty filter returns no tools — LLM has no capabilities."""
+        result = get_openai_tools(enabled_names=set())
+        assert len(result) == 0
+
+    def test_all_disabled_means_no_write(self) -> None:
+        """Even with no tools, the safety boundary holds."""
+        result = get_openai_tools(enabled_names=set())
+        # No tools means no write tools — safe by definition
+        assert len(result) == 0

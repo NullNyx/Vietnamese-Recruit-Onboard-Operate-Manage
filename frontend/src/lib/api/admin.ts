@@ -190,3 +190,36 @@ export async function getAuditLogs(
   const res = await fetch(url);
   return handleResponse<PaginatedAuditLogs>(res);
 }
+
+
+// ---------------------------------------------------------------------------
+// Assistant Tool Config Endpoints
+// ---------------------------------------------------------------------------
+
+export interface AssistantToolConfig {
+  tool_name: string;
+  description: string;
+  kind: string;
+  enabled: boolean;
+  updated_at: string | null;
+}
+
+export interface AssistantToolConfigListResponse {
+  tools: AssistantToolConfig[];
+}
+
+export async function listAssistantTools(): Promise<AssistantToolConfigListResponse> {
+  const res = await fetch(`${BASE}/assistant-tools`);
+  return handleResponse<AssistantToolConfigListResponse>(res);
+}
+
+export async function updateAssistantTools(
+  tools: Record<string, boolean>
+): Promise<AssistantToolConfigListResponse> {
+  const res = await fetch(`${BASE}/assistant-tools`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tools }),
+  });
+  return handleResponse<AssistantToolConfigListResponse>(res);
+}

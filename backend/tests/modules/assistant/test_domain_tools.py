@@ -75,3 +75,43 @@ class TestOpenAIFormat:
         openai_names = {t["function"]["name"] for t in get_openai_tools()}
         def_names = {t.name for t in TOOL_DEFINITIONS}
         assert openai_names == def_names
+
+
+class TestToolFiltering:
+    """Test filtering tools by enabled_names parameter."""
+
+    def test_filter_single_tool(self) -> None:
+        """Filter to a single tool returns only that tool."""
+        result = get_openai_tools(enabled_names={"count_candidates_by_status"})
+        assert len(result) == 1
+        assert result[0]["function"]["name"] == "count_candidates_by_status"
+
+    def test_filter_multiple_tools(self) -> None:
+        """Filter to multiple tools returns only those tools."""
+        result = get_openai_tools(
+            enabled_names={"count_candidates_by_status", "draft_email"}
+        )
+        assert len(result) == 2
+        names = {t["function"]["name"] for t in result}
+        assert names == {"count_candidates_by_status", "draft_email"}
+
+    def test_filter_empty_set(self) -> None:
+        """Filter to empty set returns no tools."""
+        result = get_openai_tools(enabled_names=set())
+        assert len(result) == 0
+
+    def test_filter_unknown_tool_name(self) -> None:
+        """Filter with unknown tool name returns no tools."""
+        result = get_openai_tools(enabled_names={"nonexistent_tool"})
+        assert len(result) == 0
+
+    def test_filter_all_tools(self) -> None:
+        """Filter with all tool names returns all tools."""
+        all_names = {t.name for t in TOOL_DEFINITIONS}
+        result = get_openai_tools(enabled_names=all_names)
+        assert len(result) == 4
+
+    def test_none_filter_returns_all(self) -> None:
+        """None filter (backwards compatible) returns all tools."""
+        result = get_openai_tools(enabled_names=None)
+        assert len(result) == 4

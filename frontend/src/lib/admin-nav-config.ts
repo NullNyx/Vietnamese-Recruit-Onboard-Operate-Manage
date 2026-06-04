@@ -21,6 +21,7 @@ import {
   KeyRound,
   ScrollText,
   Mail,
+  Bot,
 } from "lucide-react";
 import type { HeaderNavConfig } from "./header-nav-config";
 
@@ -86,6 +87,7 @@ export const adminNavConfig: HeaderNavConfig = {
         { href: "/admin/whitelist", label: "Whitelist", icon: ListChecks },
         { href: "/admin/oauth", label: "OAuth", icon: KeyRound },
         { href: "/admin/audit-logs", label: "Audit logs", icon: ScrollText },
+        { href: "/admin/assistant-tools", label: "AI Tools", icon: Bot },
         { href: "/gmail", label: "Gmail", icon: Mail },
       ],
       activeRoutes: ["/admin", "/gmail"],
