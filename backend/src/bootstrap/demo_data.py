@@ -103,6 +103,17 @@ async def seed_demo_data(session: AsyncSession) -> bool:
     docs = []
     for doc_type, file_name, description in doc_specs:
         storage_path = f"employees/{employee.id}/{doc_type}/{file_name}"
+
+        # Upload placeholder blob to MinIO first; only persist DB row on success.
+        try:
+            await minio.upload_file(storage_path, placeholder_pdf, "application/pdf")
+        except Exception:
+            logger.warning(
+                "Could not upload demo document %s to MinIO — skipping DB record.",
+                file_name,
+            )
+            continue
+
         doc = EmployeeDocument(
             employee_id=employee.id,
             document_type=doc_type,
@@ -114,17 +125,9 @@ async def seed_demo_data(session: AsyncSession) -> bool:
         )
         docs.append(doc)
 
-        # Upload placeholder blob to MinIO (best-effort)
-        try:
-            await minio.upload_file(storage_path, placeholder_pdf, "application/pdf")
-        except Exception:
-            logger.warning(
-                "Could not upload demo document %s to MinIO — download will fail.",
-                file_name,
-            )
-
-    session.add_all(docs)
-    await session.flush()
+    if docs:
+        session.add_all(docs)
+        await session.flush()
 
     logger.info("Demo seed completed: departments, positions, 1 employee + 3 documents.")
     return True

@@ -41,6 +41,7 @@ from src.modules.employee.container import (
     get_import_service,
     get_position_service,
 )
+from src.modules.identity.api.admin_router import require_admin
 from src.modules.identity.container import get_current_user
 from src.modules.identity.domain.entities import User
 
@@ -49,6 +50,7 @@ from src.modules.identity.domain.entities import User
 # ---------------------------------------------------------------------------
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+AdminUserDep = Annotated[User, Depends(require_admin)]
 EmployeeServiceDep = Annotated[EmployeeService, Depends(get_employee_service)]
 DepartmentServiceDep = Annotated[DepartmentService, Depends(get_department_service)]
 PositionServiceDep = Annotated[PositionService, Depends(get_position_service)]
@@ -137,7 +139,7 @@ async def get_employee(
 @employee_router.post("", response_model=EmployeeResponse, status_code=201)
 async def create_employee(
     body: EmployeeCreate,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     employee_service: EmployeeServiceDep,
 ) -> EmployeeResponse:
     """Create a new employee."""
@@ -180,7 +182,7 @@ async def update_employee(
 @employee_router.delete("/{employee_id}", response_model=EmployeeResponse)
 async def delete_employee(
     employee_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     employee_service: EmployeeServiceDep,
 ) -> EmployeeResponse:
     """Soft-delete an employee (set is_active=False)."""
@@ -191,7 +193,7 @@ async def delete_employee(
 @employee_router.post("/promote", response_model=EmployeeResponse, status_code=201)
 async def promote_candidate(
     body: PromoteCandidateRequest,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     employee_service: EmployeeServiceDep,
 ) -> EmployeeResponse:
     """Promote a candidate to employee."""
@@ -202,7 +204,7 @@ async def promote_candidate(
 
 @employee_router.post("/import", response_model=ImportResult)
 async def import_employees(
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     import_service: ImportServiceDep,
     file: UploadFile = File(..., description="Excel .xlsx file to import"),
 ) -> ImportResult:
@@ -314,15 +316,13 @@ async def download_document(
 @document_router.delete("/{document_id}", status_code=204)
 async def delete_document(
     document_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     document_service: DocumentServiceDep,
 ) -> None:
     """Delete a document by its ID.
 
     Only admins can delete documents.
     """
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Employees cannot delete documents")
     await document_service.delete_document(document_id)
 
 
@@ -344,7 +344,7 @@ async def list_departments(
 @department_router.post("", response_model=DepartmentResponse, status_code=201)
 async def create_department(
     body: DepartmentCreate,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     department_service: DepartmentServiceDep,
 ) -> DepartmentResponse:
     """Create a new department."""
@@ -357,7 +357,7 @@ async def create_department(
 async def update_department(
     department_id: UUID,
     body: DepartmentUpdate,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     department_service: DepartmentServiceDep,
 ) -> DepartmentResponse:
     """Update an existing department."""
@@ -369,7 +369,7 @@ async def update_department(
 @department_router.delete("/{department_id}", status_code=204)
 async def delete_department(
     department_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     department_service: DepartmentServiceDep,
 ) -> None:
     """Delete a department (cascade-protected)."""
@@ -394,7 +394,7 @@ async def list_positions(
 @position_router.post("", response_model=PositionResponse, status_code=201)
 async def create_position(
     body: PositionCreate,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     position_service: PositionServiceDep,
 ) -> PositionResponse:
     """Create a new position."""
@@ -407,7 +407,7 @@ async def create_position(
 async def update_position(
     position_id: UUID,
     body: PositionUpdate,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     position_service: PositionServiceDep,
 ) -> PositionResponse:
     """Update an existing position."""
@@ -419,7 +419,7 @@ async def update_position(
 @position_router.delete("/{position_id}", status_code=204)
 async def delete_position(
     position_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     position_service: PositionServiceDep,
 ) -> None:
     """Delete a position (cascade-protected)."""
