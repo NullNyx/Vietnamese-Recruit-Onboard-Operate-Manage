@@ -4,4 +4,9 @@
 
 # Add authorized HR emails below:
 admin@vroom.local
+
+# Admin
 hoangxuannguyen1234@gmail.com
+
+# Employee (for ESS demo)
+hoangxuannguyen2005@gmail.com

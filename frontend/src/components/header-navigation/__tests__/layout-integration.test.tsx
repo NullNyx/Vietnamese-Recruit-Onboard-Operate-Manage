@@ -145,10 +145,8 @@ describe("Layout Integration: HeaderNavigation", () => {
 
       render(React.createElement(HeaderNavigation));
 
-      // ESS nav groups should be present
+      // ESS nav groups should be present (only Hồ sơ — attendance/payroll not live)
       expect(screen.getByText("Hồ sơ")).toBeInTheDocument();
-      expect(screen.getByText("Chấm công")).toBeInTheDocument();
-      expect(screen.getByText("Lương")).toBeInTheDocument();
     });
 
     it("does NOT render admin-specific navigation groups", () => {
@@ -258,7 +256,7 @@ describe("Layout Integration: HeaderNavigation", () => {
       }
     });
 
-    it("user role renders all 3 ESS navigation groups", () => {
+    it("user role renders ESS navigation groups (Hồ sơ only)", () => {
       mockUseCurrentUser.mockReturnValue({
         user: employeeUser,
         loading: false,
@@ -267,10 +265,8 @@ describe("Layout Integration: HeaderNavigation", () => {
 
       render(React.createElement(HeaderNavigation));
 
-      const essGroups = ["Hồ sơ", "Chấm công", "Lương"];
-      for (const group of essGroups) {
-        expect(screen.getByText(group)).toBeInTheDocument();
-      }
+      // Only Hồ sơ is live; attendance/payroll hidden
+      expect(screen.getByText("Hồ sơ")).toBeInTheDocument()
     });
 
     it("invalid role redirects to login", () => {
