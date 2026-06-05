@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 
 from src.modules.employee.api.schemas import (
@@ -42,6 +42,7 @@ from src.modules.employee.container import (
 )
 from src.modules.identity.container import get_current_user
 from src.modules.identity.domain.entities import User
+from src.modules.employee.api.dependencies import CurrentUserEmployee
 
 # ---------------------------------------------------------------------------
 # Type aliases for injected dependencies
@@ -54,7 +55,6 @@ PositionServiceDep = Annotated[PositionService, Depends(get_position_service)]
 ImportServiceDep = Annotated[ImportService, Depends(get_import_service)]
 DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]
 
-
 # ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
@@ -66,11 +66,9 @@ department_router = APIRouter(prefix="/api/departments", tags=["departments"])
 position_router = APIRouter(prefix="/api/positions", tags=["positions"])
 document_router = APIRouter(prefix="/api/documents", tags=["documents"])
 
-
 # ---------------------------------------------------------------------------
 # Employee endpoints
 # ---------------------------------------------------------------------------
-
 
 @employee_router.get("", response_model=EmployeeListResponse)
 async def list_employees(
@@ -83,21 +81,7 @@ async def list_employees(
     position_id: UUID | None = Query(default=None, description="Filter by position"),
     is_active: bool | None = Query(default=True, description="Filter by active status"),
 ) -> EmployeeListResponse:
-    """List employees with pagination and optional filters.
-
-    Args:
-        current_user: The authenticated user.
-        employee_service: The employee service.
-        page: Page number (1-indexed).
-        page_size: Number of items per page.
-        search: Optional search query for name/email.
-        department_id: Optional department filter.
-        position_id: Optional position filter.
-        is_active: Optional active status filter.
-
-    Returns:
-        Paginated list of employees.
-    """
+    """List employees with pagination and optional filters."""
     items, total = await employee_service.list_employees(
         page=page,
         page_size=page_size,
@@ -106,7 +90,6 @@ async def list_employees(
         position_id=position_id,
         is_active=is_active,
     )
-
     return EmployeeListResponse(
         items=[EmployeeResponse.model_validate(emp) for emp in items],
         total=total,
@@ -119,19 +102,17 @@ async def list_employees(
 async def get_employee(
     employee_id: UUID,
     current_user: CurrentUserDep,
+    current_employee: CurrentUserEmployee,
     employee_service: EmployeeServiceDep,
 ) -> EmployeeResponse:
     """Get a single employee by ID.
 
-    Args:
-        employee_id: The UUID of the employee.
-        current_user: The authenticated user.
-        employee_service: The employee service.
-
-    Returns:
-        The employee details.
+    Ownership check: non-admin employees can only view their own profile.
     """
     employee = await employee_service.get_employee(employee_id)
+    if current_user.role != "admin":
+        if current_employee is None or employee.id != current_employee.id:
+            raise HTTPException(status_code=403, detail="Access denied: cannot view another employee's profile")
     return EmployeeResponse.model_validate(employee)
 
 
@@ -141,16 +122,7 @@ async def create_employee(
     current_user: CurrentUserDep,
     employee_service: EmployeeServiceDep,
 ) -> EmployeeResponse:
-    """Create a new employee.
-
-    Args:
-        body: The employee creation data.
-        current_user: The authenticated user.
-        employee_service: The employee service.
-
-    Returns:
-        The newly created employee.
-    """
+    """Create a new employee."""
     data = body.model_dump(exclude_unset=True)
     employee = await employee_service.create_employee(data)
     return EmployeeResponse.model_validate(employee)
@@ -161,20 +133,24 @@ async def update_employee(
     employee_id: UUID,
     body: EmployeeUpdate,
     current_user: CurrentUserDep,
+    current_employee: CurrentUserEmployee,
     employee_service: EmployeeServiceDep,
 ) -> EmployeeResponse:
     """Update an existing employee.
 
-    Args:
-        employee_id: The UUID of the employee to update.
-        body: The fields to update.
-        current_user: The authenticated user.
-        employee_service: The employee service.
-
-    Returns:
-        The updated employee.
+    Self-edit restriction: employees can only update phone and address.
     """
     data = body.model_dump(exclude_unset=True)
+    if current_user.role != "admin":
+        allowed_fields = {"phone", "address"}
+        disallowed = set(data.keys()) - allowed_fields
+        if disallowed:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Employees can only update phone and address. Disallowed: {', '.join(sorted(disallowed))}",
+            )
+        if current_employee is None or employee_id != current_employee.id:
+            raise HTTPException(status_code=403, detail="Access denied: cannot update another employee")
     employee = await employee_service.update_employee(employee_id, data)
     return EmployeeResponse.model_validate(employee)
 
@@ -185,16 +161,7 @@ async def delete_employee(
     current_user: CurrentUserDep,
     employee_service: EmployeeServiceDep,
 ) -> EmployeeResponse:
-    """Soft-delete an employee (set is_active=False).
-
-    Args:
-        employee_id: The UUID of the employee to soft-delete.
-        current_user: The authenticated user.
-        employee_service: The employee service.
-
-    Returns:
-        The soft-deleted employee.
-    """
+    """Soft-delete an employee (set is_active=False)."""
     employee = await employee_service.delete_employee(employee_id)
     return EmployeeResponse.model_validate(employee)
 
@@ -205,18 +172,7 @@ async def promote_candidate(
     current_user: CurrentUserDep,
     employee_service: EmployeeServiceDep,
 ) -> EmployeeResponse:
-    """Promote a candidate to employee.
-
-    Creates an employee record from candidate data, linking via candidate_id.
-
-    Args:
-        body: The candidate promotion data.
-        current_user: The authenticated user.
-        employee_service: The employee service.
-
-    Returns:
-        The newly created (or linked) employee.
-    """
+    """Promote a candidate to employee."""
     data = body.model_dump(exclude_unset=True)
     employee = await employee_service.promote_candidate(data)
     return EmployeeResponse.model_validate(employee)
@@ -228,16 +184,7 @@ async def import_employees(
     import_service: ImportServiceDep,
     file: UploadFile = File(..., description="Excel .xlsx file to import"),
 ) -> ImportResult:
-    """Import employees from an Excel (.xlsx) file.
-
-    Args:
-        current_user: The authenticated user.
-        import_service: The import service.
-        file: The uploaded Excel file.
-
-    Returns:
-        Import result summary with success/error counts.
-    """
+    """Import employees from an Excel (.xlsx) file."""
     file_bytes = await file.read()
     result = await import_service.import_from_excel(file_bytes)
     return ImportResult(**result)
@@ -247,23 +194,20 @@ async def import_employees(
 # Employee document endpoints
 # ---------------------------------------------------------------------------
 
-
 @employee_router.get("/{employee_id}/documents", response_model=list[DocumentResponse])
 async def list_documents(
     employee_id: UUID,
     current_user: CurrentUserDep,
+    current_employee: CurrentUserEmployee,
     document_service: DocumentServiceDep,
 ) -> list[DocumentResponse]:
     """List all documents for an employee.
 
-    Args:
-        employee_id: The UUID of the employee.
-        current_user: The authenticated user.
-        document_service: The document service.
-
-    Returns:
-        List of document metadata records.
+    Ownership check: employees can only view their own documents.
     """
+    if current_user.role != "admin":
+        if current_employee is None or employee_id != current_employee.id:
+            raise HTTPException(status_code=403, detail="Access denied: cannot view another employee's documents")
     documents = await document_service.list_documents(employee_id)
     return [DocumentResponse.model_validate(doc) for doc in documents]
 
@@ -276,24 +220,20 @@ async def list_documents(
 async def upload_document(
     employee_id: UUID,
     current_user: CurrentUserDep,
+    current_employee: CurrentUserEmployee,
     document_service: DocumentServiceDep,
     file: UploadFile = File(..., description="Document file to upload"),
-    document_type: str = Form(..., description="Document category (e.g., cccd, degree, contract)"),
+    document_type: str = Form(..., description="Document category"),
     description: str | None = Form(default=None, description="Optional document description"),
 ) -> DocumentResponse:
     """Upload a document to an employee's document vault.
 
-    Args:
-        employee_id: The UUID of the employee.
-        current_user: The authenticated user.
-        document_service: The document service.
-        file: The uploaded file.
-        document_type: Category of the document.
-        description: Optional description.
-
-    Returns:
-        The created document metadata.
+    Ownership check: employees can only upload to their own vault.
     """
+    if current_user.role != "admin":
+        if current_employee is None or employee_id != current_employee.id:
+            raise HTTPException(status_code=403, detail="Access denied: cannot upload to another employee's documents")
+
     file_data = await file.read()
     content_type = file.content_type or "application/octet-stream"
     file_name = file.filename or "unnamed"
@@ -312,24 +252,22 @@ async def upload_document(
 # Document download/delete endpoints (by document ID)
 # ---------------------------------------------------------------------------
 
-
 @document_router.get("/{document_id}/download")
 async def download_document(
     document_id: UUID,
     current_user: CurrentUserDep,
+    current_employee: CurrentUserEmployee,
     document_service: DocumentServiceDep,
 ) -> Response:
     """Download a document by its ID.
 
-    Args:
-        document_id: The UUID of the document.
-        current_user: The authenticated user.
-        document_service: The document service.
-
-    Returns:
-        The file content with appropriate content-type headers.
+    Ownership check: employees can only download their own documents.
     """
     document, file_data = await document_service.download_document(document_id)
+
+    if current_user.role != "admin":
+        if current_employee is None or document.employee_id != current_employee.id:
+            raise HTTPException(status_code=403, detail="Access denied: cannot download another employee's document")
 
     return Response(
         content=file_data,
@@ -348,11 +286,10 @@ async def delete_document(
 ) -> None:
     """Delete a document by its ID.
 
-    Args:
-        document_id: The UUID of the document.
-        current_user: The authenticated user.
-        document_service: The document service.
+    Only admins can delete documents.
     """
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Employees cannot delete documents")
     await document_service.delete_document(document_id)
 
 
@@ -360,21 +297,12 @@ async def delete_document(
 # Department endpoints
 # ---------------------------------------------------------------------------
 
-
 @department_router.get("", response_model=list[DepartmentResponse])
 async def list_departments(
     current_user: CurrentUserDep,
     department_service: DepartmentServiceDep,
 ) -> list[DepartmentResponse]:
-    """List all departments.
-
-    Args:
-        current_user: The authenticated user.
-        department_service: The department service.
-
-    Returns:
-        List of all departments.
-    """
+    """List all departments."""
     departments = await department_service.list_departments()
     return [DepartmentResponse.model_validate(dept) for dept in departments]
 
@@ -385,16 +313,7 @@ async def create_department(
     current_user: CurrentUserDep,
     department_service: DepartmentServiceDep,
 ) -> DepartmentResponse:
-    """Create a new department.
-
-    Args:
-        body: The department creation data.
-        current_user: The authenticated user.
-        department_service: The department service.
-
-    Returns:
-        The newly created department.
-    """
+    """Create a new department."""
     data = body.model_dump(exclude_unset=True)
     department = await department_service.create_department(data)
     return DepartmentResponse.model_validate(department)
@@ -407,17 +326,7 @@ async def update_department(
     current_user: CurrentUserDep,
     department_service: DepartmentServiceDep,
 ) -> DepartmentResponse:
-    """Update an existing department.
-
-    Args:
-        department_id: The UUID of the department to update.
-        body: The fields to update.
-        current_user: The authenticated user.
-        department_service: The department service.
-
-    Returns:
-        The updated department.
-    """
+    """Update an existing department."""
     data = body.model_dump(exclude_unset=True)
     department = await department_service.update_department(department_id, data)
     return DepartmentResponse.model_validate(department)
@@ -429,13 +338,7 @@ async def delete_department(
     current_user: CurrentUserDep,
     department_service: DepartmentServiceDep,
 ) -> None:
-    """Delete a department (cascade-protected).
-
-    Args:
-        department_id: The UUID of the department to delete.
-        current_user: The authenticated user.
-        department_service: The department service.
-    """
+    """Delete a department (cascade-protected)."""
     await department_service.delete_department(department_id)
 
 
@@ -443,21 +346,12 @@ async def delete_department(
 # Position endpoints
 # ---------------------------------------------------------------------------
 
-
 @position_router.get("", response_model=list[PositionResponse])
 async def list_positions(
     current_user: CurrentUserDep,
     position_service: PositionServiceDep,
 ) -> list[PositionResponse]:
-    """List all positions.
-
-    Args:
-        current_user: The authenticated user.
-        position_service: The position service.
-
-    Returns:
-        List of all positions.
-    """
+    """List all positions."""
     positions = await position_service.list_positions()
     return [PositionResponse.model_validate(pos) for pos in positions]
 
@@ -468,16 +362,7 @@ async def create_position(
     current_user: CurrentUserDep,
     position_service: PositionServiceDep,
 ) -> PositionResponse:
-    """Create a new position.
-
-    Args:
-        body: The position creation data.
-        current_user: The authenticated user.
-        position_service: The position service.
-
-    Returns:
-        The newly created position.
-    """
+    """Create a new position."""
     data = body.model_dump(exclude_unset=True)
     position = await position_service.create_position(data)
     return PositionResponse.model_validate(position)
@@ -490,17 +375,7 @@ async def update_position(
     current_user: CurrentUserDep,
     position_service: PositionServiceDep,
 ) -> PositionResponse:
-    """Update an existing position.
-
-    Args:
-        position_id: The UUID of the position to update.
-        body: The fields to update.
-        current_user: The authenticated user.
-        position_service: The position service.
-
-    Returns:
-        The updated position.
-    """
+    """Update an existing position."""
     data = body.model_dump(exclude_unset=True)
     position = await position_service.update_position(position_id, data)
     return PositionResponse.model_validate(position)
@@ -512,13 +387,7 @@ async def delete_position(
     current_user: CurrentUserDep,
     position_service: PositionServiceDep,
 ) -> None:
-    """Delete a position (cascade-protected).
-
-    Args:
-        position_id: The UUID of the position to delete.
-        current_user: The authenticated user.
-        position_service: The position service.
-    """
+    """Delete a position (cascade-protected)."""
     await position_service.delete_position(position_id)
 
 
