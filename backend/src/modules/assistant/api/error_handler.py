@@ -44,9 +44,7 @@ def register_assistant_error_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(AssistantError)
-    async def handle_assistant_error(
-        request: Request, exc: AssistantError
-    ) -> JSONResponse:
+    async def handle_assistant_error(request: Request, exc: AssistantError) -> JSONResponse:
         return JSONResponse(
             status_code=500,
             content={"detail": f"Assistant error: {exc}"},

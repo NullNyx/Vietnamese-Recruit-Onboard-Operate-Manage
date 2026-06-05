@@ -48,6 +48,7 @@ from src.modules.recruitment.api.runtime_router import runtime_router  # noqa: E
 
 logger = logging.getLogger(__name__)
 
+
 async def _bootstrap_super_admin() -> None:
     """Bootstrap the super admin user at application startup.
 
@@ -113,6 +114,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
     # Shutdown (nothing to clean up currently)
 
+
 app = FastAPI(
     title="Vroom HR",
     description="Vietnamese Recruit-Onboard-Operate-Manage platform",
@@ -141,6 +143,7 @@ register_recruitment_error_handlers(app)
 register_onboarding_error_handlers(app)
 register_attendance_error_handlers(app)
 register_assistant_error_handlers(app)
+
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:

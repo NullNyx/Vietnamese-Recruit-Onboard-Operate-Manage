@@ -28,9 +28,7 @@ class ToolConfigRepository:
 
     async def get_all(self) -> list[AssistantToolConfig]:
         """Return all tool config rows, ordered by tool_name."""
-        statement = select(AssistantToolConfig).order_by(
-            col(AssistantToolConfig.tool_name)
-        )
+        statement = select(AssistantToolConfig).order_by(col(AssistantToolConfig.tool_name))
         result = await self._session.execute(statement)
         return list(result.scalars().all())
 

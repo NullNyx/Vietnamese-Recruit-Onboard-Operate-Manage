@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import typing
 from dataclasses import dataclass
 from typing import Any
 
@@ -65,10 +66,10 @@ class ChatMessage:
 
     role: str
     content: str | None = None
-    tool_calls: list[dict] | None = None
+    tool_calls: list[dict[str, typing.Any]] | None = None
     tool_call_id: str | None = None
     name: str | None = None
-    draft_action: dict | None = None
+    draft_action: dict[str, typing.Any] | None = None
 
 
 @dataclass
@@ -81,7 +82,7 @@ class ChatResponse:
     """
 
     messages: list[ChatMessage]
-    draft_action: dict | None = None
+    draft_action: dict[str, typing.Any] | None = None
 
 
 class AssistantService:
@@ -120,7 +121,7 @@ class AssistantService:
         # Build OpenAI-format messages with system prompt
         openai_messages = self._build_messages(messages)
 
-        draft_action: dict | None = None
+        draft_action: dict[str, typing.Any] | None = None
         all_new_messages: list[ChatMessage] = []
 
         # Tool-calling loop
@@ -196,14 +197,12 @@ class AssistantService:
             draft_action=draft_action,
         )
 
-    def _build_messages(self, messages: list[ChatMessage]) -> list[dict]:
+    def _build_messages(self, messages: list[ChatMessage]) -> list[dict[str, typing.Any]]:
         """Build OpenAI-format messages with system prompt and history trimming.
 
         Applies max_history limit per grill decision (20 messages).
         """
-        result: list[dict[str, Any]] = [
-            {"role": "system", "content": _SYSTEM_PROMPT}
-        ]
+        result: list[dict[str, Any]] = [{"role": "system", "content": _SYSTEM_PROMPT}]
 
         # Trim to max_history (excluding system message)
         history = messages[-self._settings.max_history :]

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import typing
 from typing import TYPE_CHECKING, Any
 
 from src.modules.assistant.domain.tools import DraftAction, ToolKind
@@ -88,7 +89,7 @@ class ToolRegistry:
                 return True
         return False
 
-    async def _count_candidates_by_status(self, args: dict[str, Any]) -> dict:
+    async def _count_candidates_by_status(self, args: dict[str, Any]) -> dict[str, typing.Any]:
         """Read-Tool: count candidates grouped by status."""
         status_filter = args.get("status")
 
@@ -103,13 +104,11 @@ class ToolRegistry:
 
         counts = {}
         for s in sorted(_VALID_STATUSES):
-            result = await self._candidate_service.list_candidates(
-                status=[s], page=1, page_size=1
-            )
+            result = await self._candidate_service.list_candidates(status=[s], page=1, page_size=1)
             counts[s] = result.total_count
         return {"counts": counts, "total": sum(counts.values())}
 
-    async def _list_in_progress_onboarding(self, args: dict[str, Any]) -> dict:
+    async def _list_in_progress_onboarding(self, args: dict[str, Any]) -> dict[str, typing.Any]:
         """Read-Tool: list onboarding processes that are in_progress."""
         result = await self._onboarding_service.list_processes(
             status="in_progress", page=1, page_size=50
@@ -127,15 +126,13 @@ class ToolRegistry:
             )
         return {"processes": items, "total": result.total}
 
-    async def _search_candidates(self, args: dict[str, Any]) -> dict:
+    async def _search_candidates(self, args: dict[str, Any]) -> dict[str, typing.Any]:
         """Read-Tool: search candidates by name or email."""
         query = args.get("query", "")
         if not query:
             return {"error": "Query is required"}
 
-        result = await self._candidate_service.list_candidates(
-            search=query, page=1, page_size=10
-        )
+        result = await self._candidate_service.list_candidates(search=query, page=1, page_size=10)
         candidates = []
         for c in result.candidates:
             candidates.append(
@@ -148,7 +145,7 @@ class ToolRegistry:
             )
         return {"candidates": candidates, "total": result.total_count}
 
-    async def _draft_email(self, args: dict[str, Any]) -> dict:
+    async def _draft_email(self, args: dict[str, Any]) -> dict[str, typing.Any]:
         """Draft-Tool: returns a Draft Action for email sending."""
         to = args.get("to", [])
         subject = args.get("subject", "")
