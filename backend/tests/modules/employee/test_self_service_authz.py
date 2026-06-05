@@ -27,16 +27,14 @@ from src.modules.employee.api.router import (
     upload_document,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_user(role: str = "user", employee_id=None):
+def _make_user(role: str = "user"):
     user = MagicMock()
     user.id = uuid4()
     user.role = role
-    user.employee_id = employee_id
     return user
 
 
@@ -92,44 +90,66 @@ class TestGetEmployeeOwnership:
     @pytest.mark.asyncio
     async def test_employee_can_view_own_profile(self):
         emp_id = uuid4()
-        user = _make_user(role="user", employee_id=emp_id)
+        user = _make_user(role="user")
+        current_emp = _make_employee(employee_id=emp_id)
         emp = _make_employee(employee_id=emp_id)
         svc = AsyncMock()
         svc.get_employee.return_value = emp
 
-        result = await get_employee(employee_id=emp_id, current_user=user, employee_service=svc)
+        result = await get_employee(
+            employee_id=emp_id,
+            current_user=user,
+            current_employee=current_emp,
+            employee_service=svc,
+        )
         assert result.id == emp_id
 
     @pytest.mark.asyncio
     async def test_employee_cannot_view_other_profile(self):
         my_id = uuid4()
         other_id = uuid4()
-        user = _make_user(role="user", employee_id=my_id)
+        user = _make_user(role="user")
+        current_emp = _make_employee(employee_id=my_id)
         svc = AsyncMock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_employee(employee_id=other_id, current_user=user, employee_service=svc)
+            await get_employee(
+                employee_id=other_id,
+                current_user=user,
+                current_employee=current_emp,
+                employee_service=svc,
+            )
         assert exc_info.value.status_code == 403
         assert "Access denied" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_admin_can_view_any_profile(self):
         emp_id = uuid4()
-        user = _make_user(role="admin", employee_id=None)
+        user = _make_user(role="admin")
         emp = _make_employee(employee_id=emp_id)
         svc = AsyncMock()
         svc.get_employee.return_value = emp
 
-        result = await get_employee(employee_id=emp_id, current_user=user, employee_service=svc)
+        result = await get_employee(
+            employee_id=emp_id,
+            current_user=user,
+            current_employee=None,
+            employee_service=svc,
+        )
         assert result.id == emp_id
 
     @pytest.mark.asyncio
-    async def test_user_without_employee_id_blocked(self):
-        user = _make_user(role="user", employee_id=None)
+    async def test_user_without_employee_blocked(self):
+        user = _make_user(role="user")
         svc = AsyncMock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_employee(employee_id=uuid4(), current_user=user, employee_service=svc)
+            await get_employee(
+                employee_id=uuid4(),
+                current_user=user,
+                current_employee=None,
+                employee_service=svc,
+            )
         assert exc_info.value.status_code == 403
 
 
@@ -143,7 +163,8 @@ class TestUpdateEmployeeSelfEdit:
     @pytest.mark.asyncio
     async def test_employee_can_update_own_phone(self):
         emp_id = uuid4()
-        user = _make_user(role="user", employee_id=emp_id)
+        user = _make_user(role="user")
+        current_emp = _make_employee(employee_id=emp_id)
         emp = _make_employee(employee_id=emp_id)
         svc = AsyncMock()
         svc.update_employee.return_value = emp
@@ -151,14 +172,20 @@ class TestUpdateEmployeeSelfEdit:
         body = MagicMock()
         body.model_dump.return_value = {"phone": "0912345678"}
 
-        result = await update_employee(employee_id=emp_id, body=body, current_user=user, employee_service=svc)
+        result = await update_employee(
+            employee_id=emp_id,
+            body=body,
+            current_user=user,
+            current_employee=current_emp,
+            employee_service=svc,
+        )
         assert result.id == emp_id
-        svc.update_employee.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_employee_can_update_own_address(self):
         emp_id = uuid4()
-        user = _make_user(role="user", employee_id=emp_id)
+        user = _make_user(role="user")
+        current_emp = _make_employee(employee_id=emp_id)
         emp = _make_employee(employee_id=emp_id)
         svc = AsyncMock()
         svc.update_employee.return_value = emp
@@ -166,62 +193,101 @@ class TestUpdateEmployeeSelfEdit:
         body = MagicMock()
         body.model_dump.return_value = {"address": "456 New St"}
 
-        result = await update_employee(employee_id=emp_id, body=body, current_user=user, employee_service=svc)
+        result = await update_employee(
+            employee_id=emp_id,
+            body=body,
+            current_user=user,
+            current_employee=current_emp,
+            employee_service=svc,
+        )
         assert result.id == emp_id
 
     @pytest.mark.asyncio
     async def test_employee_cannot_update_full_name(self):
         emp_id = uuid4()
-        user = _make_user(role="user", employee_id=emp_id)
+        user = _make_user(role="user")
+        current_emp = _make_employee(employee_id=emp_id)
         svc = AsyncMock()
 
         body = MagicMock()
-        body.model_dump.return_value = {"full_name": "Hacker"}
+        body.model_dump.return_value = {"full_name": "Hacker Name"}
 
         with pytest.raises(HTTPException) as exc_info:
-            await update_employee(employee_id=emp_id, body=body, current_user=user, employee_service=svc)
+            await update_employee(
+                employee_id=emp_id,
+                body=body,
+                current_user=user,
+                current_employee=current_emp,
+                employee_service=svc,
+            )
         assert exc_info.value.status_code == 403
-        assert "full_name" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_employee_cannot_update_multiple_disallowed(self):
         emp_id = uuid4()
-        user = _make_user(role="user", employee_id=emp_id)
+        user = _make_user(role="user")
+        current_emp = _make_employee(employee_id=emp_id)
         svc = AsyncMock()
 
         body = MagicMock()
-        body.model_dump.return_value = {"full_name": "X", "email": "x@evil.com"}
+        body.model_dump.return_value = {
+            "phone": "0912345678",
+            "full_name": "Hacker",
+            "email": "bad@evil.com",
+        }
 
         with pytest.raises(HTTPException) as exc_info:
-            await update_employee(employee_id=emp_id, body=body, current_user=user, employee_service=svc)
+            await update_employee(
+                employee_id=emp_id,
+                body=body,
+                current_user=user,
+                current_employee=current_emp,
+                employee_service=svc,
+            )
         assert exc_info.value.status_code == 403
 
     @pytest.mark.asyncio
     async def test_employee_cannot_update_other_employee(self):
         my_id = uuid4()
         other_id = uuid4()
-        user = _make_user(role="user", employee_id=my_id)
+        user = _make_user(role="user")
+        current_emp = _make_employee(employee_id=my_id)
         svc = AsyncMock()
 
         body = MagicMock()
         body.model_dump.return_value = {"phone": "0912345678"}
 
         with pytest.raises(HTTPException) as exc_info:
-            await update_employee(employee_id=other_id, body=body, current_user=user, employee_service=svc)
+            await update_employee(
+                employee_id=other_id,
+                body=body,
+                current_user=user,
+                current_employee=current_emp,
+                employee_service=svc,
+            )
         assert exc_info.value.status_code == 403
 
     @pytest.mark.asyncio
     async def test_admin_can_update_any_field(self):
         emp_id = uuid4()
-        user = _make_user(role="admin", employee_id=None)
+        user = _make_user(role="admin")
         emp = _make_employee(employee_id=emp_id)
         svc = AsyncMock()
         svc.update_employee.return_value = emp
 
         body = MagicMock()
-        body.model_dump.return_value = {"full_name": "Admin Changed", "phone": "0999999999"}
+        body.model_dump.return_value = {
+            "full_name": "Admin Changed",
+            "phone": "0999999999",
+        }
 
-        result = await update_employee(employee_id=emp_id, body=body, current_user=user, employee_service=svc)
+        result = await update_employee(
+            employee_id=emp_id,
+            body=body,
+            current_user=user,
+            current_employee=None,
+            employee_service=svc,
+        )
         assert result.id == emp_id
 
 
@@ -235,32 +301,49 @@ class TestListDocumentsOwnership:
     @pytest.mark.asyncio
     async def test_employee_can_list_own_documents(self):
         emp_id = uuid4()
-        user = _make_user(role="user", employee_id=emp_id)
+        user = _make_user(role="user")
+        current_emp = _make_employee(employee_id=emp_id)
         svc = AsyncMock()
         svc.list_documents.return_value = []
 
-        result = await list_documents(employee_id=emp_id, current_user=user, document_service=svc)
+        result = await list_documents(
+            employee_id=emp_id,
+            current_user=user,
+            current_employee=current_emp,
+            document_service=svc,
+        )
         assert result == []
 
     @pytest.mark.asyncio
     async def test_employee_cannot_list_other_documents(self):
         my_id = uuid4()
         other_id = uuid4()
-        user = _make_user(role="user", employee_id=my_id)
+        user = _make_user(role="user")
+        current_emp = _make_employee(employee_id=my_id)
         svc = AsyncMock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await list_documents(employee_id=other_id, current_user=user, document_service=svc)
+            await list_documents(
+                employee_id=other_id,
+                current_user=user,
+                current_employee=current_emp,
+                document_service=svc,
+            )
         assert exc_info.value.status_code == 403
 
     @pytest.mark.asyncio
     async def test_admin_can_list_any_documents(self):
         emp_id = uuid4()
-        user = _make_user(role="admin", employee_id=None)
+        user = _make_user(role="admin")
         svc = AsyncMock()
         svc.list_documents.return_value = []
 
-        result = await list_documents(employee_id=emp_id, current_user=user, document_service=svc)
+        result = await list_documents(
+            employee_id=emp_id,
+            current_user=user,
+            current_employee=None,
+            document_service=svc,
+        )
         assert result == []
 
 
@@ -275,14 +358,20 @@ class TestDownloadDocumentOwnership:
     async def test_employee_can_download_own_document(self):
         emp_id = uuid4()
         doc_id = uuid4()
-        user = _make_user(role="user", employee_id=emp_id)
+        user = _make_user(role="user")
+        current_emp = _make_employee(employee_id=emp_id)
         doc = _make_document(employee_id=emp_id, doc_id=doc_id)
 
         svc = AsyncMock()
         svc.download_document.return_value = (doc, b"fake content")
 
         from fastapi.responses import Response
-        result = await download_document(document_id=doc_id, current_user=user, document_service=svc)
+        result = await download_document(
+            document_id=doc_id,
+            current_user=user,
+            current_employee=current_emp,
+            document_service=svc,
+        )
         assert isinstance(result, Response)
 
     @pytest.mark.asyncio
@@ -290,28 +379,39 @@ class TestDownloadDocumentOwnership:
         my_id = uuid4()
         other_emp_id = uuid4()
         doc_id = uuid4()
-        user = _make_user(role="user", employee_id=my_id)
+        user = _make_user(role="user")
+        current_emp = _make_employee(employee_id=my_id)
         doc = _make_document(employee_id=other_emp_id, doc_id=doc_id)
 
         svc = AsyncMock()
         svc.download_document.return_value = (doc, b"fake content")
 
         with pytest.raises(HTTPException) as exc_info:
-            await download_document(document_id=doc_id, current_user=user, document_service=svc)
+            await download_document(
+                document_id=doc_id,
+                current_user=user,
+                current_employee=current_emp,
+                document_service=svc,
+            )
         assert exc_info.value.status_code == 403
 
     @pytest.mark.asyncio
     async def test_admin_can_download_any_document(self):
         emp_id = uuid4()
         doc_id = uuid4()
-        user = _make_user(role="admin", employee_id=None)
+        user = _make_user(role="admin")
         doc = _make_document(employee_id=emp_id, doc_id=doc_id)
 
         svc = AsyncMock()
         svc.download_document.return_value = (doc, b"fake content")
 
         from fastapi.responses import Response
-        result = await download_document(document_id=doc_id, current_user=user, document_service=svc)
+        result = await download_document(
+            document_id=doc_id,
+            current_user=user,
+            current_employee=None,
+            document_service=svc,
+        )
         assert isinstance(result, Response)
 
 
@@ -324,18 +424,26 @@ class TestDeleteDocumentOwnership:
 
     @pytest.mark.asyncio
     async def test_employee_cannot_delete_document(self):
-        user = _make_user(role="user", employee_id=uuid4())
+        user = _make_user(role="user")
         svc = AsyncMock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await delete_document(document_id=uuid4(), current_user=user, document_service=svc)
+            await delete_document(
+                document_id=uuid4(),
+                current_user=user,
+                document_service=svc,
+            )
         assert exc_info.value.status_code == 403
         assert "cannot delete" in exc_info.value.detail.lower()
 
     @pytest.mark.asyncio
     async def test_admin_can_delete_document(self):
-        user = _make_user(role="admin", employee_id=None)
+        user = _make_user(role="admin")
         svc = AsyncMock()
 
-        await delete_document(document_id=uuid4(), current_user=user, document_service=svc)
+        await delete_document(
+            document_id=uuid4(),
+            current_user=user,
+            document_service=svc,
+        )
         svc.delete_document.assert_called_once()

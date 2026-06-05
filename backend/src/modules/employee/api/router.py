@@ -13,6 +13,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 
+from src.modules.employee.api.dependencies import CurrentUserEmployee
 from src.modules.employee.api.schemas import (
     DepartmentCreate,
     DepartmentResponse,
@@ -42,7 +43,6 @@ from src.modules.employee.container import (
 )
 from src.modules.identity.container import get_current_user
 from src.modules.identity.domain.entities import User
-from src.modules.employee.api.dependencies import CurrentUserEmployee
 
 # ---------------------------------------------------------------------------
 # Type aliases for injected dependencies
@@ -69,6 +69,7 @@ document_router = APIRouter(prefix="/api/documents", tags=["documents"])
 # ---------------------------------------------------------------------------
 # Employee endpoints
 # ---------------------------------------------------------------------------
+
 
 @employee_router.get("", response_model=EmployeeListResponse)
 async def list_employees(
@@ -112,7 +113,10 @@ async def get_employee(
     employee = await employee_service.get_employee(employee_id)
     if current_user.role != "admin":
         if current_employee is None or employee.id != current_employee.id:
-            raise HTTPException(status_code=403, detail="Access denied: cannot view another employee's profile")
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied: cannot view another employee's profile",
+            )
     return EmployeeResponse.model_validate(employee)
 
 
@@ -147,10 +151,14 @@ async def update_employee(
         if disallowed:
             raise HTTPException(
                 status_code=403,
-                detail=f"Employees can only update phone and address. Disallowed: {', '.join(sorted(disallowed))}",
+                detail="Employees can only update phone and address. Disallowed: "
+                f"{', '.join(sorted(disallowed))}",
             )
         if current_employee is None or employee_id != current_employee.id:
-            raise HTTPException(status_code=403, detail="Access denied: cannot update another employee")
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied: cannot update another employee",
+            )
     employee = await employee_service.update_employee(employee_id, data)
     return EmployeeResponse.model_validate(employee)
 
@@ -194,6 +202,7 @@ async def import_employees(
 # Employee document endpoints
 # ---------------------------------------------------------------------------
 
+
 @employee_router.get("/{employee_id}/documents", response_model=list[DocumentResponse])
 async def list_documents(
     employee_id: UUID,
@@ -207,7 +216,10 @@ async def list_documents(
     """
     if current_user.role != "admin":
         if current_employee is None or employee_id != current_employee.id:
-            raise HTTPException(status_code=403, detail="Access denied: cannot view another employee's documents")
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied: cannot view another employee's documents",
+            )
     documents = await document_service.list_documents(employee_id)
     return [DocumentResponse.model_validate(doc) for doc in documents]
 
@@ -232,7 +244,10 @@ async def upload_document(
     """
     if current_user.role != "admin":
         if current_employee is None or employee_id != current_employee.id:
-            raise HTTPException(status_code=403, detail="Access denied: cannot upload to another employee's documents")
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied: cannot upload to another employee's documents",
+            )
 
     file_data = await file.read()
     content_type = file.content_type or "application/octet-stream"
@@ -252,6 +267,7 @@ async def upload_document(
 # Document download/delete endpoints (by document ID)
 # ---------------------------------------------------------------------------
 
+
 @document_router.get("/{document_id}/download")
 async def download_document(
     document_id: UUID,
@@ -267,7 +283,10 @@ async def download_document(
 
     if current_user.role != "admin":
         if current_employee is None or document.employee_id != current_employee.id:
-            raise HTTPException(status_code=403, detail="Access denied: cannot download another employee's document")
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied: cannot download another employee's document",
+            )
 
     return Response(
         content=file_data,
@@ -296,6 +315,7 @@ async def delete_document(
 # ---------------------------------------------------------------------------
 # Department endpoints
 # ---------------------------------------------------------------------------
+
 
 @department_router.get("", response_model=list[DepartmentResponse])
 async def list_departments(
@@ -345,6 +365,7 @@ async def delete_department(
 # ---------------------------------------------------------------------------
 # Position endpoints
 # ---------------------------------------------------------------------------
+
 
 @position_router.get("", response_model=list[PositionResponse])
 async def list_positions(

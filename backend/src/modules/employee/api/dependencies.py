@@ -11,14 +11,13 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException
 
+from src.modules.employee.container import get_employee_repository
 from src.modules.employee.domain.entities import Employee
 from src.modules.employee.infrastructure.employee_repository import (
     EmployeeRepository,
 )
 from src.modules.identity.container import get_current_user
 from src.modules.identity.domain.entities import User
-
-from src.modules.employee.container import get_employee_repository
 
 
 async def get_current_employee(
