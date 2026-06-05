@@ -74,6 +74,7 @@ document_router = APIRouter(prefix="/api/documents", tags=["documents"])
 @employee_router.get("", response_model=EmployeeListResponse)
 async def list_employees(
     current_user: CurrentUserDep,
+    current_employee: CurrentUserEmployee,
     employee_service: EmployeeServiceDep,
     page: int = Query(default=1, ge=1, description="Page number (1-indexed)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
@@ -82,7 +83,20 @@ async def list_employees(
     position_id: UUID | None = Query(default=None, description="Filter by position"),
     is_active: bool | None = Query(default=True, description="Filter by active status"),
 ) -> EmployeeListResponse:
-    """List employees with pagination and optional filters."""
+    """List employees with pagination and optional filters.
+
+    Ownership check: non-admin employees can only see their own profile.
+    """
+    if current_user.role != "admin":
+        if current_employee is None:
+            return EmployeeListResponse(items=[], total=0, page=1, page_size=page_size)
+        return EmployeeListResponse(
+            items=[EmployeeResponse.model_validate(current_employee)],
+            total=1,
+            page=1,
+            page_size=page_size,
+        )
+
     items, total = await employee_service.list_employees(
         page=page,
         page_size=page_size,

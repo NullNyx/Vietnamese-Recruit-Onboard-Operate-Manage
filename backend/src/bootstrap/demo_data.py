@@ -14,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel
 
 from src.modules.employee.domain.entities import Department, Employee, EmployeeDocument, Position
+from src.modules.employee.infrastructure.config import EmployeeSettings
+from src.modules.employee.infrastructure.minio_client import MinIOClient
 
 logger = logging.getLogger(__name__)
 
@@ -78,35 +80,49 @@ async def seed_demo_data(session: AsyncSession) -> bool:
     session.add(employee)
     await session.flush()
 
-    docs = [
-        EmployeeDocument(
-            employee_id=employee.id,
-            document_type="cccd",
-            file_name="CCCD_Nguyen_Xuan.pdf",
-            storage_path=f"employees/{employee.id}/cccd/CCCD_Nguyen_Xuan.pdf",
-            file_size=245000,
-            mime_type="application/pdf",
-            description="CCCD/CMND",
-        ),
-        EmployeeDocument(
-            employee_id=employee.id,
-            document_type="contract",
-            file_name="Hop_dong_lao_dong.pdf",
-            storage_path=f"employees/{employee.id}/contract/Hop_dong_lao_dong.pdf",
-            file_size=520000,
-            mime_type="application/pdf",
-            description="Hop dong lao dong",
-        ),
-        EmployeeDocument(
-            employee_id=employee.id,
-            document_type="degree",
-            file_name="Bang_dai_hoc.pdf",
-            storage_path=f"employees/{employee.id}/degree/Bang_dai_hoc.pdf",
-            file_size=380000,
-            mime_type="application/pdf",
-            description="Bang dai hoc",
-        ),
+    # --- Seed demo documents with placeholder files in MinIO ------------------
+    employee_settings = EmployeeSettings()
+    minio = MinIOClient(employee_settings)
+
+    # Minimal valid PDF placeholder (single blank page)
+    placeholder_pdf = (
+        b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+        b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
+        b"3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj\n"
+        b"xref\n0 4\n0000000000 65535 f\n"
+        b"0000000009 00000 n\n0000000058 00000 n\n0000000115 00000 n\n"
+        b"trailer<</Size 4/Root 1 0 R>>\nstartxref\n190\n%%EOF"
+    )
+
+    doc_specs = [
+        ("cccd", "CCCD_Nguyen_Xuan.pdf", "CCCD/CMND"),
+        ("contract", "Hop_dong_lao_dong.pdf", "Hop dong lao dong"),
+        ("degree", "Bang_dai_hoc.pdf", "Bang dai hoc"),
     ]
+
+    docs = []
+    for doc_type, file_name, description in doc_specs:
+        storage_path = f"employees/{employee.id}/{doc_type}/{file_name}"
+        doc = EmployeeDocument(
+            employee_id=employee.id,
+            document_type=doc_type,
+            file_name=file_name,
+            storage_path=storage_path,
+            file_size=len(placeholder_pdf),
+            mime_type="application/pdf",
+            description=description,
+        )
+        docs.append(doc)
+
+        # Upload placeholder blob to MinIO (best-effort)
+        try:
+            await minio.upload_file(storage_path, placeholder_pdf, "application/pdf")
+        except Exception:
+            logger.warning(
+                "Could not upload demo document %s to MinIO — download will fail.",
+                file_name,
+            )
+
     session.add_all(docs)
     await session.flush()
 
