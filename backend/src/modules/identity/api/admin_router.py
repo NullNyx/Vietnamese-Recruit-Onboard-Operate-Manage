@@ -20,6 +20,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from src.modules.assistant.infrastructure.tool_config_repository import (
+    ToolConfigRepository,
+)
 from src.modules.identity.api.admin_schemas import (
     AdminUserResponse,
     AssistantToolConfigListResponse,
@@ -53,9 +56,6 @@ from src.modules.identity.application.role_service import (
     UserNotFoundError,
 )
 from src.modules.identity.application.whitelist_manager import WhitelistManager
-from src.modules.assistant.infrastructure.tool_config_repository import (
-    ToolConfigRepository,
-)
 from src.modules.identity.container import (
     get_current_user,
     get_db_session,
@@ -473,6 +473,7 @@ async def update_oauth_config(
     )
 
 
+<<<<<<< HEAD
 # --- Organization Domain Endpoints ---
 
 
@@ -621,9 +622,12 @@ async def remove_domain(
 
     return DomainRemoveResponse(removed=domain, allowed_domains=updated)
 
+=======
+>>>>>>> 7f3c1cb (fix lỗi)
 # ---------------------------------------------------------------------------
 # Assistant Tool Config Endpoints
 # ---------------------------------------------------------------------------
+
 
 async def get_tool_config_repository(
     session: AsyncSession = Depends(get_db_session),
@@ -645,7 +649,7 @@ async def list_assistant_tools(
     Returns tools from TOOL_DEFINITIONS merged with DB config.
     Tools not yet in DB default to enabled=True.
     """
-    from src.modules.assistant.domain.tools import TOOL_DEFINITIONS, ToolKind
+    from src.modules.assistant.domain.tools import TOOL_DEFINITIONS
 
     db_configs = {c.tool_name: c for c in await tool_config_repo.get_all()}
 
@@ -706,3 +710,4 @@ async def update_assistant_tools(
 
     # Return updated list
     return await list_assistant_tools(admin_user, tool_config_repo)
+

@@ -5,9 +5,8 @@ toggle that lets admins enable/disable assistant tools without code changes.
 """
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
 
 
