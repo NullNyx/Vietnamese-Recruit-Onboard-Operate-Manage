@@ -29,6 +29,7 @@ from src.modules.recruitment.container import get_candidate_service
 # Settings & LLM Client (singletons)
 # ---------------------------------------------------------------------------
 
+
 @lru_cache
 def get_assistant_settings() -> AssistantSettings:
     """Load and cache AssistantSettings from ASSISTANT_LLM_* env vars."""
@@ -45,6 +46,7 @@ def get_assistant_llm_client() -> AssistantLLMClient:
 # ---------------------------------------------------------------------------
 # FastAPI Depends providers
 # ---------------------------------------------------------------------------
+
 
 async def get_tool_registry(
     candidate_service: CandidateService = Depends(get_candidate_service),
