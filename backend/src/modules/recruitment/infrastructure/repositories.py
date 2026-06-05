@@ -8,7 +8,7 @@ patterns established in the employee module.
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import desc, func, or_
+from sqlalchemy import Text, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -165,7 +165,7 @@ class CandidateRepository:
                 skill_pattern = f"%{skill.lower()}%"
                 skills_conditions.append(
                     func.lower(
-                        func.cast(Candidate.skills, func.text())  # type: ignore[arg-type]
+                        func.cast(Candidate.skills, Text())  # type: ignore[arg-type]
                     ).ilike(skill_pattern)
                 )
             skills_filter = or_(*skills_conditions)
@@ -180,7 +180,7 @@ class CandidateRepository:
                 func.lower(Candidate.email).ilike(search_term),
                 func.lower(Candidate.phone).ilike(search_term),
                 # Search within skills JSONB array cast to text
-                func.lower(func.cast(Candidate.skills, func.text())).ilike(  # type: ignore[arg-type]
+                func.lower(func.cast(Candidate.skills, Text())).ilike(  # type: ignore[arg-type]
                     search_term
                 ),
             ]
