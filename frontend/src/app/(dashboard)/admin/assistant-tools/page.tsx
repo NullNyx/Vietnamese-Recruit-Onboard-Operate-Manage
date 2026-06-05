@@ -135,7 +135,7 @@ export default function AssistantToolsPage() {
 
       {/* Pending changes indicator */}
       {hasPendingChanges && (
-        <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+        <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-700">
           Có {Object.keys(pendingChanges).length} thay đổi chưa áp dụng. Nhấn
           &quot;Áp dụng&quot; để lưu.
         </div>
