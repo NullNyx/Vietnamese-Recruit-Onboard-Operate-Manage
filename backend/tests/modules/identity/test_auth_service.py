@@ -7,9 +7,8 @@ with all dependencies mocked.
 from __future__ import annotations
 
 import hashlib
-from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -77,7 +76,13 @@ def mock_oauth_service():
             refresh_token="google-refresh-token",
             id_token="eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwibmFtZSI6IlRlc3QgVXNlciIsInBpY3R1cmUiOiJodHRwczovL2V4YW1wbGUuY29tL2F2YXRhci5qcGcifQ.signature",
             expires_in=3600,
-            scope="openid email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/calendar.events",
+            scope=(
+                "openid email profile "
+                "https://www.googleapis.com/auth/gmail.readonly "
+                "https://www.googleapis.com/auth/gmail.modify "
+                "https://www.googleapis.com/auth/gmail.send "
+                "https://www.googleapis.com/auth/calendar.events"
+            ),
         )
     )
     service.determine_grant_status.return_value = GrantStatus(
@@ -406,3 +411,116 @@ class TestLogout:
         await auth_service.logout("nonexistent-token")
 
         mock_refresh_token_repository.revoke.assert_not_called()
+from src.modules.identity.domain.exceptions import DomainAccessDeniedError
+
+
+class TestDomainGate:
+    """Tests for AuthService domain gate integration."""
+
+    def _build_service(self, domain_gate_service):
+        """Create AuthService with a domain gate service."""
+        return AuthService(
+            settings=MagicMock(
+                google_client_id="test-client-id",
+                google_client_secret="test-client-secret",
+                google_redirect_uri="http://localhost:8000/api/auth/callback",
+                access_token_expire_minutes=15,
+                refresh_token_expire_days=7,
+                frontend_url="http://localhost:3000",
+                super_admin_email=None,
+            ),
+            jwt_utils=MagicMock(verify_state_token=MagicMock()),
+            crypto=MagicMock(encrypt=lambda x: f"encrypted:{x}", decrypt=lambda x: x),
+            whitelist_service=MagicMock(is_allowed=MagicMock(return_value=True)),
+            oauth_service=MagicMock(
+                exchange_code=AsyncMock(
+                    return_value=GoogleTokens(
+                        access_token="google-access",
+                        refresh_token="google-refresh",
+                        id_token="eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwibmFtZSI6IlRlc3QifQ.sig",
+                        expires_in=3600,
+                        scope=(
+                "openid email profile "
+                "https://www.googleapis.com/auth/gmail.readonly "
+                "https://www.googleapis.com/auth/gmail.modify "
+                "https://www.googleapis.com/auth/gmail.send "
+                "https://www.googleapis.com/auth/calendar.events"
+            ),
+                    )
+                ),
+                determine_grant_status=MagicMock(
+                    return_value=GrantStatus(
+                        gmail_grant_valid=True, calendar_grant_valid=True
+                    )
+                ),
+            ),
+            token_service=MagicMock(
+                create_access_token=MagicMock(return_value="jwt-access"),
+                create_refresh_token=MagicMock(return_value=("raw-refresh", "hash-refresh")),
+                revoke_user_tokens=AsyncMock(),
+            ),
+            user_repository=MagicMock(
+                upsert=AsyncMock(
+                    return_value=MagicMock(
+                        id=uuid4(),
+                        email="test@example.com",
+                        name="Test",
+                    )
+                ),
+            ),
+            oauth_grant_repository=MagicMock(upsert=AsyncMock()),
+            refresh_token_repository=MagicMock(store=AsyncMock()),
+            employee_repository=None,
+            domain_gate_service=domain_gate_service,
+        )
+
+    @pytest.mark.asyncio
+    async def test_blocks_disallowed_email(self):
+        """Domain gate blocks email not in allowed list."""
+        mock_gate = MagicMock()
+        mock_gate.is_email_allowed = AsyncMock(return_value=False)
+        service = self._build_service(mock_gate)
+
+        with patch("src.modules.identity.application.auth_service.jose_jwt") as mock_jose:
+            mock_jose.get_unverified_claims.return_value = {
+                "sub": "g-123",
+                "email": "user@blocked.com",
+                "name": "User",
+            }
+            with pytest.raises(DomainAccessDeniedError):
+                await service.handle_callback("code", "state", "verifier")
+
+        mock_gate.is_email_allowed.assert_called_once_with("user@blocked.com")
+
+    @pytest.mark.asyncio
+    async def test_allows_permitted_email(self):
+        """Domain gate allows email in allowed list."""
+        mock_gate = MagicMock()
+        mock_gate.is_email_allowed = AsyncMock(return_value=True)
+        service = self._build_service(mock_gate)
+
+        with patch("src.modules.identity.application.auth_service.jose_jwt") as mock_jose:
+            mock_jose.get_unverified_claims.return_value = {
+                "sub": "g-123",
+                "email": "user@allowed.com",
+                "name": "User",
+            }
+            result = await service.handle_callback("code", "state", "verifier")
+
+        assert isinstance(result, AuthResult)
+        mock_gate.is_email_allowed.assert_called_once_with("user@allowed.com")
+
+    @pytest.mark.asyncio
+    async def test_no_domain_gate_passes_all(self):
+        """Without domain gate service, all emails pass."""
+        service = self._build_service(None)
+
+        with patch("src.modules.identity.application.auth_service.jose_jwt") as mock_jose:
+            mock_jose.get_unverified_claims.return_value = {
+                "sub": "g-123",
+                "email": "anyone@anywhere.com",
+                "name": "User",
+            }
+            result = await service.handle_callback("code", "state", "verifier")
+
+        assert isinstance(result, AuthResult)

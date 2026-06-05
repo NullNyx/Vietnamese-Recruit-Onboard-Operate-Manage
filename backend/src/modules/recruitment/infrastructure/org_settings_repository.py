@@ -9,6 +9,7 @@ validated against ``zoneinfo.available_timezones()`` whenever they are written.
 Requirements: 11.1, 11.2
 """
 
+import re
 from zoneinfo import available_timezones
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -118,6 +119,125 @@ class OrganizationSettingsRepository:
         self.session.add(settings_row)
         await self.session.flush()
         return settings_row
+
+    # ------------------------------------------------------------------
+    # Allowed domains
+    # ------------------------------------------------------------------
+
+    _DOMAIN_RE = re.compile(
+        r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?\.[a-z0-9]"
+        r"([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$"
+    )
+    _MAX_DOMAINS = 50
+
+    async def get_allowed_domains(self) -> list[str]:
+        """Return the Organization's allowed email domains.
+
+        Returns:
+            The list of allowed domain strings (lowercase, bare domains
+            without ``@`` prefix).  An empty list means no restriction.
+        """
+        settings_row = await self._get_row()
+        if settings_row is None:
+            return []
+        return list(settings_row.allowed_domains or [])
+
+    async def set_allowed_domains(self, domains: list[str]) -> list[str]:
+        """Replace the entire allowed_domains list.
+
+        Args:
+            domains: The new list of domain strings.
+
+        Returns:
+            The persisted list of domains.
+
+        Raises:
+            ValueError: If any domain is invalid or the list exceeds the limit.
+        """
+        normalized = self._normalize_and_validate_domains(domains)
+        settings_row = await self._get_row()
+        if settings_row is None:
+            settings_row = OrganizationSettings(
+                timezone=self.default_timezone,
+                allowed_domains=normalized,
+            )
+        else:
+            settings_row.allowed_domains = normalized
+        self.session.add(settings_row)
+        await self.session.flush()
+        return list(settings_row.allowed_domains)
+
+    async def add_domains(self, domains: list[str]) -> list[str]:
+        """Add one or more domains to the allowed list (set semantics).
+
+        Args:
+            domains: Domains to add.
+
+        Returns:
+            The updated full list of allowed domains.
+
+        Raises:
+            ValueError: If any domain is invalid, duplicate, or the list
+                would exceed the limit.
+        """
+        new_normalized = self._normalize_and_validate_domains(domains)
+        current = await self.get_allowed_domains()
+        current_set = set(current)
+        duplicates = [d for d in new_normalized if d in current_set]
+        if duplicates:
+            raise ValueError(f"Domains already allowed: {', '.join(duplicates)}")
+        combined = current + new_normalized
+        if len(combined) > self._MAX_DOMAINS:
+            raise ValueError(
+                f"Too many domains (max {self._MAX_DOMAINS}, would have {len(combined)})"
+            )
+        return await self.set_allowed_domains(combined)
+
+    async def remove_domain(self, domain: str) -> list[str]:
+        """Remove a single domain from the allowed list.
+
+        Args:
+            domain: The domain string to remove.
+
+        Returns:
+            The updated full list of allowed domains.
+
+        Raises:
+            ValueError: If the domain is not in the current list.
+        """
+        normalized = domain.strip().lower()
+        current = await self.get_allowed_domains()
+        if normalized not in current:
+            raise ValueError(f"Domain not found: {normalized}")
+        updated = [d for d in current if d != normalized]
+        return await self.set_allowed_domains(updated)
+
+    def _normalize_and_validate_domains(self, domains: list[str]) -> list[str]:
+        """Normalize and validate a list of domain strings.
+
+        Args:
+            domains: Raw domain strings from the caller.
+
+        Returns:
+            A deduplicated list of normalized, validated domain strings.
+
+        Raises:
+            ValueError: If any domain fails validation or the list exceeds
+                the maximum allowed count.
+        """
+        if len(domains) > self._MAX_DOMAINS:
+            raise ValueError(f"Too many domains (max {self._MAX_DOMAINS})")
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for d in domains:
+            n = d.strip().lower()
+            if not self._DOMAIN_RE.match(n):
+                raise ValueError(f"Invalid domain: {d!r}")
+            if n in seen:
+                raise ValueError(f"Duplicate domain: {d!r}")
+            seen.add(n)
+            normalized.append(n)
+        return normalized
 
     @staticmethod
     def _validate_timezone(timezone: str) -> None:

@@ -54,6 +54,7 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: onboardingKeys.detail(processId) });
       queryClient.invalidateQueries({ queryKey: onboardingKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: onboardingKeys.counts() });
       toast.success("Đã cập nhật task");
     },
     onError: (err: Error) => {
@@ -69,8 +70,10 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
   const allDone = tasks.length > 0 && tasks.every((t) => t.status === "done");
 
   const handleToggle = (taskId: string, currentStatus: "pending" | "done") => {
-    const newStatus = currentStatus === "done" ? "pending" : "done";
-    updateMutation.mutate({ taskId, status: newStatus });
+    // One-way action: only allow marking pending → done (matching backend semantics).
+    if (currentStatus === "pending") {
+      updateMutation.mutate({ taskId, status: "done" });
+    }
   };
 
   return (
@@ -121,11 +124,12 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
                 <button
                   key={task.id}
                   onClick={() => handleToggle(task.id, task.status)}
-                  disabled={updateMutation.isPending}
+                  disabled={updateMutation.isPending || task.status === "done"}
                   className={cn(
                     "w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all",
-                    "hover:bg-muted/50",
-                    task.status === "done" && "bg-muted/30",
+                    task.status === "done"
+                      ? "bg-muted/30 cursor-default"
+                      : "hover:bg-muted/50",
                     updateMutation.isPending && "opacity-50 cursor-not-allowed"
                   )}
                 >

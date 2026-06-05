@@ -7,7 +7,7 @@ and audit log retrieval under /api/admin/*.
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.modules.identity.domain.entities import AuditActionType, UserRole
 
@@ -121,3 +121,58 @@ class AssistantToolConfigUpdateRequest(BaseModel):
     """
 
     tools: dict[str, bool]
+
+# --- Admin Organization Domain Schemas ---
+
+
+class DomainListResponse(BaseModel):
+    """Response schema for listing allowed Organization domains.
+
+    Attributes:
+        allowed_domains: The list of email domains permitted for login.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    allowed_domains: list[str]
+
+
+class DomainAddRequest(BaseModel):
+    """Request schema for adding domains to the allowed list.
+
+    Attributes:
+        domains: One or more bare domain strings (e.g. ``company.vn``).
+    """
+
+    domains: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        description="List of domain strings to add (e.g. company.vn)",
+    )
+
+
+class DomainReplaceRequest(BaseModel):
+    """Request schema for replacing the entire allowed domain list.
+
+    Attributes:
+        domains: The new complete list of domain strings.
+    """
+
+    domains: list[str] = Field(
+        ...,
+        max_length=50,
+        description="Complete list of domain strings to set",
+    )
+
+
+class DomainRemoveResponse(BaseModel):
+    """Response schema after removing a domain.
+
+    Attributes:
+        removed: The domain that was removed.
+        allowed_domains: The updated list of allowed domains.
+    """
+
+    removed: str
+    allowed_domains: list[str]

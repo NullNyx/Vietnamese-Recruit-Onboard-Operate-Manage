@@ -58,7 +58,17 @@ export type AuditActionType =
   | "whitelist_add"
   | "whitelist_remove"
   | "oauth_update"
-  | "role_change";
+  | "role_change"
+  | "org_domain_update";
+
+export interface DomainListResponse {
+  allowed_domains: string[];
+}
+
+export interface DomainRemoveResponse {
+  removed: string;
+  allowed_domains: string[];
+}
 
 export interface AuditLog {
   id: string;
@@ -222,4 +232,36 @@ export async function updateAssistantTools(
     body: JSON.stringify({ tools }),
   });
   return handleResponse<AssistantToolConfigListResponse>(res);
+
+// Organization Domain Endpoints
+// ---------------------------------------------------------------------------
+
+export async function listDomains(): Promise<DomainListResponse> {
+  const res = await fetch(`${BASE}/organization/domains`);
+  return handleResponse<DomainListResponse>(res);
+}
+
+export async function addDomains(domains: string[]): Promise<DomainListResponse> {
+  const res = await fetch(`${BASE}/organization/domains`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ domains }),
+  });
+  return handleResponse<DomainListResponse>(res);
+}
+
+export async function replaceDomains(domains: string[]): Promise<DomainListResponse> {
+  const res = await fetch(`${BASE}/organization/domains`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ domains }),
+  });
+  return handleResponse<DomainListResponse>(res);
+}
+
+export async function removeDomain(domain: string): Promise<DomainRemoveResponse> {
+  const res = await fetch(`${BASE}/organization/domains/${encodeURIComponent(domain)}`, {
+    method: "DELETE",
+  });
+  return handleResponse<DomainRemoveResponse>(res);
 }

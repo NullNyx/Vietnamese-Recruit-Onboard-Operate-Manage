@@ -15,6 +15,7 @@ import {
   Clock,
 } from "lucide-react";
 
+import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDashboardStats } from "@/hooks/queries";
 import { StatCard } from "@/components/stat-card";
@@ -120,6 +121,14 @@ function formatDate() {
 export default function DashboardPage() {
   const { data: stats, isLoading: loading } = useDashboardStats();
   const { user } = useCurrentUser();
+  const router = useRouter();
+
+  // Redirect employees to their self-service dashboard
+  React.useEffect(() => {
+    if (!loading && user && user.role === "user" && user.employee_id) {
+      router.replace("/employee/dashboard");
+    }
+  }, [user, loading, router]);
   const [greeting, setGreeting] = React.useState("");
   const [dateStr, setDateStr] = React.useState("");
 

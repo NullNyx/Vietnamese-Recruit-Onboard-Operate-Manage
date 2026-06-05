@@ -82,3 +82,25 @@ export const roleUpdateSchema = z.object({
 });
 
 export type RoleUpdateFormData = z.infer<typeof roleUpdateSchema>;
+
+
+// ---------------------------------------------------------------------------
+// Domain Add Schema
+// ---------------------------------------------------------------------------
+
+/**
+ * Validates a domain string for the Organization allowed domains list.
+ * Must be a bare domain without protocol or @ prefix (e.g. company.vn).
+ */
+export const domainAddSchema = z.object({
+  domain: z
+    .string()
+    .min(3, "Domain phải có ít nhất 3 ký tự")
+    .max(255, "Domain không được vượt quá 255 ký tự")
+    .regex(
+      /^[a-z0-9]([a-z0-9-]*[a-z0-9])?\.[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/,
+      "Domain không hợp lệ (ví dụ: company.vn)"
+    ),
+});
+
+export type DomainAddFormData = z.infer<typeof domainAddSchema>;

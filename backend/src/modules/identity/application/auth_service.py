@@ -18,7 +18,10 @@ from jose import jwt as jose_jwt
 
 from src.modules.identity.api.schemas import GoogleUserInfo, GrantStatus, LoginRedirect
 from src.modules.identity.domain.entities import UserRole
-from src.modules.identity.domain.exceptions import AccessDeniedError
+from src.modules.identity.domain.exceptions import (
+    AccessDeniedError,
+    DomainAccessDeniedError,
+)
 from src.modules.identity.infrastructure.config import AuthSettings
 from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
 from src.modules.identity.infrastructure.jwt_utils import JWTUtils
@@ -26,6 +29,9 @@ from src.modules.identity.infrastructure.jwt_utils import JWTUtils
 if TYPE_CHECKING:
     from src.modules.employee.infrastructure.employee_repository import (
         EmployeeRepository,
+    )
+    from src.modules.identity.application.domain_gate_service import (
+        DomainGateService,
     )
     from src.modules.identity.application.oauth_service import OAuthService
     from src.modules.identity.application.token_service import (
@@ -132,6 +138,7 @@ class AuthService:
         oauth_grant_repository: OAuthGrantRepository,
         refresh_token_repository: RefreshTokenRepository,
         employee_repository: EmployeeRepository | None = None,
+        domain_gate_service: DomainGateService | None = None,
     ) -> None:
         """Initialize AuthService with all required dependencies.
 
@@ -148,6 +155,8 @@ class AuthService:
             refresh_token_repository: Repository for refresh token persistence.
             employee_repository: Repository for employee lookup by email.
                 Used to resolve the User-Employee link at login time.
+            domain_gate_service: Service for checking email domain against
+                the Organization's allowed_domains list.
         """
         self._settings = settings
         self._jwt_utils = jwt_utils
@@ -159,6 +168,7 @@ class AuthService:
         self._oauth_grant_repository = oauth_grant_repository
         self._refresh_token_repository = refresh_token_repository
         self._employee_repository = employee_repository
+        self._domain_gate_service = domain_gate_service
 
     async def initiate_login(self) -> LoginRedirect:
         """Generate an OAuth2 redirect URL with PKCE and CSRF state.
@@ -237,7 +247,15 @@ class AuthService:
             picture=id_token_claims.get("picture"),
         )
 
-        # 4. Check whitelist.
+        # 4. Domain gate.
+        if self._domain_gate_service is not None:
+            if not await self._domain_gate_service.is_email_allowed(user_info.email):
+                domain = user_info.email.split("@")[-1]
+                raise DomainAccessDeniedError(
+                    message=f"Email domain '{domain}' is not authorized for this Organization."
+                )
+
+        # 6. Check whitelist.
         if not self._whitelist_service.is_allowed(user_info.email):
             raise AccessDeniedError()
 
@@ -248,7 +266,7 @@ class AuthService:
             role = UserRole.ADMIN
         user = await self._user_repository.upsert(user_info, role=role)
 
-        # 6. Encrypt and store Google tokens.
+        # 7. Encrypt and store Google tokens.
         encrypted_access = self._crypto.encrypt(google_tokens.access_token)
         encrypted_refresh = self._crypto.encrypt(google_tokens.refresh_token or "")
         scopes = google_tokens.scope.split(" ")
@@ -262,20 +280,20 @@ class AuthService:
             token_expires_at=token_expires_at,
         )
 
-        # 7. Determine grant status.
+        # 8. Determine grant status.
         grant_status = self._oauth_service.determine_grant_status(scopes)
 
-        # 8. Revoke old refresh tokens (single active session).
+        # 9. Revoke old refresh tokens (single active session).
         await self._token_service.revoke_user_tokens(user.id)
 
-        # 9. Resolve User-Employee link by matching email.
+        # 10. Resolve User-Employee link by matching email.
         employee_id = None
         if self._employee_repository is not None:
             employee = await self._employee_repository.get_by_email(user.email)
             if employee and employee.is_active:
                 employee_id = employee.id
 
-        # 10. Create new access token (with employee_id if linked) and refresh token.
+        # 11. Create new access token (with employee_id if linked) and refresh token.
         access_token = self._token_service.create_access_token(user.id, user.email, employee_id)
         raw_refresh_token, token_hash = self._token_service.create_refresh_token(user.id)
 

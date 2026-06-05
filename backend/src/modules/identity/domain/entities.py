@@ -171,6 +171,7 @@ class AuditActionType(str, Enum):
     OAUTH_UPDATE = "oauth_update"
     ROLE_CHANGE = "role_change"
     ASSISTANT_TOOL_CONFIG = "assistant_tool_config"
+    ORG_DOMAIN_UPDATE = "org_domain_update"
 
 
 class AuditLog(SQLModel, table=True):
