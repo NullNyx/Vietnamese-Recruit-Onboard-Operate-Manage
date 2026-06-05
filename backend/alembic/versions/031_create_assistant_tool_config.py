@@ -4,8 +4,8 @@ Stores per-tool enable/disable toggles for the AI Assistant.
 Admin manages tools via /api/admin/assistant-tools; the ToolRegistry
 reads this table at chat time to filter which tools the LLM sees.
 
-Revision ID: 030
-Revises: 029
+Revision ID: 031
+Revises: 030
 Create Date: 2026-06-04
 """
 
@@ -13,8 +13,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "030"
-down_revision: str | None = "029"
+revision: str = "031"
+down_revision: str | None = "030"
 branch_labels: str | None = None
 depends_on: str | None = None
 

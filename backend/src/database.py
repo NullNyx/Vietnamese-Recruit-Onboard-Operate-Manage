@@ -1,25 +1,33 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from typing import TYPE_CHECKING
 
-from sqlmodel import Session, create_engine
+from sqlmodel import Session
 
-from src.modules.identity.infrastructure.config import AuthSettings
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Engine
 
-
-def _get_sync_database_url() -> str:
-    settings = AuthSettings()
-    database_url = settings.database_url
-    if database_url.startswith("postgresql+asyncpg://"):
-        return database_url.replace("+asyncpg", "", 1)
-    return database_url
+_engine: Engine | None = None
 
 
-engine = create_engine(_get_sync_database_url(), echo=False)
+def _get_engine() -> Engine:
+    global _engine
+    if _engine is None:
+        from sqlalchemy import create_engine
+
+        from src.modules.identity.infrastructure.config import AuthSettings
+
+        settings = AuthSettings()
+        url = settings.database_url
+        if url.startswith("postgresql+asyncpg://"):
+            url = url.replace("+asyncpg", "", 1)
+        _engine = create_engine(url, echo=False)
+    return _engine
 
 
 def get_session() -> Generator[Session, None, None]:
-    with Session(engine) as session:
+    with Session(_get_engine()) as session:
         try:
             yield session
             session.commit()
