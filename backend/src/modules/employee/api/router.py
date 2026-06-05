@@ -294,8 +294,9 @@ async def download_document(
     """Download a document by its ID.
 
     Ownership check: employees can only download their own documents.
+    Fetches metadata first, checks ownership, then downloads from MinIO.
     """
-    document, file_data = await document_service.download_document(document_id)
+    document = await document_service.get_document_metadata(document_id)
 
     if current_user.role != "admin":
         if current_employee is None or document.employee_id != current_employee.id:
@@ -303,6 +304,8 @@ async def download_document(
                 status_code=403,
                 detail="Access denied: cannot download another employee's document",
             )
+
+    file_data = await document_service.download_file(document.storage_path)
 
     return Response(
         content=file_data,

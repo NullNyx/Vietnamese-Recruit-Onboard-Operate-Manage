@@ -172,6 +172,34 @@ class DocumentService:
         file_data = await self._minio_client.download_file(document.storage_path)
         return document, file_data
 
+    async def get_document_metadata(self, document_id: UUID) -> EmployeeDocument:
+        """Retrieve document metadata without downloading the file.
+
+        Args:
+            document_id: The UUID of the document.
+
+        Returns:
+            The EmployeeDocument entity.
+
+        Raises:
+            EmployeeError: If no document exists with the given ID.
+        """
+        document = await self._document_repo.get_by_id(document_id)
+        if document is None:
+            raise EmployeeError("Document not found")
+        return document
+
+    async def download_file(self, storage_path: str) -> bytes:
+        """Download raw file bytes from MinIO.
+
+        Args:
+            storage_path: The storage key within the bucket.
+
+        Returns:
+            The raw file bytes.
+        """
+        return await self._minio_client.download_file(storage_path)
+
     async def delete_document(self, document_id: UUID) -> None:
         """Delete a document from the vault.
 

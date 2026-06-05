@@ -24,7 +24,6 @@ from src.modules.employee.api.router import (
     get_employee,
     list_documents,
     update_employee,
-    upload_document,
 )
 
 # ---------------------------------------------------------------------------
@@ -363,7 +362,8 @@ class TestDownloadDocumentOwnership:
         doc = _make_document(employee_id=emp_id, doc_id=doc_id)
 
         svc = AsyncMock()
-        svc.download_document.return_value = (doc, b"fake content")
+        svc.get_document_metadata.return_value = doc
+        svc.download_file.return_value = b"fake content"
 
         from fastapi.responses import Response
         result = await download_document(
@@ -373,6 +373,7 @@ class TestDownloadDocumentOwnership:
             document_service=svc,
         )
         assert isinstance(result, Response)
+        svc.download_file.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_employee_cannot_download_other_document(self):
@@ -384,7 +385,7 @@ class TestDownloadDocumentOwnership:
         doc = _make_document(employee_id=other_emp_id, doc_id=doc_id)
 
         svc = AsyncMock()
-        svc.download_document.return_value = (doc, b"fake content")
+        svc.get_document_metadata.return_value = doc
 
         with pytest.raises(HTTPException) as exc_info:
             await download_document(
@@ -394,6 +395,7 @@ class TestDownloadDocumentOwnership:
                 document_service=svc,
             )
         assert exc_info.value.status_code == 403
+        svc.download_file.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_admin_can_download_any_document(self):
@@ -403,7 +405,8 @@ class TestDownloadDocumentOwnership:
         doc = _make_document(employee_id=emp_id, doc_id=doc_id)
 
         svc = AsyncMock()
-        svc.download_document.return_value = (doc, b"fake content")
+        svc.get_document_metadata.return_value = doc
+        svc.download_file.return_value = b"fake content"
 
         from fastapi.responses import Response
         result = await download_document(
@@ -413,6 +416,7 @@ class TestDownloadDocumentOwnership:
             document_service=svc,
         )
         assert isinstance(result, Response)
+        svc.download_file.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
