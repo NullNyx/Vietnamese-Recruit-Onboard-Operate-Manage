@@ -420,21 +420,28 @@ class TestDownloadDocumentOwnership:
 # ---------------------------------------------------------------------------
 
 class TestDeleteDocumentOwnership:
-    """Ownership boundary for DELETE /api/documents/{id}."""
+    """Ownership boundary for DELETE /api/documents/{id}.
+
+    The admin guard is enforced by the ``require_admin`` dependency, not
+    inline in the handler.  These tests verify the dependency directly.
+    """
 
     @pytest.mark.asyncio
-    async def test_employee_cannot_delete_document(self):
-        user = _make_user(role="user")
-        svc = AsyncMock()
+    async def test_non_admin_rejected_by_require_admin(self):
+        from src.modules.identity.api.admin_router import require_admin
 
+        user = _make_user(role="user")
         with pytest.raises(HTTPException) as exc_info:
-            await delete_document(
-                document_id=uuid4(),
-                current_user=user,
-                document_service=svc,
-            )
+            await require_admin(current_user=user)
         assert exc_info.value.status_code == 403
-        assert "cannot delete" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_admin_passes_require_admin(self):
+        from src.modules.identity.api.admin_router import require_admin
+
+        user = _make_user(role="admin")
+        result = await require_admin(current_user=user)
+        assert result.role == "admin"
 
     @pytest.mark.asyncio
     async def test_admin_can_delete_document(self):
