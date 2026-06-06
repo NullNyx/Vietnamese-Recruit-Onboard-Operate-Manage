@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FileSearch, BarChart3 } from "lucide-react";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   CommandDialog,
   CommandEmpty,
@@ -10,7 +11,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { navItems } from "@/lib/navigation";
+import { navItems, adminNavSection } from "@/lib/navigation";
 import type { LucideIcon } from "lucide-react";
 
 interface CommandBarItem {
@@ -32,7 +33,14 @@ interface CommandBarProps {
 export function CommandBar({ open, onOpenChange }: CommandBarProps) {
   const router = useRouter();
 
-  const allItems: CommandBarItem[] = [...navItems, ...additionalItems];
+  const { user } = useCurrentUser();
+  const isAdmin = user?.role === "admin";
+
+  const allItems: CommandBarItem[] = [
+    ...navItems,
+    ...additionalItems,
+    ...(isAdmin ? adminNavSection.items : []),
+  ];
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>

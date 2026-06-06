@@ -1,19 +1,14 @@
-"use client";
+'use client';
 
-import { usePathname } from "next/navigation";
-import { ChevronLeft, ChevronRight, LogOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
-import { useSidebar } from "@/hooks/use-sidebar";
-import { useCurrentUser } from "@/hooks/use-current-user";
-import { NavLink } from "@/components/nav-link";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import { navItems, adminNavSection } from "@/lib/navigation";
+import { NavLink } from '@/components/nav-link';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { useSidebar } from '@/hooks/use-sidebar';
+import { adminNavSection, navItems } from '@/lib/navigation';
+import { cn } from '@/lib/utils';
 
 interface AppSidebarProps {
   className?: string;
@@ -23,19 +18,19 @@ export function AppSidebar({ className }: AppSidebarProps) {
   const { collapsed, toggle } = useSidebar();
   const pathname = usePathname();
   const { user } = useCurrentUser();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === 'admin';
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/login";
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
   };
 
   return (
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "flex h-screen flex-col border-r border-border/20 bg-card transition-[width] duration-200 ease-out overflow-hidden shrink-0",
-          collapsed ? "w-[60px]" : "w-[240px]",
+          'flex h-screen flex-col border-r border-border/20 bg-card transition-[width] duration-200 ease-out overflow-hidden shrink-0',
+          collapsed ? 'w-[60px]' : 'w-[240px]',
           className,
         )}
       >
@@ -45,38 +40,27 @@ export function AppSidebar({ className }: AppSidebarProps) {
             <span className="text-xs font-bold text-white">V</span>
           </div>
           {!collapsed && (
-            <span className="text-sm font-semibold tracking-tight text-foreground">
-              Vroom
-            </span>
+            <span className="text-sm font-semibold tracking-tight text-foreground">Vroom</span>
           )}
         </div>
 
         {/* Navigation */}
-        <nav
-          className="flex-1 space-y-0.5 px-2 py-3 overflow-y-auto"
-          aria-label="Điều hướng chính"
-        >
+        <nav className="flex-1 space-y-0.5 px-2 py-3 overflow-y-auto" aria-label="Điều hướng chính">
           {navItems.map((item) => {
-            const isActive =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href);
+            const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
 
             const linkContent = (
               <NavLink
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all rounded-none",
+                  'flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all rounded-none',
                   isActive
-                    ? "border-l-[3px] border-primary text-foreground bg-secondary"
-                    : "border-l-[3px] border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground",
-                  collapsed && "justify-center px-2",
+                    ? 'border-l-[3px] border-primary text-foreground bg-secondary'
+                    : 'border-l-[3px] border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground',
+                  collapsed && 'justify-center px-2',
                 )}
               >
-                <item.icon
-                  className="h-[18px] w-[18px] shrink-0"
-                  aria-hidden="true"
-                />
+                <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
                 {!collapsed && <span>{item.label}</span>}
               </NavLink>
             );
@@ -120,17 +104,14 @@ export function AppSidebar({ className }: AppSidebarProps) {
                   <NavLink
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all rounded-none",
+                      'flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all rounded-none',
                       isActive
-                        ? "border-l-[3px] border-primary text-foreground bg-secondary"
-                        : "border-l-[3px] border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground",
-                      collapsed && "justify-center px-2",
+                        ? 'border-l-[3px] border-primary text-foreground bg-secondary'
+                        : 'border-l-[3px] border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground',
+                      collapsed && 'justify-center px-2',
                     )}
                   >
-                    <item.icon
-                      className="h-[18px] w-[18px] shrink-0"
-                      aria-hidden="true"
-                    />
+                    <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
                     {!collapsed && <span>{item.label}</span>}
                   </NavLink>
                 );
@@ -158,19 +139,17 @@ export function AppSidebar({ className }: AppSidebarProps) {
         {/* Bottom section */}
         <div
           className={cn(
-            "mt-auto border-t border-border/10 py-3 space-y-1",
-            collapsed ? "px-1" : "px-2",
+            'mt-auto border-t border-border/10 py-3 space-y-1',
+            collapsed ? 'px-1' : 'px-2',
           )}
         >
           {/* User info */}
           {!collapsed && user && (
             <div className="px-3 py-1.5">
               <p className="text-xs font-medium text-foreground truncate">
-                {user.email?.split("@")[0]}
+                {user.email?.split('@')[0]}
               </p>
-              <p className="text-[10px] text-muted-foreground truncate">
-                {user.email}
-              </p>
+              <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
             </div>
           )}
 
@@ -180,32 +159,23 @@ export function AppSidebar({ className }: AppSidebarProps) {
               <button
                 onClick={toggle}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground transition-all hover:bg-secondary hover:text-foreground rounded-md",
-                  collapsed ? "mx-auto justify-center px-2 w-full" : "w-full",
+                  'flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground transition-all hover:bg-secondary hover:text-foreground rounded-md',
+                  collapsed ? 'mx-auto justify-center px-2 w-full' : 'w-full',
                 )}
-                aria-label={collapsed ? "Mở rộng" : "Thu gọn"}
+                aria-label={collapsed ? 'Mở rộng' : 'Thu gọn'}
               >
                 {collapsed ? (
-                  <ChevronRight
-                    className="h-[18px] w-[18px]"
-                    aria-hidden="true"
-                  />
+                  <ChevronRight className="h-[18px] w-[18px]" aria-hidden="true" />
                 ) : (
                   <>
-                    <ChevronLeft
-                      className="h-[18px] w-[18px]"
-                      aria-hidden="true"
-                    />
+                    <ChevronLeft className="h-[18px] w-[18px]" aria-hidden="true" />
                     <span>Thu gọn</span>
                   </>
                 )}
               </button>
             </TooltipTrigger>
             {collapsed && (
-              <TooltipContent
-                side="right"
-                className="bg-foreground text-white border-border/20"
-              >
+              <TooltipContent side="right" className="bg-foreground text-white border-border/20">
                 Mở rộng
               </TooltipContent>
             )}
@@ -217,8 +187,8 @@ export function AppSidebar({ className }: AppSidebarProps) {
               <button
                 onClick={handleLogout}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground transition-all hover:bg-secondary hover:text-primary rounded-md",
-                  collapsed ? "mx-auto justify-center px-2 w-full" : "w-full",
+                  'flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground transition-all hover:bg-secondary hover:text-primary rounded-md',
+                  collapsed ? 'mx-auto justify-center px-2 w-full' : 'w-full',
                 )}
                 aria-label="Đăng xuất"
               >
@@ -227,10 +197,7 @@ export function AppSidebar({ className }: AppSidebarProps) {
               </button>
             </TooltipTrigger>
             {collapsed && (
-              <TooltipContent
-                side="right"
-                className="bg-foreground text-white border-border/20"
-              >
+              <TooltipContent side="right" className="bg-foreground text-white border-border/20">
                 Đăng xuất
               </TooltipContent>
             )}
