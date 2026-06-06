@@ -86,7 +86,7 @@ export const adminNavConfig: HeaderNavConfig = {
         { href: '/admin/oauth', label: 'OAuth', icon: KeyRound },
         { href: '/admin/domains', label: 'Domains', icon: Globe },
         { href: '/admin/audit-logs', label: 'Audit logs', icon: ScrollText },
-        { href: '/assistant', label: 'AI Assistant', icon: Bot },
+        { href: '/admin/assistant', label: 'AI Assistant', icon: Bot },
         { href: '/admin/assistant-tools', label: 'AI Tools Config', icon: Bot },
         { href: '/gmail', label: 'Gmail', icon: Mail },
         { href: '/settings/organization', label: 'Cấu hình mạng', icon: Shield },

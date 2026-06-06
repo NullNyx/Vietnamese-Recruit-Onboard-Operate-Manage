@@ -8,7 +8,6 @@ export function middleware(request: NextRequest) {
   // Admin dashboard routes — require authentication
   if (
     path.startsWith("/admin") ||
-    path.startsWith("/assistant") ||
     path.startsWith("/attendance") ||
     path.startsWith("/employees") ||
     path.startsWith("/gmail") ||

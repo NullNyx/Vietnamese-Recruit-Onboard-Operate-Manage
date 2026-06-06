@@ -28,7 +28,6 @@ export const navItems: NavItem[] = [
   { href: '/gmail', label: 'Gmail', icon: Mail },
   { href: '/recruitment', label: 'Tuyển dụng', icon: UserSearch },
   { href: '/onboarding', label: 'Onboarding', icon: ListChecks },
-  { href: '/assistant', label: 'AI Assistant', icon: Bot },
 ];
 
 export interface AdminNavSection {
@@ -45,5 +44,6 @@ export const adminNavSection: AdminNavSection = {
     { href: '/admin/oauth', label: 'OAuth', icon: KeyRound },
     { href: '/admin/users', label: 'Người dùng', icon: UserCog },
     { href: '/admin/audit-logs', label: 'Nhật ký', icon: ScrollText },
+    { href: '/admin/assistant', label: 'AI Assistant', icon: Bot },
   ],
 };
