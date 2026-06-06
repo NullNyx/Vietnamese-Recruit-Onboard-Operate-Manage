@@ -3,7 +3,7 @@
 Defines POST /api/assistant/chat — the single endpoint for the
 conversational AI Assistant.
 
-Requires authentication (HR/admin role). Conversation history is
+Requires any authenticated user. Conversation history is
 held in frontend memory; backend processes each turn statelessly.
 """
 
@@ -28,7 +28,7 @@ from src.modules.assistant.container import get_assistant_service
 from src.modules.assistant.infrastructure.tool_config_repository import (
     ToolConfigRepository,
 )
-from src.modules.identity.api.admin_router import require_admin
+from src.modules.identity.api.router import get_current_user
 from src.modules.identity.container import get_db_session
 from src.modules.identity.domain.entities import User
 
@@ -36,7 +36,7 @@ from src.modules.identity.domain.entities import User
 # Type aliases
 # ---------------------------------------------------------------------------
 
-AdminUserDep = Annotated[User, Depends(require_admin)]
+CurrentUserDep = Annotated[User, Depends(get_current_user)]
 AssistantServiceDep = Annotated[AssistantService, Depends(get_assistant_service)]
 
 
@@ -53,7 +53,7 @@ router = APIRouter(prefix="/api/assistant", tags=["assistant"])
 )
 async def chat(
     body: ChatRequest,
-    _admin: AdminUserDep,
+    _user: CurrentUserDep,
     assistant_service: AssistantServiceDep,
     session: AsyncSession = Depends(get_db_session),
 ) -> ChatResponseSchema:
@@ -63,7 +63,7 @@ async def chat(
     The last message must be from the user. Returns new assistant
     messages and optionally a Draft Action for HR to review.
 
-    Requires admin (HR) role.
+    Requires any authenticated user.
     """
     # Validate last message is from user
     last_msg = body.messages[-1]
