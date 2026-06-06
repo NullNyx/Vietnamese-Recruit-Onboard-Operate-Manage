@@ -105,12 +105,47 @@ async def _seed_demo_data() -> None:
             await session.commit()
 
 
+async def _seed_assistant_tool_configs() -> None:
+    """Seed default assistant tool configs at startup.
+
+    Ensures all TOOL_DEFINITIONS have a row in assistant_tool_config
+    with enabled=True. Only inserts missing rows -- never overwrites
+    existing admin toggles.
+    """
+    from sqlmodel import select
+
+    from src.modules.assistant.domain.entities import AssistantToolConfig
+    from src.modules.assistant.domain.tools import TOOL_DEFINITIONS
+    from src.modules.identity.container import _get_async_session_maker
+
+    session_maker = _get_async_session_maker()
+    async with session_maker() as session:
+        result = await session.execute(select(AssistantToolConfig))
+        existing = {row.tool_name for row in result.scalars().all()}
+        to_insert = [
+            AssistantToolConfig(tool_name=t.name, enabled=True)
+            for t in TOOL_DEFINITIONS
+            if t.name not in existing
+        ]
+        if to_insert:
+            session.add_all(to_insert)
+            await session.commit()
+            logger.info(
+                "Seeded %d assistant tool configs: %s",
+                len(to_insert),
+                [t.tool_name for t in to_insert],
+            )
+        else:
+            logger.info("Assistant tool configs already present -- skipping seed.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler for startup and shutdown events."""
     # Startup
     await _bootstrap_super_admin()
     await _seed_demo_data()
+    await _seed_assistant_tool_configs()
     yield
     # Shutdown (nothing to clean up currently)
 

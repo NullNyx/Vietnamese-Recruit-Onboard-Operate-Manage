@@ -119,6 +119,7 @@ class TestAuthSettingsValidation:
 
     def test_missing_required_field_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Only set some required fields, omit google_client_id
+        monkeypatch.delenv("AUTH_GOOGLE_CLIENT_ID", raising=False)
         monkeypatch.setenv("AUTH_GOOGLE_CLIENT_SECRET", "secret")
         monkeypatch.setenv("AUTH_JWT_SECRET_KEY", "key")
         monkeypatch.setenv("AUTH_OAUTH_TOKEN_ENCRYPTION_KEY", "enc-key")

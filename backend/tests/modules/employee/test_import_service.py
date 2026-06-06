@@ -142,25 +142,33 @@ class TestImportServiceDepartmentResolution:
         department_repo.get_by_name.assert_called_once_with("Engineering")
 
     @pytest.mark.asyncio
-    async def test_unknown_department_name_produces_error(self):
-        """A row with an unknown department_name should produce an error."""
+    async def test_unknown_department_name_auto_creates(self):
+        """A row with an unknown department_name auto-creates the department."""
         headers = ["full_name", "email", "department_name"]
         rows = [["Nguyen Van A", "a@example.com", "NonExistent"]]
         file_bytes = _create_excel(headers, rows)
 
+        new_dept = MagicMock(spec=Department)
+        new_dept.id = uuid4()
+
         employee_repo = AsyncMock()
+        employee_repo.get_by_email.return_value = None
+        employee_repo.get_next_code.return_value = "NV-001"
+        employee_repo.create.return_value = MagicMock()
+
         department_repo = AsyncMock()
         department_repo.get_by_name.return_value = None
+        department_repo.create.return_value = new_dept
+
         position_repo = AsyncMock()
 
         service = _make_service(employee_repo, department_repo, position_repo)
         result = await service.import_from_excel(file_bytes)
 
         assert result["total_rows"] == 1
-        assert result["success_count"] == 0
-        assert result["error_count"] == 1
-        assert "Department not found" in result["errors"][0]["message"]
-        assert "NonExistent" in result["errors"][0]["message"]
+        assert result["success_count"] == 1
+        assert result["error_count"] == 0
+        department_repo.create.assert_called_once()
 
 
 class TestImportServicePositionResolution:
@@ -193,24 +201,32 @@ class TestImportServicePositionResolution:
         position_repo.get_by_name.assert_called_once_with("Developer")
 
     @pytest.mark.asyncio
-    async def test_unknown_position_name_produces_error(self):
-        """A row with an unknown position_name should produce an error."""
+    async def test_unknown_position_name_auto_creates(self):
+        """A row with an unknown position_name auto-creates the position."""
         headers = ["full_name", "email", "position_name"]
         rows = [["Nguyen Van A", "a@example.com", "NonExistent"]]
         file_bytes = _create_excel(headers, rows)
 
+        new_pos = MagicMock(spec=Position)
+        new_pos.id = uuid4()
+
         employee_repo = AsyncMock()
+        employee_repo.get_by_email.return_value = None
+        employee_repo.get_next_code.return_value = "NV-001"
+        employee_repo.create.return_value = MagicMock()
+
         department_repo = AsyncMock()
         position_repo = AsyncMock()
         position_repo.get_by_name.return_value = None
+        position_repo.create.return_value = new_pos
 
         service = _make_service(employee_repo, department_repo, position_repo)
         result = await service.import_from_excel(file_bytes)
 
         assert result["total_rows"] == 1
-        assert result["success_count"] == 0
-        assert result["error_count"] == 1
-        assert "Position not found" in result["errors"][0]["message"]
+        assert result["success_count"] == 1
+        assert result["error_count"] == 0
+        position_repo.create.assert_called_once()
 
 
 class TestImportServiceMixedRows:
@@ -218,7 +234,7 @@ class TestImportServiceMixedRows:
 
     @pytest.mark.asyncio
     async def test_mix_of_valid_and_invalid_rows(self):
-        """Valid rows succeed while invalid rows produce errors."""
+        """All rows succeed — unknown departments are auto-created."""
         headers = ["full_name", "email", "department_name"]
         rows = [
             ["Nguyen Van A", "a@example.com", "Engineering"],
@@ -230,15 +246,19 @@ class TestImportServiceMixedRows:
         dept = MagicMock(spec=Department)
         dept.id = uuid4()
 
+        new_dept = MagicMock(spec=Department)
+        new_dept.id = uuid4()
+
         employee_repo = AsyncMock()
         employee_repo.get_by_email.return_value = None
         employee_repo.get_next_code.return_value = "NV-001"
         employee_repo.create.return_value = MagicMock()
 
         department_repo = AsyncMock()
-        department_repo.get_by_name.side_effect = (
-            lambda name: dept if name == "Engineering" else None
-        )
+        def get_by_name_side_effect(name):
+            return dept if name == "Engineering" else None
+        department_repo.get_by_name.side_effect = get_by_name_side_effect
+        department_repo.create.return_value = new_dept
 
         position_repo = AsyncMock()
 
@@ -246,9 +266,8 @@ class TestImportServiceMixedRows:
         result = await service.import_from_excel(file_bytes)
 
         assert result["total_rows"] == 3
-        assert result["success_count"] == 2
-        assert result["error_count"] == 1
-        assert "Department not found" in result["errors"][0]["message"]
+        assert result["success_count"] == 3
+        assert result["error_count"] == 0
 
     @pytest.mark.asyncio
     async def test_parse_errors_included_in_result(self):

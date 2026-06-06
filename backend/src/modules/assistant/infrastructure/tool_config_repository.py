@@ -64,4 +64,4 @@ class ToolConfigRepository:
                         updated_at=now,
                     )
                 )
-        await self._session.commit()
+        await self._session.flush()

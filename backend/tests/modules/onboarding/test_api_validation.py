@@ -30,6 +30,7 @@ each endpoint).
 from __future__ import annotations
 
 from collections.abc import Iterator
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -37,7 +38,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.modules.identity.api.admin_router import require_admin
-from src.modules.identity.container import get_current_user
+from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User, UserRole
 from src.modules.onboarding.api.error_handler import register_onboarding_error_handlers
 from src.modules.onboarding.api.router import onboarding_router
@@ -176,9 +177,18 @@ def client(fake_service: FakeOnboardingService) -> Iterator[TestClient]:
     register_onboarding_error_handlers(app)
 
     admin_user = _make_admin_user()
+    from unittest.mock import MagicMock
+
+    mock_scalars = MagicMock()
+    mock_scalars.first.return_value = None
+    mock_result = MagicMock()
+    mock_result.scalars.return_value = mock_scalars
+    mock_session = AsyncMock()
+    mock_session.execute.return_value = mock_result
     app.dependency_overrides[require_admin] = lambda: admin_user
     app.dependency_overrides[get_current_user] = lambda: admin_user
     app.dependency_overrides[get_onboarding_service] = lambda: fake_service
+    app.dependency_overrides[get_db_session] = lambda: mock_session
 
     with TestClient(app) as test_client:
         yield test_client
