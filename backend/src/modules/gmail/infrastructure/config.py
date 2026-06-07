@@ -106,6 +106,7 @@ class GmailSettings(BaseSettings):
     classification_llm_timeout_seconds: int = Field(default=15, gt=0)
     classification_llm_max_retries: int = Field(default=3, ge=1)
     classification_confidence_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
+    classification_needs_review_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
     classification_enabled: bool = Field(default=True)
     # Max simultaneous AI classification calls in a batch
     classification_batch_concurrency: int = Field(default=3, ge=1, le=10)

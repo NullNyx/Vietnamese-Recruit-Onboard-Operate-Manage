@@ -117,6 +117,7 @@ export interface EmailMessage {
   label_ids: string[];
   has_attachments: boolean;
   category: string | null;
+  processing_status?: string;
 }
 
 export interface MessageBodyResponse {

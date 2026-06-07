@@ -6,6 +6,7 @@ import { PenSquare, Sparkles } from "lucide-react";
 import type { ConnectionStatus, EmailMessage } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/types";
 import * as gmailApi from "@/lib/api/gmail";
+import { RotateCw } from "lucide-react";
 
 import { ToastProvider, useToast } from "@/components/gmail/toast-provider";
 import { ConnectionPanel } from "@/components/gmail/connection-panel";
@@ -56,6 +57,12 @@ function GmailPageContent() {
     null,
   );
 
+  // --- Review mode state ---
+  const [reviewMode, setReviewMode] = React.useState(false);
+  const [reviewEmails, setReviewEmails] = React.useState<EmailMessage[]>([]);
+  const [reclassifying, setReclassifying] = React.useState<string | null>(null);
+  const [processingAttachments, setProcessingAttachments] = React.useState<string | null>(null);
+
   // --- Classification state ---
   const [classifying, setClassifying] = React.useState(false);
   const [classifyProgress, setClassifyProgress] = React.useState<string | null>(
@@ -64,16 +71,17 @@ function GmailPageContent() {
 
   // Derived: filtered emails by category
   const filteredEmails = React.useMemo(() => {
-    if (selectedCategory === null) return emails;
-    return emails.filter(
+    const source = reviewMode ? reviewEmails : emails;
+    if (selectedCategory === null) return source;
+    return source.filter(
       (e) => (e.category || "uncategorized") === selectedCategory,
     );
-  }, [emails, selectedCategory]);
+  }, [emails, reviewEmails, reviewMode, selectedCategory]);
 
   // Derived: selected email object
   const selectedEmail = React.useMemo(
-    () => emails.find((e) => e.id === selectedEmailId) ?? null,
-    [emails, selectedEmailId],
+    () => (reviewMode ? reviewEmails : emails).find((e) => e.id === selectedEmailId) ?? null,
+    [emails, reviewEmails, reviewMode, selectedEmailId],
   );
 
   // --- Error handler (stable ref to avoid re-render loops) ---
@@ -96,6 +104,16 @@ function GmailPageContent() {
   const handleApiError = React.useCallback((err: unknown) => {
     handleApiErrorRef.current(err);
   }, []);
+
+  // --- Fetch review emails ---
+  const fetchReviewEmails = React.useCallback(async () => {
+    try {
+      const res = await gmailApi.listEmailsNeedingReview();
+      setReviewEmails(res.messages);
+    } catch (err) {
+      handleApiError(err);
+    }
+  }, [handleApiError]);
 
   // --- Fetch connection status ---
   const fetchStatus = React.useCallback(async () => {
@@ -157,11 +175,12 @@ function GmailPageContent() {
   React.useEffect(() => {
     if (connectionStatus === "connected") {
       fetchEmails();
+      if (reviewMode) fetchReviewEmails();
     } else {
       setEmails([]);
       setSelectedEmailId(null);
     }
-  }, [connectionStatus, fetchEmails]);
+  }, [connectionStatus, fetchEmails, reviewMode, fetchReviewEmails]);
 
   // --- Connect handler ---
   const handleConnect = React.useCallback(async () => {
@@ -231,6 +250,46 @@ function GmailPageContent() {
     setComposeOpen(true);
   }, []);
 
+  // --- Reclassify handler ---
+  const handleReclassify = React.useCallback(async (emailId: string) => {
+    setReclassifying(emailId);
+    try {
+      const result = await gmailApi.reclassifyEmail(emailId);
+      // Update the email in the review list
+      setReviewEmails((prev) =>
+        prev.map((e) => (e.id === emailId ? result : e)),
+      );
+      // Also update in main emails list if present
+      setEmails((prev) => prev.map((e) => (e.id === emailId ? result : e)));
+      addToast("Đã phân loại lại email", "success");
+      // If email is no longer needs_review, remove from review list
+      if (result.processing_status !== "needs_review") {
+        setReviewEmails((prev) => prev.filter((e) => e.id !== emailId));
+      }
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setReclassifying(null);
+    }
+  }, [addToast, handleApiError]);
+
+  // --- Process attachments handler ---
+  const handleProcessAttachments = React.useCallback(async (messageId: string) => {
+    setProcessingAttachments(messageId);
+    try {
+      const result = await gmailApi.processAttachments(messageId);
+      if (result.processed_count > 0) {
+        addToast(`Đã xử lý ${result.processed_count} CV`, "success");
+      } else {
+        addToast(result.message || "Không có CV nào để xử lý", "success");
+      }
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setProcessingAttachments(null);
+    }
+  }, [addToast, handleApiError]);
+
   // --- Compose handlers ---
   const handleComposeOpen = React.useCallback(() => {
     setReplyToEmail(null);
@@ -249,6 +308,7 @@ function GmailPageContent() {
 
     let totalClassified = 0;
     let totalToClassify: number | null = null;
+      let totalCvProcessed = 0;
 
     try {
       // Process in batches of 5 to avoid proxy timeout
@@ -262,6 +322,7 @@ function GmailPageContent() {
         }
 
         totalClassified += result.classified_count;
+          totalCvProcessed += result.cv_processed_count ?? 0;
         remaining = result.remaining;
 
         // Update progress with accurate numbers
@@ -274,7 +335,7 @@ function GmailPageContent() {
       }
 
       setClassifyProgress(null);
-      addToast(`AI đã phân loại ${totalClassified} email`, "success");
+      addToast(`AI đã phân loại ${totalClassified} email${totalCvProcessed > 0 ? `, xử lý ${totalCvProcessed} CV` : ""}`, "success");
       await fetchEmails();
     } catch (err) {
       setClassifyProgress(null);
@@ -304,6 +365,28 @@ function GmailPageContent() {
         </div>
         {isConnected && (
           <div className="flex items-center gap-2">
+            {/* Review button — shows count of needs_review emails */}
+            <button
+              type="button"
+              onClick={() => {
+                setReviewMode(!reviewMode);
+                if (!reviewMode) fetchReviewEmails();
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                reviewMode
+                  ? "bg-orange-100 text-orange-700 ring-1 ring-orange-200"
+                  : "bg-muted text-muted-foreground hover:bg-accent"
+              }`}
+            >
+              <RotateCw className="h-3.5 w-3.5" />
+              Cần review
+              {reviewEmails.length > 0 && (
+                <span className="rounded-full bg-orange-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">
+                  {reviewEmails.length}
+                </span>
+              )}
+            </button>
+
             {/* Classify button in header — always visible when there are unclassified emails */}
             {emails.length > 0 &&
               emails.some(
@@ -437,6 +520,10 @@ function GmailPageContent() {
                     email={selectedEmail}
                     onBack={handleBack}
                     onReply={handleReply}
+                    onReclassify={handleReclassify}
+                    reclassifying={reclassifying}
+                    onProcessAttachments={handleProcessAttachments}
+                    processingAttachments={processingAttachments}
                   />
                 </div>
               ) : (

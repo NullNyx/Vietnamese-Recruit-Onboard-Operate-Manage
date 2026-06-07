@@ -109,7 +109,7 @@ class ClassificationService:
                         extra={"gmail_message_id": email.gmail_message_id},
                     )
                     # Mark as classification_failed for manual review
-                    email.processing_status = "classification_failed"
+                    email.processing_status = "needs_review"
                     self._session.add(email)
                     return 0
 
@@ -240,11 +240,25 @@ class ClassificationService:
         """Persist classification result to the email record.
 
         Updates the email's category and processing_status fields.
+        If confidence is below needs_review_threshold, marks as needs_review
+        instead of classified.
 
         Args:
             email: The EmailMessage entity to update.
             result: The classification result to apply.
         """
         email.category = result.category.value
-        email.processing_status = "classified"
+        
+        # Dead-letter queue: if confidence below threshold, mark for human review
+        if result.confidence < self._settings.classification_needs_review_threshold:
+            email.processing_status = "needs_review"
+            logger.info(
+                "Email %s marked needs_review (confidence=%.2f < threshold=%.2f)",
+                email.gmail_message_id[:10],
+                result.confidence,
+                self._settings.classification_needs_review_threshold,
+            )
+        else:
+            email.processing_status = "classified"
+        
         self._session.add(email)

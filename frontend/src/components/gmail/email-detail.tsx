@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft, Reply, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Reply, ChevronDown, ChevronUp, RotateCw, FileText } from "lucide-react";
 import type { EmailMessage, MessageBodyResponse } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/types";
 import { getMessageBody } from "@/lib/api/gmail";
+import { AttachmentViewer } from "@/components/gmail/attachment-viewer";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -14,6 +15,10 @@ export interface EmailDetailProps {
   email: EmailMessage | null;
   onBack: () => void;
   onReply: (email: EmailMessage) => void;
+  onReclassify?: (emailId: string) => void;
+  reclassifying?: string | null;
+  onProcessAttachments?: (messageId: string) => void;
+  processingAttachments?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -51,7 +56,7 @@ function EmailDetailSkeleton() {
 // Component
 // ---------------------------------------------------------------------------
 
-export function EmailDetail({ email, onBack, onReply }: EmailDetailProps) {
+export function EmailDetail({ email, onBack, onReply, onReclassify, reclassifying, onProcessAttachments, processingAttachments }: EmailDetailProps) {
   const [body, setBody] = React.useState<MessageBodyResponse | null>(null);
   const [bodyLoading, setBodyLoading] = React.useState(false);
   const [bodyError, setBodyError] = React.useState<string | null>(null);
@@ -207,15 +212,47 @@ export function EmailDetail({ email, onBack, onReply }: EmailDetailProps) {
             )}
           </div>
 
-          {/* Reply button */}
-          <button
-            type="button"
-            onClick={() => onReply(email)}
-            className="shrink-0 flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            <Reply className="h-4 w-4" />
-            <span className="hidden sm:inline">Trả lời</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Process CV button — shown for recruitment emails with attachments */}
+            {email.category === "recruitment" && email.has_attachments && onProcessAttachments && (
+              <button
+                type="button"
+                onClick={() => onProcessAttachments(email.gmail_message_id)}
+                disabled={processingAttachments === email.gmail_message_id}
+                className="shrink-0 flex items-center gap-1.5 rounded-md bg-blue-100 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {processingAttachments === email.gmail_message_id ? "Đang xử lý CV..." : "Xử lý CV"}
+                </span>
+              </button>
+            )}
+
+            {/* Reclassify button — shown for needs_review emails */}
+            {email.processing_status === "needs_review" && onReclassify && (
+              <button
+                type="button"
+                onClick={() => onReclassify(email.id)}
+                disabled={reclassifying === email.id}
+                className="shrink-0 flex items-center gap-1.5 rounded-md bg-orange-100 px-3 py-1.5 text-sm font-medium text-orange-700 hover:bg-orange-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <RotateCw className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {reclassifying === email.id ? "Đang phân loại..." : "Phân loại lại"}
+                </span>
+              </button>
+            )}
+
+            {/* Reply button */}
+            <button
+              type="button"
+              onClick={() => onReply(email)}
+              className="shrink-0 flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Reply className="h-4 w-4" />
+              <span className="hidden sm:inline">Trả lời</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -261,6 +298,14 @@ export function EmailDetail({ email, onBack, onReply }: EmailDetailProps) {
           </>
         )}
       </div>
+
+      {/* Attachment viewer — shown when email has attachments */}
+      {email && (
+        <AttachmentViewer
+          messageId={email.gmail_message_id}
+          hasAttachments={email.has_attachments}
+        />
+      )}
     </div>
   );
 }
