@@ -8,10 +8,10 @@ sending, and attachment retrieval. All endpoints require authentication.
 from __future__ import annotations
 
 import asyncio
-import logging
 import base64
+import logging
 from typing import Annotated, Any
-from uuid import UUID
+from uuid import UUID (fix(gmail): resolve undefined name errors in router.py)
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
@@ -691,6 +691,7 @@ async def process_attachments(
 async def classify_emails(
     current_user: CurrentUserDep,
     email_repo: EmailRepositoryDep,
+    connection_service: ConnectionServiceDep,
     limit: int = Query(default=5, ge=1, le=20, description="Max emails to classify per request"),
 ) -> dict[str, Any] | JSONResponse:
     """Trigger AI classification for all unclassified emails.
@@ -712,7 +713,11 @@ async def classify_emails(
 
     settings = GmailSettings()
 
+<<<<<<< HEAD
     async def _do_classify() -> dict[str, Any]:
+=======
+    async def _do_classify(connection_service: ConnectionService) -> dict:
+>>>>>>> c74dbd2 (fix(gmail): resolve undefined name errors in router.py)
         from sqlmodel import select
 
         from src.modules.gmail.application.classification_service import (
@@ -914,7 +919,7 @@ async def classify_emails(
 
     try:
         return await asyncio.wait_for(
-            _do_classify(),
+            _do_classify(connection_service),
             timeout=settings.classification_request_timeout_seconds,
         )
     except TimeoutError:
@@ -1034,11 +1039,10 @@ async def list_emails_needing_review(
     Returns:
         MessageListResponse with list of emails needing review.
     """
+    from sqlalchemy import desc
     from sqlmodel import select
 
     from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
-
-    from sqlalchemy import desc
 
     statement = (
         select(EmailMessageEntity)
@@ -1128,10 +1132,15 @@ async def reclassify_email(
         )
 
     from src.modules.gmail.container import get_classification_service
+    from src.modules.gmail.infrastructure.audit_logger import AuditLogger
+    from src.modules.gmail.infrastructure.config import GmailSettings
+
+    gmail_settings = GmailSettings()  # type: ignore[call-arg]
+    audit_logger_instance = AuditLogger(email_repo.session, gmail_settings)
 
     classification_service = await get_classification_service(
         email_repo=email_repo,
-        audit_logger=audit_logger,
+        audit_logger=audit_logger_instance,
     )
     await classification_service.classify_single_email(
         user_id=current_user.id,
