@@ -248,7 +248,7 @@ class ClassificationService:
             result: The classification result to apply.
         """
         email.category = result.category.value
-        
+
         # Dead-letter queue: if confidence below threshold, mark for human review
         if result.confidence < self._settings.classification_needs_review_threshold:
             email.processing_status = "needs_review"
@@ -260,5 +260,5 @@ class ClassificationService:
             )
         else:
             email.processing_status = "classified"
-        
+
         self._session.add(email)
