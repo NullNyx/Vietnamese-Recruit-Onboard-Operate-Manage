@@ -101,8 +101,19 @@ class TestClassifyEndpointTimeout:
         from src.modules.identity.container import get_current_user
 
         # Override dependencies
+        from src.modules.gmail.container import get_connection_service
+
+        mock_connection_service = AsyncMock()
+        mock_connection_service.get_status = AsyncMock(
+            return_value=MagicMock(status="connected")
+        )
+
+        async def _mock_get_connection_service():
+            return mock_connection_service
+
         app.dependency_overrides[get_current_user] = lambda: mock_user
         app.dependency_overrides[get_email_repository] = lambda: mock_email_repo
+        app.dependency_overrides[get_connection_service] = _mock_get_connection_service
 
         with patch(
             "src.modules.gmail.infrastructure.config.GmailSettings",
@@ -163,6 +174,18 @@ class TestClassifyEndpointTimeout:
         app.dependency_overrides[get_current_user] = lambda: mock_user
         app.dependency_overrides[get_email_repository] = lambda: mock_email_repo
 
+
+        from src.modules.gmail.container import get_connection_service
+
+        mock_connection_service = AsyncMock()
+        mock_connection_service.get_status = AsyncMock(
+            return_value=MagicMock(status="connected")
+        )
+
+        async def _mock_get_connection_service():
+            return mock_connection_service
+
+        app.dependency_overrides[get_connection_service] = _mock_get_connection_service
         with patch(
             "src.modules.gmail.infrastructure.config.GmailSettings",
             return_value=test_settings,
@@ -228,6 +251,18 @@ class TestClassifyEndpointTimeout:
         app.dependency_overrides[get_current_user] = lambda: mock_user
         app.dependency_overrides[get_email_repository] = lambda: mock_email_repo
 
+
+        from src.modules.gmail.container import get_connection_service
+
+        mock_connection_service = AsyncMock()
+        mock_connection_service.get_status = AsyncMock(
+            return_value=MagicMock(status="connected")
+        )
+
+        async def _mock_get_connection_service():
+            return mock_connection_service
+
+        app.dependency_overrides[get_connection_service] = _mock_get_connection_service
         with patch(
             "src.modules.gmail.infrastructure.config.GmailSettings",
             return_value=test_settings,
