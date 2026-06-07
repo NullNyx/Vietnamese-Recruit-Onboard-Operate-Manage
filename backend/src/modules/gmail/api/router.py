@@ -8,6 +8,7 @@ sending, and attachment retrieval. All endpoints require authentication.
 from __future__ import annotations
 
 import asyncio
+import logging
 import base64
 from typing import Annotated, Any
 from uuid import UUID
@@ -54,6 +55,8 @@ from src.modules.gmail.infrastructure.email_repository import EmailRepository
 from src.modules.gmail.infrastructure.gmail_adapter import GmailAdapter
 from src.modules.identity.container import get_current_user
 from src.modules.identity.domain.entities import User
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Type aliases for injected dependencies

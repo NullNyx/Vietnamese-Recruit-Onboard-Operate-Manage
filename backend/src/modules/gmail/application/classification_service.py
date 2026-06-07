@@ -109,7 +109,7 @@ class ClassificationService:
                         extra={"gmail_message_id": email.gmail_message_id},
                     )
                     # Mark as classification_failed for manual review
-                    email.processing_status = "needs_review"
+                    email.processing_status = "classification_failed"
                     self._session.add(email)
                     return 0
 
