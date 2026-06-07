@@ -308,6 +308,7 @@ async def get_attachment_service(
         audit_logger=audit_logger,
     )
 
+
 async def get_classification_service(
     email_repo: EmailRepository = Depends(get_email_repository),
     audit_logger: AuditLogger = Depends(get_audit_logger),

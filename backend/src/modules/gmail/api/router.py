@@ -544,8 +544,6 @@ async def fetch_attachments(
     }
 
 
-
-
 @router.post(
     "/messages/{message_id}/process-attachments",
     responses={
@@ -596,9 +594,7 @@ async def process_attachments(
     access_token = await _get_user_access_token(current_user.id, connection_service)
 
     # Find email record
-    stmt = select(EmailMessageEntity).where(
-        EmailMessageEntity.gmail_message_id == message_id
-    )
+    stmt = select(EmailMessageEntity).where(EmailMessageEntity.gmail_message_id == message_id)
     result = await email_repo.session.execute(stmt)
     email = result.scalar_one_or_none()
 
@@ -674,6 +670,7 @@ async def process_attachments(
             for doc in cv_documents
         ],
     }
+
 
 # ---------------------------------------------------------------------------
 # Classification endpoints
@@ -796,8 +793,7 @@ async def classify_emails(
         # Auto-process CV attachments for recruitment emails
         cv_processed_count = 0
         recruitment_with_attachments = [
-            e for e in unclassified_emails
-            if e.category == "recruitment" and e.has_attachments
+            e for e in unclassified_emails if e.category == "recruitment" and e.has_attachments
         ]
 
         if recruitment_with_attachments:
@@ -813,9 +809,7 @@ async def classify_emails(
 
                     # Fetch attachment binary data from Gmail API
                     gmail_adapter = await get_gmail_adapter()
-                    access_token = await _get_user_access_token(
-                        current_user.id, connection_service
-                    )
+                    access_token = await _get_user_access_token(current_user.id, connection_service)
 
                     response = await gmail_adapter._http_client.get(
                         f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{email.gmail_message_id}",
@@ -825,9 +819,7 @@ async def classify_emails(
                     response.raise_for_status()
                     msg_data = response.json()
 
-                    attachments_meta = _extract_attachment_metadata(
-                        msg_data.get("payload", {})
-                    )
+                    attachments_meta = _extract_attachment_metadata(msg_data.get("payload", {}))
 
                     if not attachments_meta:
                         classify_logger.info(
@@ -864,9 +856,7 @@ async def classify_emails(
                     ]
 
                     # Run CV processing pipeline
-                    cv_processor = await get_cv_processor_service(
-                        session=email_repo.session
-                    )
+                    cv_processor = await get_cv_processor_service(session=email_repo.session)
                     cv_documents = await cv_processor.process_cv_from_email(
                         email_message_id=email.id,
                         attachments=attachment_inputs,
@@ -1006,9 +996,11 @@ def _walk_parts_for_attachments(
     for sub_part in part.get("parts", []):
         _walk_parts_for_attachments(sub_part, attachments)
 
+
 # ---------------------------------------------------------------------------
 # Dead-letter queue endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/review/emails",
