@@ -1,20 +1,18 @@
 """Add attendance_allowed_networks to organization_settings.
 
-Revision ID: 018
-Revises: 017
+Revision ID: 031
+Revises: 030
 Create Date: 2026-06-08
 """
 
 from alembic import op
 import sqlalchemy as sa
 
-
 # revision identifiers
 revision = "031"
 down_revision = "030"
 branch_labels = None
 depends_on = None
-
 
 def upgrade() -> None:
     """Add attendance_allowed_networks column to organization_settings table."""
@@ -27,7 +25,6 @@ def upgrade() -> None:
             server_default="{}",
         ),
     )
-
 
 def downgrade() -> None:
     """Remove attendance_allowed_networks column."""

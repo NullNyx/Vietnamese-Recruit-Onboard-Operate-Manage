@@ -258,7 +258,7 @@ class OrganizationSettingsRepository:
     _MAX_NETWORKS = 20
     _CIDR_RE = re.compile(
         r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}"
-        r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/(?:[0-9]|[12][0-9]|3[0-2])$"
+        r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:/(?:[0-9]|[12][0-9]|3[0-2]))?$"
     )
 
     async def get_attendance_allowed_networks(self) -> list[str]:
@@ -345,22 +345,33 @@ class OrganizationSettingsRepository:
     def _normalize_and_validate_networks(self, networks: list[str]) -> list[str]:
         """Normalize and validate a list of CIDR strings.
 
+        Plain IPv4 addresses (e.g. ``192.168.1.10``) are automatically
+        converted to ``/32`` CIDR notation.
+
         Args:
-            networks: Raw CIDR strings from the caller.
+            networks: Raw CIDR or plain-IPv4 strings from the caller.
 
         Returns:
             A deduplicated list of normalized, validated CIDR strings.
 
         Raises:
-            ValueError: If any CIDR fails validation or the list exceeds
+            ValueError: If any entry fails validation or the list exceeds
                 the maximum allowed count.
         """
+        import ipaddress as _ip
+
         if len(networks) > self._MAX_NETWORKS:
             raise ValueError(f"Too many networks (max {self._MAX_NETWORKS})")
         normalized: list[str] = []
         seen: set[str] = set()
         for n in networks:
             nn = n.strip()
+            # Try plain IP first → normalize to /32
+            try:
+                addr = _ip.ip_address(nn)
+                nn = f"{addr}/32"
+            except ValueError:
+                pass
             if not self._CIDR_RE.match(nn):
                 raise ValueError(f"Invalid CIDR: {n!r}")
             if nn in seen:

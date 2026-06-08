@@ -5,8 +5,7 @@ the office network allowlist. All endpoints require authentication,
 and write operations require HR/Admin role.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, Query
 
 from src.modules.attendance.api.schemas import (
     NetworkAddRequest,
@@ -16,39 +15,24 @@ from src.modules.attendance.api.schemas import (
 from src.modules.attendance.application.attendance_settings_service import (
     AttendanceSettingsService,
 )
-from src.modules.identity.container import get_current_user, get_db_session
+from src.modules.attendance.container import get_attendance_settings_service
+from src.modules.identity.container import get_current_user
 from src.modules.identity.domain.entities import User, UserRole
+from src.modules.identity.domain.exceptions import AccessDeniedError
 
 attendance_router = APIRouter(prefix="/api/attendance", tags=["attendance"])
 
 
-def get_attendance_settings_service(
-    session: AsyncSession = Depends(get_db_session),
-) -> AttendanceSettingsService:
-    """Provide an AttendanceSettingsService instance."""
-    from src.modules.recruitment.infrastructure.org_settings_repository import (
-        OrganizationSettingsRepository,
-    )
-
-    org_repo = OrganizationSettingsRepository(session=session)
-    return AttendanceSettingsService(org_repo=org_repo)
-
-
-def require_hr(user: User = Depends(get_current_user)) -> User:
+def _require_hr(user: User = Depends(get_current_user)) -> User:
     """Dependency that requires HR/Admin role."""
     if user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="HR/Admin access required")
-    return user
-
-
-def require_auth(user: User = Depends(get_current_user)) -> User:
-    """Dependency that requires authentication."""
+        raise AccessDeniedError()
     return user
 
 
 @attendance_router.get("/settings/network", response_model=NetworkAllowlistResponse)
 async def get_network_allowlist(
-    user: User = Depends(require_auth),
+    user: User = Depends(get_current_user),
     service: AttendanceSettingsService = Depends(get_attendance_settings_service),
 ) -> NetworkAllowlistResponse:
     """Get the current attendance network allowlist.
@@ -63,7 +47,7 @@ async def get_network_allowlist(
 @attendance_router.put("/settings/network", response_model=NetworkAllowlistResponse)
 async def update_network_allowlist(
     update: NetworkAllowlistUpdate,
-    user: User = Depends(require_hr),
+    user: User = Depends(_require_hr),
     service: AttendanceSettingsService = Depends(get_attendance_settings_service),
 ) -> NetworkAllowlistResponse:
     """Replace the entire attendance network allowlist.
@@ -77,7 +61,7 @@ async def update_network_allowlist(
 @attendance_router.post("/settings/network/add", response_model=NetworkAllowlistResponse)
 async def add_to_network_allowlist(
     add_request: NetworkAddRequest,
-    user: User = Depends(require_hr),
+    user: User = Depends(_require_hr),
     service: AttendanceSettingsService = Depends(get_attendance_settings_service),
 ) -> NetworkAllowlistResponse:
     """Add one or more CIDRs to the allowlist.
@@ -94,7 +78,7 @@ async def add_to_network_allowlist(
 )
 async def remove_from_network_allowlist(
     cidr: str = Query(..., description="CIDR notation to remove"),
-    user: User = Depends(require_hr),
+    user: User = Depends(_require_hr),
     service: AttendanceSettingsService = Depends(get_attendance_settings_service),
 ) -> NetworkAllowlistResponse:
     """Remove a CIDR from the allowlist.
