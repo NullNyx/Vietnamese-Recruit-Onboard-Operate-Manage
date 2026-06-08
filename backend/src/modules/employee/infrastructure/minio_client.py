@@ -30,13 +30,13 @@ class MinIOClient:
 
     @asynccontextmanager
     async def _client_context(self) -> AsyncIterator[Any]:
-        client = self._session.client(
+        async with self._session.client(
             "s3",
             endpoint_url=self._endpoint_url,
             aws_access_key_id=self._settings.minio_access_key,
             aws_secret_access_key=self._settings.minio_secret_key,
-        )
-        yield client
+        ) as client:
+            yield client
 
     async def _ensure_bucket(self, client: Any) -> None:
         """Create the bucket if it doesn't already exist."""

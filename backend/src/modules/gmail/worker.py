@@ -83,26 +83,37 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     """ARQ worker shutdown hook.
 
     Cleans up shared resources (HTTP client, Redis connection).
+    Clears heartbeat BEFORE closing Redis so the delete succeeds.
 
     Args:
         ctx: The ARQ worker context dictionary.
     """
+    # Clear heartbeat first while Redis is still connected
+    redis_client: redis.Redis | None = ctx.get("redis_client")
+    if redis_client:
+        try:
+            await redis_client.delete("runtime:heartbeat:gmail-worker")
+        except Exception:
+            logger.warning("Failed to clear heartbeat on shutdown")
+        await redis_client.aclose()
+
     http_client: httpx.AsyncClient | None = ctx.get("http_client")
     if http_client:
         await http_client.aclose()
 
-    redis_client: redis.Redis | None = ctx.get("redis_client")
-    if redis_client:
-        await redis_client.aclose()
-
     logger.info("Gmail ARQ worker shut down")
 
-    # Clear heartbeat on shutdown
-    try:
-        if redis_client:
-            await redis_client.delete("runtime:heartbeat:gmail-worker")
-    except Exception:
-        pass
+
+async def _refresh_heartbeat(ctx: dict[str, Any]) -> None:
+    """Refresh the runtime heartbeat key in Redis."""
+    redis_client: redis.Redis | None = ctx.get("redis_client")
+    if redis_client:
+        try:
+            await redis_client.set(
+                "runtime:heartbeat:gmail-worker", __import__("time").time(), ex=600
+            )
+        except Exception:
+            pass
 
 
 async def poll_gmail_emails(ctx: dict[str, Any]) -> None:

@@ -27,6 +27,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import redis.asyncio as redis
+from arq import cron
 from arq.connections import RedisSettings
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -97,6 +98,20 @@ async def shutdown(ctx: dict[str, Any]) -> None:
             pass
 
 
+async def refresh_heartbeat(ctx: dict[str, Any]) -> None:
+    """Refresh the onboarding worker heartbeat in Redis."""
+    redis_client = ctx.get("redis_client")
+    if redis_client:
+        try:
+            await redis_client.set(
+                "runtime:heartbeat:onboarding-worker",
+                __import__("time").time(),
+                ex=600,
+            )
+        except Exception:
+            pass
+
+
 # Load settings for the Redis connection configuration.
 _onboarding_settings = OnboardingSettings()
 
@@ -117,3 +132,10 @@ class OnboardingWorkerSettings:
     redis_settings = RedisSettings.from_dsn(_onboarding_settings.redis_url)
 
     max_tries = 3
+
+    cron_jobs = [
+        cron(
+            refresh_heartbeat,
+            minute={1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 43, 46, 49, 52, 55, 58},
+        )
+    ]

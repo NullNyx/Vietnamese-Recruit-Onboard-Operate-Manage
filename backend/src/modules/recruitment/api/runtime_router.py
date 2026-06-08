@@ -16,7 +16,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.employee.infrastructure.config import EmployeeSettings
-from src.modules.identity.container import get_current_user, get_db_session
+from src.modules.identity.api.admin_router import require_admin
+from src.modules.identity.container import get_db_session
 from src.modules.identity.domain.entities import User
 from src.modules.identity.infrastructure.config import AuthSettings
 
@@ -36,7 +37,7 @@ class ServiceStatus:
 @runtime_router.get("/health")
 async def runtime_health(
     session: AsyncSession = Depends(get_db_session),
-    _current_user: User = Depends(get_current_user),
+    _current_user: User = Depends(require_admin),
 ) -> dict[str, Any]:
     """Check runtime health of all infrastructure services.
 
