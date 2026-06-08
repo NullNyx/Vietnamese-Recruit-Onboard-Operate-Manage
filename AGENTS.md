@@ -69,7 +69,8 @@ Build the answer from these sources of truth (not from memory):
   disk but not registered there is not live.
 - **Why things are the way they are** — `docs/decisions/` ADRs (e.g. scope is the
   recruit→onboard Backbone Flow; attendance/payroll/self-service were shelved).
-- **Open work** — GitHub Issues via `gh issue list` (filter by label/state).
+- **Open work** — Jira Tasks via Atlassian MCP (project `KAN`; filter by
+  status/label/assignee).
 - **Recent activity** — `git log --oneline -n 20` and merged PRs for momentum.
 
 Then answer in the shape the user asked for:
@@ -138,7 +139,7 @@ Create docs lazily — only when there is something real to record.
 - A decision that is hard to reverse AND surprising without context AND the result
   of a real trade-off → add an ADR to `docs/decisions/` (next sequential number,
   short title + 1–3 sentences).
-- Issues, PRDs, and progress/task lists go to GitHub Issues, never into markdown
+- Issues, PRDs, and progress/task lists go to Jira Tasks, never into markdown
   under `docs/`.
 
 Allowed layout — do not create anything outside it:
@@ -219,7 +220,7 @@ infrastructure/` with `container.py` for DI, matching existing modules.
 
 ## Agent skills config
 
-- Issue tracker: GitHub Issues via `gh` CLI → `docs/agents/issue-tracker.md`.
+- Issue tracker: Jira Tasks via Atlassian MCP → `docs/agents/issue-tracker.md`.
 - Triage labels: five canonical roles, default strings → `docs/agents/triage-labels.md`.
 - Domain docs: single-context, `CONTEXT.md` + `docs/decisions/` → `docs/agents/domain.md`.
 
@@ -227,7 +228,7 @@ infrastructure/` with `container.py` for DI, matching existing modules.
 
 ### Issue tracker
 
-GitHub Issues via `gh`. See `docs/agents/issue-tracker.md`.
+Jira Tasks via Atlassian MCP. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
