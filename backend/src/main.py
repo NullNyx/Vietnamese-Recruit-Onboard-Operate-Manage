@@ -43,6 +43,7 @@ from src.modules.recruitment.api.metrics_router import metrics_router  # noqa: E
 
 logger = logging.getLogger(__name__)
 
+
 async def _bootstrap_super_admin() -> None:
     """Bootstrap the super admin user at application startup.
 
@@ -81,6 +82,7 @@ async def _bootstrap_super_admin() -> None:
                     "the first administrator."
                 )
 
+
 async def _seed_demo_data() -> None:
     """Seed demo data for local Docker development when enabled."""
     from src.modules.identity.container import _get_async_session_maker, get_settings
@@ -97,6 +99,7 @@ async def _seed_demo_data() -> None:
         if seeded:
             await session.commit()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler for startup and shutdown events."""
@@ -105,6 +108,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await _seed_demo_data()
     yield
     # Shutdown (nothing to clean up currently)
+
 
 app = FastAPI(
     title="Vroom HR",
@@ -131,6 +135,7 @@ register_gmail_error_handlers(app)
 register_recruitment_error_handlers(app)
 register_onboarding_error_handlers(app)
 register_attendance_error_handlers(app)
+
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:

@@ -16,18 +16,14 @@ class NetworkAllowlistUpdate(BaseModel):
     """Request schema for updating network allowlist."""
 
     networks: list[str] = Field(
-        default_factory=list,
-        description="List of CIDR notations to replace current allowlist"
+        default_factory=list, description="List of CIDR notations to replace current allowlist"
     )
 
 
 class NetworkAddRequest(BaseModel):
     """Request schema for adding CIDRs to allowlist."""
 
-    networks: list[str] = Field(
-        min_length=1,
-        description="List of CIDR notations to add"
-    )
+    networks: list[str] = Field(min_length=1, description="List of CIDR notations to add")
 
 
 class NetworkRemoveRequest(BaseModel):

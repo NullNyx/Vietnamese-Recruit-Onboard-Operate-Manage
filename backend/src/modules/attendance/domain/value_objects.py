@@ -25,7 +25,7 @@ class CidrRange:
 
     def __post_init__(self) -> None:
         # Normalize the CIDR string
-        object.__setattr__(self, 'cidr', str(self.network))
+        object.__setattr__(self, "cidr", str(self.network))
 
     @classmethod
     def create(cls, cidr: str) -> "CidrRange":
