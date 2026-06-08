@@ -1,10 +1,9 @@
 """Repository for Organization settings (single-row company configuration).
 
 Provides async access to the single ``OrganizationSettings`` row, which holds
-the canonical IANA timezone used to interpret and render interview times on
-Google Calendar events. On first access the configured default timezone is
-seeded and persisted, enforcing single-row semantics. Timezone strings are
-validated against ``zoneinfo.available_timezones()`` whenever they are written.
+the canonical IANA timezone, allowed email domains, and attendance network
+configuration. On first access the configured default timezone is seeded and
+persisted, enforcing single-row semantics.
 
 Requirements: 11.1, 11.2
 """
@@ -251,3 +250,132 @@ class OrganizationSettingsRepository:
         """
         if timezone not in available_timezones():
             raise ValueError(f"Invalid timezone: {timezone!r}")
+
+    # ------------------------------------------------------------------
+    # Attendance network config
+    # ------------------------------------------------------------------
+
+    _MAX_NETWORKS = 20
+    _CIDR_RE = re.compile(
+        r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}"
+        r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:/(?:[0-9]|[12][0-9]|3[0-2]))?$"
+    )
+
+    async def get_attendance_allowed_networks(self) -> list[str]:
+        """Return the Organization's allowed attendance IP/CIDR ranges.
+
+        Returns:
+            The list of CIDR strings. Empty list means allow all.
+        """
+        settings_row = await self._get_row()
+        if settings_row is None:
+            return []
+        return list(settings_row.attendance_allowed_networks or [])
+
+    async def set_attendance_allowed_networks(self, networks: list[str]) -> list[str]:
+        """Replace the entire attendance_allowed_networks list.
+
+        Args:
+            networks: The new list of CIDR strings.
+
+        Returns:
+            The persisted list of networks.
+
+        Raises:
+            ValueError: If any network is invalid or exceeds the limit.
+        """
+        normalized = self._normalize_and_validate_networks(networks)
+        settings_row = await self._get_row()
+        if settings_row is None:
+            settings_row = OrganizationSettings(
+                timezone=self.default_timezone,
+                attendance_allowed_networks=normalized,
+            )
+        else:
+            settings_row.attendance_allowed_networks = normalized
+        self.session.add(settings_row)
+        await self.session.flush()
+        return list(settings_row.attendance_allowed_networks)
+
+    async def add_networks(self, networks: list[str]) -> list[str]:
+        """Add one or more CIDRs to the attendance allowlist (set semantics).
+
+        Args:
+            networks: CIDRs to add.
+
+        Returns:
+            The updated full list of allowed networks.
+
+        Raises:
+            ValueError: If any CIDR is invalid, duplicate, or the list
+                would exceed the limit.
+        """
+        new_normalized = self._normalize_and_validate_networks(networks)
+        current = await self.get_attendance_allowed_networks()
+        current_set = set(current)
+        duplicates = [n for n in new_normalized if n in current_set]
+        if duplicates:
+            raise ValueError(f"Networks already allowed: {', '.join(duplicates)}")
+        combined = current + new_normalized
+        if len(combined) > self._MAX_NETWORKS:
+            raise ValueError(
+                f"Too many networks (max {self._MAX_NETWORKS}, would have {len(combined)})"
+            )
+        return await self.set_attendance_allowed_networks(combined)
+
+    async def remove_network(self, cidr: str) -> list[str]:
+        """Remove a single CIDR from the attendance allowlist.
+
+        Args:
+            cidr: The CIDR string to remove.
+
+        Returns:
+            The updated full list of allowed networks.
+
+        Raises:
+            ValueError: If the CIDR is not in the current list.
+        """
+        normalized = cidr.strip()
+        current = await self.get_attendance_allowed_networks()
+        if normalized not in current:
+            raise ValueError(f"CIDR not found: {normalized}")
+        updated = [n for n in current if n != normalized]
+        return await self.set_attendance_allowed_networks(updated)
+
+    def _normalize_and_validate_networks(self, networks: list[str]) -> list[str]:
+        """Normalize and validate a list of CIDR strings.
+
+        Plain IPv4 addresses (e.g. ``192.168.1.10``) are automatically
+        converted to ``/32`` CIDR notation.
+
+        Args:
+            networks: Raw CIDR or plain-IPv4 strings from the caller.
+
+        Returns:
+            A deduplicated list of normalized, validated CIDR strings.
+
+        Raises:
+            ValueError: If any entry fails validation or the list exceeds
+                the maximum allowed count.
+        """
+        import ipaddress as _ip
+
+        if len(networks) > self._MAX_NETWORKS:
+            raise ValueError(f"Too many networks (max {self._MAX_NETWORKS})")
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for n in networks:
+            nn = n.strip()
+            # Try plain IP first → normalize to /32
+            try:
+                addr = _ip.ip_address(nn)
+                nn = f"{addr}/32"
+            except ValueError:
+                pass
+            if not self._CIDR_RE.match(nn):
+                raise ValueError(f"Invalid CIDR: {n!r}")
+            if nn in seen:
+                raise ValueError(f"Duplicate CIDR: {n!r}")
+            seen.add(nn)
+            normalized.append(nn)
+        return normalized

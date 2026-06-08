@@ -13,6 +13,10 @@ load_dotenv()
 
 from fastapi import FastAPI  # noqa: E402
 
+from src.modules.attendance.api.error_handler import (  # noqa: E402
+    register_attendance_error_handlers,
+)
+from src.modules.attendance.api.router import attendance_router  # noqa: E402
 from src.modules.employee.api.error_handler import (  # noqa: E402
     register_employee_error_handlers,
 )
@@ -122,6 +126,7 @@ app.include_router(candidate_router)
 app.include_router(cv_review_router)
 app.include_router(metrics_router)
 app.include_router(onboarding_router)
+app.include_router(attendance_router)
 
 # Register exception handlers.
 register_auth_error_handlers(app)
@@ -129,6 +134,7 @@ register_employee_error_handlers(app)
 register_gmail_error_handlers(app)
 register_recruitment_error_handlers(app)
 register_onboarding_error_handlers(app)
+register_attendance_error_handlers(app)
 
 
 @app.get("/health")

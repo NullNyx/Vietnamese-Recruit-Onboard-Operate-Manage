@@ -134,9 +134,9 @@ class RecruitmentAuditLog(SQLModel, table=True):
 class OrganizationSettings(SQLModel, table=True):
     """Single-row settings for the Organization (the company deployment).
 
-    Holds the canonical IANA timezone used to interpret and render
-    interview times on Google Calendar events. The repository enforces
-    single-row semantics, seeding the configured default on first access.
+    Holds the canonical IANA timezone, allowed email domains, and
+    attendance network configuration. The repository enforces single-row
+    semantics, seeding the configured default on first access.
     """
 
     __tablename__ = "organization_settings"
@@ -144,6 +144,9 @@ class OrganizationSettings(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     timezone: str = Field(default="Asia/Ho_Chi_Minh", max_length=64, nullable=False)
     allowed_domains: list[str] = Field(
+        sa_column=Column(ARRAY(String), nullable=False, server_default="{}"),
+    )
+    attendance_allowed_networks: list[str] = Field(
         sa_column=Column(ARRAY(String), nullable=False, server_default="{}"),
     )
     created_at: datetime = Field(

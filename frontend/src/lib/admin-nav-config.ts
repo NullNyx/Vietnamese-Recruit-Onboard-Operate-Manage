@@ -22,6 +22,7 @@ import {
   KeyRound,
   ScrollText,
   Mail,
+  Shield,
 } from "lucide-react";
 import type { HeaderNavConfig } from "./header-nav-config";
 
@@ -89,8 +90,9 @@ export const adminNavConfig: HeaderNavConfig = {
         { href: "/admin/domains", label: "Domains", icon: Globe },
         { href: "/admin/audit-logs", label: "Audit logs", icon: ScrollText },
         { href: "/gmail", label: "Gmail", icon: Mail },
+        { href: "/settings/organization", label: "Cấu hình mạng", icon: Shield },
       ],
-      activeRoutes: ["/admin", "/gmail"],
+      activeRoutes: ["/admin", "/gmail", "/settings/organization"],
     },
   ],
 };
