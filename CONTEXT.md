@@ -43,6 +43,22 @@ The employee-facing side of the system for active Employees. It is distinct
 from the HR admin side and is used for employee-owned views and actions.
 _Avoid_: Portal, Employee dashboard, User area
 
+**Attendance Record**:
+A daily timekeeping record for one Employee on one work date. It captures the
+Employee's presence for that day, distinct from leave, overtime, and payroll.
+_Avoid_: Presence status, Shift, Timesheet
+
+**Employee Request**:
+An Employee-submitted request that requires HR review before it takes effect,
+such as leave or overtime. It is owned by the submitting Employee and decided by
+HR.
+_Avoid_: Ticket, Approval item, Form submission
+
+**Payslip**:
+A payroll statement for one Employee and one pay period. It presents payroll
+amounts for Employee review and is distinct from the payroll calculation engine.
+_Avoid_: Salary record, Payroll run, Payment
+
 ## AI Capabilities
 
 The system has three distinct AI concepts. They are NOT the same thing and must
@@ -63,6 +79,11 @@ interview-invitation or congratulations email), but it never writes to the
 database on its own — HR confirms every write (human-in-the-loop). Employee-side
 assistant is a future extension, deferred with the attendance/leave modules.
 _Avoid_: Chatbot (too generic), Agent (implies autonomous writes)
+
+**Employee Assistant**:
+A conversational assistant for active Employees. It can read only the Employee's
+own data and draft Employee-owned actions, but it never writes on its own.
+_Avoid_: Employee AI Agent, Employee Chatbot, Self-service bot
 
 **AI Agent (autonomous)**:
 A hypothetical future capability where AI decides and executes write actions on

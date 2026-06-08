@@ -1,22 +1,62 @@
-# Issue tracker: GitHub
+# Issue tracker: Jira
 
-Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
+Issues, PRDs, and implementation tasks for this repo live as Jira Tasks in the
+`KAN` project on `https://nullnyx.atlassian.net/`. Use Atlassian MCP for all Jira
+operations.
 
 ## Conventions
 
-- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
-- **Read an issue**: `gh issue view <number> --comments`, filtering comments by `jq` and also fetching labels.
-- **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
-- **Comment on an issue**: `gh issue comment <number> --body "..."`
-- **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
-- **Close**: `gh issue close <number> --comment "..."`
+- **Create a task**: use Jira project key `KAN`, issue type `Task`, and a concise
+  English summary. Leave assignee empty unless the user explicitly provides one.
+- **Read a task**: fetch by Jira key, e.g. `KAN-14`, including description,
+  status, labels, comments, assignee, and linked issues.
+- **List tasks**: use JQL through Atlassian MCP. Common filters:
+  - `project = KAN ORDER BY created DESC`
+  - `project = KAN AND statusCategory != Done ORDER BY created DESC`
+  - `project = KAN AND labels = ready-for-agent ORDER BY created DESC`
+- **Comment on a task**: add a Jira comment on the task key.
+- **Apply labels**: update Jira labels. Use the strings in
+  `docs/agents/triage-labels.md`.
+- **Dependencies**: use Jira issue links. For directional links, use `Blocks` so
+  the blocker blocks the dependent task.
+- **Close / transition**: transition the Jira task only when explicitly asked or
+  when a triage workflow says to do so.
 
-Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone. This repo's remote is `NullNyx/Vietnamese-Recruit-Onboard-Operate-Manage`.
+## Task body shape
+
+When a skill says "publish issues" or "create implementation tickets", create
+Jira Tasks with this structure:
+
+```markdown
+## What to build
+
+## Context
+
+## Output cần đạt
+
+## Acceptance criteria
+
+- [ ] ...
+
+## Codex workflow
+
+## Blocked by
+```
+
+Keep task descriptions implementation-guiding but not code-stale: mention domain
+terms, APIs, acceptance boundaries, tests, and relevant ADRs; avoid long file-path
+lists unless the path is the actual subject of the task.
 
 ## When a skill says "publish to the issue tracker"
 
-Create a GitHub issue.
+Create Jira Tasks in project `KAN`, not GitHub Issues.
 
 ## When a skill says "fetch the relevant ticket"
 
-Run `gh issue view <number> --comments`.
+Read the Jira task by key, e.g. `KAN-14`.
+
+## Atlassian MCP note
+
+The older `https://mcp.atlassian.com/v1/sse` transport is deprecated after
+2026-06-30. Prefer `https://mcp.atlassian.com/v1/mcp` when configuring MCP
+clients that support the newer transport.
