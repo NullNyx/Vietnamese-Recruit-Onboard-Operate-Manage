@@ -47,3 +47,6 @@ Thumbs.db
 
 # ---- MCP (local config) ----
 .mcp.json
+
+# ---- Local code intelligence ----
+.codegraph/

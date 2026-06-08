@@ -4,6 +4,23 @@ Issues, PRDs, and implementation tasks for this repo live as Jira Tasks in the
 `KAN` project on `https://nullnyx.atlassian.net/`. Use Atlassian MCP for all Jira
 operations.
 
+## Fast path for checking a task
+
+When the user asks to check a Jira task, do not browse the web, scan source code,
+or list MCP tools first. Call Atlassian MCP directly:
+
+- Tool: `getJiraIssue`
+- `cloudId`: `https://nullnyx.atlassian.net/`
+- `issueIdOrKey`: the requested key, e.g. `KAN-8` or `KAN-08`
+- `fields`: `summary`, `description`, `status`, `labels`, `comment`, `assignee`,
+  `issuelinks`, `created`, `updated`, `issuetype`, `priority`, `reporter`
+- `responseContentFormat`: `markdown`
+
+If the direct call fails because the Atlassian tools are not exposed in the
+current session, use the configured `atlassian` MCP server through `mcp-remote`
+and call `tools/call` with `name: "getJiraIssue"`. Only list tools or resources
+when diagnosing that fallback.
+
 ## Conventions
 
 - **Create a task**: use Jira project key `KAN`, issue type `Task`, and a concise
