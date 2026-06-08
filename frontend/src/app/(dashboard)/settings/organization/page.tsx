@@ -18,10 +18,9 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   getNetworkAllowlist,
-  updateNetworkAllowlist,
+
   addNetworkToAllowlist,
   removeNetworkFromAllowlist,
-  type NetworkAllowlistResponse,
 } from "@/lib/api/attendance";
 
 function isValidCIDR(cidr: string): boolean {
@@ -99,21 +98,6 @@ export default function OrganizationSettingsPage() {
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to remove network");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveAll = async () => {
-    try {
-      setSaving(true);
-      setError(null);
-      const data = await updateNetworkAllowlist(networks);
-      setNetworks(data.networks);
-      setSuccess("Đã lưu cấu hình thành công");
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save networks");
     } finally {
       setSaving(false);
     }
