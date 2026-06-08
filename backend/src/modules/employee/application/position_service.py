@@ -8,7 +8,7 @@ with active employees).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from src.modules.employee.domain.entities import Position
@@ -50,7 +50,7 @@ class PositionService:
         """
         return await self._position_repo.list_all()
 
-    async def create_position(self, data: dict) -> Position:
+    async def create_position(self, data: dict[str, Any]) -> Position:
         """Create a new position.
 
         Validates that the position name is unique before persisting.
@@ -80,7 +80,7 @@ class PositionService:
 
         return await self._position_repo.create(position)
 
-    async def update_position(self, position_id: UUID, data: dict) -> Position:
+    async def update_position(self, position_id: UUID, data: dict[str, Any]) -> Position:
         """Update an existing position.
 
         Validates that the position exists and that the new name (if changed)

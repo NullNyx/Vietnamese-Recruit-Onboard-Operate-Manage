@@ -8,8 +8,13 @@ the authenticated user to have the Admin role.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from src.modules.recruitment.infrastructure.org_settings_repository import (
+        OrganizationSettingsRepository,
+    )
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -467,7 +472,7 @@ async def update_oauth_config(
 
 async def get_org_settings_repo(
     session: AsyncSession = Depends(get_db_session),
-):
+) -> OrganizationSettingsRepository:
     """Provide an OrganizationSettingsRepository instance.
 
     Args:
@@ -486,7 +491,7 @@ async def get_org_settings_repo(
 @admin_router.get("/organization/domains", response_model=DomainListResponse)
 async def list_domains(
     admin_user: AdminUserDep,
-    org_repo=Depends(get_org_settings_repo),
+    org_repo: OrganizationSettingsRepository = Depends(get_org_settings_repo),
 ) -> DomainListResponse:
     """List the Organization's allowed login domains.
 
@@ -508,7 +513,7 @@ async def list_domains(
 async def add_domains(
     body: DomainAddRequest,
     admin_user: AdminUserDep,
-    org_repo=Depends(get_org_settings_repo),
+    org_repo: OrganizationSettingsRepository = Depends(get_org_settings_repo),
     audit_service: AuditService = Depends(get_audit_service),
 ) -> DomainListResponse:
     """Add one or more domains to the allowed list.
@@ -545,7 +550,7 @@ async def add_domains(
 async def replace_domains(
     body: DomainReplaceRequest,
     admin_user: AdminUserDep,
-    org_repo=Depends(get_org_settings_repo),
+    org_repo: OrganizationSettingsRepository = Depends(get_org_settings_repo),
     audit_service: AuditService = Depends(get_audit_service),
 ) -> DomainListResponse:
     """Replace the entire allowed domains list.
@@ -580,7 +585,7 @@ async def replace_domains(
 async def remove_domain(
     domain: str,
     admin_user: AdminUserDep,
-    org_repo=Depends(get_org_settings_repo),
+    org_repo: OrganizationSettingsRepository = Depends(get_org_settings_repo),
     audit_service: AuditService = Depends(get_audit_service),
 ) -> DomainRemoveResponse:
     """Remove a single domain from the allowed list.

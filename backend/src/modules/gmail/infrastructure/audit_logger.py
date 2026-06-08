@@ -8,6 +8,7 @@ that Gmail operations are never blocked by audit failures.
 
 import logging
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -63,7 +64,7 @@ class AuditLogger:
         user_id: UUID,
         message_count: int = 0,
         success: bool = True,
-        metadata: dict | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Log a Gmail API operation to the audit trail.
 
@@ -130,7 +131,7 @@ class AuditLogger:
             max_subject_len = self.settings.audit_subject_max_length
             truncated_subject = subject[:max_subject_len] if subject else ""
 
-            send_metadata: dict = {
+            send_metadata: dict[str, Any] = {
                 "recipient_emails": truncated_recipients,
                 "subject": truncated_subject,
                 "sent_at": datetime.now(UTC).isoformat(),
@@ -162,7 +163,7 @@ class AuditLogger:
                 str(exc),
             )
 
-    def _sanitize_metadata(self, metadata: dict | None) -> dict | None:
+    def _sanitize_metadata(self, metadata: dict[str, Any] | None) -> dict[str, Any] | None:
         """Remove forbidden fields from metadata to protect privacy.
 
         Strips any keys that could contain email body content, snippets,

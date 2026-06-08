@@ -11,6 +11,7 @@ from typing import Protocol
 from uuid import UUID
 
 from src.modules.identity.api.schemas import TokenPayload
+from src.modules.identity.domain.entities import RefreshToken
 from src.modules.identity.domain.exceptions import InvalidTokenError
 from src.modules.identity.infrastructure.config import AuthSettings
 from src.modules.identity.infrastructure.jwt_utils import JWTUtils
@@ -44,7 +45,13 @@ class RefreshTokenRepository(Protocol):
         """
         ...
 
-    async def store(self, user_id: UUID, token_hash: str, expires_at: datetime) -> None:
+    async def store(
+        self,
+        user_id: UUID,
+        token_hash: str,
+        expires_at: datetime,
+        user_agent: str | None = None,
+    ) -> RefreshToken:
         """Store a new refresh token hash in the database.
 
         Args:

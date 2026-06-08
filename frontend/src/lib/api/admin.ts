@@ -85,6 +85,20 @@ export interface PaginatedAuditLogs {
   page_size: number;
 }
 
+export type RuntimeHealthStatus = "healthy" | "degraded" | "unhealthy";
+
+export interface RuntimeServiceStatus {
+  name: string;
+  status: RuntimeHealthStatus;
+  latency_ms: number | null;
+  detail: string | null;
+}
+
+export interface RuntimeHealthResponse {
+  status: RuntimeHealthStatus;
+  services: RuntimeServiceStatus[];
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -199,6 +213,17 @@ export async function getAuditLogs(
     : `${BASE}/audit-logs`;
   const res = await fetch(url);
   return handleResponse<PaginatedAuditLogs>(res);
+}
+
+// ---------------------------------------------------------------------------
+// Runtime Health Endpoint
+// ---------------------------------------------------------------------------
+
+export async function getRuntimeHealth(): Promise<RuntimeHealthResponse> {
+  const res = await fetch(`${BASE}/runtime/health`, {
+    credentials: "include",
+  });
+  return handleResponse<RuntimeHealthResponse>(res);
 }
 
 

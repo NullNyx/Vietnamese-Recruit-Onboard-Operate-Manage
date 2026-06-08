@@ -6,6 +6,7 @@ SQLAlchemy async sessions with SQLModel.
 """
 
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,7 +50,7 @@ class AuditLogRepository:
         self,
         offset: int,
         limit: int,
-        filters: dict | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> tuple[list[AuditLog], int]:
         """Retrieve audit log entries with pagination and optional filtering.
 
@@ -85,21 +86,13 @@ class AuditLogRepository:
 
         if "start_date" in filters and filters["start_date"] is not None:
             start_date: datetime = filters["start_date"]
-            statement = statement.where(
-                AuditLog.created_at >= start_date  # type: ignore[operator]
-            )
-            count_statement = count_statement.where(
-                AuditLog.created_at >= start_date  # type: ignore[operator]
-            )
+            statement = statement.where(AuditLog.created_at >= start_date)
+            count_statement = count_statement.where(AuditLog.created_at >= start_date)
 
         if "end_date" in filters and filters["end_date"] is not None:
             end_date: datetime = filters["end_date"]
-            statement = statement.where(
-                AuditLog.created_at <= end_date  # type: ignore[operator]
-            )
-            count_statement = count_statement.where(
-                AuditLog.created_at <= end_date  # type: ignore[operator]
-            )
+            statement = statement.where(AuditLog.created_at <= end_date)
+            count_statement = count_statement.where(AuditLog.created_at <= end_date)
 
         # Get total count
         count_result = await self.session.execute(count_statement)

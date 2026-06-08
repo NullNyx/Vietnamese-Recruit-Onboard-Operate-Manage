@@ -6,6 +6,7 @@ that map to PostgreSQL tables used for authentication and authorization.
 
 from datetime import UTC, datetime
 from enum import Enum
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column, DateTime, String
@@ -192,7 +193,7 @@ class AuditLog(SQLModel, table=True):
     action_type: AuditActionType = Field(
         sa_column=Column(String(50), nullable=False),
     )
-    details: dict = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False))
+    details: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

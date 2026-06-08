@@ -12,6 +12,7 @@ import asyncio
 import logging
 import re
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,12 +45,12 @@ class ReviewValidationError(Exception):
         errors: List of validation error dicts with field and reason.
     """
 
-    def __init__(self, errors: list[dict]) -> None:
+    def __init__(self, errors: list[dict[str, Any]]) -> None:
         self.errors = errors
         super().__init__(f"Review validation failed: {errors}")
 
 
-def validate_correction(parsed_cv: ParsedCV) -> list[dict]:
+def validate_correction(parsed_cv: ParsedCV) -> list[dict[str, Any]]:
     """Validate corrected ParsedCV data for the review submission.
 
     Checks:
@@ -62,7 +63,7 @@ def validate_correction(parsed_cv: ParsedCV) -> list[dict]:
     Returns:
         List of validation error dicts. Empty list means validation passed.
     """
-    errors: list[dict] = []
+    errors: list[dict[str, Any]] = []
 
     # Validate name: 1-200 chars, at least 1 non-whitespace
     name = parsed_cv.name.strip() if parsed_cv.name else ""

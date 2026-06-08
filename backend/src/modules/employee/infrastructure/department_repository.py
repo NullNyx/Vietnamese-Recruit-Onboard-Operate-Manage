@@ -5,6 +5,7 @@ creation, update, hard-delete, and active-employee checks using
 SQLAlchemy async sessions with SQLModel.
 """
 
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func
@@ -35,7 +36,7 @@ class DepartmentRepository:
         Returns:
             A list of all Department entities sorted alphabetically by name.
         """
-        statement = select(Department).order_by(Department.name)  # type: ignore[arg-type]
+        statement = select(Department).order_by(Department.name)
         result = await self.session.execute(statement)
         return list(result.scalars().all())
 
@@ -80,7 +81,7 @@ class DepartmentRepository:
         await self.session.flush()
         return department
 
-    async def update(self, department_id: UUID, data: dict) -> Department | None:
+    async def update(self, department_id: UUID, data: dict[str, Any]) -> Department | None:
         """Update an existing department with partial data.
 
         Only the fields present in the data dict are updated.

@@ -5,6 +5,7 @@ creation, update, hard-delete, and active-employee checks using
 SQLAlchemy async sessions with SQLModel.
 """
 
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func
@@ -35,7 +36,7 @@ class PositionRepository:
         Returns:
             A list of all Position entities sorted alphabetically by name.
         """
-        statement = select(Position).order_by(Position.name)  # type: ignore[arg-type]
+        statement = select(Position).order_by(Position.name)
         result = await self.session.execute(statement)
         return list(result.scalars().all())
 
@@ -80,7 +81,7 @@ class PositionRepository:
         await self.session.flush()
         return position
 
-    async def update(self, position_id: UUID, data: dict) -> Position | None:
+    async def update(self, position_id: UUID, data: dict[str, Any]) -> Position | None:
         """Update an existing position with partial data.
 
         Only the fields present in the data dict are updated.

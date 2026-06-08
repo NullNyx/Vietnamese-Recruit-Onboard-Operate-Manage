@@ -4,7 +4,10 @@ Provides async S3-compatible operations for uploading, downloading,
 and deleting files in MinIO via aioboto3.
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from io import BytesIO
+from typing import Any
 
 import aioboto3
 
@@ -25,16 +28,17 @@ class MinIOClient:
         self._session = aioboto3.Session()
         self._endpoint_url = f"http://{settings.minio_endpoint}"
 
-    def _client_context(self):
-        """Create an S3 client context manager."""
-        return self._session.client(
+    @asynccontextmanager
+    async def _client_context(self) -> AsyncIterator[Any]:
+        async with self._session.client(
             "s3",
             endpoint_url=self._endpoint_url,
             aws_access_key_id=self._settings.minio_access_key,
             aws_secret_access_key=self._settings.minio_secret_key,
-        )
+        ) as client:
+            yield client
 
-    async def _ensure_bucket(self, client) -> None:
+    async def _ensure_bucket(self, client: Any) -> None:
         """Create the bucket if it doesn't already exist."""
         try:
             await client.head_bucket(Bucket=self._settings.minio_bucket)
@@ -77,7 +81,7 @@ class MinIOClient:
                 Key=path,
             )
             data = await response["Body"].read()
-        return data
+        return bytes(data)
 
     async def delete_file(self, path: str) -> None:
         """Delete a file from MinIO.
@@ -115,7 +119,7 @@ class MinIOClient:
             except Exception as exc:
                 raise FileNotFoundError(f"File not found at path: {path}") from exc
 
-            url: str = await client.generate_presigned_url(
+            url = await client.generate_presigned_url(
                 "get_object",
                 Params={
                     "Bucket": self._settings.minio_bucket,
@@ -123,4 +127,4 @@ class MinIOClient:
                 },
                 ExpiresIn=expires_seconds,
             )
-            return url
+            return str(url)

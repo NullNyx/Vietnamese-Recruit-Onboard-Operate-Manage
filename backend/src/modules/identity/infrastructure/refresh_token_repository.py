@@ -102,7 +102,7 @@ class RefreshTokenRepository:
         """
         statement = (
             select(RefreshToken, User.email)
-            .join(User, RefreshToken.user_id == User.id)
+            .join(User, RefreshToken.user_id == User.id)  # type: ignore[arg-type]
             .where(RefreshToken.token_hash == token_hash)
         )
         result = await self.session.execute(statement)

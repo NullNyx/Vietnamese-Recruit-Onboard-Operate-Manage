@@ -6,6 +6,7 @@ pipeline management.
 """
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column, DateTime, Index, String, text
@@ -37,10 +38,14 @@ class Candidate(SQLModel, table=True):
     email: str = Field(max_length=255, nullable=False, index=True)
     phone: str = Field(default="", max_length=20)
     skills: list[str] = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
-    experience: list[dict] = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
-    education: list[dict] = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
+    experience: list[dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column(JSONB, nullable=False)
+    )
+    education: list[dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column(JSONB, nullable=False)
+    )
     summary: str = Field(default="", max_length=500)
-    parsed_cv_json: dict | None = Field(default=None, sa_column=Column(JSONB))
+    parsed_cv_json: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     status: str = Field(default="new", max_length=30, nullable=False, index=True)
     confidence_score: float = Field(default=0.0, nullable=False)
     source_email_message_id: UUID | None = Field(default=None, foreign_key="email_messages.id")
@@ -82,11 +87,11 @@ class CVDocument(SQLModel, table=True):
     size_bytes: int = Field(nullable=False)
     file_path: str = Field(max_length=500, nullable=False)
     ocr_output: str | None = Field(default=None)
-    parsed_cv_data: dict | None = Field(default=None, sa_column=Column(JSONB))
+    parsed_cv_data: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     confidence_score: float | None = Field(default=None)
     processing_status: str = Field(default="pending", max_length=30, nullable=False, index=True)
     processing_error: str | None = Field(default=None, max_length=500)
-    validation_errors: list[dict] | None = Field(default=None, sa_column=Column(JSONB))
+    validation_errors: list[dict[str, Any]] | None = Field(default=None, sa_column=Column(JSONB))
     retry_count: int = Field(default=0, nullable=False)
     uploaded_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -118,11 +123,11 @@ class RecruitmentAuditLog(SQLModel, table=True):
     operation_type: str = Field(max_length=50, nullable=False, index=True)
     entity_type: str = Field(max_length=50, nullable=False)
     entity_id: UUID | None = Field(default=None, index=True)
-    previous_value: dict | None = Field(default=None, sa_column=Column(JSONB))
-    new_value: dict | None = Field(default=None, sa_column=Column(JSONB))
+    previous_value: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    new_value: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     change_summary: str | None = Field(default=None, max_length=500)
     model_name: str | None = Field(default=None, max_length=100)
-    token_usage: dict | None = Field(default=None, sa_column=Column(JSONB))
+    token_usage: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     latency_ms: int | None = Field(default=None)
     success: bool = Field(default=True, nullable=False)
     created_at: datetime = Field(

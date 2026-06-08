@@ -18,6 +18,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDashboardStats } from "@/hooks/queries";
+import { RuntimeHealthPanel } from "@/components/admin/runtime-health-panel";
 import { StatCard } from "@/components/stat-card";
 
 // ─── Quick Action ───────────────────────────────────────────────────────────
@@ -173,10 +174,12 @@ export default function DashboardPage() {
             loading={loading}
           />
         </div>
-      </div>
+        </div>
 
-      {/* ─── Quick Actions ───────────────────────────────────────────────── */}
-      <div>
+        {user?.role === "admin" && <RuntimeHealthPanel />}
+
+        {/* ─── Quick Actions ───────────────────────────────────────────────── */}
+        <div>
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
           Thao tác nhanh
         </h2>

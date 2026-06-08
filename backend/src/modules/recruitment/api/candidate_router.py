@@ -163,7 +163,7 @@ async def list_candidates(
             email=c.email,
             phone=c.phone or "",
             skills=(c.skills or [])[:5],
-            status=c.status,
+            status=CandidateStatus(c.status),
             confidence_score=c.confidence_score,
             created_at=c.created_at,
             has_cv=True,  # Candidates are created from CVs
@@ -231,7 +231,7 @@ async def get_candidate(
         experience=candidate.experience or [],
         education=candidate.education or [],
         summary=candidate.summary or "",
-        status=candidate.status,
+        status=CandidateStatus(candidate.status),
         confidence_score=candidate.confidence_score,
         source_email_message_id=candidate.source_email_message_id,
         rejection_reason=candidate.rejection_reason,

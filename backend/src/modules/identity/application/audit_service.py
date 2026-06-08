@@ -5,6 +5,7 @@ and to retrieve paginated, filterable audit log entries.
 """
 
 from datetime import datetime
+from typing import Any
 
 from src.modules.identity.domain.entities import (
     AuditActionType,
@@ -74,7 +75,7 @@ class AuditService:
         self,
         admin: User,
         action_type: AuditActionType,
-        details: dict,
+        details: dict[str, Any],
     ) -> AuditLog:
         """Create an audit log entry for an admin action.
 
@@ -124,7 +125,7 @@ class AuditService:
         """
         offset = (page - 1) * page_size
 
-        filters: dict = {}
+        filters: dict[str, Any] = {}
         if action_type is not None:
             filters["action_type"] = action_type
         if start_date is not None:
@@ -146,7 +147,7 @@ class AuditService:
         )
 
     @staticmethod
-    def _sanitize_details(details: dict) -> dict:
+    def _sanitize_details(details: dict[str, Any]) -> dict[str, Any]:
         """Remove or mask sensitive values from the details dictionary.
 
         Recursively processes nested dictionaries. Keys matching known
@@ -158,7 +159,7 @@ class AuditService:
         Returns:
             A new dictionary with sensitive values masked.
         """
-        sanitized: dict = {}
+        sanitized: dict[str, Any] = {}
         for key, value in details.items():
             if key.lower() in _SENSITIVE_KEYS:
                 sanitized[key] = _MASK

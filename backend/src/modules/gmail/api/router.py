@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from typing import Annotated
+from typing import Annotated, Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
@@ -477,7 +478,7 @@ async def fetch_attachments(
     attachment_service: AttachmentServiceDep,
     connection_service: ConnectionServiceDep,
     gmail_adapter: GmailAdapterDep,
-) -> dict:
+) -> dict[str, Any]:
     """Fetch and validate attachments for an email message.
 
     Downloads attachments from Gmail API, validates MIME types and file
@@ -557,7 +558,7 @@ async def classify_emails(
     current_user: CurrentUserDep,
     email_repo: EmailRepositoryDep,
     limit: int = Query(default=5, ge=1, le=20, description="Max emails to classify per request"),
-) -> dict | JSONResponse:
+) -> dict[str, Any] | JSONResponse:
     """Trigger AI classification for all unclassified emails.
 
     Finds emails with processing_status='unprocessed' or category=NULL
@@ -575,9 +576,9 @@ async def classify_emails(
     """
     from src.modules.gmail.infrastructure.config import GmailSettings
 
-    settings = GmailSettings()  # type: ignore[call-arg]
+    settings = GmailSettings()
 
-    async def _do_classify() -> dict:
+    async def _do_classify() -> dict[str, Any]:
         from sqlmodel import select
 
         from src.modules.gmail.application.classification_service import (
@@ -694,7 +695,7 @@ async def classify_emails(
 # ---------------------------------------------------------------------------
 
 
-async def _get_user_access_token(user_id, connection_service: ConnectionService) -> str:
+async def _get_user_access_token(user_id: UUID, connection_service: ConnectionService) -> str:
     """Retrieve the decrypted access token for a user.
 
     Uses the connection service's internal OAuth grant repository
@@ -722,7 +723,7 @@ async def _get_user_access_token(user_id, connection_service: ConnectionService)
     return crypto.decrypt(grant.access_token_enc)
 
 
-def _extract_attachment_metadata(payload: dict) -> list[AttachmentMetadata]:
+def _extract_attachment_metadata(payload: dict[str, Any]) -> list[AttachmentMetadata]:
     """Extract attachment metadata from a Gmail message payload.
 
     Recursively searches the message parts for attachments (parts with
@@ -739,7 +740,9 @@ def _extract_attachment_metadata(payload: dict) -> list[AttachmentMetadata]:
     return attachments
 
 
-def _walk_parts_for_attachments(part: dict, attachments: list[AttachmentMetadata]) -> None:
+def _walk_parts_for_attachments(
+    part: dict[str, Any], attachments: list[AttachmentMetadata]
+) -> None:
     """Recursively walk message parts to find attachments.
 
     Args:

@@ -13,6 +13,7 @@ HR-driven (task completion, activation) state changes.
 """
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column, DateTime
@@ -101,8 +102,8 @@ class OnboardingAuditLog(SQLModel, table=True):
     entity_id: UUID | None = Field(default=None, index=True)
     candidate_id: UUID | None = Field(default=None, index=True)
     event_id: str | None = Field(default=None, max_length=255)
-    previous_value: dict | None = Field(default=None, sa_column=Column(JSONB))
-    new_value: dict | None = Field(default=None, sa_column=Column(JSONB))
+    previous_value: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    new_value: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     change_summary: str | None = Field(default=None, max_length=500)
     success: bool = Field(default=True, nullable=False)
     created_at: datetime = Field(

@@ -5,6 +5,7 @@ using python-jose with HMAC-SHA signing algorithms.
 """
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from jose import JWTError, jwt
 
@@ -32,7 +33,7 @@ class JWTUtils:
         self._secret_key = secret_key
         self._algorithm = algorithm
 
-    def encode(self, payload: dict, expires_delta: timedelta) -> str:
+    def encode(self, payload: dict[str, Any], expires_delta: timedelta) -> str:
         """Encode a payload into a signed JWT.
 
         Adds standard time claims (exp, iat) to the provided payload
@@ -49,9 +50,9 @@ class JWTUtils:
         to_encode = payload.copy()
         to_encode["exp"] = now + expires_delta
         to_encode["iat"] = now
-        return jwt.encode(to_encode, self._secret_key, algorithm=self._algorithm)
+        return str(jwt.encode(to_encode, self._secret_key, algorithm=self._algorithm))
 
-    def decode(self, token: str) -> dict:
+    def decode(self, token: str) -> dict[str, Any]:
         """Decode and validate a JWT token.
 
         Verifies the token signature and checks that the token has not
@@ -68,11 +69,14 @@ class JWTUtils:
                 signature, or is otherwise malformed.
         """
         try:
-            return jwt.decode(token, self._secret_key, algorithms=[self._algorithm])
+            result: dict[str, Any] = jwt.decode(
+                token, self._secret_key, algorithms=[self._algorithm]
+            )
+            return result
         except JWTError as e:
             raise InvalidTokenError() from e
 
-    def create_state_token(self, data: dict) -> str:
+    def create_state_token(self, data: dict[str, Any]) -> str:
         """Create a signed CSRF state token with a 10-minute expiry.
 
         State tokens include a ``purpose`` claim set to ``"state"`` to
@@ -89,9 +93,9 @@ class JWTUtils:
         to_encode["purpose"] = "state"
         to_encode["exp"] = now + timedelta(minutes=10)
         to_encode["iat"] = now
-        return jwt.encode(to_encode, self._secret_key, algorithm=self._algorithm)
+        return str(jwt.encode(to_encode, self._secret_key, algorithm=self._algorithm))
 
-    def verify_state_token(self, token: str) -> dict:
+    def verify_state_token(self, token: str) -> dict[str, Any]:
         """Verify a CSRF state token.
 
         Decodes the token, validates the signature and expiry, and
@@ -108,7 +112,9 @@ class JWTUtils:
                 signature, is malformed, or has an incorrect purpose claim.
         """
         try:
-            payload = jwt.decode(token, self._secret_key, algorithms=[self._algorithm])
+            payload: dict[str, Any] = jwt.decode(
+                token, self._secret_key, algorithms=[self._algorithm]
+            )
         except JWTError as e:
             raise InvalidStateError() from e
 

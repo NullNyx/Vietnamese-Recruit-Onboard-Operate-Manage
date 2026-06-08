@@ -27,7 +27,7 @@ from src.modules.gmail.infrastructure.config import GmailSettings
 if TYPE_CHECKING:
     from src.modules.gmail.infrastructure.audit_logger import AuditLogger
     from src.modules.gmail.infrastructure.email_repository import EmailRepository
-    from src.modules.gmail.infrastructure.gmail_adapter import GmailAdapter
+    from src.modules.gmail.infrastructure.gmail_adapter import GmailAdapter, SentMessageInfo
     from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
     from src.modules.identity.infrastructure.oauth_grant_repository import (
         OAuthGrantRepository,
@@ -387,7 +387,7 @@ class SendService:
         self,
         user_id: UUID,
         params: SendEmailParams,
-        sent_info,
+        sent_info: SentMessageInfo,
     ) -> None:
         """Store sent message metadata in the EmailRepository.
 

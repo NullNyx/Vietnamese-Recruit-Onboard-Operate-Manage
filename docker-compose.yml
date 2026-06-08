@@ -43,6 +43,8 @@ services:
       AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
       AUTH_REDIS_URL: redis://redis:6379/0
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      EMPLOYEE_MINIO_ENDPOINT: minio:9000
+      RECRUITMENT_MINIO_ENDPOINT: minio:9000
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -53,6 +55,27 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  minio:
+    image: minio/minio:latest
+    container_name: vroom-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build:
@@ -67,5 +90,58 @@ services:
     depends_on:
       - backend
 
+  gmail-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.local
+    container_name: vroom-gmail-worker
+    restart: unless-stopped
+    command: uv run arq src.modules.gmail.worker.WorkerSettings
+    env_file:
+      - ./backend/.env
+    environment:
+      AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      AUTH_REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      EMPLOYEE_MINIO_ENDPOINT: minio:9000
+      RECRUITMENT_MINIO_ENDPOINT: minio:9000
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      - ./backend/config:/app/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  onboarding-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.local
+    container_name: vroom-onboarding-worker
+    restart: unless-stopped
+    command: uv run arq src.modules.onboarding.worker.OnboardingWorkerSettings
+    env_file:
+      - ./backend/.env
+    environment:
+      AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      AUTH_REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      EMPLOYEE_MINIO_ENDPOINT: minio:9000
+      RECRUITMENT_MINIO_ENDPOINT: minio:9000
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      - ./backend/config:/app/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  minio_data:

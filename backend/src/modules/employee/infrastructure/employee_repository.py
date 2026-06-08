@@ -6,6 +6,7 @@ SQLAlchemy async sessions with SQLModel.
 """
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import desc, func, or_
@@ -133,7 +134,7 @@ class EmployeeRepository:
         await self.session.flush()
         return employee
 
-    async def update(self, employee_id: UUID, data: dict) -> Employee | None:
+    async def update(self, employee_id: UUID, data: dict[str, Any]) -> Employee | None:
         """Update an existing employee with partial data.
 
         Only the fields present in the data dict are updated.

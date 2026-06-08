@@ -95,7 +95,7 @@ def get_redis_client() -> redis.Redis:
         An async Redis client connected to the configured Redis URL.
     """
     settings = get_settings()
-    return redis.from_url(settings.redis_url, decode_responses=True)
+    return redis.from_url(settings.redis_url, decode_responses=True)  # type: ignore[no-any-return, no-untyped-call]
 
 
 @lru_cache

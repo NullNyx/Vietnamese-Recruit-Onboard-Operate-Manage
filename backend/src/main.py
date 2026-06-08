@@ -40,6 +40,7 @@ from src.modules.recruitment.api.error_handler import (  # noqa: E402
     register_recruitment_error_handlers,
 )
 from src.modules.recruitment.api.metrics_router import metrics_router  # noqa: E402
+from src.modules.recruitment.api.runtime_router import runtime_router  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +128,7 @@ app.include_router(cv_review_router)
 app.include_router(metrics_router)
 app.include_router(onboarding_router)
 app.include_router(attendance_router)
+app.include_router(runtime_router)
 
 # Register exception handlers.
 register_auth_error_handlers(app)

@@ -6,6 +6,7 @@ PostgreSQL tables used for Gmail email management and synchronization.
 """
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column, DateTime, UniqueConstraint
@@ -138,7 +139,9 @@ class GmailAuditLog(SQLModel, table=True):
     operation_type: str = Field(max_length=50, nullable=False)
     message_count: int = Field(default=0, nullable=False)
     success: bool = Field(nullable=False)
-    metadata_: dict | None = Field(default=None, sa_column=Column("metadata", JSONB, nullable=True))
+    metadata_: dict[str, Any] | None = Field(
+        default=None, sa_column=Column("metadata", JSONB, nullable=True)
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False, index=True),

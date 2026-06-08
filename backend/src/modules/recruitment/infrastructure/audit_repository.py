@@ -9,6 +9,7 @@ Requirements: 17.1, 17.2, 17.3, 17.4, 17.5, 17.6
 
 import logging
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func
@@ -68,7 +69,7 @@ class AuditRepository:
         statement = (
             select(RecruitmentAuditLog)
             .where(RecruitmentAuditLog.entity_id == entity_id)
-            .order_by(RecruitmentAuditLog.created_at.desc())  # type: ignore[union-attr]
+            .order_by(RecruitmentAuditLog.created_at.desc())  # type: ignore[attr-defined]
         )
         result = await self.session.execute(statement)
         return list(result.scalars().all())
@@ -100,7 +101,7 @@ class AuditRepository:
         statement = (
             select(RecruitmentAuditLog)
             .where(RecruitmentAuditLog.user_id == user_id)
-            .order_by(RecruitmentAuditLog.created_at.desc())  # type: ignore[union-attr]
+            .order_by(RecruitmentAuditLog.created_at.desc())  # type: ignore[attr-defined]
             .offset(offset)
             .limit(page_size)
         )
@@ -120,7 +121,7 @@ class AuditRepository:
         statement = (
             select(RecruitmentAuditLog)
             .where(RecruitmentAuditLog.operation_type == operation_type)
-            .order_by(RecruitmentAuditLog.created_at.desc())  # type: ignore[union-attr]
+            .order_by(RecruitmentAuditLog.created_at.desc())  # type: ignore[attr-defined]
         )
         result = await self.session.execute(statement)
         return list(result.scalars().all())
@@ -141,10 +142,10 @@ class AuditRepository:
         statement = (
             select(RecruitmentAuditLog)
             .where(
-                RecruitmentAuditLog.created_at >= start,  # type: ignore[operator]
-                RecruitmentAuditLog.created_at <= end,  # type: ignore[operator]
+                RecruitmentAuditLog.created_at >= start,
+                RecruitmentAuditLog.created_at <= end,
             )
-            .order_by(RecruitmentAuditLog.created_at.desc())  # type: ignore[union-attr]
+            .order_by(RecruitmentAuditLog.created_at.desc())  # type: ignore[attr-defined]
         )
         result = await self.session.execute(statement)
         return list(result.scalars().all())
@@ -156,11 +157,11 @@ async def log_audit(
     entity_type: str,
     entity_id: UUID | None = None,
     user_id: UUID | None = None,
-    previous_value: dict | None = None,
-    new_value: dict | None = None,
+    previous_value: dict[str, Any] | None = None,
+    new_value: dict[str, Any] | None = None,
     change_summary: str | None = None,
     model_name: str | None = None,
-    token_usage: dict | None = None,
+    token_usage: dict[str, Any] | None = None,
     latency_ms: int | None = None,
     success: bool = True,
 ) -> RecruitmentAuditLog | None:

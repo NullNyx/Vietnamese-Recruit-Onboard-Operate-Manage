@@ -18,6 +18,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -25,6 +26,8 @@ from dotenv import load_dotenv
 # the Gmail worker).
 load_dotenv()
 
+import redis.asyncio as redis
+from arq import cron
 from arq.connections import RedisSettings
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -39,7 +42,7 @@ from src.modules.onboarding.infrastructure.config import OnboardingSettings
 logger = logging.getLogger(__name__)
 
 
-async def startup(ctx: dict) -> None:
+async def startup(ctx: dict[str, Any]) -> None:
     """ARQ worker startup hook.
 
     Builds the shared async database engine and session factory and stores them
@@ -60,8 +63,17 @@ async def startup(ctx: dict) -> None:
 
     logger.info("Onboarding ARQ worker started successfully")
 
+    # Write heartbeat for runtime health monitoring
+    import time as _time
 
-async def shutdown(ctx: dict) -> None:
+    redis_client = redis.from_url(  # type: ignore[no-untyped-call]
+        onboarding_settings.redis_url, decode_responses=True
+    )
+    await redis_client.set("runtime:heartbeat:onboarding-worker", _time.time(), ex=600)
+    ctx["redis_client"] = redis_client
+
+
+async def shutdown(ctx: dict[str, Any]) -> None:
     """ARQ worker shutdown hook.
 
     Disposes the async database engine created at startup so its connection
@@ -75,6 +87,29 @@ async def shutdown(ctx: dict) -> None:
         await engine.dispose()
 
     logger.info("Onboarding ARQ worker shut down")
+
+    # Clear heartbeat on shutdown
+    redis_client = ctx.get("redis_client")
+    if redis_client:
+        try:
+            await redis_client.delete("runtime:heartbeat:onboarding-worker")
+            await redis_client.aclose()
+        except Exception:
+            pass
+
+
+async def refresh_heartbeat(ctx: dict[str, Any]) -> None:
+    """Refresh the onboarding worker heartbeat in Redis."""
+    redis_client = ctx.get("redis_client")
+    if redis_client:
+        try:
+            await redis_client.set(
+                "runtime:heartbeat:onboarding-worker",
+                __import__("time").time(),
+                ex=600,
+            )
+        except Exception:
+            pass
 
 
 # Load settings for the Redis connection configuration.
@@ -97,3 +132,10 @@ class OnboardingWorkerSettings:
     redis_settings = RedisSettings.from_dsn(_onboarding_settings.redis_url)
 
     max_tries = 3
+
+    cron_jobs = [
+        cron(
+            refresh_heartbeat,
+            minute={1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 43, 46, 49, 52, 55, 58},
+        )
+    ]

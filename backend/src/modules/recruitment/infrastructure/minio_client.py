@@ -6,7 +6,10 @@ deleting CV files, and generating presigned URLs in MinIO via aioboto3.
 Storage path format: storage/cv/{gmail_message_id}/{sanitized_filename}
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from io import BytesIO
+from typing import Any
 
 import aioboto3
 from botocore.exceptions import ClientError, EndpointConnectionError
@@ -33,16 +36,17 @@ class RecruitmentMinIOClient:
         self._session = aioboto3.Session()
         self._endpoint_url = f"http://{settings.minio_endpoint}"
 
-    def _client_context(self):
-        """Create an S3 client context manager."""
-        return self._session.client(
+    @asynccontextmanager
+    async def _client_context(self) -> AsyncIterator[Any]:
+        async with self._session.client(
             "s3",
             endpoint_url=self._endpoint_url,
             aws_access_key_id=self._settings.minio_access_key,
             aws_secret_access_key=self._settings.minio_secret_key,
-        )
+        ) as client:
+            yield client
 
-    async def _ensure_bucket(self, client) -> None:
+    async def _ensure_bucket(self, client: Any) -> None:
         """Create the bucket if it doesn't already exist."""
         try:
             await client.head_bucket(Bucket=self._settings.minio_bucket_name)
@@ -117,7 +121,7 @@ class RecruitmentMinIOClient:
             raise StorageServiceUnavailableError(
                 f"Storage service connection failed: {exc}"
             ) from exc
-        return data
+        return bytes(data)
 
     async def delete_cv(self, path: str) -> None:
         """Delete a CV file from MinIO.
@@ -187,4 +191,4 @@ class RecruitmentMinIOClient:
             raise StorageServiceUnavailableError(
                 f"Storage service connection failed: {exc}"
             ) from exc
-        return url
+        return str(url)
