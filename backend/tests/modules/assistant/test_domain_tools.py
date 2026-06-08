@@ -13,8 +13,8 @@ class TestToolDefinitions:
     """Test tool definition structure and correctness."""
 
     def test_tool_definitions_count(self) -> None:
-        """There must be exactly 4 tools."""
-        assert len(TOOL_DEFINITIONS) == 4
+        """There must be exactly 5 tools."""
+        assert len(TOOL_DEFINITIONS) == 5
 
     def test_all_tools_have_names(self) -> None:
         """Every tool must have a non-empty name."""
@@ -41,10 +41,11 @@ class TestToolDefinitions:
         assert "search_candidates" in names
 
     def test_draft_tool_name(self) -> None:
-        """Draft-Tool has correct name."""
+        """Draft-Tools have correct names."""
         draft_tools = [t for t in TOOL_DEFINITIONS if t.kind == ToolKind.DRAFT]
-        assert len(draft_tools) == 1
-        assert draft_tools[0].name == "draft_email"
+        assert len(draft_tools) == 2
+        names = {t.name for t in draft_tools}
+        assert names == {"draft_interview_invitation", "draft_congratulations_email"}
 
 
 class TestOpenAIFormat:
@@ -56,9 +57,9 @@ class TestOpenAIFormat:
         assert isinstance(result, list)
 
     def test_get_openai_tools_count(self) -> None:
-        """Returns all 4 tools."""
+        """Returns all 5 tools."""
         result = get_openai_tools()
-        assert len(result) == 4
+        assert len(result) == 5
 
     def test_openai_tool_structure(self) -> None:
         """Each tool has correct OpenAI function-calling structure."""
@@ -89,11 +90,11 @@ class TestToolFiltering:
     def test_filter_multiple_tools(self) -> None:
         """Filter to multiple tools returns only those tools."""
         result = get_openai_tools(
-            enabled_names={"count_candidates_by_status", "draft_email"}
+            enabled_names={"count_candidates_by_status", "draft_interview_invitation"}
         )
         assert len(result) == 2
         names = {t["function"]["name"] for t in result}
-        assert names == {"count_candidates_by_status", "draft_email"}
+        assert names == {"count_candidates_by_status", "draft_interview_invitation"}
 
     def test_filter_empty_set(self) -> None:
         """Filter to empty set returns no tools."""
@@ -109,9 +110,9 @@ class TestToolFiltering:
         """Filter with all tool names returns all tools."""
         all_names = {t.name for t in TOOL_DEFINITIONS}
         result = get_openai_tools(enabled_names=all_names)
-        assert len(result) == 4
+        assert len(result) == 5
 
     def test_none_filter_returns_all(self) -> None:
         """None filter (backwards compatible) returns all tools."""
         result = get_openai_tools(enabled_names=None)
-        assert len(result) == 4
+        assert len(result) == 5

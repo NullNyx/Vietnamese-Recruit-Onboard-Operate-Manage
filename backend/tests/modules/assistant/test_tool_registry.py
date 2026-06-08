@@ -140,14 +140,23 @@ class TestToolRegistryDraftTools:
     """Test Draft-Tool behavior — returns proposals, never executes writes."""
 
     @pytest.mark.asyncio
-    async def test_draft_email_returns_draft_action(self, registry: ToolRegistry) -> None:
-        """draft_email returns a Draft Action, not a write result."""
+    async def test_draft_interview_invitation_returns_draft_action(
+        self, registry: ToolRegistry, mock_candidate_service: AsyncMock
+    ) -> None:
+        """draft_interview_invitation returns a Draft Action."""
+        mock_detail = MagicMock()
+        mock_detail.candidate.name = "Nguyen Van A"
+        mock_detail.candidate.email = "a@example.com"
+        mock_candidate_service.get_candidate = AsyncMock(return_value=mock_detail)
+
+        candidate_id = "00000000-0000-0000-0000-000000000001"
         result_str = await registry.execute(
-            "draft_email",
+            "draft_interview_invitation",
             {
-                "to": ["a@example.com"],
-                "subject": "Test Subject",
-                "body_html": "<p>Test body</p>",
+                "candidate_id": candidate_id,
+                "interview_date": "15/06/2026",
+                "interview_time": "09:00 AM",
+                "location": "Phòng họp 1",
             },
         )
         result = json.loads(result_str)
@@ -155,23 +164,65 @@ class TestToolRegistryDraftTools:
         assert "draft_action" in result
         draft = result["draft_action"]
         assert draft["action_type"] == "send_email"
-        assert draft["confirm_endpoint"] == "/api/gmail/send"
+        assert draft["confirm_endpoint"] == f"/api/recruitment/candidates/{candidate_id}/send-email"
         assert draft["confirm_method"] == "POST"
-        assert draft["parameters"]["to"] == ["a@example.com"]
+        assert draft["parameters"]["candidate_id"] == candidate_id
 
     @pytest.mark.asyncio
-    async def test_draft_email_missing_recipients(self, registry: ToolRegistry) -> None:
-        """draft_email without recipients returns error."""
+    async def test_draft_interview_invitation_missing_params(self, registry: ToolRegistry) -> None:
+        """draft_interview_invitation without required params returns error."""
         result_str = await registry.execute(
-            "draft_email",
-            {"to": [], "subject": "Test", "body_html": "<p>Test</p>"},
+            "draft_interview_invitation",
+            {
+                "candidate_id": "00000000-0000-0000-0000-000000000001",
+                # missing other params
+            },
+        )
+        result = json.loads(result_str)
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_draft_congratulations_email_returns_draft_action(
+        self, registry: ToolRegistry, mock_candidate_service: AsyncMock
+    ) -> None:
+        """draft_congratulations_email returns a Draft Action."""
+        mock_detail = MagicMock()
+        mock_detail.candidate.name = "Nguyen Van A"
+        mock_detail.candidate.email = "a@example.com"
+        mock_candidate_service.get_candidate = AsyncMock(return_value=mock_detail)
+
+        candidate_id = "00000000-0000-0000-0000-000000000001"
+        result_str = await registry.execute(
+            "draft_congratulations_email",
+            {
+                "candidate_id": candidate_id,
+                "position": "Backend Developer",
+                "start_date": "20/06/2026",
+            },
+        )
+        result = json.loads(result_str)
+
+        assert "draft_action" in result
+        draft = result["draft_action"]
+        assert draft["action_type"] == "send_email"
+        assert draft["confirm_endpoint"] == f"/api/recruitment/candidates/{candidate_id}/send-email"
+
+    @pytest.mark.asyncio
+    async def test_draft_congratulations_email_missing_params(self, registry: ToolRegistry) -> None:
+        """draft_congratulations_email without required params returns error."""
+        result_str = await registry.execute(
+            "draft_congratulations_email",
+            {
+                "candidate_id": "00000000-0000-0000-0000-000000000001",
+            },
         )
         result = json.loads(result_str)
         assert "error" in result
 
     def test_is_draft_tool(self, registry: ToolRegistry) -> None:
-        """draft_email is correctly identified as a Draft-Tool."""
-        assert registry.is_draft_tool("draft_email") is True
+        """draft tools are correctly identified as Draft-Tools."""
+        assert registry.is_draft_tool("draft_interview_invitation") is True
+        assert registry.is_draft_tool("draft_congratulations_email") is True
 
     def test_is_not_draft_tool(self, registry: ToolRegistry) -> None:
         """Read-Tools are not identified as Draft-Tools."""

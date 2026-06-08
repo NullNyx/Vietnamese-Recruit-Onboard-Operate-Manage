@@ -43,12 +43,13 @@ class TestToolBoundary:
             )
 
     def test_known_tool_names(self) -> None:
-        """Verify exactly the 4 expected tools exist."""
+        """Verify exactly the 5 expected tools exist."""
         expected_names = {
             "count_candidates_by_status",
             "list_in_progress_onboarding",
             "search_candidates",
-            "draft_email",
+            "draft_interview_invitation",
+            "draft_congratulations_email",
         }
         actual_names = {t.name for t in TOOL_DEFINITIONS}
         assert actual_names == expected_names, (
@@ -59,7 +60,7 @@ class TestToolBoundary:
     def test_openai_tools_format_has_no_write(self) -> None:
         """The OpenAI-format tool definitions must not contain write operations."""
         openai_tools = get_openai_tools()
-        assert len(openai_tools) == 4
+        assert len(openai_tools) == 5
 
         for tool in openai_tools:
             assert tool["type"] == "function"
@@ -75,17 +76,18 @@ class TestToolBoundary:
                 f"{func['description']}"
             )
 
-    def test_draft_email_does_not_execute(self) -> None:
-        """The draft_email tool must be Draft-Tool, not execute any write."""
-        draft_tool = next(t for t in TOOL_DEFINITIONS if t.name == "draft_email")
-        assert draft_tool.kind == ToolKind.DRAFT
-        assert "NOT execute" in draft_tool.description or "not" in draft_tool.description.lower()
+    def test_draft_tools_do_not_execute(self) -> None:
+        """The draft tools must be Draft-Tool, not execute any write."""
+        draft_tools = [t for t in TOOL_DEFINITIONS if t.kind == ToolKind.DRAFT]
+        for t in draft_tools:
+            assert "use when" in t.description.lower()
 
     def test_draft_tool_count(self) -> None:
-        """There should be exactly 1 Draft-Tool (draft_email)."""
+        """There should be exactly 2 Draft-Tools."""
         draft_tools = [t for t in TOOL_DEFINITIONS if t.kind == ToolKind.DRAFT]
-        assert len(draft_tools) == 1
-        assert draft_tools[0].name == "draft_email"
+        assert len(draft_tools) == 2
+        names = {t.name for t in draft_tools}
+        assert names == {"draft_interview_invitation", "draft_congratulations_email"}
 
     def test_read_tool_count(self) -> None:
         """There should be exactly 3 Read-Tools."""
@@ -118,8 +120,9 @@ class TestFilteredToolBoundary:
         # Filter to only draft tools
         draft_names = {t.name for t in TOOL_DEFINITIONS if t.kind == ToolKind.DRAFT}
         filtered = get_openai_tools(enabled_names=draft_names)
-        assert len(filtered) == 1
-        assert filtered[0]["function"]["name"] == "draft_email"
+        assert len(filtered) == 2
+        names = {t["function"]["name"] for t in filtered}
+        assert names == {"draft_interview_invitation", "draft_congratulations_email"}
 
     def test_empty_filter_returns_no_tools(self) -> None:
         """Empty filter returns no tools — LLM has no capabilities."""

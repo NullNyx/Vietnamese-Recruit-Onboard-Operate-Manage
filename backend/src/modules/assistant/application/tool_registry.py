@@ -66,7 +66,8 @@ class ToolRegistry:
             "count_candidates_by_status": self._count_candidates_by_status,
             "list_in_progress_onboarding": self._list_in_progress_onboarding,
             "search_candidates": self._search_candidates,
-            "draft_email": self._draft_email,
+            "draft_interview_invitation": self._draft_interview_invitation,
+            "draft_congratulations_email": self._draft_congratulations_email,
         }
 
         handler = handlers.get(tool_name)
@@ -145,28 +146,96 @@ class ToolRegistry:
             )
         return {"candidates": candidates, "total": result.total_count}
 
-    async def _draft_email(self, args: dict[str, Any]) -> dict[str, typing.Any]:
-        """Draft-Tool: returns a Draft Action for email sending."""
-        to = args.get("to", [])
-        subject = args.get("subject", "")
-        body_html = args.get("body_html", "")
+    async def _draft_interview_invitation(self, args: dict[str, Any]) -> dict[str, typing.Any]:
+        """Draft-Tool: returns a Draft Action for interview invitation."""
+        candidate_id_str = args.get("candidate_id")
+        date_str = args.get("interview_date")
+        time_str = args.get("interview_time")
+        location = args.get("location")
 
-        if not to:
-            return {"error": "Recipients (to) are required"}
-        if not subject:
-            return {"error": "Subject is required"}
-        if not body_html:
-            return {"error": "Body is required"}
+        if not candidate_id_str or not date_str or not time_str or not location:
+            return {"error": "Missing required parameters: candidate_id, interview_date, interview_time, location."}
 
-        to_str = ", ".join(to)
+        import uuid
+        try:
+            candidate_id = uuid.UUID(candidate_id_str)
+            detail = await self._candidate_service.get_candidate(candidate_id)
+            candidate = detail.candidate
+        except Exception as e:
+            return {"error": f"Không tìm thấy ứng viên: {str(e)}"}
+
+        subject = f"Thư mời phỏng vấn - {candidate.name}"
+        body_html = f"""
+        <div style="font-family: sans-serif; line-height: 1.5;">
+            <h3>Thư Mời Phỏng Vấn</h3>
+            <p>Thân gửi <strong>{candidate.name}</strong>,</p>
+            <p>Chúng tôi trân trọng kính mời bạn tham gia phỏng vấn tại Vroom HR.</p>
+            <ul>
+                <li><strong>Ngày:</strong> {date_str}</li>
+                <li><strong>Thời gian:</strong> {time_str}</li>
+                <li><strong>Địa điểm / Link Meet:</strong> {location}</li>
+            </ul>
+            <p>Vui lòng xác nhận email này nếu bạn có thể tham gia.</p>
+            <p>Trân trọng,<br>Phòng Nhân Sự</p>
+        </div>
+        """
 
         draft = DraftAction(
             action_type="send_email",
-            parameters={"to": to, "subject": subject, "body_html": body_html},
-            preview=f"Gửi email đến {to_str} với subject: {subject}",
-            confirm_endpoint="/api/gmail/send",
+            parameters={"candidate_id": str(candidate_id), "subject": subject, "body_html": body_html},
+            preview=f"Gửi thư mời phỏng vấn đến {candidate.email} lúc {time_str} {date_str}",
+            confirm_endpoint=f"/api/recruitment/candidates/{candidate_id}/send-email",
             confirm_method="POST",
-            confirm_body={"to": to, "subject": subject, "body_html": body_html},
+            confirm_body={"subject": subject, "body_html": body_html},
+        )
+
+        return {
+            "draft_action": {
+                "action_type": draft.action_type,
+                "parameters": draft.parameters,
+                "preview": draft.preview,
+                "confirm_endpoint": draft.confirm_endpoint,
+                "confirm_method": draft.confirm_method,
+                "confirm_body": draft.confirm_body,
+            }
+        }
+
+    async def _draft_congratulations_email(self, args: dict[str, Any]) -> dict[str, typing.Any]:
+        """Draft-Tool: returns a Draft Action for congratulations email."""
+        candidate_id_str = args.get("candidate_id")
+        position = args.get("position")
+        start_date = args.get("start_date")
+
+        if not candidate_id_str or not position or not start_date:
+            return {"error": "Missing required parameters: candidate_id, position, start_date."}
+
+        import uuid
+        try:
+            candidate_id = uuid.UUID(candidate_id_str)
+            detail = await self._candidate_service.get_candidate(candidate_id)
+            candidate = detail.candidate
+        except Exception as e:
+            return {"error": f"Không tìm thấy ứng viên: {str(e)}"}
+
+        subject = f"Chúc mừng bạn đã trúng tuyển - Vroom HR"
+        body_html = f"""
+        <div style="font-family: sans-serif; line-height: 1.5;">
+            <h3>Thư Báo Trúng Tuyển</h3>
+            <p>Thân gửi <strong>{candidate.name}</strong>,</p>
+            <p>Chúc mừng bạn đã trúng tuyển vào vị trí <strong>{position}</strong> tại Vroom HR.</p>
+            <p>Ngày bắt đầu làm việc dự kiến: <strong>{start_date}</strong>.</p>
+            <p>Vui lòng phản hồi lại email này để xác nhận nhận việc. Chúng tôi sẽ hướng dẫn thủ tục Onboarding tiếp theo.</p>
+            <p>Trân trọng,<br>Phòng Nhân Sự</p>
+        </div>
+        """
+
+        draft = DraftAction(
+            action_type="send_email",
+            parameters={"candidate_id": str(candidate_id), "subject": subject, "body_html": body_html},
+            preview=f"Gửi thư trúng tuyển vị trí {position} đến {candidate.email}",
+            confirm_endpoint=f"/api/recruitment/candidates/{candidate_id}/send-email",
+            confirm_method="POST",
+            confirm_body={"subject": subject, "body_html": body_html},
         )
 
         return {

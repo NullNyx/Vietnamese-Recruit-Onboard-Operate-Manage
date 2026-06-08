@@ -4,7 +4,8 @@ Defines the 4 tools available to the LLM:
 - Read-Tool: count_candidates_by_status
 - Read-Tool: list_in_progress_onboarding
 - Read-Tool: search_candidates
-- Draft-Tool: draft_email
+- Draft-Tool: draft_interview_invitation
+- Draft-Tool: draft_congratulations_email
 
 The LLM is NEVER given a tool that writes to the database (ADR-0006).
 Backend executes tools directly — LLM only defines what to call.
@@ -128,33 +129,61 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
         },
     ),
     ToolDefinition(
-        name="draft_email",
+        name="draft_interview_invitation",
         kind=ToolKind.DRAFT,
         description=(
-            "Draft an email to send to a recipient. Returns a Draft Action "
+            "Draft an interview invitation email for a candidate. Returns a Draft Action "
             "with the email content for HR to review and confirm. "
-            "The email is NOT sent until HR confirms. "
-            "Use when the user asks to compose, draft, or send an email "
-            "to a candidate or any recipient."
+            "Use when the user asks to compose or send an interview invitation."
         ),
         parameters={
             "type": "object",
             "properties": {
-                "to": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "List of recipient email addresses.",
-                },
-                "subject": {
+                "candidate_id": {
                     "type": "string",
-                    "description": "Email subject line.",
+                    "description": "UUID of the candidate.",
                 },
-                "body_html": {
+                "interview_date": {
                     "type": "string",
-                    "description": "HTML body content of the email.",
+                    "description": "Date of the interview (e.g. 15/06/2026 or YYYY-MM-DD).",
+                },
+                "interview_time": {
+                    "type": "string",
+                    "description": "Time of the interview (e.g. 09:00 AM).",
+                },
+                "location": {
+                    "type": "string",
+                    "description": "Location or Google Meet link for the interview.",
                 },
             },
-            "required": ["to", "subject", "body_html"],
+            "required": ["candidate_id", "interview_date", "interview_time", "location"],
+        },
+    ),
+    ToolDefinition(
+        name="draft_congratulations_email",
+        kind=ToolKind.DRAFT,
+        description=(
+            "Draft a congratulations / offer email for a candidate. Returns a Draft Action "
+            "with the email content for HR to review and confirm. "
+            "Use when the user asks to send an offer or congratulations to a candidate."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "candidate_id": {
+                    "type": "string",
+                    "description": "UUID of the candidate.",
+                },
+                "position": {
+                    "type": "string",
+                    "description": "The job position being offered.",
+                },
+                "start_date": {
+                    "type": "string",
+                    "description": "The expected start date (e.g. 15/06/2026 or YYYY-MM-DD).",
+                },
+            },
+            "required": ["candidate_id", "position", "start_date"],
         },
     ),
 ]
