@@ -14,7 +14,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.modules.attendance.application.attendance_settings_service import (
     AttendanceSettingsService,
 )
+from src.modules.identity.application.audit_service import AuditService
 from src.modules.identity.container import get_db_session
+from src.modules.identity.infrastructure.audit_log_repository import (
+    AuditLogRepository,
+)
 from src.modules.recruitment.infrastructure.org_settings_repository import (
     OrganizationSettingsRepository,
 )
@@ -48,3 +52,18 @@ async def get_attendance_settings_service(
         An AttendanceSettingsService for the current request.
     """
     return AttendanceSettingsService(org_repo=org_repo)
+
+
+async def get_attendance_audit_service(
+    session: AsyncSession = Depends(get_db_session),
+) -> AuditService:
+    """Provide an AuditService for attendance admin actions.
+
+    Args:
+        session: The async database session from DI.
+
+    Returns:
+        An AuditService bound to the current session.
+    """
+    repository = AuditLogRepository(session)
+    return AuditService(repository=repository)

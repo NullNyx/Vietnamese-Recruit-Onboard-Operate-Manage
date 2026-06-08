@@ -7,6 +7,7 @@ Covers:
 - Validation: invalid CIDR/IP returns 400, duplicate returns 400,
   combined > 20 returns 400.
 - Plain IP normalization: ``192.168.1.10`` accepted as ``192.168.1.10/32``.
+- Audit logging: write endpoints call audit_service.log_action.
 """
 
 from __future__ import annotations
@@ -23,12 +24,11 @@ from src.modules.attendance.api.error_handler import (
 from src.modules.attendance.api.router import (
     _require_hr,
     attendance_router,
-    get_network_allowlist,
 )
-from src.modules.attendance.application.attendance_settings_service import (
-    AttendanceSettingsService,
+from src.modules.attendance.container import (
+    get_attendance_audit_service,
+    get_attendance_settings_service,
 )
-from src.modules.attendance.container import get_attendance_settings_service
 from src.modules.attendance.domain.exceptions import (
     DuplicateCidrError,
     InvalidCidrError,
@@ -36,7 +36,7 @@ from src.modules.attendance.domain.exceptions import (
 )
 from src.modules.identity.api.error_handler import register_auth_error_handlers
 from src.modules.identity.container import get_current_user
-from src.modules.identity.domain.entities import User, UserRole
+from src.modules.identity.domain.entities import AuditActionType, User, UserRole
 
 
 # ---------------------------------------------------------------------------
@@ -101,6 +101,18 @@ class FakeAttendanceService:
         return list(self.networks)
 
 
+class FakeAuditService:
+    """Stand-in for AuditService recording calls."""
+
+    def __init__(self) -> None:
+        self.log_calls: list[tuple[User, AuditActionType, dict]] = []
+
+    async def log_action(
+        self, admin: User, action_type: AuditActionType, details: dict
+    ) -> None:
+        self.log_calls.append((admin, action_type, details))
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -109,6 +121,7 @@ class FakeAttendanceService:
 def _build_app(
     user: object,
     service: FakeAttendanceService,
+    audit: FakeAuditService | None = None,
 ) -> FastAPI:
     """Build a test FastAPI app with overridden dependencies."""
     app = FastAPI()
@@ -117,6 +130,7 @@ def _build_app(
     register_auth_error_handlers(app)
     app.dependency_overrides[get_current_user] = lambda: user
     app.dependency_overrides[get_attendance_settings_service] = lambda: service
+    app.dependency_overrides[get_attendance_audit_service] = lambda: audit or FakeAuditService()
     return app
 
 
@@ -150,7 +164,8 @@ class TestNetworkAllowlistAccessControl:
     def test_hr_can_update_networks(self) -> None:
         """HR/Admin can replace the network allowlist."""
         svc = FakeAttendanceService()
-        app = _build_app(FakeAdminUser(), svc)
+        audit = FakeAuditService()
+        app = _build_app(FakeAdminUser(), svc, audit)
         client = TestClient(app)
 
         resp = client.put(
@@ -175,7 +190,8 @@ class TestNetworkAllowlistAccessControl:
     def test_hr_can_add_networks(self) -> None:
         """HR/Admin can add CIDRs to the allowlist."""
         svc = FakeAttendanceService()
-        app = _build_app(FakeAdminUser(), svc)
+        audit = FakeAuditService()
+        app = _build_app(FakeAdminUser(), svc, audit)
         client = TestClient(app)
 
         resp = client.post(
@@ -200,7 +216,8 @@ class TestNetworkAllowlistAccessControl:
     def test_hr_can_remove_network(self) -> None:
         """HR/Admin can remove a CIDR from the allowlist."""
         svc = FakeAttendanceService()
-        app = _build_app(FakeAdminUser(), svc)
+        audit = FakeAuditService()
+        app = _build_app(FakeAdminUser(), svc, audit)
         client = TestClient(app)
 
         resp = client.delete(
@@ -277,3 +294,89 @@ class TestNetworkAllowlistValidationErrors:
         assert resp.status_code == 400
         body = resp.json()
         assert body["error_code"] == "TOO_MANY_NETWORKS"
+
+
+# ---------------------------------------------------------------------------
+# Audit logging tests
+# ---------------------------------------------------------------------------
+
+
+class TestNetworkAllowlistAuditLogging:
+    """Write endpoints must log audit entries on success."""
+
+    def test_update_networks_logs_audit(self) -> None:
+        """PUT /settings/network logs ATTENDANCE_NETWORK_UPDATE."""
+        svc = FakeAttendanceService()
+        audit = FakeAuditService()
+        app = _build_app(FakeAdminUser(), svc, audit)
+        client = TestClient(app)
+
+        resp = client.put(
+            "/api/attendance/settings/network",
+            json={"networks": ["10.0.0.0/8"]},
+        )
+        assert resp.status_code == 200
+        assert len(audit.log_calls) == 1
+        _, action_type, details = audit.log_calls[0]
+        assert action_type == AuditActionType.ATTENDANCE_NETWORK_UPDATE
+        assert details["networks"] == ["10.0.0.0/8"]
+
+    def test_add_networks_logs_audit(self) -> None:
+        """POST /settings/network/add logs ATTENDANCE_NETWORK_ADD."""
+        svc = FakeAttendanceService()
+        audit = FakeAuditService()
+        app = _build_app(FakeAdminUser(), svc, audit)
+        client = TestClient(app)
+
+        resp = client.post(
+            "/api/attendance/settings/network/add",
+            json={"networks": ["10.0.0.0/8"]},
+        )
+        assert resp.status_code == 200
+        assert len(audit.log_calls) == 1
+        _, action_type, details = audit.log_calls[0]
+        assert action_type == AuditActionType.ATTENDANCE_NETWORK_ADD
+        assert details["added"] == ["10.0.0.0/8"]
+
+    def test_remove_network_logs_audit(self) -> None:
+        """DELETE /settings/network logs ATTENDANCE_NETWORK_REMOVE."""
+        svc = FakeAttendanceService()
+        audit = FakeAuditService()
+        app = _build_app(FakeAdminUser(), svc, audit)
+        client = TestClient(app)
+
+        resp = client.delete(
+            "/api/attendance/settings/network",
+            params={"cidr": "192.168.1.0/24"},
+        )
+        assert resp.status_code == 200
+        assert len(audit.log_calls) == 1
+        _, action_type, details = audit.log_calls[0]
+        assert action_type == AuditActionType.ATTENDANCE_NETWORK_REMOVE
+        assert details["removed"] == "192.168.1.0/24"
+
+    def test_no_audit_on_failed_write(self) -> None:
+        """Failed write (validation error) does not produce audit entry."""
+        svc = FakeAttendanceService()
+        svc.set_side_effect = InvalidCidrError("bad")
+        audit = FakeAuditService()
+        app = _build_app(FakeAdminUser(), svc, audit)
+        client = TestClient(app)
+
+        resp = client.put(
+            "/api/attendance/settings/network",
+            json={"networks": ["bad"]},
+        )
+        assert resp.status_code == 400
+        assert len(audit.log_calls) == 0
+
+    def test_no_audit_on_get(self) -> None:
+        """GET (read) does not produce audit entry."""
+        svc = FakeAttendanceService()
+        audit = FakeAuditService()
+        app = _build_app(FakeAdminUser(), svc, audit)
+        client = TestClient(app)
+
+        resp = client.get("/api/attendance/settings/network")
+        assert resp.status_code == 200
+        assert len(audit.log_calls) == 0

@@ -2,7 +2,8 @@
 
 Defines the /api/attendance/settings/network endpoints for managing
 the office network allowlist. All endpoints require authentication,
-and write operations require HR/Admin role.
+and write operations require HR/Admin role. Every admin write action
+is recorded in the audit log.
 """
 
 from fastapi import APIRouter, Depends, Query
@@ -15,9 +16,13 @@ from src.modules.attendance.api.schemas import (
 from src.modules.attendance.application.attendance_settings_service import (
     AttendanceSettingsService,
 )
-from src.modules.attendance.container import get_attendance_settings_service
+from src.modules.attendance.container import (
+    get_attendance_audit_service,
+    get_attendance_settings_service,
+)
+from src.modules.identity.application.audit_service import AuditService
 from src.modules.identity.container import get_current_user
-from src.modules.identity.domain.entities import User, UserRole
+from src.modules.identity.domain.entities import AuditActionType, User, UserRole
 from src.modules.identity.domain.exceptions import AccessDeniedError
 
 attendance_router = APIRouter(prefix="/api/attendance", tags=["attendance"])
@@ -49,12 +54,18 @@ async def update_network_allowlist(
     update: NetworkAllowlistUpdate,
     user: User = Depends(_require_hr),
     service: AttendanceSettingsService = Depends(get_attendance_settings_service),
+    audit_service: AuditService = Depends(get_attendance_audit_service),
 ) -> NetworkAllowlistResponse:
     """Replace the entire attendance network allowlist.
 
-    HR/Admin only.
+    HR/Admin only. Audit-logged.
     """
     networks = await service.set_allowed_networks(update.networks)
+    await audit_service.log_action(
+        admin=user,
+        action_type=AuditActionType.ATTENDANCE_NETWORK_UPDATE,
+        details={"networks": networks, "count": len(networks)},
+    )
     return NetworkAllowlistResponse(networks=networks)
 
 
@@ -63,12 +74,18 @@ async def add_to_network_allowlist(
     add_request: NetworkAddRequest,
     user: User = Depends(_require_hr),
     service: AttendanceSettingsService = Depends(get_attendance_settings_service),
+    audit_service: AuditService = Depends(get_attendance_audit_service),
 ) -> NetworkAllowlistResponse:
     """Add one or more CIDRs to the allowlist.
 
-    HR/Admin only.
+    HR/Admin only. Audit-logged.
     """
     networks = await service.add_networks(add_request.networks)
+    await audit_service.log_action(
+        admin=user,
+        action_type=AuditActionType.ATTENDANCE_NETWORK_ADD,
+        details={"added": add_request.networks, "total": len(networks)},
+    )
     return NetworkAllowlistResponse(networks=networks)
 
 
@@ -80,10 +97,16 @@ async def remove_from_network_allowlist(
     cidr: str = Query(..., description="CIDR notation to remove"),
     user: User = Depends(_require_hr),
     service: AttendanceSettingsService = Depends(get_attendance_settings_service),
+    audit_service: AuditService = Depends(get_attendance_audit_service),
 ) -> NetworkAllowlistResponse:
     """Remove a CIDR from the allowlist.
 
-    HR/Admin only.
+    HR/Admin only. Audit-logged.
     """
     networks = await service.remove_network(cidr)
+    await audit_service.log_action(
+        admin=user,
+        action_type=AuditActionType.ATTENDANCE_NETWORK_REMOVE,
+        details={"removed": cidr, "remaining": len(networks)},
+    )
     return NetworkAllowlistResponse(networks=networks)
