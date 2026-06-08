@@ -13,6 +13,10 @@ load_dotenv()
 
 from fastapi import FastAPI  # noqa: E402
 
+from src.modules.attendance.api.error_handler import (  # noqa: E402
+    register_attendance_error_handlers,
+)
+from src.modules.attendance.api.router import attendance_router  # noqa: E402
 from src.modules.employee.api.error_handler import (  # noqa: E402
     register_employee_error_handlers,
 )
@@ -38,7 +42,6 @@ from src.modules.recruitment.api.error_handler import (  # noqa: E402
 from src.modules.recruitment.api.metrics_router import metrics_router  # noqa: E402
 
 logger = logging.getLogger(__name__)
-
 
 async def _bootstrap_super_admin() -> None:
     """Bootstrap the super admin user at application startup.
@@ -78,7 +81,6 @@ async def _bootstrap_super_admin() -> None:
                     "the first administrator."
                 )
 
-
 async def _seed_demo_data() -> None:
     """Seed demo data for local Docker development when enabled."""
     from src.modules.identity.container import _get_async_session_maker, get_settings
@@ -95,7 +97,6 @@ async def _seed_demo_data() -> None:
         if seeded:
             await session.commit()
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler for startup and shutdown events."""
@@ -104,7 +105,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await _seed_demo_data()
     yield
     # Shutdown (nothing to clean up currently)
-
 
 app = FastAPI(
     title="Vroom HR",
@@ -122,6 +122,7 @@ app.include_router(candidate_router)
 app.include_router(cv_review_router)
 app.include_router(metrics_router)
 app.include_router(onboarding_router)
+app.include_router(attendance_router)
 
 # Register exception handlers.
 register_auth_error_handlers(app)
@@ -129,7 +130,7 @@ register_employee_error_handlers(app)
 register_gmail_error_handlers(app)
 register_recruitment_error_handlers(app)
 register_onboarding_error_handlers(app)
-
+register_attendance_error_handlers(app)
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
