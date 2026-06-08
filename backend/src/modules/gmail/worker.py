@@ -71,6 +71,9 @@ async def startup(ctx: dict) -> None:
 
     logger.info("Gmail ARQ worker started successfully")
 
+    # Write heartbeat for runtime health monitoring
+    await redis_client.set("runtime:heartbeat:gmail-worker", __import__("time").time(), ex=600)
+
 
 async def shutdown(ctx: dict) -> None:
     """ARQ worker shutdown hook.
@@ -89,6 +92,14 @@ async def shutdown(ctx: dict) -> None:
         await redis_client.aclose()
 
     logger.info("Gmail ARQ worker shut down")
+
+    # Clear heartbeat on shutdown
+    try:
+        redis_client: redis.Redis | None = ctx.get("redis_client")
+        if redis_client:
+            await redis_client.delete("runtime:heartbeat:gmail-worker")
+    except Exception:
+        pass
 
 
 async def poll_gmail_emails(ctx: dict) -> None:

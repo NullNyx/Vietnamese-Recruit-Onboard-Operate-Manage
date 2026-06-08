@@ -25,6 +25,7 @@ from dotenv import load_dotenv
 # the Gmail worker).
 load_dotenv()
 
+import redis.asyncio as redis
 from arq.connections import RedisSettings
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -60,6 +61,12 @@ async def startup(ctx: dict) -> None:
 
     logger.info("Onboarding ARQ worker started successfully")
 
+    # Write heartbeat for runtime health monitoring
+    import time as _time
+    redis_client = redis.from_url(onboarding_settings.redis_url, decode_responses=True)
+    await redis_client.set("runtime:heartbeat:onboarding-worker", _time.time(), ex=600)
+    ctx["redis_client"] = redis_client
+
 
 async def shutdown(ctx: dict) -> None:
     """ARQ worker shutdown hook.
@@ -75,6 +82,15 @@ async def shutdown(ctx: dict) -> None:
         await engine.dispose()
 
     logger.info("Onboarding ARQ worker shut down")
+
+    # Clear heartbeat on shutdown
+    redis_client = ctx.get("redis_client")
+    if redis_client:
+        try:
+            await redis_client.delete("runtime:heartbeat:onboarding-worker")
+            await redis_client.aclose()
+        except Exception:
+            pass
 
 
 # Load settings for the Redis connection configuration.

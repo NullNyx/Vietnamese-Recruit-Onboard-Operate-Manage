@@ -67,5 +67,53 @@ services:
     depends_on:
       - backend
 
+  gmail-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.local
+    container_name: vroom-gmail-worker
+    restart: unless-stopped
+    command: uv run arq src.modules.gmail.worker.WorkerSettings
+    env_file:
+      - ./backend/.env
+    environment:
+      AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      AUTH_REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      - ./backend/config:/app/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  onboarding-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.local
+    container_name: vroom-onboarding-worker
+    restart: unless-stopped
+    command: uv run arq src.modules.onboarding.worker.OnboardingWorkerSettings
+    env_file:
+      - ./backend/.env
+    environment:
+      AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      AUTH_REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      - ./backend/config:/app/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
