@@ -154,6 +154,18 @@ export function EmailList({
                   <span>{CATEGORY_META[email.category].icon}</span>
                   {CATEGORY_META[email.category].label}
                 </span>
+                {/* Processing status badge */}
+                {email.processing_status === "needs_review" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
+                    Cần review
+                  </span>
+                )}
+                {/* Attachment indicator */}
+                {email.has_attachments && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                    📎 CV
+                  </span>
+                )}
               </div>
             )}
           </button>
