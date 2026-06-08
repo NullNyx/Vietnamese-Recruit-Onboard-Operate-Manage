@@ -64,8 +64,10 @@ async def startup(ctx: dict[str, Any]) -> None:
 
     # Write heartbeat for runtime health monitoring
     import time as _time
+
     redis_client = redis.from_url(  # type: ignore[no-untyped-call]
-        onboarding_settings.redis_url, decode_responses=True)
+        onboarding_settings.redis_url, decode_responses=True
+    )
     await redis_client.set("runtime:heartbeat:onboarding-worker", _time.time(), ex=600)
     ctx["redis_client"] = redis_client
 

@@ -46,7 +46,8 @@ async def runtime_health(
     services: list[ServiceStatus] = []
 
     r = redis.from_url(  # type: ignore[no-untyped-call]
-        auth_settings.redis_url, decode_responses=True)
+        auth_settings.redis_url, decode_responses=True
+    )
 
     # 1. Redis
     try:
@@ -61,6 +62,7 @@ async def runtime_health(
     try:
         start = time.monotonic()
         from sqlalchemy import text
+
         await session.execute(text("SELECT 1"))
         latency = (time.monotonic() - start) * 1000
         services.append(

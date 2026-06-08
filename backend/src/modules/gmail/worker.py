@@ -59,7 +59,8 @@ async def startup(ctx: dict[str, Any]) -> None:
     session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     redis_client = redis.from_url(  # type: ignore[no-untyped-call]
-        auth_settings.redis_url, decode_responses=True)
+        auth_settings.redis_url, decode_responses=True
+    )
     http_client = httpx.AsyncClient()
     crypto = CryptoUtils(auth_settings.oauth_token_encryption_key)
     quota_tracker = QuotaTracker(redis_client, gmail_settings)

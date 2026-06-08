@@ -86,21 +86,13 @@ class AuditLogRepository:
 
         if "start_date" in filters and filters["start_date"] is not None:
             start_date: datetime = filters["start_date"]
-            statement = statement.where(
-                AuditLog.created_at >= start_date
-            )
-            count_statement = count_statement.where(
-                AuditLog.created_at >= start_date
-            )
+            statement = statement.where(AuditLog.created_at >= start_date)
+            count_statement = count_statement.where(AuditLog.created_at >= start_date)
 
         if "end_date" in filters and filters["end_date"] is not None:
             end_date: datetime = filters["end_date"]
-            statement = statement.where(
-                AuditLog.created_at <= end_date
-            )
-            count_statement = count_statement.where(
-                AuditLog.created_at <= end_date
-            )
+            statement = statement.where(AuditLog.created_at <= end_date)
+            count_statement = count_statement.where(AuditLog.created_at <= end_date)
 
         # Get total count
         count_result = await self.session.execute(count_statement)
