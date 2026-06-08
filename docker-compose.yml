@@ -43,6 +43,8 @@ services:
       AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
       AUTH_REDIS_URL: redis://redis:6379/0
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      EMPLOYEE_MINIO_ENDPOINT: minio:9000
+      RECRUITMENT_MINIO_ENDPOINT: minio:9000
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -52,6 +54,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      minio:
         condition: service_healthy
 
   minio:
@@ -99,6 +103,8 @@ services:
       AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
       AUTH_REDIS_URL: redis://redis:6379/0
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      EMPLOYEE_MINIO_ENDPOINT: minio:9000
+      RECRUITMENT_MINIO_ENDPOINT: minio:9000
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -123,6 +129,8 @@ services:
       AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
       AUTH_REDIS_URL: redis://redis:6379/0
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      EMPLOYEE_MINIO_ENDPOINT: minio:9000
+      RECRUITMENT_MINIO_ENDPOINT: minio:9000
     dns:
       - 8.8.8.8
       - 8.8.4.4

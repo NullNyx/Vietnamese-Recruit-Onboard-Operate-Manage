@@ -117,6 +117,9 @@ async def _refresh_heartbeat(ctx: dict[str, Any]) -> None:
 
 
 async def poll_gmail_emails(ctx: dict[str, Any]) -> None:
+    # Refresh heartbeat so runtime health stays accurate
+    await _refresh_heartbeat(ctx)
+
     """ARQ cron job: fetch new emails for all connected Gmail users.
 
     Iterates over all users with valid Gmail OAuth grants, checks their
@@ -253,6 +256,7 @@ class WorkerSettings:
             minute=_build_cron_schedule(_gmail_settings.poll_interval_seconds),
             second={0},
         ),
+        cron(_refresh_heartbeat, minute=set(range(0, 60, 3)), second={0}),
     ]
 
     redis_settings = RedisSettings.from_dsn(_auth_settings.redis_url)
