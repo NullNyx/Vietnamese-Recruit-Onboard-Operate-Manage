@@ -230,6 +230,21 @@ infrastructure/` with `container.py` for DI, matching existing modules.
 
 Jira Tasks via Atlassian MCP. See `docs/agents/issue-tracker.md`.
 
+Quick Jira checks:
+
+- Natural-language shortcut: `check task KAN-11 bằng mcp jira`.
+- Fast path: call Atlassian MCP `getJiraIssue` directly. Do not browse, scan
+  source, or list MCP tools first.
+- Use `cloudId: "https://nullnyx.atlassian.net/"`, `issueIdOrKey: "KAN-11"`,
+  fields `summary`, `description`, `status`, `labels`, `comment`, `assignee`,
+  `issuelinks`, `created`, `updated`, `issuetype`, `priority`, `reporter`, and
+  `responseContentFormat: "markdown"`.
+- If direct Atlassian tools are unavailable, fallback to the configured
+  `atlassian` MCP server through `mcp-remote` and call `tools/call` with
+  `name: "getJiraIssue"`; only list tools/resources while diagnosing fallback.
+- List tasks via JQL: call `searchJiraIssuesUsingJql` with
+  `project = KAN ORDER BY created DESC`.
+
 ### Triage labels
 
 Five canonical roles; labels use the default strings. See `docs/agents/triage-labels.md`.
