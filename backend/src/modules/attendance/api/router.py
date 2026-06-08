@@ -5,7 +5,7 @@ the office network allowlist. All endpoints require authentication,
 and write operations require HR/Admin role.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.attendance.api.schemas import (
@@ -95,11 +95,11 @@ async def add_to_network_allowlist(
 
 
 @attendance_router.delete(
-    "/settings/network/{cidr}",
+    "/settings/network",
     response_model=NetworkAllowlistResponse,
 )
 async def remove_from_network_allowlist(
-    cidr: str,
+    cidr: str = Query(..., description="CIDR notation to remove"),
     user: User = Depends(require_hr),
     service: AttendanceSettingsService = Depends(get_attendance_settings_service),
 ) -> NetworkAllowlistResponse:
