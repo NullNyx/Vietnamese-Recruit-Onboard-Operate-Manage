@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
+from typing import Any
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI
 
@@ -144,7 +145,7 @@ class AIClassifier:
                 response = await asyncio.wait_for(
                     self._client.chat.completions.create(
                         model=self._model,
-                        messages=messages,
+                        messages=messages,  # type: ignore[arg-type]
                         temperature=0.0,
                         max_tokens=1000,
                     ),
@@ -302,7 +303,7 @@ class AIClassifier:
         return EmailCategory.uncategorized
 
     @staticmethod
-    def _extract_token_usage(response) -> dict[str, int]:
+    def _extract_token_usage(response: Any) -> dict[str, int]:
         """Extract token usage from the API response.
 
         Args:

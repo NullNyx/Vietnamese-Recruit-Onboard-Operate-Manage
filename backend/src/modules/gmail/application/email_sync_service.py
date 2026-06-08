@@ -480,7 +480,7 @@ class EmailSyncService:
             statement = (
                 select(EmailMessageEntity)
                 .where(EmailMessageEntity.user_id == user_id)
-                .where(EmailMessageEntity.gmail_message_id.in_(gmail_message_ids))
+                .where(EmailMessageEntity.gmail_message_id.in_(gmail_message_ids))  # type: ignore[attr-defined]
                 .where(EmailMessageEntity.processing_status == "unprocessed")
             )
             result = await self._email_repo.session.execute(statement)

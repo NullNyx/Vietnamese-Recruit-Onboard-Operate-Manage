@@ -5,6 +5,7 @@ and audit log retrieval under /api/admin/*.
 """
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -64,7 +65,7 @@ class AuditLogResponse(BaseModel):
     id: UUID
     admin_email: str
     action_type: AuditActionType
-    details: dict
+    details: dict[str, Any]
     created_at: datetime
 
 

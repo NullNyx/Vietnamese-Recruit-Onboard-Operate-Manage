@@ -8,7 +8,7 @@ from src.modules.identity.infrastructure.config import AuthSettings
 
 
 def _get_sync_database_url() -> str:
-    settings = AuthSettings()
+    settings = AuthSettings()  # type: ignore[call-arg]
     database_url = settings.database_url
     if database_url.startswith("postgresql+asyncpg://"):
         return database_url.replace("+asyncpg", "", 1)

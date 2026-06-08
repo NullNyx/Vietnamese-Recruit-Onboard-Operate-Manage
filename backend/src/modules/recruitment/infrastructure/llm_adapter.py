@@ -115,7 +115,7 @@ class LLMAdapter:
                 response = await asyncio.wait_for(
                     self._client.chat.completions.create(
                         model=self._model,
-                        messages=messages,
+                        messages=messages,  # type: ignore[arg-type]
                         temperature=0.0,
                         max_tokens=10,
                     ),
@@ -191,7 +191,7 @@ class LLMAdapter:
                 response = await asyncio.wait_for(
                     self._client.chat.completions.create(
                         model=self._model,
-                        messages=messages,
+                        messages=messages,  # type: ignore[arg-type]
                         temperature=0.0,
                         max_tokens=4096,
                     ),
@@ -335,7 +335,7 @@ class LLMAdapter:
             response = await asyncio.wait_for(
                 self._client.chat.completions.create(
                     model=self._model,
-                    messages=messages,
+                    messages=messages,  # type: ignore[arg-type]
                     temperature=0.0,
                     max_tokens=2048,
                 ),

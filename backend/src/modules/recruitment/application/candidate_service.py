@@ -14,7 +14,7 @@ import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -100,12 +100,12 @@ class CandidateValidationError(Exception):
         errors: List of validation error dicts with field and reason.
     """
 
-    def __init__(self, errors: list[dict]) -> None:
+    def __init__(self, errors: list[dict[str, Any]]) -> None:
         self.errors = errors
         super().__init__(f"Candidate validation failed: {errors}")
 
 
-def validate_candidate_fields(parsed_cv: ParsedCV) -> list[dict]:
+def validate_candidate_fields(parsed_cv: ParsedCV) -> list[dict[str, Any]]:
     """Validate required candidate fields from parsed CV data.
 
     Checks:
@@ -118,7 +118,7 @@ def validate_candidate_fields(parsed_cv: ParsedCV) -> list[dict]:
     Returns:
         List of validation error dicts. Empty list means validation passed.
     """
-    errors: list[dict] = []
+    errors: list[dict[str, Any]] = []
 
     # Validate name
     name = parsed_cv.name.strip() if parsed_cv.name else ""
@@ -198,7 +198,7 @@ class GmailConnectionChecker(Protocol):
 class DomainEventPublisher(Protocol):
     """Protocol for publishing domain events."""
 
-    async def publish(self, event_type: str, payload: dict) -> None:
+    async def publish(self, event_type: str, payload: dict[str, Any]) -> None:
         """Publish a domain event."""
         ...
 
@@ -745,9 +745,9 @@ class CandidateService:
             user_id = None
 
             if callable(self._access_token_provider):
-                access_token = await self._access_token_provider()  # type: ignore[misc]
+                access_token = await self._access_token_provider()
             if callable(self._user_id_provider):
-                user_id = await self._user_id_provider()  # type: ignore[misc]
+                user_id = await self._user_id_provider()
 
             if access_token and user_id:
                 await self._gmail_label_service.add_label(

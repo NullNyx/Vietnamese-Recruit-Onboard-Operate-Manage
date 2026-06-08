@@ -8,8 +8,10 @@ backoff retry for transient failures (5xx, 429).
 import asyncio
 import base64
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -117,13 +119,13 @@ class GmailAdapter:
 
     async def retry_with_backoff(
         self,
-        func,
+        func: Callable[..., Awaitable[Any]],
         *,
         max_retries: int | None = None,
         base_delay: float | None = None,
         timeout: float | None = None,
         quota_units: int = 5,
-    ):
+    ) -> Any:
         """Execute an async function with exponential backoff retry.
 
         Retries on 5xx errors and 429 (with Retry-After handling).
@@ -313,7 +315,7 @@ class GmailAdapter:
         access_token: str,
         query: str | None = None,
         max_results: int = 100,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """List message IDs from Gmail API messages.list.
 
         Args:
@@ -328,17 +330,17 @@ class GmailAdapter:
         if query:
             params["q"] = query
 
-        async def _request():
+        async def _request() -> dict[str, Any]:
             response = await self._http_client.get(
                 f"{GMAIL_API_BASE}messages",
                 headers=self._auth_headers(access_token),
                 params=params,
             )
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore[no-any-return]
 
         data = await self.retry_with_backoff(_request, quota_units=5)
-        return data.get("messages", [])
+        return data.get("messages", [])  # type: ignore[no-any-return]
 
     async def _get_message_metadata(
         self, access_token: str, message_id: str
@@ -353,14 +355,14 @@ class GmailAdapter:
             GmailMessageMetadata or None if fetch fails.
         """
 
-        async def _request():
+        async def _request() -> dict[str, Any]:
             response = await self._http_client.get(
                 f"{GMAIL_API_BASE}messages/{message_id}",
                 headers=self._auth_headers(access_token),
                 params={"format": "metadata"},
             )
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore[no-any-return]
 
         try:
             data = await self.retry_with_backoff(_request, quota_units=5)
@@ -373,7 +375,7 @@ class GmailAdapter:
             )
             return None
 
-    def _parse_message_metadata(self, data: dict) -> GmailMessageMetadata:
+    def _parse_message_metadata(self, data: dict[str, Any]) -> GmailMessageMetadata:
         """Parse Gmail API message response into GmailMessageMetadata.
 
         Args:
@@ -472,7 +474,7 @@ class GmailAdapter:
                 addresses.append(email)
         return addresses
 
-    def _check_has_attachments(self, payload: dict) -> bool:
+    def _check_has_attachments(self, payload: dict[str, Any]) -> bool:
         """Check if a message payload contains attachments.
 
         Args:
@@ -517,14 +519,14 @@ class GmailAdapter:
                 "historyTypes": "messageAdded",
             }
 
-            async def _request():
+            async def _request() -> dict[str, Any]:
                 response = await self._http_client.get(
                     f"{GMAIL_API_BASE}history",
                     headers=self._auth_headers(access_token),
                     params=params,
                 )
                 response.raise_for_status()
-                return response.json()
+                return response.json()  # type: ignore[no-any-return]
 
             data = await self.retry_with_backoff(_request, quota_units=5)
 
@@ -571,14 +573,14 @@ class GmailAdapter:
             httpx.HTTPStatusError: If message not found (404) or auth (401).
         """
 
-        async def _request():
+        async def _request() -> dict[str, Any]:
             response = await self._http_client.get(
                 f"{GMAIL_API_BASE}messages/{message_id}",
                 headers=self._auth_headers(access_token),
                 params={"format": "full"},
             )
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore[no-any-return]
 
         try:
             data = await self.retry_with_backoff(
@@ -592,7 +594,7 @@ class GmailAdapter:
                 raise
             raise GmailFetchError(f"Failed to fetch message body: {exc}") from exc
 
-    def _extract_body(self, payload: dict) -> MessageBody:
+    def _extract_body(self, payload: dict[str, Any]) -> MessageBody:
         """Extract text/plain and text/html body parts from message payload.
 
         Recursively searches multipart message structure for body content.
@@ -657,14 +659,14 @@ class GmailAdapter:
         # Encode the MIME message as base64url for the Gmail API
         encoded_message = base64.urlsafe_b64encode(mime_message).decode("ascii")
 
-        async def _request():
+        async def _request() -> dict[str, Any]:
             response = await self._http_client.post(
                 f"{GMAIL_API_BASE}messages/send",
                 headers=self._auth_headers(access_token),
                 json={"raw": encoded_message},
             )
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore[no-any-return]
 
         try:
             data = await self.retry_with_backoff(_request, quota_units=100)
@@ -695,13 +697,13 @@ class GmailAdapter:
             httpx.HTTPStatusError: If 401 (for token refresh handling).
         """
 
-        async def _request():
+        async def _request() -> dict[str, Any]:
             response = await self._http_client.get(
                 f"{GMAIL_API_BASE}messages/{message_id}/attachments/{attachment_id}",
                 headers=self._auth_headers(access_token),
             )
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore[no-any-return]
 
         try:
             data = await self.retry_with_backoff(_request, quota_units=5)
@@ -745,7 +747,7 @@ class GmailAdapter:
 
         for message_id in message_ids:
 
-            async def _request(msg_id=message_id):
+            async def _request(msg_id: str = message_id) -> dict[str, Any]:
                 response = await self._http_client.post(
                     f"{GMAIL_API_BASE}messages/{msg_id}/modify",
                     headers=self._auth_headers(access_token),
@@ -755,7 +757,7 @@ class GmailAdapter:
                     },
                 )
                 response.raise_for_status()
-                return response.json()
+                return response.json()  # type: ignore[no-any-return]
 
             try:
                 await self.retry_with_backoff(_request, quota_units=5)
@@ -796,7 +798,7 @@ class GmailAdapter:
         for i in range(0, len(message_ids), batch_size):
             batch = message_ids[i : i + batch_size]
 
-            async def _request(batch_ids=batch):
+            async def _request(batch_ids: list[str] = batch) -> None:
                 response = await self._http_client.post(
                     f"{GMAIL_API_BASE}messages/batchModify",
                     headers=self._auth_headers(access_token),
@@ -831,7 +833,7 @@ class GmailAdapter:
             httpx.HTTPStatusError: If 401 (for token refresh handling).
         """
 
-        async def _request():
+        async def _request() -> dict[str, Any]:
             response = await self._http_client.post(
                 f"{GMAIL_API_BASE}labels",
                 headers=self._auth_headers(access_token),
@@ -842,11 +844,11 @@ class GmailAdapter:
                 },
             )
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore[no-any-return]
 
         try:
             data = await self.retry_with_backoff(_request, quota_units=5)
-            return data.get("id", "")
+            return str(data.get("id", ""))
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 401:
                 raise
@@ -866,13 +868,13 @@ class GmailAdapter:
             httpx.HTTPStatusError: If 401 (for token refresh handling).
         """
 
-        async def _request():
+        async def _request() -> dict[str, Any]:
             response = await self._http_client.get(
                 f"{GMAIL_API_BASE}labels",
                 headers=self._auth_headers(access_token),
             )
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore[no-any-return]
 
         try:
             data = await self.retry_with_backoff(_request, quota_units=5)

@@ -205,7 +205,7 @@ class EmailRepository:
         statement = (
             select(EmailMessage)
             .where(EmailMessage.user_id == user_id)
-            .order_by(EmailMessage.received_at.desc())
+            .order_by(EmailMessage.received_at.desc())  # type: ignore[attr-defined]
             .limit(limit)
             .offset(offset)
         )

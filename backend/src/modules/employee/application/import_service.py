@@ -7,7 +7,7 @@ matched by email address.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from src.modules.employee.domain.entities import Department, Employee, Position
 from src.modules.employee.infrastructure.excel_parser import parse_excel
@@ -55,7 +55,7 @@ class ImportService:
         self._department_repo = department_repository
         self._position_repo = position_repository
 
-    async def import_from_excel(self, file_bytes: bytes) -> dict:
+    async def import_from_excel(self, file_bytes: bytes) -> dict[str, Any]:
         """Import employees from an Excel file.
 
         Parses the Excel file, auto-creates any departments/positions that
@@ -78,7 +78,7 @@ class ImportService:
 
         total_rows = len(parsed_rows) + len(parse_errors)
         success_count = 0
-        errors: list[dict] = list(parse_errors)
+        errors: list[dict[str, Any]] = list(parse_errors)
 
         # Track auto-created entities
         self._departments_created = 0
@@ -107,7 +107,7 @@ class ImportService:
             "positions_created": self._positions_created,
         }
 
-    async def _process_row(self, row_data: dict) -> list[dict]:
+    async def _process_row(self, row_data: dict[str, Any]) -> list[dict[str, Any]]:
         """Process a single parsed row: auto-create references and upsert.
 
         If a department_name or position_name doesn't exist in the system,
@@ -120,7 +120,7 @@ class ImportService:
         Returns:
             A list of error dicts (empty if the row was processed successfully).
         """
-        errors: list[dict] = []
+        errors: list[dict[str, Any]] = []
         department_id = None
         position_id = None
 

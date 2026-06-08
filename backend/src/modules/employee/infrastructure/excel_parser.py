@@ -7,6 +7,7 @@ and normalizing date formats.
 import re
 from datetime import date, datetime
 from io import BytesIO
+from typing import Any
 
 from openpyxl import load_workbook
 
@@ -85,7 +86,7 @@ def _validate_email(email: str) -> bool:
     return bool(_EMAIL_REGEX.match(email.strip()))
 
 
-def parse_excel(file_bytes: bytes) -> tuple[list[dict], list[dict]]:
+def parse_excel(file_bytes: bytes) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Parse an Excel (.xlsx) file into a list of row dictionaries.
 
     Reads the first worksheet, uses the first row as headers, and parses
@@ -123,11 +124,11 @@ def parse_excel(file_bytes: bytes) -> tuple[list[dict], list[dict]]:
         else:
             headers.append(_normalize_header(str(h)))
 
-    parsed_rows: list[dict] = []
-    errors: list[dict] = []
+    parsed_rows: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
 
     for row_idx, row in enumerate(rows[1:], start=2):
-        row_data: dict = {}
+        row_data: dict[str, Any] = {}
         row_errors: list[str] = []
 
         for col_idx, cell_value in enumerate(row):

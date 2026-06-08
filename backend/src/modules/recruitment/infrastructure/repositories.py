@@ -137,20 +137,20 @@ class CandidateRepository:
 
         # Exclude archived candidates unless explicitly requested
         if status is not None:
-            statement = statement.where(Candidate.status.in_(status))  # type: ignore[union-attr]
-            count_statement = count_statement.where(Candidate.status.in_(status))  # type: ignore[union-attr]
+            statement = statement.where(Candidate.status.in_(status))  # type: ignore[attr-defined]
+            count_statement = count_statement.where(Candidate.status.in_(status))  # type: ignore[attr-defined]
         else:
             statement = statement.where(Candidate.status != CandidateStatus.ARCHIVED)
             count_statement = count_statement.where(Candidate.status != CandidateStatus.ARCHIVED)
 
         # Apply date range filter
         if date_from is not None:
-            statement = statement.where(Candidate.created_at >= date_from)  # type: ignore[arg-type]
-            count_statement = count_statement.where(Candidate.created_at >= date_from)  # type: ignore[arg-type]
+            statement = statement.where(Candidate.created_at >= date_from)
+            count_statement = count_statement.where(Candidate.created_at >= date_from)
 
         if date_to is not None:
-            statement = statement.where(Candidate.created_at <= date_to)  # type: ignore[arg-type]
-            count_statement = count_statement.where(Candidate.created_at <= date_to)  # type: ignore[arg-type]
+            statement = statement.where(Candidate.created_at <= date_to)
+            count_statement = count_statement.where(Candidate.created_at <= date_to)
 
         # Apply minimum confidence filter
         if min_confidence is not None:
@@ -287,13 +287,13 @@ class CVDocumentRepository:
         ]
 
         statement = select(CVDocument).where(
-            CVDocument.processing_status.in_(review_statuses)  # type: ignore[union-attr]
+            CVDocument.processing_status.in_(review_statuses)  # type: ignore[attr-defined]
         )
         count_statement = (
             select(func.count())
             .select_from(CVDocument)
             .where(
-                CVDocument.processing_status.in_(review_statuses)  # type: ignore[union-attr]
+                CVDocument.processing_status.in_(review_statuses)  # type: ignore[attr-defined]
             )
         )
 

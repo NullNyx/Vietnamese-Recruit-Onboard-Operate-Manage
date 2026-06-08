@@ -11,6 +11,7 @@ Requirements: 15.1, 15.2, 15.3, 15.4, 15.5, 15.6
 import hashlib
 import logging
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -117,7 +118,7 @@ async def _delete_candidate_data(
     await candidate_repo.delete(candidate.id)
 
 
-async def retention_cleanup(ctx: dict) -> int:
+async def retention_cleanup(ctx: dict[str, Any]) -> int:
     """ARQ scheduled task for retention cleanup of rejected candidates.
 
     Selects rejected candidates whose rejected_at timestamp exceeds the

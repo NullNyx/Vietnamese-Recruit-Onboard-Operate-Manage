@@ -39,7 +39,7 @@ async def seed_demo_data(session: AsyncSession) -> bool:
     """Seed minimal data: departments, positions, and one demo employee."""
     from src.modules.identity.infrastructure.config import AuthSettings
 
-    settings = AuthSettings()
+    settings = AuthSettings()  # type: ignore[call-arg]
     if not settings.auto_seed_sample_data:
         logger.info("Demo seed disabled by config.")
         return False

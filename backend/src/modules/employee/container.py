@@ -37,7 +37,7 @@ def get_employee_settings() -> EmployeeSettings:
     Returns:
         The EmployeeSettings singleton loaded from EMPLOYEE_* env vars.
     """
-    return EmployeeSettings()  # type: ignore[call-arg]
+    return EmployeeSettings()
 
 
 @lru_cache

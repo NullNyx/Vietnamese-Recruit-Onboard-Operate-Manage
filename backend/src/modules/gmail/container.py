@@ -47,7 +47,7 @@ def get_gmail_settings() -> GmailSettings:
     Returns:
         The GmailSettings singleton loaded from GMAIL_* env vars.
     """
-    return GmailSettings()  # type: ignore[call-arg]
+    return GmailSettings()
 
 
 @lru_cache

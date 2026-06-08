@@ -8,7 +8,7 @@ with active employees).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from src.modules.employee.domain.entities import Department
@@ -50,7 +50,7 @@ class DepartmentService:
         """
         return await self._department_repo.list_all()
 
-    async def create_department(self, data: dict) -> Department:
+    async def create_department(self, data: dict[str, Any]) -> Department:
         """Create a new department.
 
         Validates that the department name is unique before persisting.
@@ -80,7 +80,7 @@ class DepartmentService:
 
         return await self._department_repo.create(department)
 
-    async def update_department(self, department_id: UUID, data: dict) -> Department:
+    async def update_department(self, department_id: UUID, data: dict[str, Any]) -> Department:
         """Update an existing department.
 
         Validates that the department exists and that the new name (if changed)

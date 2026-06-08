@@ -14,6 +14,7 @@ Requirements: 1.4, 2.7, 15.4, 16.2
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -61,7 +62,7 @@ def get_recruitment_settings() -> RecruitmentSettings:
     Returns:
         The RecruitmentSettings singleton loaded from RECRUITMENT_* env vars.
     """
-    return RecruitmentSettings()  # type: ignore[call-arg]
+    return RecruitmentSettings()
 
 
 @lru_cache
@@ -311,7 +312,7 @@ async def get_intent_classifier_service(
 # ---------------------------------------------------------------------------
 
 
-async def arq_process_cv_from_email(ctx: dict, email_message_id: UUID) -> None:
+async def arq_process_cv_from_email(ctx: dict[str, Any], email_message_id: UUID) -> None:
     """ARQ task: process CV attachments from a classified email.
 
     This task is enqueued by the IntentClassifierService when an email
@@ -404,7 +405,7 @@ async def arq_process_cv_from_email(ctx: dict, email_message_id: UUID) -> None:
 
             # Get OAuth grant for the user to access Gmail API
             auth_settings = AuthSettings()  # type: ignore[call-arg]
-            gmail_settings = GmailSettings()  # type: ignore[call-arg]
+            gmail_settings = GmailSettings()
             crypto = CryptoUtils(auth_settings.oauth_token_encryption_key)
             oauth_grant_repo = OAuthGrantRepository(session)
 
@@ -420,7 +421,7 @@ async def arq_process_cv_from_email(ctx: dict, email_message_id: UUID) -> None:
             # Build Gmail adapter and AttachmentService to fetch binary data
             redis_client = ctx.get("redis_client")
             if redis_client is None:
-                redis_client = redis.from_url(auth_settings.redis_url, decode_responses=True)
+                redis_client = redis.from_url(auth_settings.redis_url, decode_responses=True)  # type: ignore[no-untyped-call]
 
             quota_tracker = QuotaTracker(redis_client, gmail_settings)
 
@@ -496,7 +497,7 @@ async def arq_process_cv_from_email(ctx: dict, email_message_id: UUID) -> None:
             raise
 
 
-async def arq_retention_cleanup(ctx: dict) -> int:
+async def arq_retention_cleanup(ctx: dict[str, Any]) -> int:
     """ARQ task: retention cleanup of expired rejected candidates.
 
     Delegates to the retention_cleanup function which handles the full
@@ -519,7 +520,7 @@ async def arq_retention_cleanup(ctx: dict) -> int:
 
     async with session_maker() as session:
         # Build the context expected by retention_cleanup
-        retention_ctx: dict = {
+        retention_ctx: dict[str, Any] = {
             "session": session,
             "minio_client": get_minio_client(),
             "settings": get_recruitment_settings(),
@@ -530,7 +531,7 @@ async def arq_retention_cleanup(ctx: dict) -> int:
         return deleted_count
 
 
-def get_arq_tasks() -> list:
+def get_arq_tasks() -> list[Any]:
     """Return the list of ARQ task functions for the recruitment module.
 
     These tasks should be registered in the ARQ worker settings alongside

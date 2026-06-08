@@ -7,7 +7,7 @@ business rules such as email uniqueness and referential integrity.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from src.modules.employee.domain.entities import Employee
@@ -107,7 +107,7 @@ class EmployeeService:
             raise EmployeeNotFoundError()
         return employee
 
-    async def create_employee(self, data: dict) -> Employee:
+    async def create_employee(self, data: dict[str, Any]) -> Employee:
         """Create a new employee with auto-generated employee code.
 
         Validates email uniqueness and department/position existence
@@ -170,7 +170,7 @@ class EmployeeService:
 
         return await self._employee_repo.create(employee)
 
-    async def update_employee(self, employee_id: UUID, data: dict) -> Employee:
+    async def update_employee(self, employee_id: UUID, data: dict[str, Any]) -> Employee:
         """Update an existing employee record.
 
         Validates that the employee exists, checks email uniqueness if
@@ -242,7 +242,7 @@ class EmployeeService:
             raise EmployeeNotFoundError()
         return deleted
 
-    async def promote_candidate(self, data: dict) -> Employee:
+    async def promote_candidate(self, data: dict[str, Any]) -> Employee:
         """Create an employee from a promoted candidate.
 
         Accepts candidate data and creates an employee record with source

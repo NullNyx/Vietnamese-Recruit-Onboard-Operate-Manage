@@ -10,7 +10,7 @@ Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7, 14.8
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -63,11 +63,11 @@ class CVReviewItemResponse(BaseModel):
     size_bytes: int
     file_path: str
     ocr_output: str | None = None
-    parsed_cv_data: dict | None = None
+    parsed_cv_data: dict[str, Any] | None = None
     confidence_score: float | None = None
     processing_status: str
     processing_error: str | None = None
-    validation_errors: list[dict] | None = None
+    validation_errors: list[dict[str, Any]] | None = None
     retry_count: int = 0
     uploaded_at: datetime
     created_at: datetime

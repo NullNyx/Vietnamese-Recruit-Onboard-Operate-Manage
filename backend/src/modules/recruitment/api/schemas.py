@@ -5,6 +5,7 @@ for structured data validation and serialization.
 """
 
 from datetime import date, datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -212,8 +213,8 @@ class CandidateDetailResponse(BaseModel):
     email: str
     phone: str = ""
     skills: list[str] = Field(default_factory=list)
-    experience: list[dict] = Field(default_factory=list)
-    education: list[dict] = Field(default_factory=list)
+    experience: list[dict[str, Any]] = Field(default_factory=list)
+    education: list[dict[str, Any]] = Field(default_factory=list)
     summary: str = ""
     status: CandidateStatus
     confidence_score: float = 0.0
@@ -256,9 +257,9 @@ class CVReviewItemResponse(BaseModel):
     uploaded_at: datetime
     processing_status: ProcessingStatus
     processing_error: str | None = None
-    validation_errors: list[dict] | None = None
+    validation_errors: list[dict[str, Any]] | None = None
     ocr_output: str | None = None
-    parsed_cv_data: dict | None = None
+    parsed_cv_data: dict[str, Any] | None = None
     presigned_url: str | None = None
     candidate_id: UUID | None = None
     gmail_message_id: str
@@ -291,7 +292,7 @@ class PaginatedResponse(BaseModel):
         page_size: Number of items per page.
     """
 
-    items: list
+    items: list[dict[str, Any]]
     total_count: int
     page: int
     page_size: int

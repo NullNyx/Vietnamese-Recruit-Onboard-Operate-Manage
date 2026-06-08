@@ -39,7 +39,7 @@ class DocumentRepository:
         statement = (
             select(EmployeeDocument)
             .where(EmployeeDocument.employee_id == employee_id)
-            .order_by(EmployeeDocument.uploaded_at.desc())  # type: ignore[union-attr]
+            .order_by(EmployeeDocument.uploaded_at.desc())  # type: ignore[attr-defined]
         )
         result = await self.session.execute(statement)
         return list(result.scalars().all())

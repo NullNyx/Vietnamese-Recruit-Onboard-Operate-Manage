@@ -4,6 +4,8 @@ Defines data transfer objects used by the Gmail router endpoints
 for structured data validation and serialization.
 """
 
+from typing import Any
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from src.modules.gmail.domain.enums import ConnectionStatus
@@ -221,4 +223,4 @@ class ErrorResponse(BaseModel):
 
     error_code: str
     message: str
-    details: dict | None = None
+    details: dict[str, Any] | None = None

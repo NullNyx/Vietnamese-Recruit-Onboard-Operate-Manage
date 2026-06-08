@@ -92,7 +92,7 @@ class LabelService:
 
             if full_label_name in existing_label_map:
                 # Reuse existing label ID
-                gmail_label_id = existing_label_map[full_label_name]
+                gmail_label_id: str | None = existing_label_map[full_label_name]
                 logger.info(
                     "Reusing existing label '%s' (ID: %s) for user %s",
                     full_label_name,
@@ -118,6 +118,7 @@ class LabelService:
                     user_id,
                 )
 
+            assert gmail_label_id is not None
             mappings.append({"label_name": full_label_name, "gmail_label_id": gmail_label_id})
 
         # Step 3: Store mappings in the database

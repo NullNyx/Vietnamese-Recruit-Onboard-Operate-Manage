@@ -18,6 +18,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -40,7 +41,7 @@ from src.modules.onboarding.infrastructure.config import OnboardingSettings
 logger = logging.getLogger(__name__)
 
 
-async def startup(ctx: dict) -> None:
+async def startup(ctx: dict[str, Any]) -> None:
     """ARQ worker startup hook.
 
     Builds the shared async database engine and session factory and stores them
@@ -63,12 +64,13 @@ async def startup(ctx: dict) -> None:
 
     # Write heartbeat for runtime health monitoring
     import time as _time
-    redis_client = redis.from_url(onboarding_settings.redis_url, decode_responses=True)
+    redis_client = redis.from_url(  # type: ignore[no-untyped-call]
+        onboarding_settings.redis_url, decode_responses=True)
     await redis_client.set("runtime:heartbeat:onboarding-worker", _time.time(), ex=600)
     ctx["redis_client"] = redis_client
 
 
-async def shutdown(ctx: dict) -> None:
+async def shutdown(ctx: dict[str, Any]) -> None:
     """ARQ worker shutdown hook.
 
     Disposes the async database engine created at startup so its connection

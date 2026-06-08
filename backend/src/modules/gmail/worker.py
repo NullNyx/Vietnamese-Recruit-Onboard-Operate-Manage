@@ -20,6 +20,8 @@ from dotenv import load_dotenv
 # Load .env before any settings are instantiated (same pattern as main.py).
 load_dotenv()
 
+from typing import Any
+
 import httpx
 import redis.asyncio as redis
 from arq import cron
@@ -41,7 +43,7 @@ from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGran
 logger = logging.getLogger(__name__)
 
 
-async def startup(ctx: dict) -> None:
+async def startup(ctx: dict[str, Any]) -> None:
     """ARQ worker startup hook.
 
     Initializes shared resources (database engine, Redis client, HTTP client,
@@ -51,12 +53,13 @@ async def startup(ctx: dict) -> None:
         ctx: The ARQ worker context dictionary.
     """
     auth_settings = AuthSettings()  # type: ignore[call-arg]
-    gmail_settings = GmailSettings()  # type: ignore[call-arg]
+    gmail_settings = GmailSettings()
 
     engine = create_async_engine(auth_settings.database_url, echo=False)
     session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-    redis_client = redis.from_url(auth_settings.redis_url, decode_responses=True)
+    redis_client = redis.from_url(  # type: ignore[no-untyped-call]
+        auth_settings.redis_url, decode_responses=True)
     http_client = httpx.AsyncClient()
     crypto = CryptoUtils(auth_settings.oauth_token_encryption_key)
     quota_tracker = QuotaTracker(redis_client, gmail_settings)
@@ -75,7 +78,7 @@ async def startup(ctx: dict) -> None:
     await redis_client.set("runtime:heartbeat:gmail-worker", __import__("time").time(), ex=600)
 
 
-async def shutdown(ctx: dict) -> None:
+async def shutdown(ctx: dict[str, Any]) -> None:
     """ARQ worker shutdown hook.
 
     Cleans up shared resources (HTTP client, Redis connection).
@@ -95,14 +98,13 @@ async def shutdown(ctx: dict) -> None:
 
     # Clear heartbeat on shutdown
     try:
-        redis_client: redis.Redis | None = ctx.get("redis_client")
         if redis_client:
             await redis_client.delete("runtime:heartbeat:gmail-worker")
     except Exception:
         pass
 
 
-async def poll_gmail_emails(ctx: dict) -> None:
+async def poll_gmail_emails(ctx: dict[str, Any]) -> None:
     """ARQ cron job: fetch new emails for all connected Gmail users.
 
     Iterates over all users with valid Gmail OAuth grants, checks their
@@ -214,7 +216,7 @@ def _build_cron_schedule(poll_interval_seconds: int) -> set[int]:
 
 
 # Load settings for cron schedule configuration.
-_gmail_settings = GmailSettings()  # type: ignore[call-arg]
+_gmail_settings = GmailSettings()
 _auth_settings = AuthSettings()  # type: ignore[call-arg]
 
 

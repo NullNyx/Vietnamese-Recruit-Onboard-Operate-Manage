@@ -241,7 +241,7 @@ class OCRAdapter:
             finally:
                 pdf_doc.close()
 
-            return pdf_bytes
+            return bytes(pdf_bytes)
         except Exception as exc:
             logger.error("Failed to convert DOCX '%s' to PDF: %s", filename, exc)
             raise OCRExtractionError(
@@ -301,7 +301,7 @@ class OCRAdapter:
                         )
                         last_error = OCRExtractionError(error_msg)
                     else:
-                        return markdown
+                        return str(markdown)
 
             except httpx.ConnectError as exc:
                 error_msg = f"olmOCR server unreachable for file '{filename}': {exc}"
