@@ -154,9 +154,13 @@ class ToolRegistry:
         location = args.get("location")
 
         if not candidate_id_str or not date_str or not time_str or not location:
-            return {"error": "Missing required parameters: candidate_id, interview_date, interview_time, location."}
+            return {
+                "error": "Missing required parameters: candidate_id, interview_date, "
+                "interview_time, location."
+            }
 
         import uuid
+
         try:
             candidate_id = uuid.UUID(candidate_id_str)
             detail = await self._candidate_service.get_candidate(candidate_id)
@@ -182,7 +186,11 @@ class ToolRegistry:
 
         draft = DraftAction(
             action_type="send_email",
-            parameters={"candidate_id": str(candidate_id), "subject": subject, "body_html": body_html},
+            parameters={
+                "candidate_id": str(candidate_id),
+                "subject": subject,
+                "body_html": body_html,
+            },
             preview=f"Gửi thư mời phỏng vấn đến {candidate.email} lúc {time_str} {date_str}",
             confirm_endpoint=f"/api/recruitment/candidates/{candidate_id}/send-email",
             confirm_method="POST",
@@ -210,6 +218,7 @@ class ToolRegistry:
             return {"error": "Missing required parameters: candidate_id, position, start_date."}
 
         import uuid
+
         try:
             candidate_id = uuid.UUID(candidate_id_str)
             detail = await self._candidate_service.get_candidate(candidate_id)
@@ -217,21 +226,26 @@ class ToolRegistry:
         except Exception as e:
             return {"error": f"Không tìm thấy ứng viên: {str(e)}"}
 
-        subject = f"Chúc mừng bạn đã trúng tuyển - Vroom HR"
+        subject = "Chúc mừng bạn đã trúng tuyển - Vroom HR"
         body_html = f"""
         <div style="font-family: sans-serif; line-height: 1.5;">
             <h3>Thư Báo Trúng Tuyển</h3>
             <p>Thân gửi <strong>{candidate.name}</strong>,</p>
             <p>Chúc mừng bạn đã trúng tuyển vào vị trí <strong>{position}</strong> tại Vroom HR.</p>
             <p>Ngày bắt đầu làm việc dự kiến: <strong>{start_date}</strong>.</p>
-            <p>Vui lòng phản hồi lại email này để xác nhận nhận việc. Chúng tôi sẽ hướng dẫn thủ tục Onboarding tiếp theo.</p>
+            <p>Vui lòng phản hồi lại email này để xác nhận nhận việc. Chúng tôi sẽ hướng dẫn thủ tục
+            Onboarding tiếp theo.</p>
             <p>Trân trọng,<br>Phòng Nhân Sự</p>
         </div>
         """
 
         draft = DraftAction(
             action_type="send_email",
-            parameters={"candidate_id": str(candidate_id), "subject": subject, "body_html": body_html},
+            parameters={
+                "candidate_id": str(candidate_id),
+                "subject": subject,
+                "body_html": body_html,
+            },
             preview=f"Gửi thư trúng tuyển vị trí {position} đến {candidate.email}",
             confirm_endpoint=f"/api/recruitment/candidates/{candidate_id}/send-email",
             confirm_method="POST",
