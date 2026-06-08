@@ -1,7 +1,6 @@
 """API schemas for Attendance network configuration."""
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -10,7 +9,7 @@ class NetworkAllowlistResponse(BaseModel):
     """Response schema for network allowlist."""
 
     networks: list[str] = Field(default_factory=list, description="List of CIDR notations")
-    updated_at: Optional[datetime] = Field(default=None, description="Last update timestamp")
+    updated_at: datetime | None = Field(default=None, description="Last update timestamp")
 
 
 class NetworkAllowlistUpdate(BaseModel):

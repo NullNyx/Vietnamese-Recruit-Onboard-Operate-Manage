@@ -16,12 +16,6 @@ from src.modules.attendance.api.schemas import (
 from src.modules.attendance.application.attendance_settings_service import (
     AttendanceSettingsService,
 )
-from src.modules.attendance.domain.exceptions import (
-    CidrNotFoundError,
-    DuplicateCidrError,
-    InvalidCidrError,
-    TooManyNetworksError,
-)
 from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User, UserRole
 

@@ -15,7 +15,10 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
     """Register error handlers for attendance module exceptions."""
 
     @app.exception_handler(AttendanceError)
-    async def attendance_error_handler(request: Request, exc: AttendanceError) -> JSONResponse:
+    async def attendance_error_handler(
+        request: Request,
+        exc: AttendanceError,
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=exc.status_code,
             content={
@@ -25,7 +28,10 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(InvalidCidrError)
-    async def invalid_cidr_handler(request: Request, exc: InvalidCidrError) -> JSONResponse:
+    async def invalid_cidr_handler(
+        request: Request,
+        exc: InvalidCidrError,
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=400,
             content={
@@ -35,7 +41,10 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(TooManyNetworksError)
-    async def too_many_networks_handler(request: Request, exc: TooManyNetworksError) -> JSONResponse:
+    async def too_many_networks_handler(
+        request: Request,
+        exc: TooManyNetworksError,
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=400,
             content={
@@ -45,7 +54,10 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(OfficeNetworkRequiredError)
-    async def office_network_required_handler(request: Request, exc: OfficeNetworkRequiredError) -> JSONResponse:
+    async def office_network_required_handler(
+        request: Request,
+        exc: OfficeNetworkRequiredError,
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=403,
             content={

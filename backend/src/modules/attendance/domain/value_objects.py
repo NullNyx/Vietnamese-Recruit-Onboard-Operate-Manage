@@ -5,7 +5,6 @@ from dataclasses import dataclass
 
 from src.modules.attendance.domain.exceptions import InvalidCidrError
 
-
 MAX_NETWORKS = 20
 
 
