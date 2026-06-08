@@ -1,7 +1,6 @@
 """Attendance settings service for office network allowlist management."""
 
 import ipaddress
-import re
 
 from src.modules.attendance.domain.exceptions import (
     CidrNotFoundError,
