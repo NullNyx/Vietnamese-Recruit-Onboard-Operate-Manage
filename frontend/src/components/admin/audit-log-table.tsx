@@ -51,6 +51,7 @@ const ACTION_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "whitelist_remove", label: "Xóa whitelist" },
   { value: "oauth_update", label: "Cập nhật OAuth" },
   { value: "role_change", label: "Thay đổi vai trò" },
+  { value: "assistant_tool_config", label: "Cấu hình AI Tools" },
 ];
 
 function getActionBadgeVariant(
@@ -65,6 +66,8 @@ function getActionBadgeVariant(
       return "secondary";
     case "role_change":
       return "outline";
+    case "assistant_tool_config":
+      return "default";
     default:
       return "secondary";
   }
@@ -80,6 +83,8 @@ function getActionLabel(actionType: AuditActionType): string {
       return "Cập nhật OAuth";
     case "role_change":
       return "Thay đổi vai trò";
+    case "assistant_tool_config":
+      return "Cấu hình AI Tools";
     default:
       return actionType;
   }

@@ -59,7 +59,8 @@ export type AuditActionType =
   | 'whitelist_remove'
   | 'oauth_update'
   | 'role_change'
-  | 'org_domain_update';
+  | 'org_domain_update'
+  | 'assistant_tool_config';
 
 export interface DomainListResponse {
   allowed_domains: string[];

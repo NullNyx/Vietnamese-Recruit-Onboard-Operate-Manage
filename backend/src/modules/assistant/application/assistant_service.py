@@ -206,8 +206,11 @@ class AssistantService:
         """
         result: list[dict[str, Any]] = [{"role": "system", "content": _SYSTEM_PROMPT}]
 
-        # Trim to max_history (excluding system message)
-        history = messages[-self._settings.max_history :]
+        # Trim to max_history (excluding system message), ensuring we start at a user turn
+        start_idx = max(0, len(messages) - self._settings.max_history)
+        while start_idx > 0 and messages[start_idx].role != "user":
+            start_idx -= 1
+        history = messages[start_idx:]
 
         for msg in history:
             entry: dict[str, Any] = {"role": msg.role}

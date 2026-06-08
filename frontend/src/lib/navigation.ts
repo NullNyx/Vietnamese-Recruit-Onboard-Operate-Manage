@@ -45,5 +45,6 @@ export const adminNavSection: AdminNavSection = {
     { href: '/admin/users', label: 'Người dùng', icon: UserCog },
     { href: '/admin/audit-logs', label: 'Nhật ký', icon: ScrollText },
     { href: '/admin/assistant', label: 'AI Assistant', icon: Bot },
+    { href: '/admin/assistant-tools', label: 'AI Tools Config', icon: Bot },
   ],
 };
