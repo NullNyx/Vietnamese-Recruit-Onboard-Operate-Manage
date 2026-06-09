@@ -601,7 +601,7 @@ async def process_attachments(
 
     if email is None:
         raise HTTPException(status_code=404, detail="Email not found")
-    if email.user_id != current_user.id:  # type: ignore[comparison-overlap]
+    if email.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Guard: only classified recruitment emails with attachments
@@ -636,6 +636,9 @@ async def process_attachments(
     attachments_meta = _extract_attachment_metadata(msg_data.get("payload", {}))
 
     if not attachments_meta:
+        email.processing_status = "classified"
+        email_repo.session.add(email)
+        await email_repo.session.commit()
         return {"processed_count": 0, "message": "No attachments found"}
 
     # Fetch binary data
@@ -684,6 +687,11 @@ async def process_attachments(
             detail=f"CV processing failed: {exc}",
         ) from exc
 
+    # Set final status based on CV processing results.
+    # If any CVDocument ended up as needs_review, propagate that.
+    # Otherwise mark as classified (CV pipeline handles its own status).
+    email.processing_status = "classified"
+    email_repo.session.add(email)
     await email_repo.session.commit()
 
     return {
@@ -1070,7 +1078,7 @@ async def list_emails_needing_review(
         select(EmailMessageEntity)
         .where(EmailMessageEntity.user_id == current_user.id)
         .where(EmailMessageEntity.processing_status == "needs_review")
-        .order_by(desc(EmailMessageEntity.received_at))
+        .order_by(desc(EmailMessageEntity.received_at))  # type: ignore[arg-type]
         .limit(limit)
         .offset(offset)
     )
@@ -1148,14 +1156,14 @@ async def reclassify_email(
     )
 
     # Fetch the email
-    statement = select(EmailMessageEntity).where(EmailMessageEntity.id == str(message_id))
+    statement = select(EmailMessageEntity).where(EmailMessageEntity.id == message_id)  # type: ignore[arg-type]
     result = await email_repo.session.execute(statement)
     email = result.scalar_one_or_none()
 
     if email is None:
         raise HTTPException(status_code=404, detail="Email not found")
 
-    if email.user_id != current_user.id:  # type: ignore[comparison-overlap]
+    if email.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Guard: only needs_review emails can be reclassified
