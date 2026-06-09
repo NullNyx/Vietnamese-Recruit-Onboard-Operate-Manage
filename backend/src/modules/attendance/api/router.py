@@ -6,7 +6,6 @@ and write operations require HR/Admin role. Every admin write action
 is recorded in the audit log.
 """
 
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from src.modules.attendance.api.schemas import (
@@ -128,6 +127,7 @@ from src.modules.employee.domain.entities import Employee
 # Trusted proxy list - only these originating IPs can provide X-Forwarded-For.
 # Expand this list for known reverse proxies (e.g. "10.0.0.1").
 TRUSTED_PROXIES: frozenset[str] = frozenset({"127.0.0.1", "::1"})
+
 
 async def get_client_ip(request: Request) -> str:
     """Extract client IP from request with trusted-proxy enforcement.

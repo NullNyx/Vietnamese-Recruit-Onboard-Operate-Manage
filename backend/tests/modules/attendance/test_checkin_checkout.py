@@ -45,9 +45,7 @@ def mock_settings_service():
 
 
 @pytest.fixture
-def attendance_service(
-    mock_attendance_repo, mock_org_settings_repo, mock_settings_service
-):
+def attendance_service(mock_attendance_repo, mock_org_settings_repo, mock_settings_service):
     """Create an AttendanceService with mocked dependencies."""
     return AttendanceService(
         attendance_repo=mock_attendance_repo,
@@ -60,9 +58,7 @@ class TestCheckInAllowedIP:
     """Tests for check-in with allowed IP."""
 
     @pytest.mark.asyncio
-    async def test_check_in_creates_record(
-        self, attendance_service, mock_attendance_repo
-    ):
+    async def test_check_in_creates_record(self, attendance_service, mock_attendance_repo):
         """Test check-in creates a new attendance record atomically."""
         employee_id = uuid4()
         client_ip = "192.168.1.100"
@@ -80,9 +76,7 @@ class TestCheckInAllowedIP:
         )
         mock_attendance_repo.upsert_check_in = AsyncMock(return_value=created)
 
-        result = await attendance_service.check_in(
-            employee_id, client_ip, user_agent
-        )
+        result = await attendance_service.check_in(employee_id, client_ip, user_agent)
 
         assert result.employee_id == employee_id
         assert result.check_in_at is not None
@@ -108,9 +102,7 @@ class TestCheckInAllowedIP:
         # Atomic upsert returns existing record when conflict occurs
         mock_attendance_repo.upsert_check_in = AsyncMock(return_value=existing_record)
 
-        result = await attendance_service.check_in(
-            employee_id, "192.168.1.100", "Mozilla/5.0"
-        )
+        result = await attendance_service.check_in(employee_id, "192.168.1.100", "Mozilla/5.0")
 
         assert result.id == existing_record.id
         assert result.check_in_at == existing_record.check_in_at
@@ -132,9 +124,7 @@ class TestCheckInBlockedIP:
         mock_settings_service.is_ip_allowed = AsyncMock(return_value=False)
 
         with pytest.raises(OfficeNetworkRequiredError) as exc_info:
-            await attendance_service.check_in(
-                employee_id, client_ip, "User-Agent"
-            )
+            await attendance_service.check_in(employee_id, client_ip, "User-Agent")
 
         assert exc_info.value.status_code == 403
         assert "office network" in exc_info.value.message.lower()
@@ -144,9 +134,7 @@ class TestCheckOut:
     """Tests for check-out functionality."""
 
     @pytest.mark.asyncio
-    async def test_check_out_requires_check_in(
-        self, attendance_service, mock_attendance_repo
-    ):
+    async def test_check_out_requires_check_in(self, attendance_service, mock_attendance_repo):
         """Test check-out fails if no check-in exists."""
         employee_id = uuid4()
         client_ip = "192.168.1.100"
@@ -154,16 +142,12 @@ class TestCheckOut:
         mock_attendance_repo.get_by_employee_and_date = AsyncMock(return_value=None)
 
         with pytest.raises(NotCheckedInError) as exc_info:
-            await attendance_service.check_out(
-                employee_id, client_ip, "User-Agent"
-            )
+            await attendance_service.check_out(employee_id, client_ip, "User-Agent")
 
         assert exc_info.value.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_check_out_idempotent(
-        self, attendance_service, mock_attendance_repo
-    ):
+    async def test_check_out_idempotent(self, attendance_service, mock_attendance_repo):
         """Test repeated check-out returns existing record."""
         employee_id = uuid4()
         now = datetime.now(UTC)
@@ -178,13 +162,9 @@ class TestCheckOut:
             source=AttendanceSource.WEB,
         )
 
-        mock_attendance_repo.get_by_employee_and_date = AsyncMock(
-            return_value=existing_record
-        )
+        mock_attendance_repo.get_by_employee_and_date = AsyncMock(return_value=existing_record)
 
-        result = await attendance_service.check_out(
-            employee_id, "192.168.1.100", "User-Agent"
-        )
+        result = await attendance_service.check_out(employee_id, "192.168.1.100", "User-Agent")
 
         assert result.check_out_at == existing_record.check_out_at
         mock_attendance_repo.update.assert_not_called()
@@ -194,19 +174,13 @@ class TestWorkDateTimezone:
     """Tests for timezone-aware work date."""
 
     @pytest.mark.asyncio
-    async def test_work_date_uses_org_timezone(
-        self, attendance_service, mock_org_settings_repo
-    ):
+    async def test_work_date_uses_org_timezone(self, attendance_service, mock_org_settings_repo):
         """Test work date is derived from Organization timezone."""
-        mock_org_settings_repo.get_timezone = AsyncMock(
-            return_value="Asia/Ho_Chi_Minh"
-        )
+        mock_org_settings_repo.get_timezone = AsyncMock(return_value="Asia/Ho_Chi_Minh")
 
         work_date = await attendance_service._get_work_date()
 
-        expected = datetime.now(UTC).astimezone(
-            tz=ZoneInfo("Asia/Ho_Chi_Minh")
-        ).date()
+        expected = datetime.now(UTC).astimezone(tz=ZoneInfo("Asia/Ho_Chi_Minh")).date()
         assert work_date == expected
 
 
@@ -232,9 +206,7 @@ class TestCheckOutBlockedIP:
         mock_settings_service.is_ip_allowed = AsyncMock(return_value=False)
 
         with pytest.raises(OfficeNetworkRequiredError) as exc_info:
-            await attendance_service.check_out(
-                employee_id, client_ip, "User-Agent"
-            )
+            await attendance_service.check_out(employee_id, client_ip, "User-Agent")
 
         assert exc_info.value.status_code == 403
         assert "office network" in exc_info.value.message.lower()
@@ -244,9 +216,7 @@ class TestUserAgentStorage:
     """Tests for user agent storage."""
 
     @pytest.mark.asyncio
-    async def test_check_in_stores_user_agent(
-        self, attendance_service, mock_attendance_repo
-    ):
+    async def test_check_in_stores_user_agent(self, attendance_service, mock_attendance_repo):
         """Test check-in stores user agent atomically."""
         employee_id = uuid4()
         client_ip = "192.168.1.100"
@@ -264,17 +234,13 @@ class TestUserAgentStorage:
         )
         mock_attendance_repo.upsert_check_in = AsyncMock(return_value=created)
 
-        result = await attendance_service.check_in(
-            employee_id, client_ip, user_agent
-        )
+        result = await attendance_service.check_in(employee_id, client_ip, user_agent)
 
         assert result.check_in_user_agent == user_agent
         mock_attendance_repo.upsert_check_in.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_check_out_stores_user_agent(
-        self, attendance_service, mock_attendance_repo
-    ):
+    async def test_check_out_stores_user_agent(self, attendance_service, mock_attendance_repo):
         """Test check-out stores user agent."""
         employee_id = uuid4()
         client_ip = "192.168.1.100"
@@ -289,14 +255,10 @@ class TestUserAgentStorage:
             source=AttendanceSource.WEB,
         )
 
-        mock_attendance_repo.get_by_employee_and_date = AsyncMock(
-            return_value=existing_record
-        )
+        mock_attendance_repo.get_by_employee_and_date = AsyncMock(return_value=existing_record)
         mock_attendance_repo.update = AsyncMock(side_effect=lambda r: r)
 
-        result = await attendance_service.check_out(
-            employee_id, client_ip, user_agent
-        )
+        result = await attendance_service.check_out(employee_id, client_ip, user_agent)
 
         assert result.check_out_user_agent == user_agent
         mock_attendance_repo.update.assert_called_once()

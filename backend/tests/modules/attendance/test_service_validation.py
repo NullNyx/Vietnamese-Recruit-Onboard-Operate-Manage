@@ -64,9 +64,7 @@ class TestAttendanceSettingsService:
     def test_validate_duplicate(self):
         """Duplicate CIDR should raise error."""
         with pytest.raises(DuplicateCidrError):
-            self.service._validate_and_normalize(
-                ["192.168.1.0/24", "192.168.1.0/24"]
-            )
+            self.service._validate_and_normalize(["192.168.1.0/24", "192.168.1.0/24"])
 
     # ------------------------------------------------------------------
     # IP normalization tests

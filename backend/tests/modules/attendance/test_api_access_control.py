@@ -102,9 +102,7 @@ class FakeAuditService:
     def __init__(self) -> None:
         self.log_calls: list[tuple[User, AuditActionType, dict]] = []
 
-    async def log_action(
-        self, admin: User, action_type: AuditActionType, details: dict
-    ) -> None:
+    async def log_action(self, admin: User, action_type: AuditActionType, details: dict) -> None:
         self.log_calls.append((admin, action_type, details))
 
 

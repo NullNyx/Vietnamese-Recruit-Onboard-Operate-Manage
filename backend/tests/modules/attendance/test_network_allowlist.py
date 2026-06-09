@@ -79,20 +79,24 @@ class TestAttendanceNetworkConfig:
 
     def test_multiple_networks(self):
         """Test config with multiple networks."""
-        config = AttendanceNetworkConfig.from_cidr_strings([
-            "192.168.1.0/24",
-            "10.0.0.0/8",
-        ])
+        config = AttendanceNetworkConfig.from_cidr_strings(
+            [
+                "192.168.1.0/24",
+                "10.0.0.0/8",
+            ]
+        )
         assert config.is_ip_allowed("192.168.1.50") is True
         assert config.is_ip_allowed("10.1.2.3") is True
         assert config.is_ip_allowed("172.16.0.1") is False
 
     def test_to_cidr_strings(self):
         """Test conversion to string list."""
-        config = AttendanceNetworkConfig.from_cidr_strings([
-            "192.168.1.0/24",
-            "10.0.0.0/8",
-        ])
+        config = AttendanceNetworkConfig.from_cidr_strings(
+            [
+                "192.168.1.0/24",
+                "10.0.0.0/8",
+            ]
+        )
         assert config.to_cidr_strings() == ["192.168.1.0/24", "10.0.0.0/8"]
 
     def test_from_cidr_strings_invalid(self):
@@ -102,10 +106,12 @@ class TestAttendanceNetworkConfig:
 
     def test_len(self):
         """Test len returns network count."""
-        config = AttendanceNetworkConfig.from_cidr_strings([
-            "192.168.1.0/24",
-            "10.0.0.0/8",
-        ])
+        config = AttendanceNetworkConfig.from_cidr_strings(
+            [
+                "192.168.1.0/24",
+                "10.0.0.0/8",
+            ]
+        )
         assert len(config) == 2
 
     def test_bool_empty(self):
