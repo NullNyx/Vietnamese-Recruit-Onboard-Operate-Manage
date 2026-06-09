@@ -6,6 +6,8 @@ and write operations require HR/Admin role. Every admin write action
 is recorded in the audit log.
 """
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, Query
 
 from src.modules.attendance.api.schemas import (
@@ -110,3 +112,100 @@ async def remove_from_network_allowlist(
         details={"removed": cidr, "remaining": len(networks)},
     )
     return NetworkAllowlistResponse(networks=networks)
+
+
+# Employee-owned attendance endpoints
+
+from fastapi import Request
+
+from src.modules.attendance.api.schemas import (
+    AttendanceRecordResponse,
+    CheckInResponse,
+    CheckOutResponse,
+)
+from src.modules.attendance.application.attendance_service import AttendanceService
+from src.modules.attendance.container import get_attendance_service
+from src.modules.identity.container import get_current_employee_id
+
+
+async def get_client_ip(request: Request) -> str:
+    """Extract client IP from request, handling proxies."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "127.0.0.1"
+
+
+def _require_employee(user_employee_id: UUID | None = Depends(get_current_employee_id)) -> UUID:
+    """Dependency that requires a linked employee_id.
+
+    Raises ValueError if no employee is linked to the current user.
+    """
+    if user_employee_id is None:
+        raise ValueError("Employee profile required for this action")
+    return user_employee_id
+
+
+@attendance_router.post("/me/check-in", response_model=CheckInResponse)
+async def check_in(
+    request: Request,
+    employee_id: UUID = Depends(_require_employee),
+    service: AttendanceService = Depends(get_attendance_service),
+) -> CheckInResponse:
+    """Check in for today from office network.
+
+    Idempotent: returns existing record if already checked in.
+    Requires employee profile linked to user account.
+    """
+    client_ip = await get_client_ip(request)
+    user_agent = request.headers.get("User-Agent")
+
+    record = await service.check_in(
+        employee_id=employee_id,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+
+    return CheckInResponse(
+        message="Checked in successfully",
+        record=AttendanceRecordResponse.model_validate(record),
+    )
+
+
+@attendance_router.post("/me/check-out", response_model=CheckOutResponse)
+async def check_out(
+    request: Request,
+    employee_id: UUID = Depends(_require_employee),
+    service: AttendanceService = Depends(get_attendance_service),
+) -> CheckOutResponse:
+    """Check out for today from office network.
+
+    Idempotent: returns existing record if already checked out.
+    Requires check-in first.
+    Requires employee profile linked to user account.
+    """
+    client_ip = await get_client_ip(request)
+    user_agent = request.headers.get("User-Agent")
+
+    record = await service.check_out(
+        employee_id=employee_id,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+
+    return CheckOutResponse(
+        message="Checked out successfully",
+        record=AttendanceRecordResponse.model_validate(record),
+    )
+
+
+@attendance_router.get("/me/today", response_model=AttendanceRecordResponse | None)
+async def get_today_attendance(
+    employee_id: UUID = Depends(_require_employee),
+    service: AttendanceService = Depends(get_attendance_service),
+) -> AttendanceRecordResponse | None:
+    """Get today's attendance record for the current employee."""
+    record = await service.get_today(employee_id)
+    if record is None:
+        return None
+    return AttendanceRecordResponse.model_validate(record)

@@ -4,10 +4,12 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from src.modules.attendance.domain.exceptions import (
+    AlreadyCheckedInError,
     AttendanceError,
     CidrNotFoundError,
     DuplicateCidrError,
     InvalidCidrError,
+    NotCheckedInError,
     OfficeNetworkRequiredError,
     TooManyNetworksError,
 )
@@ -29,52 +31,26 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
             },
         )
 
-    @app.exception_handler(InvalidCidrError)
-    async def invalid_cidr_handler(
+    @app.exception_handler(AlreadyCheckedInError)
+    async def already_checked_in_handler(
         request: Request,
-        exc: InvalidCidrError,
+        exc: AlreadyCheckedInError,
     ) -> JSONResponse:
         return JSONResponse(
-            status_code=400,
+            status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
                 "detail": exc.message,
             },
         )
 
-    @app.exception_handler(DuplicateCidrError)
-    async def duplicate_cidr_handler(
+    @app.exception_handler(NotCheckedInError)
+    async def not_checked_in_handler(
         request: Request,
-        exc: DuplicateCidrError,
+        exc: NotCheckedInError,
     ) -> JSONResponse:
         return JSONResponse(
-            status_code=400,
-            content={
-                "error_code": exc.error_code,
-                "detail": exc.message,
-            },
-        )
-
-    @app.exception_handler(TooManyNetworksError)
-    async def too_many_networks_handler(
-        request: Request,
-        exc: TooManyNetworksError,
-    ) -> JSONResponse:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error_code": exc.error_code,
-                "detail": exc.message,
-            },
-        )
-
-    @app.exception_handler(CidrNotFoundError)
-    async def cidr_not_found_handler(
-        request: Request,
-        exc: CidrNotFoundError,
-    ) -> JSONResponse:
-        return JSONResponse(
-            status_code=404,
+            status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
                 "detail": exc.message,
@@ -87,7 +63,59 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
         exc: OfficeNetworkRequiredError,
     ) -> JSONResponse:
         return JSONResponse(
-            status_code=403,
+            status_code=exc.status_code,
+            content={
+                "error_code": exc.error_code,
+                "detail": exc.message,
+            },
+        )
+
+    @app.exception_handler(InvalidCidrError)
+    async def invalid_cidr_handler(
+        request: Request,
+        exc: InvalidCidrError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error_code": exc.error_code,
+                "detail": exc.message,
+            },
+        )
+
+    @app.exception_handler(DuplicateCidrError)
+    async def duplicate_cidr_handler(
+        request: Request,
+        exc: DuplicateCidrError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error_code": exc.error_code,
+                "detail": exc.message,
+            },
+        )
+
+    @app.exception_handler(TooManyNetworksError)
+    async def too_many_networks_handler(
+        request: Request,
+        exc: TooManyNetworksError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error_code": exc.error_code,
+                "detail": exc.message,
+            },
+        )
+
+    @app.exception_handler(CidrNotFoundError)
+    async def cidr_not_found_handler(
+        request: Request,
+        exc: CidrNotFoundError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
                 "detail": exc.message,

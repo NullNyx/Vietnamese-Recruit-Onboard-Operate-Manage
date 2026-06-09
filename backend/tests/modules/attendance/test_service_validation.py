@@ -1,7 +1,9 @@
 """Tests for AttendanceSettingsService validation logic."""
 
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
+
 from src.modules.attendance.application.attendance_settings_service import (
     AttendanceSettingsService,
 )

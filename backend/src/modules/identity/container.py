@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncGenerator
 from functools import lru_cache
+from uuid import UUID
 
 import redis.asyncio as redis
 from fastapi import Depends, Request
@@ -449,3 +450,31 @@ async def get_audit_service(
         An AuditService for recording and querying admin actions.
     """
     return AuditService(repository=audit_log_repo)
+
+
+async def get_current_employee_id(
+    request: Request,
+    token_service: TokenService = Depends(get_token_service),
+) -> UUID | None:
+    """Extract the employee_id from the current JWT access token.
+
+    Returns the linked employee UUID if present in the token payload,
+    otherwise returns None (e.g. HR admin without employee link).
+
+    Args:
+        request: The incoming FastAPI request object.
+        token_service: Service for JWT token verification.
+
+    Returns:
+        The employee UUID if linked, None otherwise.
+    """
+    token = request.cookies.get("access_token")
+    if not token:
+        return None
+
+    try:
+        payload = token_service.verify_access_token(token)
+    except InvalidTokenError:
+        return None
+
+    return payload.employee_id

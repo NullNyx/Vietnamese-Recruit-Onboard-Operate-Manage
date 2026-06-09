@@ -1,0 +1,67 @@
+"""Domain entities for the Attendance module.
+
+Defines SQLModel table classes for AttendanceRecord.
+"""
+
+from datetime import UTC, date, datetime
+from enum import Enum
+from uuid import UUID, uuid4
+
+from sqlalchemy import Column, DateTime
+from sqlmodel import Field, SQLModel
+
+
+class AttendanceSource(str, Enum):
+    """Source of attendance record."""
+
+    WEB = "web"
+    MOBILE = "mobile"
+    KIOSK = "kiosk"
+
+
+class AttendanceRecord(SQLModel, table=True):
+    """Daily attendance record for one Employee on one work date.
+
+    Captures check-in/check-out timestamps, client IP addresses,
+    and user agents. Work date is derived from Organization timezone.
+    Timestamps are stored in UTC.
+    """
+
+    __tablename__ = "attendance_records"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    employee_id: UUID = Field(
+        nullable=False,
+        foreign_key="employees.id",
+        index=True,
+    )
+    work_date: date = Field(nullable=False, index=True)
+    check_in_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    check_out_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    check_in_ip: str | None = Field(default=None, max_length=45)
+    check_out_ip: str | None = Field(default=None, max_length=45)
+    check_in_user_agent: str | None = Field(default=None, max_length=512)
+    check_out_user_agent: str | None = Field(default=None, max_length=512)
+    source: AttendanceSource = Field(
+        default=AttendanceSource.WEB,
+        nullable=False,
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+    __table_args__ = (
+        # Unique constraint: one record per employee per work date
+        # Use index for query performance
+    )

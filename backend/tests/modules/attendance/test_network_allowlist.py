@@ -1,11 +1,12 @@
 """Tests for attendance network allowlist."""
 
 import pytest
+
+from src.modules.attendance.domain.exceptions import InvalidCidrError
 from src.modules.attendance.domain.value_objects import (
     AttendanceNetworkConfig,
     CidrRange,
 )
-from src.modules.attendance.domain.exceptions import InvalidCidrError
 
 
 class TestCidrRange:
