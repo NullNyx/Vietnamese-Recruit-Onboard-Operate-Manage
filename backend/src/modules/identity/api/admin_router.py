@@ -473,7 +473,6 @@ async def update_oauth_config(
     )
 
 
-
 # --- Organization Domain Endpoints ---
 
 
@@ -709,4 +708,3 @@ async def update_assistant_tools(
 
     # Return updated list
     return await list_assistant_tools(admin_user, tool_config_repo)
-

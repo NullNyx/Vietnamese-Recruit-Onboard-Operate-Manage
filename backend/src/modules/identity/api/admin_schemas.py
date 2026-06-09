@@ -1,5 +1,3 @@
-import typing
-
 """Pydantic request/response schemas for the Admin API endpoints.
 
 Defines data transfer objects for user management, role changes,
@@ -87,7 +85,6 @@ class PaginatedAuditLogsResponse(BaseModel):
     page_size: int
 
 
-
 # --- Admin Organization Domain Schemas ---
 
 
@@ -142,6 +139,7 @@ class DomainRemoveResponse(BaseModel):
 
     removed: str
     allowed_domains: list[str]
+
 
 class AssistantToolConfigResponse(BaseModel):
     """Response schema for a single assistant tool config entry.

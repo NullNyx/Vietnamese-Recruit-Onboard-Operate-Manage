@@ -202,14 +202,14 @@ class AssistantService:
         if enabled_tool_names is not None:
             available_tools = [t for t in TOOL_DEFINITIONS if t.name in enabled_tool_names]
 
-        tools_str = "\n".join(f"{i+1}. {t.name} — {t.description}" for i, t in enumerate(available_tools))
-        
+        tools_str = "\n".join(
+            f"{i + 1}. {t.name} — {t.description}" for i, t in enumerate(available_tools)
+        )
+
         system_content = _SYSTEM_PROMPT + f"\nYou have access to these tools:\n{tools_str}\n"
 
-        result: list[dict[str, Any]] = [
-            {"role": "system", "content": system_content}
-        ] 
-        
+        result: list[dict[str, Any]] = [{"role": "system", "content": system_content}]
+
         # Trim to max_history (excluding system message), ensuring we start at a user turn
         start_idx = max(0, len(messages) - self._settings.max_history)
         while start_idx > 0 and messages[start_idx].role != "user":
