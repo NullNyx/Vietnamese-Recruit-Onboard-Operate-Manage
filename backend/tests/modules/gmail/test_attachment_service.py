@@ -84,7 +84,9 @@ class TestValidateAttachment:
         over_limit = 10 * 1024 * 1024 + 1
         assert attachment_service.validate_attachment("application/pdf", over_limit) is False
 
-    def test_rejects_invalid_mime_and_over_size(self, attachment_service: AttachmentService) -> None:
+    def test_rejects_invalid_mime_and_over_size(
+        self, attachment_service: AttachmentService
+    ) -> None:
         """Attachment with both invalid MIME and over-size is rejected."""
         over_limit = 10 * 1024 * 1024 + 1
         assert attachment_service.validate_attachment("application/zip", over_limit) is False

@@ -9,8 +9,6 @@ import pytest
 from src.modules.gmail.application.connection_service import (
     GMAIL_SCOPES,
     ConnectionService,
-    ConnectionStatusResponse,
-    ConnectResponse,
 )
 from src.modules.gmail.domain.enums import ConnectionStatus
 from src.modules.gmail.domain.exceptions import GmailConnectFailedException
@@ -316,9 +314,7 @@ class TestHandleCallback:
             with pytest.raises(GmailConnectFailedException):
                 await connection_service.handle_callback(user_id, "bad_code")
 
-    async def test_raises_on_missing_scopes(
-        self, connection_service: ConnectionService
-    ) -> None:
+    async def test_raises_on_missing_scopes(self, connection_service: ConnectionService) -> None:
         """Raises GmailConnectFailedException when not all scopes granted."""
         user_id = uuid4()
 

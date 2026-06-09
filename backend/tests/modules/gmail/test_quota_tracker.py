@@ -36,9 +36,7 @@ def user_id() -> UUID:
 class TestQuotaTrackerInit:
     """Tests for QuotaTracker initialization."""
 
-    def test_stores_redis_client(
-        self, quota_tracker: QuotaTracker, mock_redis: AsyncMock
-    ) -> None:
+    def test_stores_redis_client(self, quota_tracker: QuotaTracker, mock_redis: AsyncMock) -> None:
         assert quota_tracker._redis is mock_redis
 
     def test_stores_quota_limit_from_settings(
@@ -84,9 +82,7 @@ class TestCanConsume:
         """Should allow when current usage + requested units <= 250."""
         pipeline_mock = AsyncMock()
         # Existing entries totaling 200 units
-        pipeline_mock.execute = AsyncMock(
-            return_value=[0, ["1000.0:100", "1000.1:100"]]
-        )
+        pipeline_mock.execute = AsyncMock(return_value=[0, ["1000.0:100", "1000.1:100"]])
         pipeline_mock.zremrangebyscore = AsyncMock()
         pipeline_mock.zrangebyscore = AsyncMock()
         mock_redis.pipeline = lambda: pipeline_mock
@@ -100,9 +96,7 @@ class TestCanConsume:
     ) -> None:
         """Should allow when current usage + requested units == 250."""
         pipeline_mock = AsyncMock()
-        pipeline_mock.execute = AsyncMock(
-            return_value=[0, ["1000.0:200"]]
-        )
+        pipeline_mock.execute = AsyncMock(return_value=[0, ["1000.0:200"]])
         pipeline_mock.zremrangebyscore = AsyncMock()
         pipeline_mock.zrangebyscore = AsyncMock()
         mock_redis.pipeline = lambda: pipeline_mock
@@ -116,9 +110,7 @@ class TestCanConsume:
     ) -> None:
         """Should block when current usage + requested units > 250."""
         pipeline_mock = AsyncMock()
-        pipeline_mock.execute = AsyncMock(
-            return_value=[0, ["1000.0:250"]]
-        )
+        pipeline_mock.execute = AsyncMock(return_value=[0, ["1000.0:250"]])
         pipeline_mock.zremrangebyscore = AsyncMock()
         pipeline_mock.zrangebyscore = AsyncMock()
         mock_redis.pipeline = lambda: pipeline_mock
@@ -132,9 +124,7 @@ class TestCanConsume:
     ) -> None:
         """Should block when requesting more than remaining capacity."""
         pipeline_mock = AsyncMock()
-        pipeline_mock.execute = AsyncMock(
-            return_value=[0, ["1000.0:240"]]
-        )
+        pipeline_mock.execute = AsyncMock(return_value=[0, ["1000.0:240"]])
         pipeline_mock.zremrangebyscore = AsyncMock()
         pipeline_mock.zrangebyscore = AsyncMock()
         mock_redis.pipeline = lambda: pipeline_mock
@@ -149,7 +139,11 @@ class TestConsume:
 
     @patch("src.modules.gmail.infrastructure.quota_tracker.time.time")
     async def test_adds_entry_to_sorted_set(
-        self, mock_time: AsyncMock, quota_tracker: QuotaTracker, mock_redis: AsyncMock, user_id: UUID
+        self,
+        mock_time: AsyncMock,
+        quota_tracker: QuotaTracker,
+        mock_redis: AsyncMock,
+        user_id: UUID,
     ) -> None:
         """Should add a member with timestamp:units format."""
         mock_time.return_value = 1000.5
@@ -161,13 +155,15 @@ class TestConsume:
 
         await quota_tracker.consume(user_id, 5)
 
-        pipeline_mock.zadd.assert_called_once_with(
-            f"gmail:quota:{user_id}", {"1000.5:5": 1000.5}
-        )
+        pipeline_mock.zadd.assert_called_once_with(f"gmail:quota:{user_id}", {"1000.5:5": 1000.5})
 
     @patch("src.modules.gmail.infrastructure.quota_tracker.time.time")
     async def test_sets_key_expiry(
-        self, mock_time: AsyncMock, quota_tracker: QuotaTracker, mock_redis: AsyncMock, user_id: UUID
+        self,
+        mock_time: AsyncMock,
+        quota_tracker: QuotaTracker,
+        mock_redis: AsyncMock,
+        user_id: UUID,
     ) -> None:
         """Should set TTL of 2 seconds on the key."""
         mock_time.return_value = 1000.0
@@ -179,9 +175,7 @@ class TestConsume:
 
         await quota_tracker.consume(user_id, 10)
 
-        pipeline_mock.expire.assert_called_once_with(
-            f"gmail:quota:{user_id}", 2
-        )
+        pipeline_mock.expire.assert_called_once_with(f"gmail:quota:{user_id}", 2)
 
 
 class TestWaitIfNeeded:
@@ -202,14 +196,16 @@ class TestWaitIfNeeded:
 
     @patch("src.modules.gmail.infrastructure.quota_tracker.asyncio.sleep")
     async def test_sleeps_when_at_limit_then_proceeds(
-        self, mock_sleep: AsyncMock, quota_tracker: QuotaTracker, mock_redis: AsyncMock, user_id: UUID
+        self,
+        mock_sleep: AsyncMock,
+        quota_tracker: QuotaTracker,
+        mock_redis: AsyncMock,
+        user_id: UUID,
     ) -> None:
         """Should sleep and retry when quota is exhausted."""
         pipeline_mock = AsyncMock()
         # First call: at limit (250 used), second call: under limit (0 used)
-        pipeline_mock.execute = AsyncMock(
-            side_effect=[[0, ["1000.0:250"]], [0, []]]
-        )
+        pipeline_mock.execute = AsyncMock(side_effect=[[0, ["1000.0:250"]], [0, []]])
         pipeline_mock.zremrangebyscore = AsyncMock()
         pipeline_mock.zrangebyscore = AsyncMock()
         mock_redis.pipeline = lambda: pipeline_mock
@@ -220,7 +216,11 @@ class TestWaitIfNeeded:
 
     @patch("src.modules.gmail.infrastructure.quota_tracker.asyncio.sleep")
     async def test_sleeps_multiple_times_until_capacity(
-        self, mock_sleep: AsyncMock, quota_tracker: QuotaTracker, mock_redis: AsyncMock, user_id: UUID
+        self,
+        mock_sleep: AsyncMock,
+        quota_tracker: QuotaTracker,
+        mock_redis: AsyncMock,
+        user_id: UUID,
     ) -> None:
         """Should keep sleeping until quota frees up."""
         pipeline_mock = AsyncMock()
@@ -251,9 +251,7 @@ class TestQuotaTrackerWithCustomSettings:
 
         pipeline_mock = AsyncMock()
         # 90 units used, requesting 11 more → exceeds 100 limit
-        pipeline_mock.execute = AsyncMock(
-            return_value=[0, ["1000.0:90"]]
-        )
+        pipeline_mock.execute = AsyncMock(return_value=[0, ["1000.0:90"]])
         pipeline_mock.zremrangebyscore = AsyncMock()
         pipeline_mock.zrangebyscore = AsyncMock()
         mock_redis.pipeline = lambda: pipeline_mock
@@ -270,9 +268,7 @@ class TestQuotaTrackerWithCustomSettings:
 
         pipeline_mock = AsyncMock()
         # 90 units used, requesting 10 more → exactly at 100 limit
-        pipeline_mock.execute = AsyncMock(
-            return_value=[0, ["1000.0:90"]]
-        )
+        pipeline_mock.execute = AsyncMock(return_value=[0, ["1000.0:90"]])
         pipeline_mock.zremrangebyscore = AsyncMock()
         pipeline_mock.zrangebyscore = AsyncMock()
         mock_redis.pipeline = lambda: pipeline_mock

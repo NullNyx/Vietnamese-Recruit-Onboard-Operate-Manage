@@ -214,7 +214,7 @@ export function EmailDetail({ email, onBack, onReply, onReclassify, reclassifyin
 
           <div className="flex items-center gap-2">
             {/* Process CV button — shown for recruitment emails with attachments */}
-            {email.category === "recruitment" && email.has_attachments && onProcessAttachments && (
+            {email.category === "recruitment" && email.has_attachments && email.processing_status === "classified" && onProcessAttachments && (
               <button
                 type="button"
                 onClick={() => onProcessAttachments(email.gmail_message_id)}

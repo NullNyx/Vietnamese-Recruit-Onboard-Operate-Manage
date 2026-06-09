@@ -11,7 +11,7 @@ import asyncio
 import base64
 import logging
 from typing import Annotated, Any
-from uuid import UUID (fix(gmail): resolve undefined name errors in router.py)
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
@@ -560,7 +560,7 @@ async def process_attachments(
     attachment_service: AttachmentServiceDep,
     connection_service: ConnectionServiceDep,
     email_repo: EmailRepositoryDep,
-) -> dict:
+) -> dict[str, Any]:
     """Fetch email attachments and trigger CV processing pipeline.
 
     Downloads attachments from Gmail API, then runs the recruitment
@@ -603,6 +603,18 @@ async def process_attachments(
         raise HTTPException(status_code=404, detail="Email not found")
     if email.user_id != current_user.id:  # type: ignore[comparison-overlap]
         raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Guard: only classified recruitment emails with attachments
+    if email.category != "recruitment":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Email category is '{email.category}', expected 'recruitment'",
+        )
+    if email.processing_status != "classified":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Email status is '{email.processing_status}', expected 'classified'",
+        )
 
     # Fetch attachment binary data from Gmail API
     gmail_adapter = await get_gmail_adapter()
@@ -711,11 +723,7 @@ async def classify_emails(
 
     settings = GmailSettings()
 
-<<<<<<< HEAD
-    async def _do_classify() -> dict[str, Any]:
-=======
-    async def _do_classify(connection_service: ConnectionService) -> dict:
->>>>>>> c74dbd2 (fix(gmail): resolve undefined name errors in router.py)
+    async def _do_classify(connection_service: ConnectionService) -> dict[str, Any]:
         from sqlmodel import select
 
         from src.modules.gmail.application.classification_service import (
@@ -1125,7 +1133,7 @@ async def reclassify_email(
     )
 
     # Fetch the email
-    statement = select(EmailMessageEntity).where(EmailMessageEntity.id == message_id)
+    statement = select(EmailMessageEntity).where(EmailMessageEntity.id == str(message_id))
     result = await email_repo.session.execute(statement)
     email = result.scalar_one_or_none()
 
@@ -1146,7 +1154,7 @@ async def reclassify_email(
     from src.modules.gmail.infrastructure.audit_logger import AuditLogger
     from src.modules.gmail.infrastructure.config import GmailSettings
 
-    gmail_settings = GmailSettings()  # type: ignore[call-arg]
+    gmail_settings = GmailSettings()
     audit_logger_instance = AuditLogger(email_repo.session, gmail_settings)
 
     classification_service = await get_classification_service(

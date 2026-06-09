@@ -8,8 +8,7 @@ Tests:
 **Validates: Auto-CV processing after classify**
 """
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -165,9 +164,7 @@ class TestClassifyAutoCVProcessing:
         )
 
         ai_classifier = AsyncMock()
-        ai_classifier.classify = AsyncMock(
-            return_value=_make_low_confidence_recruitment_result()
-        )
+        ai_classifier.classify = AsyncMock(return_value=_make_low_confidence_recruitment_result())
 
         service = ClassificationService(
             rules_classifier=rules_classifier,
@@ -265,7 +262,6 @@ class TestCVReviewQueueIntegration:
         Simulates the scenario where HR queries /api/gmail/review/emails
         to get all emails requiring manual CV review.
         """
-        from sqlmodel import select
 
         # Setup: low confidence + attachments = needs_review
         rules_classifier = MagicMock()
@@ -274,9 +270,7 @@ class TestCVReviewQueueIntegration:
         )
 
         ai_classifier = AsyncMock()
-        ai_classifier.classify = AsyncMock(
-            return_value=_make_low_confidence_recruitment_result()
-        )
+        ai_classifier.classify = AsyncMock(return_value=_make_low_confidence_recruitment_result())
 
         service = ClassificationService(
             rules_classifier=rules_classifier,
@@ -288,15 +282,10 @@ class TestCVReviewQueueIntegration:
         )
 
         # Process multiple CVs
-        emails = [
-            _make_mock_email(f"msg_cv_{i}", has_attachments=True)
-            for i in range(3)
-        ]
+        emails = [_make_mock_email(f"msg_cv_{i}", has_attachments=True) for i in range(3)]
         user_id = uuid4()
 
-        classified_count = await service.classify_batch(
-            user_id=user_id, emails=emails
-        )
+        classified_count = await service.classify_batch(user_id=user_id, emails=emails)
 
         # All 3 should be classified (with low confidence → needs_review)
         assert classified_count == 3
@@ -308,9 +297,7 @@ class TestCVReviewQueueIntegration:
         # Simulate review queue query
         # In real code: SELECT * FROM email_messages
         # WHERE user_id = {user_id} AND processing_status = 'needs_review'
-        needs_review_emails = [
-            e for e in emails if e.processing_status == "needs_review"
-        ]
+        needs_review_emails = [e for e in emails if e.processing_status == "needs_review"]
 
         # All 3 emails should be in the review queue
         assert len(needs_review_emails) == 3
