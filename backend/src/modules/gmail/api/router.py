@@ -291,6 +291,7 @@ async def list_messages(
             label_ids=msg.label_ids,
             has_attachments=msg.has_attachments,
             category=msg.category,
+            processing_status=msg.processing_status,
         )
         for msg in messages
     ]
@@ -790,10 +791,16 @@ async def classify_emails(
 
         await email_repo.session.commit()
 
-        # Auto-process CV attachments for recruitment emails
+        # Auto-process CV attachments for classified recruitment emails only.
+        # Skip emails that ended up as needs_review (low confidence) —
+        # those require human review before CV processing.
         cv_processed_count = 0
         recruitment_with_attachments = [
-            e for e in unclassified_emails if e.category == "recruitment" and e.has_attachments
+            e
+            for e in unclassified_emails
+            if e.category == "recruitment"
+            and e.has_attachments
+            and e.processing_status == "classified"
         ]
 
         if recruitment_with_attachments:
@@ -1067,7 +1074,19 @@ async def list_emails_needing_review(
         for msg in messages
     ]
 
-    return MessageListResponse(messages=items, total=len(items))
+    # Get total count for pagination
+    from sqlalchemy import func
+
+    count_stmt = (
+        select(func.count())
+        .select_from(EmailMessageEntity)
+        .where(EmailMessageEntity.user_id == current_user.id)
+        .where(EmailMessageEntity.processing_status == "needs_review")
+    )
+    total_result = await email_repo.session.execute(count_stmt)
+    total = total_result.scalar() or 0
+
+    return MessageListResponse(messages=items, total=total)
 
 
 @router.post(
