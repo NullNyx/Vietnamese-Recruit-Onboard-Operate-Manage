@@ -98,7 +98,7 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
         kind=ToolKind.READ,
         description=(
             "List onboarding processes that are currently in progress. "
-            "Returns a list of processes with employee name, progress "
+            "Returns a list of processes with employee full name, email, progress "
             "(completed/total tasks), and status. "
             "Use when the user asks about onboarding status, who is "
             "being onboarded, or onboarding progress."

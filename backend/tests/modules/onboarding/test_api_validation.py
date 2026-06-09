@@ -86,6 +86,9 @@ class FakeOnboardingService:
                     process_id=_PROCESS_ID,
                     status="in_progress",
                     employee_id=_EMPLOYEE_ID,
+                    employee_full_name="HR Candidate",
+                    employee_email="candidate@example.com",
+                    employee_code="NV-001",
                     completed_count=1,
                     total_count=4,
                 )

@@ -5,7 +5,6 @@ from pydantic import ValidationError
 
 from src.modules.identity.infrastructure.config import AuthSettings
 
-
 # Minimal required env vars for AuthSettings to instantiate.
 _REQUIRED_ENV = {
     "AUTH_GOOGLE_CLIENT_ID": "test-client-id",

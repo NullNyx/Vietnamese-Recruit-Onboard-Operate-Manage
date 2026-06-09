@@ -120,6 +120,9 @@ class ToolRegistry:
                 {
                     "process_id": str(item.process_id),
                     "employee_id": str(item.employee_id),
+                    "employee_full_name": item.employee_full_name,
+                    "employee_email": item.employee_email,
+                    "employee_code": item.employee_code,
                     "completed_count": item.completed_count,
                     "total_count": item.total_count,
                     "status": item.status,

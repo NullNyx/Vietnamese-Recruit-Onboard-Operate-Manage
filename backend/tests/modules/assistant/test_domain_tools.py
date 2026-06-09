@@ -19,7 +19,7 @@ class TestToolDefinitions:
     def test_all_tools_have_names(self) -> None:
         """Every tool must have a non-empty name."""
         for tool in TOOL_DEFINITIONS:
-            assert tool.name, f"Tool missing name"
+            assert tool.name, "Tool missing name"
 
     def test_all_tools_have_descriptions(self) -> None:
         """Every tool must have a non-empty description."""

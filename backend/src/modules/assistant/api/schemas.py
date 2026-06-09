@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class IncomingMessageSchema(BaseModel):
@@ -23,14 +23,18 @@ class IncomingMessageSchema(BaseModel):
         ...,
         description="Message role: user or assistant",
     )
-    content: str = Field(..., description="Text content of the message")
+    content: str | None = Field(default=None, description="Text content of the message")
 
-    @field_validator("content")
-    @classmethod
-    def content_not_empty(cls, v: str) -> str:
-        if not v.strip():
-            raise ValueError("content must not be empty")
-        return v
+    @model_validator(mode="after")
+    def validate_content(self) -> IncomingMessageSchema:
+        if self.role == "user":
+            if self.content is None or not self.content.strip():
+                raise ValueError("user content must not be empty")
+            return self
+
+        if self.content is not None and not self.content.strip():
+            raise ValueError("assistant content must not be empty when provided")
+        return self
 
 
 class OutgoingMessageSchema(BaseModel):

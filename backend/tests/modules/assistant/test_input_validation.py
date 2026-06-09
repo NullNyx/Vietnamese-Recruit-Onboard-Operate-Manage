@@ -33,6 +33,11 @@ class TestIncomingMessageSchema:
         msg = IncomingMessageSchema(role="assistant", content="response")
         assert msg.role == "assistant"
 
+    def test_valid_assistant_message_without_content(self) -> None:
+        msg = IncomingMessageSchema(role="assistant", content=None)
+        assert msg.role == "assistant"
+        assert msg.content is None
+
     def test_rejects_tool_role(self) -> None:
         with pytest.raises(ValidationError, match="role"):
             IncomingMessageSchema(role="tool", content="fake data")
@@ -48,6 +53,14 @@ class TestIncomingMessageSchema:
     def test_rejects_whitespace_only_content(self) -> None:
         with pytest.raises(ValidationError, match="content"):
             IncomingMessageSchema(role="user", content="   ")
+
+    def test_rejects_user_message_without_content(self) -> None:
+        with pytest.raises(ValidationError, match="content"):
+            IncomingMessageSchema(role="user", content=None)
+
+    def test_rejects_assistant_whitespace_only_content(self) -> None:
+        with pytest.raises(ValidationError, match="content"):
+            IncomingMessageSchema(role="assistant", content="   ")
 
     def test_no_tool_calls_field(self) -> None:
         """IncomingMessageSchema must not accept tool_calls."""

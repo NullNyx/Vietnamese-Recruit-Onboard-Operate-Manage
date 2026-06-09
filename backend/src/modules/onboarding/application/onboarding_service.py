@@ -97,6 +97,9 @@ class ProcessListItem:
         process_id: The OnboardingProcess identifier.
         status: The process status (``in_progress`` or ``complete``).
         employee_id: The linked Employee record identifier.
+        employee_full_name: The Employee's display name.
+        employee_email: The Employee's email address.
+        employee_code: The Employee code, if assigned.
         completed_count: Number of tasks with status ``done``.
         total_count: Total number of tasks in the checklist.
     """
@@ -104,6 +107,9 @@ class ProcessListItem:
     process_id: UUID
     status: str
     employee_id: UUID
+    employee_full_name: str
+    employee_email: str
+    employee_code: str | None
     completed_count: int
     total_count: int
 
@@ -754,11 +760,15 @@ class OnboardingService:
             counts = await self.task_repo.count_by_status(process.id)
             total_count = sum(counts.values())
             completed_count = counts.get(OnboardingTaskStatus.DONE.value, 0)
+            employee = await self.employee_repo.get_by_id(process.employee_id)
             items.append(
                 ProcessListItem(
                     process_id=process.id,
                     status=process.status,
                     employee_id=process.employee_id,
+                    employee_full_name=employee.full_name if employee else "",
+                    employee_email=employee.email if employee else "",
+                    employee_code=employee.employee_code if employee else None,
                     completed_count=completed_count,
                     total_count=total_count,
                 )

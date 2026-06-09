@@ -196,3 +196,16 @@ class TestBuildMessagesDefense:
 
         assistant_msg = [m for m in result if m["role"] == "assistant"][0]
         assert "tool_calls" not in assistant_msg
+
+    def test_strips_assistant_messages_without_content(self, service: AssistantService) -> None:
+        """Assistant history placeholders from prior tool calls are stripped."""
+        messages = [
+            ChatMessage(role="user", content="hello"),
+            ChatMessage(role="assistant", content=None),
+            ChatMessage(role="user", content="next question"),
+        ]
+
+        result = service._build_messages(messages)
+
+        roles = [m["role"] for m in result]
+        assert roles == ["system", "user", "user"]

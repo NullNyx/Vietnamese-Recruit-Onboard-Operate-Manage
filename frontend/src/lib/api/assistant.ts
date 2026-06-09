@@ -38,6 +38,11 @@ export interface ChatResponse {
   draft_action: DraftAction | null;
 }
 
+interface ChatRequestMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 // ---------------------------------------------------------------------------
 // API Functions
 // ---------------------------------------------------------------------------
@@ -64,9 +69,24 @@ async function fetchWithTimeout(
 export async function sendChatMessage(
   messages: ChatMessage[],
 ): Promise<ChatResponse> {
-  // Filter out tool messages — only user and assistant roles are accepted
-  // by the backend (IncomingMessageSchema, ADR-0006).
-  const sanitized = messages.filter((m) => m.role !== "tool");
+  // Filter out tool messages and assistant-only tool-call placeholders.
+  // Backend accepts only user/assistant text history (ADR-0006).
+  const sanitized: ChatRequestMessage[] = messages.flatMap((message) => {
+    if (message.role === "tool") {
+      return [];
+    }
+
+    if (message.content === null) {
+      return [];
+    }
+
+    const content = message.content.trim();
+    if (!content) {
+      return [];
+    }
+
+    return [{ role: message.role, content }];
+  });
 
   const res = await fetchWithTimeout(`${BASE}/chat`, {
     method: "POST",

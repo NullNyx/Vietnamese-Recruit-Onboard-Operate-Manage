@@ -13,8 +13,6 @@ These tests verify that:
 
 from __future__ import annotations
 
-import pytest
-
 from src.modules.assistant.domain.tools import (
     TOOL_DEFINITIONS,
     ToolKind,

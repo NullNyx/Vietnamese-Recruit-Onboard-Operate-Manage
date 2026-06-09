@@ -82,6 +82,9 @@ class TestToolRegistryReadTools:
         mock_item = MagicMock()
         mock_item.process_id = "test-id"
         mock_item.employee_id = "emp-id"
+        mock_item.employee_full_name = "Nguyen Van A"
+        mock_item.employee_email = "a@example.com"
+        mock_item.employee_code = "NV-001"
         mock_item.completed_count = 2
         mock_item.total_count = 4
         mock_item.status = "in_progress"
@@ -97,6 +100,7 @@ class TestToolRegistryReadTools:
         assert result["total"] == 1
         assert len(result["processes"]) == 1
         assert result["processes"][0]["completed_count"] == 2
+        assert result["processes"][0]["employee_full_name"] == "Nguyen Van A"
 
     @pytest.mark.asyncio
     async def test_search_candidates(

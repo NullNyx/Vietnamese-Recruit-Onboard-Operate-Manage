@@ -237,6 +237,10 @@ class AssistantService:
                 logger.warning("Stripped unexpected tool message from client history")
                 continue
 
+            if msg.role == "assistant" and msg.content is None:
+                logger.warning("Stripped assistant history message without content")
+                continue
+
             entry: dict[str, Any] = {"role": msg.role}
             if msg.content is not None:
                 entry["content"] = msg.content
