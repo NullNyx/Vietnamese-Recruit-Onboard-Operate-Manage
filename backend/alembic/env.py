@@ -36,6 +36,9 @@ from src.modules.onboarding.domain.entities import (  # noqa: E402, F401
     OnboardingProcess,
     OnboardingTask,
 )
+from src.modules.assistant.domain.entities import (  # noqa: E402, F401
+    AssistantToolConfig,
+)
 from src.modules.recruitment.domain.entities import (  # noqa: E402, F401
     Candidate,
     CVDocument,

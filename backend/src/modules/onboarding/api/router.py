@@ -113,7 +113,6 @@ async def get_counts(
 async def list_processes(
     _admin: AdminUserDep,
     onboarding_service: OnboardingServiceDep,
-    db_session: Annotated[AsyncSession, Depends(get_db_session)],
     status: OnboardingStatus | None = Query(
         default=None, description="Filter by process status (in_progress or complete)"
     ),
@@ -146,19 +145,16 @@ async def list_processes(
         page_size=page_size,
     )
 
-    # Enrich with employee data
-    emp_repo = EmployeeRepository(db_session)
     items = []
     for item in result.items:
-        employee = await emp_repo.get_by_id(item.employee_id)
         items.append(
             OnboardingProcessListItem(
                 id=item.process_id,
                 status=OnboardingStatus(item.status),
                 employee_id=item.employee_id,
-                employee_full_name=employee.full_name if employee else "",
-                employee_email=employee.email if employee else "",
-                employee_code=employee.employee_code if employee else None,
+                employee_full_name=item.employee_full_name,
+                employee_email=item.employee_email,
+                employee_code=item.employee_code,
                 completed_count=item.completed_count,
                 total_count=item.total_count,
             )

@@ -1,12 +1,9 @@
 # Email whitelist for Vroom HR
 # One email per line. Lines starting with # are comments.
 # Case-insensitive matching.
+#
+# Copy this file to whitelist.txt and add your authorized emails.
+# whitelist.txt is gitignored — real emails must not be committed.
 
 # Add authorized HR emails below:
 admin@vroom.local
-
-# Admin
-hoangxuannguyen1234@gmail.com
-
-# Employee (for ESS demo)
-hoangxuannguyen2005@gmail.com

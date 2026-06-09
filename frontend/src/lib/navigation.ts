@@ -1,17 +1,18 @@
+import type { LucideIcon } from 'lucide-react';
 import {
-  LayoutDashboard,
-  Users,
-  Building2,
+  Bot,
   Briefcase,
-  Mail,
-  UserSearch,
-  Shield,
-  ListChecks,
+  Building2,
   KeyRound,
-  UserCog,
+  LayoutDashboard,
+  ListChecks,
+  Mail,
   ScrollText,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+  Shield,
+  UserCog,
+  Users,
+  UserSearch,
+} from 'lucide-react';
 
 export interface NavItem {
   href: string;
@@ -20,13 +21,13 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
-  { href: "/", label: "Tổng quan", icon: LayoutDashboard },
-  { href: "/employees", label: "Nhân viên", icon: Users },
-  { href: "/settings/departments", label: "Phòng ban", icon: Building2 },
-  { href: "/settings/positions", label: "Chức vụ", icon: Briefcase },
-  { href: "/gmail", label: "Gmail", icon: Mail },
-  { href: "/recruitment", label: "Tuyển dụng", icon: UserSearch },
-  { href: "/onboarding", label: "Onboarding", icon: ListChecks },
+  { href: '/', label: 'Tổng quan', icon: LayoutDashboard },
+  { href: '/employees', label: 'Nhân viên', icon: Users },
+  { href: '/settings/departments', label: 'Phòng ban', icon: Building2 },
+  { href: '/settings/positions', label: 'Chức vụ', icon: Briefcase },
+  { href: '/gmail', label: 'Gmail', icon: Mail },
+  { href: '/recruitment', label: 'Tuyển dụng', icon: UserSearch },
+  { href: '/onboarding', label: 'Onboarding', icon: ListChecks },
 ];
 
 export interface AdminNavSection {
@@ -36,12 +37,14 @@ export interface AdminNavSection {
 }
 
 export const adminNavSection: AdminNavSection = {
-  title: "Quản trị",
+  title: 'Quản trị',
   icon: Shield,
   items: [
-    { href: "/admin/whitelist", label: "Whitelist", icon: ListChecks },
-    { href: "/admin/oauth", label: "OAuth", icon: KeyRound },
-    { href: "/admin/users", label: "Người dùng", icon: UserCog },
-    { href: "/admin/audit-logs", label: "Nhật ký", icon: ScrollText },
+    { href: '/admin/whitelist', label: 'Whitelist', icon: ListChecks },
+    { href: '/admin/oauth', label: 'OAuth', icon: KeyRound },
+    { href: '/admin/users', label: 'Người dùng', icon: UserCog },
+    { href: '/admin/audit-logs', label: 'Nhật ký', icon: ScrollText },
+    { href: '/admin/assistant', label: 'AI Assistant', icon: Bot },
+    { href: '/admin/assistant-tools', label: 'AI Tools Config', icon: Bot },
   ],
 };
