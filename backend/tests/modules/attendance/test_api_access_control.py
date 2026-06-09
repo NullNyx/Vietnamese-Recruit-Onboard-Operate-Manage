@@ -12,9 +12,6 @@ Covers:
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
-
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -22,7 +19,6 @@ from src.modules.attendance.api.error_handler import (
     register_attendance_error_handlers,
 )
 from src.modules.attendance.api.router import (
-    _require_hr,
     attendance_router,
 )
 from src.modules.attendance.container import (
@@ -37,7 +33,6 @@ from src.modules.attendance.domain.exceptions import (
 from src.modules.identity.api.error_handler import register_auth_error_handlers
 from src.modules.identity.container import get_current_user
 from src.modules.identity.domain.entities import AuditActionType, User, UserRole
-
 
 # ---------------------------------------------------------------------------
 # Fakes
@@ -107,9 +102,7 @@ class FakeAuditService:
     def __init__(self) -> None:
         self.log_calls: list[tuple[User, AuditActionType, dict]] = []
 
-    async def log_action(
-        self, admin: User, action_type: AuditActionType, details: dict
-    ) -> None:
+    async def log_action(self, admin: User, action_type: AuditActionType, details: dict) -> None:
         self.log_calls.append((admin, action_type, details))
 
 

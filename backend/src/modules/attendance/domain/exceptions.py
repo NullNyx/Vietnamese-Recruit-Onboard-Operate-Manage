@@ -14,6 +14,22 @@ class AttendanceError(Exception):
         super().__init__(self.message)
 
 
+class AlreadyCheckedInError(AttendanceError):
+    """Employee already checked in for today."""
+
+    status_code = 409
+    error_code = "ALREADY_CHECKED_IN"
+    message = "Already checked in for today"
+
+
+class NotCheckedInError(AttendanceError):
+    """Employee has not checked in yet."""
+
+    status_code = 400
+    error_code = "NOT_CHECKED_IN"
+    message = "Must check in before checking out"
+
+
 class OfficeNetworkRequiredError(AttendanceError):
     """Employee must be on office network to check in/out.
 
@@ -23,7 +39,7 @@ class OfficeNetworkRequiredError(AttendanceError):
 
     status_code = 403
     error_code = "OFFICE_NETWORK_REQUIRED"
-    message = "Cần kết nối mạng văn phòng để chấm công"
+    message = "Attendance check-in is only allowed from approved office network."
 
 
 class InvalidCidrError(AttendanceError):

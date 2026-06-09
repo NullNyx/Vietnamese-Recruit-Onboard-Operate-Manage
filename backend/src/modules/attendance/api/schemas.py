@@ -1,6 +1,7 @@
-"""API schemas for Attendance network configuration."""
+"""API schemas for Attendance module."""
 
-from datetime import datetime
+from datetime import date, datetime
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -30,3 +31,35 @@ class NetworkRemoveRequest(BaseModel):
     """Request schema for removing CIDR from allowlist."""
 
     cidr: str = Field(description="CIDR notation to remove")
+
+
+class AttendanceRecordResponse(BaseModel):
+    """Response schema for attendance record."""
+
+    id: UUID
+    employee_id: UUID
+    work_date: date
+    check_in_at: datetime | None = None
+    check_out_at: datetime | None = None
+    check_in_ip: str | None = None
+    check_out_ip: str | None = None
+    source: str = "web"
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CheckInResponse(BaseModel):
+    """Response schema for check-in operation."""
+
+    message: str
+    record: AttendanceRecordResponse
+
+
+class CheckOutResponse(BaseModel):
+    """Response schema for check-out operation."""
+
+    message: str
+    record: AttendanceRecordResponse

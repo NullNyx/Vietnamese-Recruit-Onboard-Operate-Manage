@@ -1,7 +1,9 @@
 """Tests for AttendanceSettingsService validation logic."""
 
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
+
 from src.modules.attendance.application.attendance_settings_service import (
     AttendanceSettingsService,
 )
@@ -62,9 +64,7 @@ class TestAttendanceSettingsService:
     def test_validate_duplicate(self):
         """Duplicate CIDR should raise error."""
         with pytest.raises(DuplicateCidrError):
-            self.service._validate_and_normalize(
-                ["192.168.1.0/24", "192.168.1.0/24"]
-            )
+            self.service._validate_and_normalize(["192.168.1.0/24", "192.168.1.0/24"])
 
     # ------------------------------------------------------------------
     # IP normalization tests
