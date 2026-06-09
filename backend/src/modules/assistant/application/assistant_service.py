@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from src.modules.assistant.application.tool_registry import ToolRegistry
-from src.modules.assistant.domain.tools import get_openai_tools
+from src.modules.assistant.domain.tools import TOOL_DEFINITIONS, get_openai_tools
 from src.modules.assistant.infrastructure.config import AssistantSettings
 from src.modules.assistant.infrastructure.llm_client import AssistantLLMClient
 
@@ -29,25 +29,17 @@ logger = logging.getLogger(__name__)
 # Safety cap to prevent infinite tool-calling loops
 _MAX_TOOL_ITERATIONS = 5
 
+# System prompt — static, hardcoded per grill decision
 _SYSTEM_PROMPT = """You are the AI Assistant for Vroom HR, a Vietnamese HR management platform.
 
 You help HR administrators with recruitment and onboarding data.
 You speak Vietnamese when the user speaks Vietnamese, English otherwise.
 
-You have access to these tools:
-1. count_candidates_by_status — Count candidates in the pipeline by status
-2. list_in_progress_onboarding — List onboarding processes currently in progress
-3. search_candidates — Search for candidates by name or email
-4. draft_interview_invitation — Draft an interview invitation for a candidate
-5. draft_congratulations_email — Draft a congratulations/offer email for a candidate
-
 Rules:
 - You NEVER write to the database directly.
 - You only propose actions for HR to confirm (human-in-the-loop).
 - For Read-Tools: call them to answer data questions accurately.
-- For Draft-Tools: Before calling the tool, ensure you have gathered all required
-  parameters (time, location, position, etc.) from the user. If missing, politely
-  ask the user for them.
+- For Draft-Tools: use draft tools when the user asks to compose/send an email.
 - Be concise and helpful. Use Vietnamese when the user does.
 - If a tool fails, tell the user clearly and suggest they try again.
 """
@@ -121,7 +113,7 @@ class AssistantService:
             ChatResponse with updated messages and optional draft_action.
         """
         # Build OpenAI-format messages with system prompt
-        openai_messages = self._build_messages(messages)
+        openai_messages = self._build_messages(messages, enabled_tool_names)
 
         draft_action: dict[str, typing.Any] | None = None
         all_new_messages: list[ChatMessage] = []
@@ -199,13 +191,25 @@ class AssistantService:
             draft_action=draft_action,
         )
 
-    def _build_messages(self, messages: list[ChatMessage]) -> list[dict[str, typing.Any]]:
+    def _build_messages(
+        self, messages: list[ChatMessage], enabled_tool_names: set[str] | None = None
+    ) -> list[dict]:
         """Build OpenAI-format messages with system prompt and history trimming.
 
         Applies max_history limit per grill decision (20 messages).
         """
-        result: list[dict[str, Any]] = [{"role": "system", "content": _SYSTEM_PROMPT}]
+        available_tools = TOOL_DEFINITIONS
+        if enabled_tool_names is not None:
+            available_tools = [t for t in TOOL_DEFINITIONS if t.name in enabled_tool_names]
 
+        tools_str = "\n".join(f"{i+1}. {t.name} — {t.description}" for i, t in enumerate(available_tools))
+        
+        system_content = _SYSTEM_PROMPT + f"\nYou have access to these tools:\n{tools_str}\n"
+
+        result: list[dict[str, Any]] = [
+            {"role": "system", "content": system_content}
+        ] 
+        
         # Trim to max_history (excluding system message), ensuring we start at a user turn
         start_idx = max(0, len(messages) - self._settings.max_history)
         while start_idx > 0 and messages[start_idx].role != "user":

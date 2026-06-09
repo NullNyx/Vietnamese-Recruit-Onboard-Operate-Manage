@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI
 
+from src.modules.assistant.domain.exceptions import LLMConnectionError
 from src.modules.assistant.infrastructure.config import AssistantSettings
 
 logger = logging.getLogger(__name__)
@@ -83,13 +84,13 @@ class AssistantLLMClient:
             response = await self._client.chat.completions.create(**kwargs)
         except APITimeoutError as exc:
             logger.error("LLM request timed out: %s", exc)
-            raise ConnectionError(f"LLM timeout: {exc}") from exc
+            raise LLMConnectionError(f"LLM timeout: {exc}") from exc
         except APIConnectionError as exc:
             logger.error("LLM connection failed: %s", exc)
-            raise ConnectionError(f"LLM connection failed: {exc}") from exc
+            raise LLMConnectionError(f"LLM connection failed: {exc}") from exc
         except APIStatusError as exc:
             logger.error("LLM API error: %s", exc)
-            raise ConnectionError(f"LLM API error {exc.status_code}: {exc}") from exc
+            raise LLMConnectionError(f"LLM API error {exc.status_code}: {exc}") from exc
 
         choice = response.choices[0]
         message = choice.message
