@@ -6,9 +6,8 @@ and write operations require HR/Admin role. Every admin write action
 is recorded in the audit log.
 """
 
-from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from src.modules.attendance.api.schemas import (
     NetworkAddRequest,
@@ -116,8 +115,6 @@ async def remove_from_network_allowlist(
 
 # Employee-owned attendance endpoints
 
-from fastapi import Request
-
 from src.modules.attendance.api.schemas import (
     AttendanceRecordResponse,
     CheckInResponse,
@@ -125,43 +122,64 @@ from src.modules.attendance.api.schemas import (
 )
 from src.modules.attendance.application.attendance_service import AttendanceService
 from src.modules.attendance.container import get_attendance_service
-from src.modules.identity.container import get_current_employee_id
+from src.modules.employee.api.dependencies import get_current_employee
+from src.modules.employee.domain.entities import Employee
 
+# Trusted proxy list - only these originating IPs can provide X-Forwarded-For.
+# Expand this list for known reverse proxies (e.g. "10.0.0.1").
+TRUSTED_PROXIES: frozenset[str] = frozenset({"127.0.0.1", "::1"})
 
 async def get_client_ip(request: Request) -> str:
-    """Extract client IP from request, handling proxies."""
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "127.0.0.1"
+    """Extract client IP from request with trusted-proxy enforcement.
 
-
-def _require_employee(user_employee_id: UUID | None = Depends(get_current_employee_id)) -> UUID:
-    """Dependency that requires a linked employee_id.
-
-    Raises ValueError if no employee is linked to the current user.
+    Only trusts X-Forwarded-For when the direct client is in the trusted-proxy
+    set. Rejects spoofed headers from untrusted origins.
     """
-    if user_employee_id is None:
-        raise ValueError("Employee profile required for this action")
-    return user_employee_id
+    client_host: str | None = request.client.host if request.client else None
+    if client_host in TRUSTED_PROXIES:
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+    if client_host:
+        return client_host
+    return "127.0.0.1"
+
+
+async def _require_active_employee(
+    employee: Employee | None = Depends(get_current_employee),
+) -> Employee:
+    """Dependency that requires an active Employee profile.
+
+    Uses get_current_employee which validates:
+    - Employee record exists and is linked to the user
+    - Employee.is_active is True
+
+    Raises HTTPException 403 if validation fails.
+    """
+    if employee is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Employee profile required for this action",
+        )
+    return employee
 
 
 @attendance_router.post("/me/check-in", response_model=CheckInResponse)
 async def check_in(
     request: Request,
-    employee_id: UUID = Depends(_require_employee),
+    employee: Employee = Depends(_require_active_employee),
     service: AttendanceService = Depends(get_attendance_service),
 ) -> CheckInResponse:
     """Check in for today from office network.
 
     Idempotent: returns existing record if already checked in.
-    Requires employee profile linked to user account.
+    Requires active employee profile linked to user account.
     """
     client_ip = await get_client_ip(request)
     user_agent = request.headers.get("User-Agent")
 
     record = await service.check_in(
-        employee_id=employee_id,
+        employee_id=employee.id,
         client_ip=client_ip,
         user_agent=user_agent,
     )
@@ -175,20 +193,20 @@ async def check_in(
 @attendance_router.post("/me/check-out", response_model=CheckOutResponse)
 async def check_out(
     request: Request,
-    employee_id: UUID = Depends(_require_employee),
+    employee: Employee = Depends(_require_active_employee),
     service: AttendanceService = Depends(get_attendance_service),
 ) -> CheckOutResponse:
     """Check out for today from office network.
 
     Idempotent: returns existing record if already checked out.
     Requires check-in first.
-    Requires employee profile linked to user account.
+    Requires active employee profile linked to user account.
     """
     client_ip = await get_client_ip(request)
     user_agent = request.headers.get("User-Agent")
 
     record = await service.check_out(
-        employee_id=employee_id,
+        employee_id=employee.id,
         client_ip=client_ip,
         user_agent=user_agent,
     )
@@ -201,11 +219,11 @@ async def check_out(
 
 @attendance_router.get("/me/today", response_model=AttendanceRecordResponse | None)
 async def get_today_attendance(
-    employee_id: UUID = Depends(_require_employee),
+    employee: Employee = Depends(_require_active_employee),
     service: AttendanceService = Depends(get_attendance_service),
 ) -> AttendanceRecordResponse | None:
     """Get today's attendance record for the current employee."""
-    record = await service.get_today(employee_id)
+    record = await service.get_today(employee.id)
     if record is None:
         return None
     return AttendanceRecordResponse.model_validate(record)

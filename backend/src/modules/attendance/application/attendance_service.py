@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 from src.modules.attendance.application.attendance_settings_service import (
     AttendanceSettingsService,
 )
-from src.modules.attendance.domain.entities import AttendanceRecord, AttendanceSource
+from src.modules.attendance.domain.entities import AttendanceRecord
 from src.modules.attendance.domain.exceptions import (
     NotCheckedInError,
     OfficeNetworkRequiredError,
@@ -80,31 +80,18 @@ class AttendanceService:
             raise OfficeNetworkRequiredError()
 
         work_date = await self._get_work_date()
-
-        # Check for existing record (idempotent)
-        existing = await self._attendance_repo.get_by_employee_and_date(employee_id, work_date)
-        if existing is not None:
-            # Already checked in - return existing without overwriting
-            if existing.check_in_at is not None:
-                return existing
-            # Edge case: record exists but check_in_at is null - update it
-            now = datetime.now(UTC)
-            existing.check_in_at = now
-            existing.check_in_ip = client_ip
-            existing.check_in_user_agent = user_agent
-            return await self._attendance_repo.update(existing)
-
-        # Create new record
         now = datetime.now(UTC)
-        record = AttendanceRecord(
+
+        # Atomic upsert: PostgreSQL ON CONFLICT DO NOTHING handles
+        # the race where two concurrent requests try to check in
+        # for the same employee + work_date simultaneously.
+        return await self._attendance_repo.upsert_check_in(
             employee_id=employee_id,
             work_date=work_date,
             check_in_at=now,
-            check_in_ip=client_ip,
-            check_in_user_agent=user_agent,
-            source=AttendanceSource.WEB,
+            client_ip=client_ip,
+            user_agent=user_agent,
         )
-        return await self._attendance_repo.create(record)
 
     async def check_out(
         self,

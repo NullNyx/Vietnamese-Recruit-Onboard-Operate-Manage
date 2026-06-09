@@ -63,13 +63,22 @@ class TestCheckInAllowedIP:
     async def test_check_in_creates_record(
         self, attendance_service, mock_attendance_repo
     ):
-        """Test check-in creates a new attendance record."""
+        """Test check-in creates a new attendance record atomically."""
         employee_id = uuid4()
         client_ip = "192.168.1.100"
         user_agent = "Mozilla/5.0"
+        now = datetime.now(UTC)
 
-        mock_attendance_repo.get_by_employee_and_date = AsyncMock(return_value=None)
-        mock_attendance_repo.create = AsyncMock(side_effect=lambda r: r)
+        created = AttendanceRecord(
+            id=uuid4(),
+            employee_id=employee_id,
+            work_date=date.today(),
+            check_in_at=now,
+            check_in_ip=client_ip,
+            check_in_user_agent=user_agent,
+            source=AttendanceSource.WEB,
+        )
+        mock_attendance_repo.upsert_check_in = AsyncMock(return_value=created)
 
         result = await attendance_service.check_in(
             employee_id, client_ip, user_agent
@@ -79,7 +88,7 @@ class TestCheckInAllowedIP:
         assert result.check_in_at is not None
         assert result.check_in_ip == client_ip
         assert result.source == AttendanceSource.WEB
-        mock_attendance_repo.create.assert_called_once()
+        mock_attendance_repo.upsert_check_in.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_check_in_idempotent_returns_existing(
@@ -96,9 +105,8 @@ class TestCheckInAllowedIP:
             source=AttendanceSource.WEB,
         )
 
-        mock_attendance_repo.get_by_employee_and_date = AsyncMock(
-            return_value=existing_record
-        )
+        # Atomic upsert returns existing record when conflict occurs
+        mock_attendance_repo.upsert_check_in = AsyncMock(return_value=existing_record)
 
         result = await attendance_service.check_in(
             employee_id, "192.168.1.100", "Mozilla/5.0"
@@ -239,20 +247,29 @@ class TestUserAgentStorage:
     async def test_check_in_stores_user_agent(
         self, attendance_service, mock_attendance_repo
     ):
-        """Test check-in stores user agent."""
+        """Test check-in stores user agent atomically."""
         employee_id = uuid4()
         client_ip = "192.168.1.100"
         user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        now = datetime.now(UTC)
 
-        mock_attendance_repo.get_by_employee_and_date = AsyncMock(return_value=None)
-        mock_attendance_repo.create = AsyncMock(side_effect=lambda r: r)
+        created = AttendanceRecord(
+            id=uuid4(),
+            employee_id=employee_id,
+            work_date=date.today(),
+            check_in_at=now,
+            check_in_ip=client_ip,
+            check_in_user_agent=user_agent,
+            source=AttendanceSource.WEB,
+        )
+        mock_attendance_repo.upsert_check_in = AsyncMock(return_value=created)
 
         result = await attendance_service.check_in(
             employee_id, client_ip, user_agent
         )
 
         assert result.check_in_user_agent == user_agent
-        mock_attendance_repo.create.assert_called_once()
+        mock_attendance_repo.upsert_check_in.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_check_out_stores_user_agent(
