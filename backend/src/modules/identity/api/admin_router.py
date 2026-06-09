@@ -473,7 +473,7 @@ async def update_oauth_config(
     )
 
 
-<<<<<<< HEAD
+
 # --- Organization Domain Endpoints ---
 
 
@@ -622,8 +622,7 @@ async def remove_domain(
 
     return DomainRemoveResponse(removed=domain, allowed_domains=updated)
 
-=======
->>>>>>> 7f3c1cb (fix lỗi)
+
 # ---------------------------------------------------------------------------
 # Assistant Tool Config Endpoints
 # ---------------------------------------------------------------------------
