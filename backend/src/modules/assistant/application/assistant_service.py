@@ -29,6 +29,10 @@ logger = logging.getLogger(__name__)
 # Safety cap to prevent infinite tool-calling loops
 _MAX_TOOL_ITERATIONS = 5
 
+_TOOL_LOOP_FALLBACK = (
+    "Xin lỗi, trợ lý đã xử lý quá nhiều bước. Vui lòng thử lại với câu hỏi cụ thể hơn."
+)
+
 # System prompt — static, hardcoded per grill decision
 _SYSTEM_PROMPT = """You are the AI Assistant for Vroom HR, a Vietnamese HR management platform.
 
@@ -186,6 +190,12 @@ class AssistantService:
                     }
                 )
 
+        # Diagnosis #3: fallback when loop exhausts without a text response.
+        # Frontend hides tool messages, so user would see silence otherwise.
+        has_text_response = any(m.role == "assistant" and m.content for m in all_new_messages)
+        if not has_text_response:
+            all_new_messages.append(ChatMessage(role="assistant", content=_TOOL_LOOP_FALLBACK))
+
         return ChatResponse(
             messages=all_new_messages,
             draft_action=draft_action,
@@ -197,6 +207,9 @@ class AssistantService:
         """Build OpenAI-format messages with system prompt and history trimming.
 
         Applies max_history limit per grill decision (20 messages).
+        Defense-in-depth: strips tool_calls from client-provided assistant
+        messages and skips tool messages, since only the backend should
+        produce these (diagnosis #2).
         """
         available_tools = TOOL_DEFINITIONS
         if enabled_tool_names is not None:
@@ -210,18 +223,31 @@ class AssistantService:
 
         result: list[dict[str, Any]] = [{"role": "system", "content": system_content}]
 
-        # Trim to max_history (excluding system message), ensuring we start at a user turn
+        # Trim to max_history (excluding system message),
+        # ensuring we start at a user turn
         start_idx = max(0, len(messages) - self._settings.max_history)
         while start_idx > 0 and messages[start_idx].role != "user":
             start_idx -= 1
         history = messages[start_idx:]
 
         for msg in history:
+            # Defense-in-depth: only user and assistant messages are allowed.
+            # Tool messages should never come from client history.
+            if msg.role == "tool":
+                logger.warning("Stripped unexpected tool message from client history")
+                continue
+
             entry: dict[str, Any] = {"role": msg.role}
             if msg.content is not None:
                 entry["content"] = msg.content
-            if msg.tool_calls:
+
+            # Defense-in-depth: only include tool_calls if the message
+            # was produced by the backend (i.e. has content=None with
+            # tool_calls, which is the backend pattern). Client-provided
+            # assistant messages must not carry tool_calls.
+            if msg.role == "assistant" and msg.tool_calls and msg.content is None:
                 entry["tool_calls"] = msg.tool_calls
+
             if msg.tool_call_id:
                 entry["tool_call_id"] = msg.tool_call_id
             if msg.name:

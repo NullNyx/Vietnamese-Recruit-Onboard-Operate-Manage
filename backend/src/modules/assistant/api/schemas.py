@@ -1,19 +1,42 @@
-"""Pydantic schemas for the AI Assistant API."""
+"""Pydantic schemas for the AI Assistant API.
+
+Input/output schemas are separate (diagnosis #2):
+- IncomingMessageSchema: client → server (user/assistant roles only, no tool fields)
+- OutgoingMessageSchema: server → client (includes tool fields for display)
+"""
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import BaseModel, Field, field_validator
 
 
-class ChatMessageSchema(BaseModel):
-    """A single message in the conversation.
+class IncomingMessageSchema(BaseModel):
+    """Incoming message from the client.
 
-    Attributes:
-        role: Message role — user, assistant, or tool.
-        content: Text content of the message.
-        tool_calls: Optional tool calls from the assistant.
-        tool_call_id: Optional ID linking a tool result to its call.
-        name: Optional tool name for tool result messages.
+    Only user and assistant roles are accepted. Tool messages are created
+    server-side and must never come from the client (ADR-0006).
+    """
+
+    role: Literal["user", "assistant"] = Field(
+        ...,
+        description="Message role: user or assistant",
+    )
+    content: str = Field(..., description="Text content of the message")
+
+    @field_validator("content")
+    @classmethod
+    def content_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("content must not be empty")
+        return v
+
+
+class OutgoingMessageSchema(BaseModel):
+    """Message returned to the client.
+
+    Includes tool-related fields only on server-generated messages.
     """
 
     role: str = Field(..., description="Message role: user, assistant, or tool")
@@ -31,7 +54,7 @@ class ChatRequest(BaseModel):
             The last message should be the new user message.
     """
 
-    messages: list[ChatMessageSchema] = Field(
+    messages: list[IncomingMessageSchema] = Field(
         ...,
         min_length=1,
         description="Conversation history. Last message must be from user.",
@@ -52,6 +75,15 @@ class DraftActionSchema(BaseModel):
     confirm_method: str = Field(..., description="HTTP method (POST, PATCH, etc.)")
     confirm_body: dict = Field(..., description="Request body for the confirm endpoint")
 
+    @field_validator("confirm_endpoint")
+    @classmethod
+    def endpoint_must_be_local_api(cls, v: str) -> str:
+        if not v.startswith("/api/"):
+            raise ValueError(
+                "confirm_endpoint must start with /api/ — external URLs are not allowed"
+            )
+        return v
+
 
 class ChatResponseSchema(BaseModel):
     """Response from the chat endpoint.
@@ -61,7 +93,7 @@ class ChatResponseSchema(BaseModel):
         draft_action: Optional Draft Action if a draft tool was invoked.
     """
 
-    messages: list[ChatMessageSchema] = Field(
+    messages: list[OutgoingMessageSchema] = Field(
         ..., description="New messages from this assistant turn"
     )
     draft_action: DraftActionSchema | None = Field(

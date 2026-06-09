@@ -56,9 +56,7 @@ class TestToolRegistryReadTools:
         mock_result.total_count = 5
         mock_candidate_service.list_candidates = AsyncMock(return_value=mock_result)
 
-        result_str = await registry.execute(
-            "count_candidates_by_status", {"status": "reviewing"}
-        )
+        result_str = await registry.execute("count_candidates_by_status", {"status": "reviewing"})
         result = json.loads(result_str)
 
         assert result["status"] == "reviewing"
@@ -68,9 +66,7 @@ class TestToolRegistryReadTools:
         )
 
     @pytest.mark.asyncio
-    async def test_count_candidates_invalid_status(
-        self, registry: ToolRegistry
-    ) -> None:
+    async def test_count_candidates_invalid_status(self, registry: ToolRegistry) -> None:
         """count_candidates_by_status with invalid status returns error."""
         result_str = await registry.execute(
             "count_candidates_by_status", {"status": "invalid_status"}
@@ -118,18 +114,14 @@ class TestToolRegistryReadTools:
         mock_result.total_count = 1
         mock_candidate_service.list_candidates = AsyncMock(return_value=mock_result)
 
-        result_str = await registry.execute(
-            "search_candidates", {"query": "Nguyen"}
-        )
+        result_str = await registry.execute("search_candidates", {"query": "Nguyen"})
         result = json.loads(result_str)
 
         assert result["total"] == 1
         assert result["candidates"][0]["name"] == "Nguyen Van A"
 
     @pytest.mark.asyncio
-    async def test_search_candidates_empty_query(
-        self, registry: ToolRegistry
-    ) -> None:
+    async def test_search_candidates_empty_query(self, registry: ToolRegistry) -> None:
         """search_candidates with empty query returns error."""
         result_str = await registry.execute("search_candidates", {"query": ""})
         result = json.loads(result_str)

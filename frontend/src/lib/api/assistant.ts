@@ -64,10 +64,14 @@ async function fetchWithTimeout(
 export async function sendChatMessage(
   messages: ChatMessage[],
 ): Promise<ChatResponse> {
+  // Filter out tool messages — only user and assistant roles are accepted
+  // by the backend (IncomingMessageSchema, ADR-0006).
+  const sanitized = messages.filter((m) => m.role !== "tool");
+
   const res = await fetchWithTimeout(`${BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify({ messages: sanitized }),
   });
 
   if (!res.ok) {
@@ -85,6 +89,11 @@ export async function sendChatMessage(
 export async function confirmDraftAction(
   draft: DraftAction,
 ): Promise<unknown> {
+  // SSRF guard: only allow local API endpoints
+  if (!draft.confirm_endpoint.startsWith("/api/")) {
+    throw new Error("Invalid confirm endpoint: must start with /api/");
+  }
+
   const res = await fetchWithTimeout(draft.confirm_endpoint, {
     method: draft.confirm_method,
     headers: { "Content-Type": "application/json" },
