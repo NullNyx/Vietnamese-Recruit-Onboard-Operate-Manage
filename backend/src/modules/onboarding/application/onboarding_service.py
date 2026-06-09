@@ -756,11 +756,14 @@ class OnboardingService:
         )
 
         items: list[ProcessListItem] = []
+        get_employee_by_id = getattr(self.employee_repo, "get_by_id", None)
         for process in processes:
             counts = await self.task_repo.count_by_status(process.id)
             total_count = sum(counts.values())
             completed_count = counts.get(OnboardingTaskStatus.DONE.value, 0)
-            employee = await self.employee_repo.get_by_id(process.employee_id)
+            employee = None
+            if callable(get_employee_by_id):
+                employee = await get_employee_by_id(process.employee_id)
             items.append(
                 ProcessListItem(
                     process_id=process.id,
