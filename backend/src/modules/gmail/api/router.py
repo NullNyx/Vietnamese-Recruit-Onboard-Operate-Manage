@@ -616,6 +616,13 @@ async def process_attachments(
             detail=f"Email status is '{email.processing_status}', expected 'classified'",
         )
 
+    # Atomically transition to cv_processing to prevent race conditions.
+    # A second concurrent request will see processing_status != "classified"
+    # and get 400 before starting the expensive pipeline.
+    email.processing_status = "cv_processing"
+    email_repo.session.add(email)
+    await email_repo.session.commit()
+
     # Fetch attachment binary data from Gmail API
     gmail_adapter = await get_gmail_adapter()
     response = await gmail_adapter._http_client.get(
@@ -640,6 +647,10 @@ async def process_attachments(
     )
 
     if not fetch_result.fetched:
+        # Revert: no valid attachments to process
+        email.processing_status = "classified"
+        email_repo.session.add(email)
+        await email_repo.session.commit()
         return {"processed_count": 0, "message": "No valid attachments to process"}
 
     # Build AttachmentInput list
@@ -664,6 +675,10 @@ async def process_attachments(
         )
     except Exception as exc:
         logger.error("CV processing failed for email %s: %s", message_id, exc)
+        # Revert to needs_review so HR can retry via reclassify
+        email.processing_status = "needs_review"
+        email_repo.session.add(email)
+        await email_repo.session.commit()
         raise HTTPException(
             status_code=500,
             detail=f"CV processing failed: {exc}",
