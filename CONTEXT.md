@@ -38,10 +38,22 @@ inactive Employee = accepted, onboarding; active Employee = onboarding done.
 Active Employees use the self-service side of the system.
 _Avoid_: User (User is the auth-account concept; an Employee is the HR concept)
 
+**Manager**:
+The direct reporting relationship of an Employee to another Employee. It is not
+an HR synonym, not a system role, and does not imply a separate permission
+model by itself.
+_Avoid_: using Manager to mean HR, Administrator, or approver-by-default
+
 **Employee Self-Service**:
 The employee-facing side of the system for active Employees. It is distinct
 from the HR admin side and is used for employee-owned views and actions.
 _Avoid_: Portal, Employee dashboard, User area
+
+**Employee Assistant**:
+A conversational assistant for active Employees. It can read only the Employee's
+own data and draft Employee-owned actions such as leave or overtime requests,
+but it never writes on its own.
+_Avoid_: Employee AI Agent, Employee Chatbot, Self-service bot
 
 **Attendance Record**:
 A daily timekeeping record for one Employee on one work date. It captures the
@@ -76,14 +88,8 @@ A conversational chatbot for HR (the admin role). It can READ recruitment and
 onboarding data (candidate counts by status, parsed CV summaries, interview
 schedules, onboarding progress) and DRAFT actions for HR (e.g. compose an
 interview-invitation or congratulations email), but it never writes to the
-database on its own — HR confirms every write (human-in-the-loop). Employee-side
-assistant is a future extension, deferred with the attendance/leave modules.
+database on its own — HR confirms every write (human-in-the-loop).
 _Avoid_: Chatbot (too generic), Agent (implies autonomous writes)
-
-**Employee Assistant**:
-A conversational assistant for active Employees. It can read only the Employee's
-own data and draft Employee-owned actions, but it never writes on its own.
-_Avoid_: Employee AI Agent, Employee Chatbot, Self-service bot
 
 **AI Agent (autonomous)**:
 A hypothetical future capability where AI decides and executes write actions on
@@ -95,8 +101,20 @@ _Avoid_: using "Agent" to describe the current Assistant, which is not autonomou
 **Candidate**:
 A person being considered for employment, created (auto or manually) from a
 parsed CV. Moves through a pipeline: new → reviewing → interview*scheduled →
-accepted/rejected/archived. A Candidate is NOT yet an Employee.
+accepted/rejected/archived. A Candidate is NOT yet an Employee. A Candidate may
+be unassigned or assigned to exactly one Job Opening, and that assignment may
+change only before the Candidate reaches accepted/rejected/archived.
 \_Avoid*: Applicant, Employee (an Employee is post-onboarding)
+
+**Job Opening**:
+A specific hiring need for one Position in the Organization. Its Department is
+derived from that Position in the initial model. It optionally groups the
+Candidates being considered for that need and tracks the target headcount
+separately from the Candidate pipeline; a Candidate may exist without a Job
+Opening. Its lifecycle is draft → open → closed/cancelled, and only open Job
+Openings accept new Candidate assignments. Its headcount is measured against
+accepted Candidates, not onboarding completion or active Employees.
+_Avoid_: Recruitment Plan, Hiring Plan, Vacancy, Requisition
 
 **Backbone Flow**:
 The project's single core workflow: incoming email → AI intent classification →

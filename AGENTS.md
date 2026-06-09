@@ -232,16 +232,25 @@ Jira Tasks via Atlassian MCP. See `docs/agents/issue-tracker.md`.
 
 Quick Jira checks:
 
-- Natural-language shortcut: `check task KAN-11 bằng mcp jira`.
-- Fast path: call Atlassian MCP `getJiraIssue` directly. Do not browse, scan
-  source, or list MCP tools first.
-- Use `cloudId: "https://nullnyx.atlassian.net/"`, `issueIdOrKey: "KAN-11"`,
-  fields `summary`, `description`, `status`, `labels`, `comment`, `assignee`,
+- Natural-language shortcut: `check task` / `xem task trên jira` lists recent
+  Jira Tasks in `KAN`.
+- Keyed shortcut: `check task KAN-11 bằng mcp jira` reads that specific task.
+- Fast path for unkeyed checks: call Atlassian MCP `searchJiraIssuesUsingJql`
+  directly with `project = KAN ORDER BY created DESC`. Do not browse, scan source,
+  ask for a key, or list MCP tools first.
+- Fast path for keyed checks: call Atlassian MCP `getJiraIssue` directly with
+  `cloudId: "https://nullnyx.atlassian.net/"`, `issueIdOrKey: "KAN-11"`, fields
+  `summary`, `description`, `status`, `labels`, `comment`, `assignee`,
   `issuelinks`, `created`, `updated`, `issuetype`, `priority`, `reporter`, and
   `responseContentFormat: "markdown"`.
+- When creating Jira Tasks through Atlassian MCP, do not trust labels passed at
+  create time to persist. After each `createJiraIssue`, immediately re-read or
+  patch the issue with `editJiraIssue` and verify the `labels` field contains
+  the expected values.
 - If direct Atlassian tools are unavailable, fallback to the configured
   `atlassian` MCP server through `mcp-remote` and call `tools/call` with
-  `name: "getJiraIssue"`; only list tools/resources while diagnosing fallback.
+  `name: "searchJiraIssuesUsingJql"` for unkeyed checks or `name: "getJiraIssue"`
+  for keyed checks; only list tools/resources while diagnosing fallback.
 - List tasks via JQL: call `searchJiraIssuesUsingJql` with
   `project = KAN ORDER BY created DESC`.
 
