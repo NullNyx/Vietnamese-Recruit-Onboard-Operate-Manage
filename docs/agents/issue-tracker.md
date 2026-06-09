@@ -4,10 +4,23 @@ Issues, PRDs, and implementation tasks for this repo live as Jira Tasks in the
 `KAN` project on `https://nullnyx.atlassian.net/`. Use Atlassian MCP for all Jira
 operations.
 
-## Fast path for checking a task
+## Fast path for checking tasks
 
-When the user asks to check a Jira task, do not browse the web, scan source code,
-or list MCP tools first. Call Atlassian MCP directly:
+When the user says "check task", "check tasks", "xem task trên Jira", or similar
+without a Jira key, treat it as a request to list Jira Tasks in `KAN`. Do not ask
+for a key first. Call Atlassian MCP directly:
+
+- Tool: `searchJiraIssuesUsingJql`
+- `cloudId`: `https://nullnyx.atlassian.net/`
+- `jql`: `project = KAN ORDER BY created DESC`
+- `maxResults`: `10`
+- `fields`: `summary`, `status`, `labels`, `assignee`, `created`, `updated`,
+  `issuetype`, `priority`
+- `responseContentFormat`: `markdown`
+
+When the user includes a Jira key, e.g. `KAN-8` or `KAN-08`, treat it as a request
+to read that specific task. Do not browse the web, scan source code, or list MCP
+tools first. Call Atlassian MCP directly:
 
 - Tool: `getJiraIssue`
 - `cloudId`: `https://nullnyx.atlassian.net/`
@@ -18,8 +31,9 @@ or list MCP tools first. Call Atlassian MCP directly:
 
 If the direct call fails because the Atlassian tools are not exposed in the
 current session, use the configured `atlassian` MCP server through `mcp-remote`
-and call `tools/call` with `name: "getJiraIssue"`. Only list tools or resources
-when diagnosing that fallback.
+and call `tools/call` with `name: "searchJiraIssuesUsingJql"` for list requests
+or `name: "getJiraIssue"` for keyed reads. Only list tools or resources when
+diagnosing that fallback.
 
 ## Conventions
 
