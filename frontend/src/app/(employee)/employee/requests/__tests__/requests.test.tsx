@@ -27,10 +27,10 @@ describe("EmployeeRequestsPage", () => {
     expect(screen.getByText("Chưa có yêu cầu nào")).toBeInTheDocument();
   });
 
-  it("has create button linking to new request", () => {
+  it("does not render a broken create button", () => {
     render(<RequestsPage />);
 
-    const createLink = screen.getByText("Tạo yêu cầu").closest("a");
-    expect(createLink).toHaveAttribute("href", "/employee/requests/new");
+    expect(screen.queryByText("Tạo yêu cầu")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Tạo yêu cầu/i })).not.toBeInTheDocument();
   });
 });
