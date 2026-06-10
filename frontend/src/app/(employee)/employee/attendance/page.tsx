@@ -176,12 +176,14 @@ export default function EmployeeAttendancePage() {
         // 409 means already checked in - resolve silently
         if (res.status === 409) {
           await fetchToday();
+      await fetchHistory();
           return;
         }
         throw new Error(data.detail || "Không thể check-in");
       }
       toast.success(data.message || "Check-in thành công");
       await fetchToday();
+      await fetchHistory();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Không thể check-in");
     } finally {
@@ -204,12 +206,14 @@ export default function EmployeeAttendancePage() {
         // 400 means not checked in - resolve silently
         if (res.status === 400) {
           await fetchToday();
+      await fetchHistory();
           return;
         }
         throw new Error(data.detail || "Không thể check-out");
       }
       toast.success(data.message || "Check-out thành công");
       await fetchToday();
+      await fetchHistory();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Không thể check-out");
     } finally {
