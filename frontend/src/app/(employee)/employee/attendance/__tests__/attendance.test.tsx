@@ -199,27 +199,74 @@ describe("API fetch with credentials", () => {
     expect(res.status).toBe(409);
     expect(data.error_code).toBe("ALREADY_CHECKED_IN");
   });
+
+  it("handles 400 NOT_CHECKED_IN error", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({
+        error_code: "NOT_CHECKED_IN",
+        detail: "Must check in before checking out",
+      }),
+    });
+
+    const res = await fetch("/api/attendance/me/check-out", { method: "POST", credentials: "include" });
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.error_code).toBe("NOT_CHECKED_IN");
+  });
 });
 
-describe("History refresh after mutation", () => {
-  it("should call fetchHistory after check-in success", async () => {
+describe("API response parsing", () => {
+  it("parses today record correctly", async () => {
     const mockRecord = {
       id: "test-id",
       employee_id: "test-emp-id",
       work_date: "2026-06-10",
       check_in_at: "2026-06-10T08:00:00Z",
+      check_out_at: "2026-06-10T17:00:00Z",
+      check_in_ip: "192.168.1.100",
+      check_out_ip: "192.168.1.100",
       source: "WEB",
+      created_at: "2026-06-10T08:00:00Z",
+      updated_at: "2026-06-10T17:00:00Z",
     };
 
-    // Check-in success
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({ message: "Checked in", record: mockRecord }),
+      json: () => Promise.resolve(mockRecord),
     });
 
-    await fetch("/api/attendance/me/check-in", { method: "POST", credentials: "include" });
-    // This test verifies the API is called correctly
-    // Actual page component calls fetchHistory after check-in
-    expect(mockFetch).toHaveBeenCalled();
+    const res = await fetch("/api/attendance/me/today", { credentials: "include" });
+    const data = await res.json();
+
+    expect(data.work_date).toBe("2026-06-10");
+    expect(data.check_in_at).toContain("08:00:00");
+    expect(data.check_out_at).toContain("17:00:00");
+    expect(data.source).toBe("WEB");
+  });
+
+  it("parses history response correctly", async () => {
+    const mockHistory = {
+      records: [
+        { id: "1", work_date: "2026-06-10", check_in_at: "2026-06-10T08:00:00Z" },
+        { id: "2", work_date: "2026-06-09", check_in_at: "2026-06-09T08:00:00Z", check_out_at: "2026-06-09T17:00:00Z" },
+      ],
+      year: 2026,
+      month: 6,
+    };
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockHistory),
+    });
+
+    const res = await fetch("/api/attendance/me/history?year=2026&month=6", { credentials: "include" });
+    const data = await res.json();
+
+    expect(data.year).toBe(2026);
+    expect(data.month).toBe(6);
+    expect(data.records).toHaveLength(2);
   });
 });
