@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Clock, Loader2, MapPin, ArrowLeft, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
@@ -143,7 +143,7 @@ export default function EmployeeAttendancePage() {
   }
 
   // Fetch history
-  async function fetchHistory() {
+  const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
     try {
       const [year, month] = selectedMonth.split("-").map(Number);
@@ -159,7 +159,7 @@ export default function EmployeeAttendancePage() {
     } finally {
       setHistoryLoading(false);
     }
-  }
+  }, [selectedMonth]);
 
   // Check-in
   async function handleCheckIn() {
@@ -233,7 +233,7 @@ export default function EmployeeAttendancePage() {
     if (user?.employee_id) {
       fetchHistory();
     }
-  }, [selectedMonth, user?.employee_id]);
+  }, [fetchHistory, user?.employee_id]);
 
   function getStatusBadge() {
     switch (todayState) {
