@@ -371,12 +371,16 @@ class JobOpeningCreate(BaseModel):
         position_id: UUID of the Position (required).
         target_headcount: Number of people to hire (required, >= 1).
         description: Optional description (max 5000 chars).
+        status: Initial status (default: draft).
     """
 
     title: str = Field(min_length=1, max_length=255)
     position_id: UUID
     target_headcount: int = Field(ge=1)
     description: str = Field(default="", max_length=5000)
+    status: JobOpeningStatus = Field(
+        default=JobOpeningStatus.DRAFT, description="Initial status"
+    )
 
 
 class JobOpeningUpdate(BaseModel):

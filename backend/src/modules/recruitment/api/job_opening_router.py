@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.identity.container import get_current_user, get_db_session
-from src.modules.identity.domain.entities import User
+from src.modules.identity.domain.entities import User, UserRole
 from src.modules.recruitment.api.schemas import (
     JobOpeningCreate,
     JobOpeningListItemResponse,
@@ -33,6 +33,33 @@ from src.modules.recruitment.infrastructure.repositories import JobOpeningReposi
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 SessionDep = Annotated[AsyncSession, Depends(get_db_session)]
+
+
+async def require_admin(
+    current_user: CurrentUserDep,
+) -> User:
+    """Verify the current user has the Admin role.
+
+    Args:
+        current_user: The authenticated User entity from the JWT.
+
+    Returns:
+        The authenticated User entity if they have the Admin role.
+
+    Raises:
+        HTTPException: 403 Forbidden if the user does not have the Admin role.
+    """
+    from fastapi import HTTPException
+
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required",
+        )
+    return current_user
+
+
+AdminUserDep = Annotated[User, Depends(require_admin)]
 
 
 def get_job_opening_service(
@@ -73,7 +100,7 @@ job_opening_router = APIRouter(
 @job_opening_router.post("", response_model=JobOpeningResponse, status_code=201)
 async def create_job_opening(
     body: JobOpeningCreate,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     session: SessionDep,
 ) -> JobOpeningResponse:
     """Create a new Job Opening.
@@ -202,7 +229,7 @@ async def get_job_opening(
 async def update_job_opening(
     job_opening_id: UUID,
     body: JobOpeningUpdate,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     session: SessionDep,
 ) -> JobOpeningResponse:
     """Update a Job Opening's editable fields.
@@ -237,7 +264,7 @@ async def update_job_opening(
 @job_opening_router.post("/{job_opening_id}/open", response_model=JobOpeningResponse)
 async def open_job_opening(
     job_opening_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     session: SessionDep,
 ) -> JobOpeningResponse:
     """Open a Job Opening for applications.
@@ -265,7 +292,7 @@ async def open_job_opening(
 @job_opening_router.post("/{job_opening_id}/close", response_model=JobOpeningResponse)
 async def close_job_opening(
     job_opening_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     session: SessionDep,
 ) -> JobOpeningResponse:
     """Close a Job Opening (filled or no longer hiring).
@@ -293,7 +320,7 @@ async def close_job_opening(
 @job_opening_router.post("/{job_opening_id}/cancel", response_model=JobOpeningResponse)
 async def cancel_job_opening(
     job_opening_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     session: SessionDep,
 ) -> JobOpeningResponse:
     """Cancel a Job Opening (terminal state).

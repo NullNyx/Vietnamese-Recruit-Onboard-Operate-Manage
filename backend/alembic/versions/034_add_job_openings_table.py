@@ -1,7 +1,7 @@
 """Add job_openings table.
 
-Revision ID: 032
-Revises: 031
+Revision ID: 034
+Revises: 033
 Create Date: 2026-06-10
 """
 
@@ -30,6 +30,7 @@ def upgrade() -> None:
         sa.Column(
             "position_id",
             postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("positions.id"),
             nullable=False,
         ),
         sa.Column("target_headcount", sa.Integer(), nullable=False),

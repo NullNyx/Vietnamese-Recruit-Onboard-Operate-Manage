@@ -266,6 +266,9 @@ class JobOpeningService:
         now = datetime.now(UTC)
         if target_status == JobOpeningStatus.OPEN:
             job_opening.opened_at = now
+            # Clear closed/cancelled timestamps when reopening
+            job_opening.closed_at = None
+            job_opening.cancelled_at = None
         elif target_status == JobOpeningStatus.CLOSED:
             job_opening.closed_at = now
         elif target_status == JobOpeningStatus.CANCELLED:
