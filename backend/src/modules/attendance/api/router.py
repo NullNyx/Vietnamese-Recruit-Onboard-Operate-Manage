@@ -9,6 +9,7 @@ is recorded in the audit log.
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from src.modules.attendance.api.schemas import (
+    HistoryResponse,
     NetworkAddRequest,
     NetworkAllowlistResponse,
     NetworkAllowlistUpdate,
@@ -227,3 +228,26 @@ async def get_today_attendance(
     if record is None:
         return None
     return AttendanceRecordResponse.model_validate(record)
+
+
+@attendance_router.get("/me/history", response_model=HistoryResponse)
+async def get_attendance_history(
+    year: int = Query(..., description="Year (e.g., 2026)", ge=2020, le=2100),
+    month: int = Query(..., description="Month (1-12)", ge=1, le=12),
+    employee: Employee = Depends(_require_active_employee),
+    service: AttendanceService = Depends(get_attendance_service),
+) -> HistoryResponse:
+    """Get attendance records for the current employee in a given month.
+
+    Returns all attendance records for the specified year and month.
+    """
+    records = await service.get_history(
+        employee_id=employee.id,
+        year=year,
+        month=month,
+    )
+    return HistoryResponse(
+        records=[AttendanceRecordResponse.model_validate(r) for r in records],
+        year=year,
+        month=month,
+    )

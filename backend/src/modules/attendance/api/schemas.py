@@ -63,3 +63,13 @@ class CheckOutResponse(BaseModel):
 
     message: str
     record: AttendanceRecordResponse
+
+
+class HistoryResponse(BaseModel):
+    """Response schema for attendance history."""
+
+    records: list[AttendanceRecordResponse] = Field(
+        default_factory=list, description="List of attendance records for the month"
+    )
+    year: int = Field(description="Year of the requested month")
+    month: int = Field(description="Month of the requested month (1-12)")
