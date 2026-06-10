@@ -229,6 +229,7 @@ async def get_today_attendance(
         return None
     return AttendanceRecordResponse.model_validate(record)
 
+
 @attendance_router.get("/me/history", response_model=HistoryResponse)
 async def get_attendance_history(
     year: int = Query(..., description="Year (e.g., 2026)", ge=2020, le=2100),

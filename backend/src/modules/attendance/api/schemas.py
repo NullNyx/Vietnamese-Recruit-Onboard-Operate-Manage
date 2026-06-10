@@ -64,6 +64,7 @@ class CheckOutResponse(BaseModel):
     message: str
     record: AttendanceRecordResponse
 
+
 class HistoryResponse(BaseModel):
     """Response schema for attendance history."""
 
