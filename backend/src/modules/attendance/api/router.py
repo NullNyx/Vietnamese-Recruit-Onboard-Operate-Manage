@@ -116,7 +116,6 @@ async def remove_from_network_allowlist(
 # Employee-owned attendance endpoints
 
 from src.modules.attendance.api.schemas import (
-    HistoryResponse,
     AttendanceRecordResponse,
     CheckInResponse,
     CheckOutResponse,
