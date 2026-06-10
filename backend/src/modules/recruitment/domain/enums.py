@@ -59,3 +59,18 @@ class EmailIntent(StrEnum):
     EVENT = "event"
     INTERNAL = "internal"
     OTHER = "other"
+
+class JobOpeningStatus(StrEnum):
+    """Lifecycle status of a Job Opening in recruitment planning.
+
+    Transitions follow a defined state machine:
+    - draft → open, cancelled
+    - open → closed, cancelled
+    - closed → open (reopen)
+    - cancelled → (terminal, no transitions)
+    """
+
+    DRAFT = "draft"
+    OPEN = "open"
+    CLOSED = "closed"
+    CANCELLED = "cancelled"

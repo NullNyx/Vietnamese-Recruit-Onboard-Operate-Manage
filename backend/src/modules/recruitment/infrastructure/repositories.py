@@ -12,7 +12,7 @@ from sqlalchemy import Text, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from src.modules.recruitment.domain.entities import Candidate, CVDocument
+from src.modules.recruitment.domain.entities import Candidate, CVDocument, JobOpening
 from src.modules.recruitment.domain.enums import CandidateStatus, ProcessingStatus
 
 
@@ -358,3 +358,115 @@ class CVDocumentRepository:
         if doc is not None:
             await self.session.delete(doc)
             await self.session.flush()
+
+
+class JobOpeningRepository:
+    """Handles JobOpening entity persistence using async SQLAlchemy sessions.
+
+    Attributes:
+        session: The async database session for executing queries.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        """Initialize the repository with an async database session.
+
+        Args:
+            session: An SQLAlchemy AsyncSession instance for database operations.
+        """
+        self.session = session
+
+    async def create(self, job_opening: JobOpening) -> JobOpening:
+        """Persist a new Job Opening entity to the database.
+
+        Args:
+            job_opening: The JobOpening entity to create.
+
+        Returns:
+            The persisted JobOpening entity with generated fields populated.
+        """
+        self.session.add(job_opening)
+        await self.session.flush()
+        return job_opening
+
+    async def get_by_id(self, id: UUID) -> JobOpening | None:
+        """Retrieve a Job Opening by its unique identifier.
+
+        Args:
+            id: The UUID primary key of the Job Opening.
+
+        Returns:
+            The JobOpening entity if found, None otherwise.
+        """
+        statement = select(JobOpening).where(JobOpening.id == id)
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
+    async def update(self, job_opening: JobOpening) -> JobOpening:
+        """Update an existing Job Opening entity.
+
+        Updates the updated_at timestamp automatically.
+
+        Args:
+            job_opening: The JobOpening entity with updated fields.
+
+        Returns:
+            The updated JobOpening entity.
+        """
+        job_opening.updated_at = datetime.now(UTC)
+        self.session.add(job_opening)
+        await self.session.flush()
+        return job_opening
+
+    async def list_job_openings(
+        self,
+        status: list[str] | None = None,
+        position_id: UUID | None = None,
+        search: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[JobOpening], int]:
+        """Retrieve a paginated list of Job Openings with optional filters.
+
+        Args:
+            status: Optional list of status values to filter by.
+            position_id: Optional position UUID to filter by.
+            search: Optional text to search in title (case-insensitive partial match).
+            page: The page number (1-indexed).
+            page_size: Number of items per page.
+
+        Returns:
+            A tuple of (list of JobOpening entities, total count).
+        """
+        statement = select(JobOpening)
+        count_statement = select(func.count()).select_from(JobOpening)
+
+        # Apply status filter
+        if status is not None:
+            statement = statement.where(JobOpening.status.in_(status))  # type: ignore[attr-defined]
+            count_statement = count_statement.where(JobOpening.status.in_(status))  # type: ignore[attr-defined]
+
+        # Apply position filter
+        if position_id is not None:
+            statement = statement.where(JobOpening.position_id == position_id)
+            count_statement = count_statement.where(JobOpening.position_id == position_id)
+
+        # Apply text search filter
+        if search:
+            search_term = f"%{search.lower()}%"
+            statement = statement.where(func.lower(JobOpening.title).ilike(search_term))
+            count_statement = count_statement.where(func.lower(JobOpening.title).ilike(search_term))
+
+        # Get total count
+        count_result = await self.session.execute(count_statement)
+        total = count_result.scalar() or 0
+
+        # Apply sorting and pagination
+        offset = (page - 1) * page_size
+        statement = statement.order_by(desc(JobOpening.created_at))  # type: ignore[arg-type]
+        statement = statement.offset(offset).limit(page_size)
+
+        # Execute query
+        result = await self.session.execute(statement)
+        job_openings = list(result.scalars().all())
+
+        return job_openings, total
