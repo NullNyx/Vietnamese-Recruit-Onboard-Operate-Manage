@@ -28,22 +28,22 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 // Dynamically import the page component
-let EmployeeAttendancePage: React.ComponentType;
+let AttendancePage: React.ComponentType;
 
 beforeEach(async () => {
   mockFetch.mockReset();
   vi.clearAllMocks();
   
   // Import the page component lazily
-  const module = await import("../page");
-  EmployeeAttendancePage = module.default;
+  const pageModule = await import("../page");
+  AttendancePage = pageModule.default;
 });
 
 describe("EmployeeAttendancePage UI states", () => {
   it("renders page header", async () => {
     mockFetch.mockImplementation(() => new Promise(() => {})); // Never resolves
     
-    render(<EmployeeAttendancePage />);
+    render(<AttendancePage />);
     
     expect(screen.getByText("Chấm công")).toBeInTheDocument();
     expect(screen.getByText("Check-in/check-out và xem lịch sử chấm công")).toBeInTheDocument();
@@ -54,7 +54,7 @@ describe("EmployeeAttendancePage UI states", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => null })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ records: [], year: 2026, month: 6 }) });
 
-    render(<EmployeeAttendancePage />);
+    render(<AttendancePage />);
 
     await waitFor(() => {
       expect(screen.getByText("Chưa điểm danh")).toBeInTheDocument();
@@ -80,12 +80,10 @@ describe("EmployeeAttendancePage UI states", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => record })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ records: [record], year: 2026, month: 6 }) });
 
-    render(<EmployeeAttendancePage />);
+    render(<AttendancePage />);
 
     await waitFor(() => {
-      // Badge shows "Đã check-in"
       expect(screen.getAllByText("Đã check-in").length).toBeGreaterThan(0);
-      // Info shows "Check-in:"
       expect(screen.getByText(/Check-in:/)).toBeInTheDocument();
     });
   });
@@ -108,10 +106,9 @@ describe("EmployeeAttendancePage UI states", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => record })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ records: [record], year: 2026, month: 6 }) });
 
-    render(<EmployeeAttendancePage />);
+    render(<AttendancePage />);
 
     await waitFor(() => {
-      // Badge and button both show "Hoàn thành"
       expect(screen.getAllByText("Hoàn thành").length).toBeGreaterThanOrEqual(2);
     });
   });
@@ -126,7 +123,7 @@ describe("EmployeeAttendancePage UI states", () => {
       }),
     });
 
-    render(<EmployeeAttendancePage />);
+    render(<AttendancePage />);
 
     await waitFor(() => {
       expect(screen.getByText("Lỗi mạng")).toBeInTheDocument();
@@ -139,7 +136,7 @@ describe("EmployeeAttendancePage UI states", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => null })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ records: [], year: 2026, month: 6 }) });
 
-    render(<EmployeeAttendancePage />);
+    render(<AttendancePage />);
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /Check-in/i })).toBeInTheDocument();
@@ -161,7 +158,7 @@ describe("EmployeeAttendancePage UI states", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => record })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ records: [], year: 2026, month: 6 }) });
 
-    render(<EmployeeAttendancePage />);
+    render(<AttendancePage />);
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /Check-out/i })).toBeInTheDocument();
@@ -184,7 +181,7 @@ describe("EmployeeAttendancePage UI states", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => record })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ records: [], year: 2026, month: 6 }) });
 
-    render(<EmployeeAttendancePage />);
+    render(<AttendancePage />);
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /Đã hoàn thành/i })).toBeInTheDocument();
@@ -196,7 +193,7 @@ describe("EmployeeAttendancePage UI states", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => null })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ records: [], year: 2026, month: 6 }) });
 
-    render(<EmployeeAttendancePage />);
+    render(<AttendancePage />);
 
     await waitFor(() => {
       expect(screen.getByText("Lịch sử chấm công")).toBeInTheDocument();
@@ -208,7 +205,7 @@ describe("EmployeeAttendancePage UI states", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => null })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ records: [], year: 2026, month: 6 }) });
 
-    render(<EmployeeAttendancePage />);
+    render(<AttendancePage />);
 
     await waitFor(() => {
       expect(screen.getByText("Chưa có bản ghi chấm công trong tháng này.")).toBeInTheDocument();
@@ -242,10 +239,9 @@ describe("EmployeeAttendancePage UI states", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => null })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ records, year: 2026, month: 6 }) });
 
-    render(<EmployeeAttendancePage />);
+    render(<AttendancePage />);
 
     await waitFor(() => {
-      // Check that table shows both statuses
       expect(screen.getAllByText("Hoàn thành").length).toBeGreaterThan(0);
       expect(screen.getAllByText("Đã check-in").length).toBeGreaterThan(0);
     });
