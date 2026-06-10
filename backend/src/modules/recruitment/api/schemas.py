@@ -378,9 +378,7 @@ class JobOpeningCreate(BaseModel):
     position_id: UUID
     target_headcount: int = Field(ge=1)
     description: str = Field(default="", max_length=5000)
-    status: JobOpeningStatus = Field(
-        default=JobOpeningStatus.DRAFT, description="Initial status"
-    )
+    status: JobOpeningStatus = Field(default=JobOpeningStatus.DRAFT, description="Initial status")
 
 
 class JobOpeningUpdate(BaseModel):
