@@ -283,8 +283,7 @@ class JobOpeningService:
             previous_value={"status": previous_status},
             new_value={"status": updated.status},
             change_summary=(
-                f"Job Opening '{updated.title}' {action_name}: "
-                f"{previous_status} → {updated.status}"
+                f"Job Opening '{updated.title}' {action_name}: {previous_status} → {updated.status}"
             ),
         )
 
@@ -301,9 +300,7 @@ class JobOpeningService:
         Returns:
             The updated JobOpening entity.
         """
-        return await self._transition_status(
-            job_opening_id, JobOpeningStatus.OPEN, "open"
-        )
+        return await self._transition_status(job_opening_id, JobOpeningStatus.OPEN, "open")
 
     async def close_job_opening(self, job_opening_id: UUID) -> JobOpening:
         """Close a Job Opening (filled or no longer hiring).
@@ -316,9 +313,7 @@ class JobOpeningService:
         Returns:
             The updated JobOpening entity.
         """
-        return await self._transition_status(
-            job_opening_id, JobOpeningStatus.CLOSED, "close"
-        )
+        return await self._transition_status(job_opening_id, JobOpeningStatus.CLOSED, "close")
 
     async def cancel_job_opening(self, job_opening_id: UUID) -> JobOpening:
         """Cancel a Job Opening (terminal state).
@@ -331,6 +326,4 @@ class JobOpeningService:
         Returns:
             The updated JobOpening entity.
         """
-        return await self._transition_status(
-            job_opening_id, JobOpeningStatus.CANCELLED, "cancel"
-        )
+        return await self._transition_status(job_opening_id, JobOpeningStatus.CANCELLED, "cancel")

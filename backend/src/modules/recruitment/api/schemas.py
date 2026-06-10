@@ -362,6 +362,7 @@ class CVPresignedUrlResponse(BaseModel):
 # Job Opening schemas
 # ---------------------------------------------------------------------------
 
+
 class JobOpeningCreate(BaseModel):
     """Request schema for creating a Job Opening.
 

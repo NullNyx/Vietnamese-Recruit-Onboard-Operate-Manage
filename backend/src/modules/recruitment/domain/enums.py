@@ -60,6 +60,7 @@ class EmailIntent(StrEnum):
     INTERNAL = "internal"
     OTHER = "other"
 
+
 class JobOpeningStatus(StrEnum):
     """Lifecycle status of a Job Opening in recruitment planning.
 

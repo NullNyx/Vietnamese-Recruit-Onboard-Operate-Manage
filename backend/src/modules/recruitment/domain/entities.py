@@ -182,15 +182,9 @@ class JobOpening(SQLModel, table=True):
     position_id: UUID = Field(foreign_key="positions.id", nullable=False, index=True)
     target_headcount: int = Field(nullable=False, ge=1)
     status: str = Field(default="draft", max_length=20, nullable=False, index=True)
-    opened_at: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
-    closed_at: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
-    cancelled_at: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
+    opened_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    closed_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    cancelled_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

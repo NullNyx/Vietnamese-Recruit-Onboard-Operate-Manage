@@ -108,12 +108,8 @@ async def create_job_opening(
 async def list_job_openings(
     current_user: CurrentUserDep,
     session: SessionDep,
-    status: list[JobOpeningStatus] | None = Query(
-        default=None, description="Filter by status"
-    ),
-    position_id: UUID | None = Query(
-        default=None, description="Filter by position UUID"
-    ),
+    status: list[JobOpeningStatus] | None = Query(default=None, description="Filter by status"),
+    position_id: UUID | None = Query(default=None, description="Filter by position UUID"),
     search: str | None = Query(
         default=None, min_length=1, max_length=200, description="Search by title"
     ),
