@@ -222,10 +222,6 @@ PR title uses the commit format. Squash merge. Requires ≥1 approval + passing 
 
 ## Backend & dev environment
 
-- Backend must run inside WSL (PostgreSQL/Redis are Docker containers in WSL2;
-  asyncpg over WSL2 port-forwarding is unreliable). Follow the dev-environment
-  steering for the exact run/restart/recovery commands. Never run the backend on
-  native Windows.
 - New backend code follows the module layout `api/ → application/ → domain/ →
 infrastructure/` with `container.py` for DI, matching existing modules.
 
@@ -234,6 +230,8 @@ infrastructure/` with `container.py` for DI, matching existing modules.
 - Issue tracker: Jira Tasks via Atlassian MCP → `docs/agents/issue-tracker.md`.
 - Triage labels: five canonical roles, default strings → `docs/agents/triage-labels.md`.
 - Domain docs: single-context, `CONTEXT.md` + `docs/decisions/` → `docs/agents/domain.md`.
+- Code review (OCR): Open Code Review (OCR) CLI instructions → `docs/ocr.md`.
+- Code review workflow: Jira-GitHub PR integration via OCR → `docs/agents/code-review.md`.
 
 ## Agent skills
 
