@@ -6,21 +6,37 @@ and write operations require HR/Admin role. Every admin write action
 is recorded in the audit log.
 """
 
+from datetime import date
+from typing import Literal
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from src.modules.attendance.api.schemas import (
+    AttendanceListResponse,
+    AttendanceRecordResponse,
+    CheckInResponse,
+    CheckOutResponse,
+    CorrectionRequest,
+    CorrectionResponse,
     HistoryResponse,
     NetworkAddRequest,
     NetworkAllowlistResponse,
     NetworkAllowlistUpdate,
 )
+from src.modules.attendance.application.attendance_service import AttendanceService
 from src.modules.attendance.application.attendance_settings_service import (
     AttendanceSettingsService,
 )
 from src.modules.attendance.container import (
     get_attendance_audit_service,
+    get_attendance_service,
     get_attendance_settings_service,
 )
+from src.modules.employee.api.dependencies import get_current_employee
+from src.modules.employee.container import get_employee_repository
+from src.modules.employee.domain.entities import Employee
+from src.modules.employee.infrastructure.employee_repository import EmployeeRepository
 from src.modules.identity.application.audit_service import AuditService
 from src.modules.identity.container import get_current_user
 from src.modules.identity.domain.entities import AuditActionType, User, UserRole
@@ -115,53 +131,27 @@ async def remove_from_network_allowlist(
 
 # Employee-owned attendance endpoints
 
-from src.modules.attendance.api.schemas import (
-    AttendanceRecordResponse,
-    CheckInResponse,
-    CheckOutResponse,
-)
-from src.modules.attendance.application.attendance_service import AttendanceService
-from src.modules.attendance.container import get_attendance_service
-from src.modules.employee.api.dependencies import get_current_employee
-from src.modules.employee.domain.entities import Employee
-
 # Trusted proxy list - only these originating IPs can provide X-Forwarded-For.
-# Expand this list for known reverse proxies (e.g. "10.0.0.1").
 TRUSTED_PROXIES: frozenset[str] = frozenset({"127.0.0.1", "::1"})
 
 
 async def get_client_ip(request: Request) -> str:
-    """Extract client IP from request with trusted-proxy enforcement.
-
-    Only trusts X-Forwarded-For when the direct client is in the trusted-proxy
-    set. Rejects spoofed headers from untrusted origins.
-    """
-    client_host: str | None = request.client.host if request.client else None
-    if client_host in TRUSTED_PROXIES:
-        forwarded = request.headers.get("X-Forwarded-For")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
-    if client_host:
-        return client_host
-    return "127.0.0.1"
+    """Extract client IP, respecting X-Forwarded-For from trusted proxies."""
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        first_ip = forwarded_for.split(",")[0].strip()
+        remote_addr = request.client.host if request.client else ""
+        if remote_addr in TRUSTED_PROXIES:
+            return first_ip
+    return request.client.host if request.client else "127.0.0.1"
 
 
-async def _require_active_employee(
-    employee: Employee | None = Depends(get_current_employee),
+def _require_active_employee(
+    employee: Employee = Depends(get_current_employee),
 ) -> Employee:
-    """Dependency that requires an active Employee profile.
-
-    Uses get_current_employee which validates:
-    - Employee record exists and is linked to the user
-    - Employee.is_active is True
-
-    Raises HTTPException 403 if validation fails.
-    """
-    if employee is None:
-        raise HTTPException(
-            status_code=403,
-            detail="Employee profile required for this action",
-        )
+    """Dependency that requires an active employee."""
+    if employee is None or not employee.is_active:
+        raise AccessDeniedError()
     return employee
 
 
@@ -171,20 +161,17 @@ async def check_in(
     employee: Employee = Depends(_require_active_employee),
     service: AttendanceService = Depends(get_attendance_service),
 ) -> CheckInResponse:
-    """Check in for today from office network.
+    """Check in the current employee for today.
 
     Idempotent: returns existing record if already checked in.
-    Requires active employee profile linked to user account.
     """
     client_ip = await get_client_ip(request)
-    user_agent = request.headers.get("User-Agent")
-
+    user_agent = request.headers.get("user-agent")
     record = await service.check_in(
         employee_id=employee.id,
         client_ip=client_ip,
         user_agent=user_agent,
     )
-
     return CheckInResponse(
         message="Checked in successfully",
         record=AttendanceRecordResponse.model_validate(record),
@@ -197,21 +184,17 @@ async def check_out(
     employee: Employee = Depends(_require_active_employee),
     service: AttendanceService = Depends(get_attendance_service),
 ) -> CheckOutResponse:
-    """Check out for today from office network.
+    """Check out the current employee for today.
 
     Idempotent: returns existing record if already checked out.
-    Requires check-in first.
-    Requires active employee profile linked to user account.
     """
     client_ip = await get_client_ip(request)
-    user_agent = request.headers.get("User-Agent")
-
+    user_agent = request.headers.get("user-agent")
     record = await service.check_out(
         employee_id=employee.id,
         client_ip=client_ip,
         user_agent=user_agent,
     )
-
     return CheckOutResponse(
         message="Checked out successfully",
         record=AttendanceRecordResponse.model_validate(record),
@@ -219,7 +202,7 @@ async def check_out(
 
 
 @attendance_router.get("/me/today", response_model=AttendanceRecordResponse | None)
-async def get_today_attendance(
+async def get_today_record(
     employee: Employee = Depends(_require_active_employee),
     service: AttendanceService = Depends(get_attendance_service),
 ) -> AttendanceRecordResponse | None:
@@ -250,4 +233,86 @@ async def get_attendance_history(
         records=[AttendanceRecordResponse.model_validate(r) for r in records],
         year=year,
         month=month,
+    )
+
+
+# HR Admin endpoints
+
+
+@attendance_router.get("/records", response_model=AttendanceListResponse)
+async def list_attendance_records(
+    start_date: date = Query(..., description="Start date"),
+    end_date: date = Query(..., description="End date"),
+    employee_id: UUID | None = Query(default=None, description="Filter by employee ID"),
+    status: Literal["checked_in", "completed"] | None = Query(
+        default=None, description="Filter by status"
+    ),
+    page: int = Query(default=1, ge=1, description="Page number"),
+    page_size: int = Query(default=20, ge=1, le=100, description="Records per page"),
+    user: User = Depends(_require_hr),
+    service: AttendanceService = Depends(get_attendance_service),
+    employee_repo: EmployeeRepository = Depends(get_employee_repository),
+) -> AttendanceListResponse:
+    """List attendance records across employees with filters.
+
+    HR/Admin only. Returns paginated results with employee info joined.
+    """
+    if end_date < start_date:
+        raise HTTPException(status_code=422, detail="end_date must be >= start_date")
+    records, total = await service.list_records(
+        start_date=start_date,
+        end_date=end_date,
+        employee_id=employee_id,
+        status=status,
+        page=page,
+        page_size=page_size,
+    )
+
+    # Batch-fetch employee details in one query
+    employee_ids = list({r.employee_id for r in records})
+    employees = await employee_repo.get_by_ids(employee_ids)
+
+    enriched_records = []
+    for record in records:
+        record_dict = AttendanceRecordResponse.model_validate(record).model_dump()
+        emp = employees.get(record.employee_id)
+        if emp:
+            record_dict["employee_name"] = emp.full_name
+            record_dict["employee_code"] = emp.employee_code
+        enriched_records.append(AttendanceRecordResponse(**record_dict))
+
+    return AttendanceListResponse(
+        records=enriched_records,
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@attendance_router.put("/records/{record_id}/correct", response_model=CorrectionResponse)
+async def correct_attendance_record(
+    record_id: UUID,
+    correction: CorrectionRequest,
+    user: User = Depends(_require_hr),
+    service: AttendanceService = Depends(get_attendance_service),
+    audit_service: AuditService = Depends(get_attendance_audit_service),
+) -> CorrectionResponse:
+    """Correct an attendance record with required reason.
+
+    HR/Admin only. Correction and audit log are written atomically
+    within the same DB transaction.
+    """
+    record = await service.correct_record(
+        record_id=record_id,
+        check_in_at=correction.check_in_at,
+        check_out_at=correction.check_out_at,
+        correction_reason=correction.correction_reason,
+        corrected_by_user_id=user.id,
+        admin=user,
+        audit_service=audit_service,
+    )
+
+    return CorrectionResponse(
+        message="Attendance record corrected successfully",
+        record=AttendanceRecordResponse.model_validate(record),
     )

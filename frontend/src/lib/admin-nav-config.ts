@@ -58,7 +58,7 @@ export const adminNavConfig: HeaderNavConfig = {
       id: 'cham-cong',
       label: 'Chấm công',
       links: [
-        { href: '/attendance/checkin', label: 'Check-in', icon: Clock },
+        { href: '/attendance', label: 'Danh sách', icon: Clock },
         { href: '/attendance/schedules', label: 'Lịch làm', icon: Calendar },
         { href: '/attendance/leave', label: 'Nghỉ phép', icon: CalendarOff },
         { href: '/attendance/overtime', label: 'Tăng ca', icon: Timer },

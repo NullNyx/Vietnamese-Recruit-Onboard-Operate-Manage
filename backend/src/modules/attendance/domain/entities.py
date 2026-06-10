@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, Text
 from sqlmodel import Field, SQLModel
 
 
@@ -51,6 +51,28 @@ class AttendanceRecord(SQLModel, table=True):
     source: AttendanceSource = Field(
         default=AttendanceSource.WEB,
         nullable=False,
+    )
+    # HR correction fields
+    corrected_by_user_id: UUID | None = Field(
+        default=None,
+        foreign_key="users.id",
+        nullable=True,
+    )
+    corrected_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    correction_reason: str | None = Field(
+        default=None,
+        sa_column=Column(Text, nullable=True),
+    )
+    previous_check_in_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    previous_check_out_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

@@ -96,9 +96,7 @@ def _build_app(
     register_attendance_error_handlers(app)
     register_auth_error_handlers(app)
     app.dependency_overrides[get_current_employee] = _make_get_current_employee(employee)
-    app.dependency_overrides[get_attendance_service] = (
-        lambda: service or FakeAttendanceService()
-    )
+    app.dependency_overrides[get_attendance_service] = lambda: service or FakeAttendanceService()
     return app
 
 
