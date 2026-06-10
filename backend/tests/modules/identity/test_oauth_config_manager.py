@@ -203,9 +203,7 @@ class TestUpdateConfig:
         with pytest.raises(
             OAuthConfigValidationError, match="Could not verify credentials with Google"
         ):
-            await manager.update_config(
-                "client-id", "secret", "https://example.com/cb", admin
-            )
+            await manager.update_config("client-id", "secret", "https://example.com/cb", admin)
 
     @respx.mock
     @pytest.mark.asyncio
@@ -299,9 +297,7 @@ class TestValidateCredentials:
     @pytest.mark.asyncio
     async def test_returns_false_for_missing_token_endpoint(self) -> None:
         respx.get(GOOGLE_DISCOVERY_URL).mock(
-            return_value=httpx.Response(
-                200, json={"authorization_endpoint": "https://example.com"}
-            )
+            return_value=httpx.Response(200, json={"authorization_endpoint": "https://example.com"})
         )
 
         manager, _ = _make_manager()
@@ -320,9 +316,7 @@ class TestValidateCredentials:
     @respx.mock
     @pytest.mark.asyncio
     async def test_returns_false_on_connection_error(self) -> None:
-        respx.get(GOOGLE_DISCOVERY_URL).mock(
-            side_effect=httpx.ConnectError("connection refused")
-        )
+        respx.get(GOOGLE_DISCOVERY_URL).mock(side_effect=httpx.ConnectError("connection refused"))
 
         manager, _ = _make_manager()
         result = await manager.validate_credentials("some-client-id")

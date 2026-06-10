@@ -253,9 +253,7 @@ class TestDeleteCV:
 class TestGeneratePresignedUrl:
     """Verify generate_presigned_url behavior."""
 
-    async def test_generate_presigned_url_returns_url(
-        self, client: RecruitmentMinIOClient
-    ) -> None:
+    async def test_generate_presigned_url_returns_url(self, client: RecruitmentMinIOClient) -> None:
         mock_s3 = AsyncMock()
         mock_s3.head_object = AsyncMock()
         mock_s3.generate_presigned_url = AsyncMock(

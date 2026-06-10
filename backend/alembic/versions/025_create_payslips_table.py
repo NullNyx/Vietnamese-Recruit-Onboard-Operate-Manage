@@ -27,7 +27,9 @@ def upgrade() -> None:
         sa.Column("total_ot_hours", sa.Numeric(precision=6, scale=2), server_default="0"),
         sa.Column("total_ot_amount", sa.Numeric(precision=10, scale=2), server_default="0"),
         sa.Column("gross_income", sa.Numeric(precision=12, scale=2), nullable=False),
-        sa.Column("personal_deduction", sa.Numeric(precision=10, scale=2), server_default="11000000"),
+        sa.Column(
+            "personal_deduction", sa.Numeric(precision=10, scale=2), server_default="11000000"
+        ),
         sa.Column("dependent_deduction", sa.Numeric(precision=10, scale=2), server_default="0"),
         sa.Column("taxable_income", sa.Numeric(precision=12, scale=2), nullable=False),
         sa.Column("income_tax", sa.Numeric(precision=10, scale=2), server_default="0"),

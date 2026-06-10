@@ -46,9 +46,7 @@ def settings():
 def mock_minio_client():
     """Create a mock MinIO client."""
     client = AsyncMock()
-    client.upload_cv = AsyncMock(
-        return_value="storage/cv/msg123/resume.pdf"
-    )
+    client.upload_cv = AsyncMock(return_value="storage/cv/msg123/resume.pdf")
     return client
 
 
@@ -274,13 +272,9 @@ class TestProcessSingleAttachment:
         assert "size" in result.processing_error.lower()
 
     @pytest.mark.asyncio
-    async def test_minio_upload_failure(
-        self, service, valid_attachment, mock_minio_client
-    ):
+    async def test_minio_upload_failure(self, service, valid_attachment, mock_minio_client):
         """MinIO upload failure → upload_failed status."""
-        mock_minio_client.upload_cv = AsyncMock(
-            side_effect=Exception("Connection refused")
-        )
+        mock_minio_client.upload_cv = AsyncMock(side_effect=Exception("Connection refused"))
         email_id = uuid4()
 
         result = await service.process_single_attachment(
@@ -293,9 +287,7 @@ class TestProcessSingleAttachment:
         assert "MinIO upload failed" in (result.processing_error or "")
 
     @pytest.mark.asyncio
-    async def test_ocr_extraction_failure(
-        self, service, valid_attachment, mock_ocr_adapter
-    ):
+    async def test_ocr_extraction_failure(self, service, valid_attachment, mock_ocr_adapter):
         """OCR extraction failure → failed status."""
         mock_ocr_adapter.extract_text = AsyncMock(
             side_effect=OCRExtractionError("olmOCR server unreachable")
@@ -316,9 +308,7 @@ class TestProcessSingleAttachment:
         assert "OCR extraction failed" in (result.processing_error or "")
 
     @pytest.mark.asyncio
-    async def test_ocr_insufficient_text(
-        self, service, valid_attachment, mock_ocr_adapter
-    ):
+    async def test_ocr_insufficient_text(self, service, valid_attachment, mock_ocr_adapter):
         """OCR returns < 50 chars → failed status."""
         mock_ocr_adapter.extract_text = AsyncMock(return_value="short")
         email_id = uuid4()
@@ -337,9 +327,7 @@ class TestProcessSingleAttachment:
         assert "insufficient text" in (result.processing_error or "").lower()
 
     @pytest.mark.asyncio
-    async def test_llm_parse_failure(
-        self, service, valid_attachment, mock_llm_adapter
-    ):
+    async def test_llm_parse_failure(self, service, valid_attachment, mock_llm_adapter):
         """LLM parse failure → failed status."""
         mock_llm_adapter.parse_cv = AsyncMock(
             side_effect=LLMParseError("LLM timeout after 3 retries")
@@ -430,9 +418,7 @@ class TestProcessCvFromEmail:
         assert len(results) == 2
 
     @pytest.mark.asyncio
-    async def test_continues_after_one_attachment_fails(
-        self, service, mock_ocr_adapter
-    ):
+    async def test_continues_after_one_attachment_fails(self, service, mock_ocr_adapter):
         """If one attachment fails, others still get processed."""
         # First attachment will fail OCR, second will succeed
         call_count = 0
@@ -567,9 +553,7 @@ class TestRetryLlmParse:
         assert cv_doc.retry_count == 1
 
     @pytest.mark.asyncio
-    async def test_retry_failure(
-        self, service, mock_cv_document_repo, mock_llm_adapter
-    ):
+    async def test_retry_failure(self, service, mock_cv_document_repo, mock_llm_adapter):
         """Failed retry → failed status, returns None."""
         cv_doc_id = uuid4()
         cv_doc = CVDocument(
@@ -584,9 +568,7 @@ class TestRetryLlmParse:
             retry_count=1,
         )
         mock_cv_document_repo.get_by_id = AsyncMock(return_value=cv_doc)
-        mock_llm_adapter.parse_cv = AsyncMock(
-            side_effect=LLMParseError("Parse failed again")
-        )
+        mock_llm_adapter.parse_cv = AsyncMock(side_effect=LLMParseError("Parse failed again"))
 
         with patch(
             "src.modules.recruitment.application.cv_processor.log_audit",

@@ -143,9 +143,7 @@ class TestUpdatePosition:
         pos_id = uuid4()
         existing = Position(id=pos_id, name="Developer")
         position_repo.get_by_id.return_value = existing
-        position_repo.get_by_name.return_value = Position(
-            id=uuid4(), name="Manager"
-        )
+        position_repo.get_by_name.return_value = Position(id=uuid4(), name="Manager")
 
         with pytest.raises(EmployeeError, match="Position with this name already exists"):
             await service.update_position(pos_id, {"name": "Manager"})
@@ -164,9 +162,7 @@ class TestUpdatePosition:
         updated = Position(id=pos_id, name="Developer", department_id=dept_id)
         position_repo.update.return_value = updated
 
-        result = await service.update_position(
-            pos_id, {"department_id": dept_id}
-        )
+        result = await service.update_position(pos_id, {"department_id": dept_id})
 
         position_repo.get_by_name.assert_not_called()
         assert result == updated

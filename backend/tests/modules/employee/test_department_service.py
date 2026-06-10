@@ -129,9 +129,7 @@ class TestUpdateDepartment:
         dept_id = uuid4()
         existing = Department(id=dept_id, name="Engineering")
         department_repo.get_by_id.return_value = existing
-        department_repo.get_by_name.return_value = Department(
-            id=uuid4(), name="HR"
-        )
+        department_repo.get_by_name.return_value = Department(id=uuid4(), name="HR")
 
         with pytest.raises(EmployeeError, match="Department with this name already exists"):
             await service.update_department(dept_id, {"name": "HR"})
@@ -149,9 +147,7 @@ class TestUpdateDepartment:
         updated = Department(id=dept_id, name="Engineering", description="Updated desc")
         department_repo.update.return_value = updated
 
-        result = await service.update_department(
-            dept_id, {"description": "Updated desc"}
-        )
+        result = await service.update_department(dept_id, {"description": "Updated desc"})
 
         department_repo.get_by_name.assert_not_called()
         assert result == updated

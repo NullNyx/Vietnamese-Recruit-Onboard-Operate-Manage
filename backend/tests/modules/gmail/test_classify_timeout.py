@@ -110,6 +110,11 @@ class TestClassifyEndpointTimeout:
         app.dependency_overrides[get_email_repository] = lambda: mock_email_repo
         app.dependency_overrides[get_connection_service] = _mock_get_connection_service
 
+        from src.modules.gmail.container import get_gmail_adapter
+
+        mock_gmail_adapter = MagicMock()
+        app.dependency_overrides[get_gmail_adapter] = lambda: mock_gmail_adapter
+
         with patch(
             "src.modules.gmail.infrastructure.config.GmailSettings",
             return_value=test_settings,
@@ -178,6 +183,12 @@ class TestClassifyEndpointTimeout:
             return mock_connection_service
 
         app.dependency_overrides[get_connection_service] = _mock_get_connection_service
+
+        from src.modules.gmail.container import get_gmail_adapter
+
+        mock_gmail_adapter = MagicMock()
+        app.dependency_overrides[get_gmail_adapter] = lambda: mock_gmail_adapter
+
         with patch(
             "src.modules.gmail.infrastructure.config.GmailSettings",
             return_value=test_settings,
@@ -252,6 +263,12 @@ class TestClassifyEndpointTimeout:
             return mock_connection_service
 
         app.dependency_overrides[get_connection_service] = _mock_get_connection_service
+
+        from src.modules.gmail.container import get_gmail_adapter
+
+        mock_gmail_adapter = MagicMock()
+        app.dependency_overrides[get_gmail_adapter] = lambda: mock_gmail_adapter
+
         with patch(
             "src.modules.gmail.infrastructure.config.GmailSettings",
             return_value=test_settings,

@@ -25,6 +25,7 @@ from src.modules.identity.domain.entities import User, UserRole
 
 # ─── Fixtures ──────────────────────────────────────────────────────────
 
+
 @pytest.fixture(autouse=True)
 def _reset_overrides():
     """Clear dependency overrides after every test."""
@@ -50,6 +51,7 @@ def _make_db_session() -> AsyncMock:
 
 
 # ─── Helper ────────────────────────────────────────────────────────────
+
 
 async def _call_health(
     *,
@@ -110,6 +112,7 @@ async def _call_health(
 
 
 # ─── Tests ─────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_health_returns_healthy_when_all_ok():

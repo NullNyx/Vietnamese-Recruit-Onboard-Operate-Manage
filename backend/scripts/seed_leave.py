@@ -81,9 +81,7 @@ async def seed_leave() -> None:
         print(f"📋 Found {len(leave_types)} leave types: {list(leave_types.keys())}")
 
         # Get all active employees
-        emp_result = await session.execute(
-            text("SELECT id FROM employees WHERE is_active = true")
-        )
+        emp_result = await session.execute(text("SELECT id FROM employees WHERE is_active = true"))
         employee_ids = [row[0] for row in emp_result.all()]
 
         if not employee_ids:

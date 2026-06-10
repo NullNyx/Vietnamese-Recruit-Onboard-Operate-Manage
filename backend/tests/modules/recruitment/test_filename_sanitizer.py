@@ -17,8 +17,8 @@ class TestSanitizeFilename:
 
     def test_removes_invalid_characters(self):
         """Characters invalid for object storage are removed."""
-        assert sanitize_filename('file<name>.pdf') == "filename.pdf"
-        assert sanitize_filename('file:name.pdf') == "filename.pdf"
+        assert sanitize_filename("file<name>.pdf") == "filename.pdf"
+        assert sanitize_filename("file:name.pdf") == "filename.pdf"
         assert sanitize_filename('file"name.pdf') == "filename.pdf"
         assert sanitize_filename("file|name.pdf") == "filename.pdf"
         assert sanitize_filename("file?name.pdf") == "filename.pdf"

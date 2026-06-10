@@ -23,6 +23,7 @@ from src.modules.recruitment.infrastructure.event_publisher import (
 
 # ─── Constants ─────────────────────────────────────────────────────────
 
+
 def test_candidate_accepted_event_constant() -> None:
     assert CANDIDATE_ACCEPTED_EVENT == "candidate_accepted"
 
@@ -32,6 +33,7 @@ def test_onboarding_consumer_task_constant() -> None:
 
 
 # ─── Publisher level ───────────────────────────────────────────────────
+
 
 @pytest.fixture
 def fake_pool() -> AsyncMock:

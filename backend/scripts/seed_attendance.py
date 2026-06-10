@@ -90,9 +90,7 @@ async def seed_attendance() -> None:
 
     async with session_maker() as session:
         # Get all active employees
-        result = await session.execute(
-            text("SELECT id FROM employees WHERE is_active = true")
-        )
+        result = await session.execute(text("SELECT id FROM employees WHERE is_active = true"))
         employee_ids = [row[0] for row in result.all()]
 
         if not employee_ids:
@@ -118,9 +116,7 @@ async def seed_attendance() -> None:
 
         # Clear existing attendance for this month
         await session.execute(
-            text(
-                "DELETE FROM attendance_records WHERE work_date >= :start AND work_date <= :end"
-            ),
+            text("DELETE FROM attendance_records WHERE work_date >= :start AND work_date <= :end"),
             {"start": start_date, "end": end_date},
         )
 

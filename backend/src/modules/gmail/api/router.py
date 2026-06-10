@@ -560,6 +560,7 @@ async def process_attachments(
     attachment_service: AttachmentServiceDep,
     connection_service: ConnectionServiceDep,
     email_repo: EmailRepositoryDep,
+    gmail_adapter: GmailAdapterDep,
 ) -> dict[str, Any]:
     """Fetch email attachments and trigger CV processing pipeline.
 
@@ -624,7 +625,6 @@ async def process_attachments(
     await email_repo.session.commit()
 
     # Fetch attachment binary data from Gmail API
-    gmail_adapter = await get_gmail_adapter()
     response = await gmail_adapter._http_client.get(
         f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{message_id}",
         headers={"Authorization": f"Bearer {access_token}"},
@@ -725,6 +725,7 @@ async def classify_emails(
     current_user: CurrentUserDep,
     email_repo: EmailRepositoryDep,
     connection_service: ConnectionServiceDep,
+    gmail_adapter: GmailAdapterDep,
     limit: int = Query(default=5, ge=1, le=20, description="Max emails to classify per request"),
 ) -> dict[str, Any] | JSONResponse:
     """Trigger AI classification for all unclassified emails.
@@ -746,7 +747,10 @@ async def classify_emails(
 
     settings = GmailSettings()
 
-    async def _do_classify(connection_service: ConnectionService) -> dict[str, Any]:
+    async def _do_classify(
+        connection_service: ConnectionService,
+        gmail_adapter: GmailAdapter,
+    ) -> dict[str, Any]:
         from sqlmodel import select
 
         from src.modules.gmail.application.classification_service import (
@@ -846,7 +850,6 @@ async def classify_emails(
                     from src.modules.recruitment.container import get_cv_processor_service
 
                     # Fetch attachment binary data from Gmail API
-                    gmail_adapter = await get_gmail_adapter()
                     access_token = await _get_user_access_token(current_user.id, connection_service)
 
                     response = await gmail_adapter._http_client.get(
@@ -947,7 +950,7 @@ async def classify_emails(
 
     try:
         return await asyncio.wait_for(
-            _do_classify(connection_service),
+            _do_classify(connection_service, gmail_adapter),
             timeout=settings.classification_request_timeout_seconds,
         )
     except TimeoutError:

@@ -53,9 +53,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(
-            ["source_email_message_id"], ["email_messages.id"]
-        ),
+        sa.ForeignKeyConstraint(["source_email_message_id"], ["email_messages.id"]),
     )
 
     op.create_index("ix_candidates_email", "candidates", ["email"])

@@ -15,9 +15,7 @@ def whitelist_file(tmp_path: Path) -> Path:
     """Create a temporary whitelist file with sample emails."""
     file = tmp_path / "whitelist.txt"
     file.write_text(
-        "alice@example.com\n"
-        "bob@example.com\n"
-        "charlie@example.com\n",
+        "alice@example.com\nbob@example.com\ncharlie@example.com\n",
         encoding="utf-8",
     )
     return file
@@ -28,13 +26,7 @@ def whitelist_file_with_comments(tmp_path: Path) -> Path:
     """Create a whitelist file with comments and empty lines."""
     file = tmp_path / "whitelist.txt"
     file.write_text(
-        "# This is a comment\n"
-        "\n"
-        "alice@example.com\n"
-        "# Another comment\n"
-        "\n"
-        "bob@example.com\n"
-        "\n",
+        "# This is a comment\n\nalice@example.com\n# Another comment\n\nbob@example.com\n\n",
         encoding="utf-8",
     )
     return file
@@ -89,9 +81,7 @@ class TestWhitelistLoader:
 
         # Ensure mtime changes (some filesystems have 1-second resolution)
         time.sleep(0.05)
-        whitelist_file.write_text(
-            "new@example.com\nalice@example.com\n", encoding="utf-8"
-        )
+        whitelist_file.write_text("new@example.com\nalice@example.com\n", encoding="utf-8")
         # Force a different mtime by touching the file
         os.utime(whitelist_file, (time.time() + 1, time.time() + 1))
 
@@ -114,9 +104,7 @@ class TestWhitelistLoader:
 class TestWhitelistService:
     """Tests for WhitelistService."""
 
-    def test_is_allowed_returns_true_for_listed_email(
-        self, whitelist_file: Path
-    ) -> None:
+    def test_is_allowed_returns_true_for_listed_email(self, whitelist_file: Path) -> None:
         service = WhitelistService(str(whitelist_file))
         assert service.is_allowed("alice@example.com") is True
 
@@ -126,9 +114,7 @@ class TestWhitelistService:
         assert service.is_allowed("Alice@Example.Com") is True
         assert service.is_allowed("aLiCe@eXaMpLe.CoM") is True
 
-    def test_is_allowed_returns_false_for_unlisted_email(
-        self, whitelist_file: Path
-    ) -> None:
+    def test_is_allowed_returns_false_for_unlisted_email(self, whitelist_file: Path) -> None:
         service = WhitelistService(str(whitelist_file))
         assert service.is_allowed("unknown@example.com") is False
 

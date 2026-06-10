@@ -274,9 +274,7 @@ class TestDeleteDocument:
 
         await service.delete_document(doc_id)
 
-        minio_client.delete_file.assert_called_once_with(
-            "employees/456/degree/diploma.pdf"
-        )
+        minio_client.delete_file.assert_called_once_with("employees/456/degree/diploma.pdf")
         document_repo.delete.assert_called_once_with(doc_id)
 
     async def test_raises_error_when_document_not_found(

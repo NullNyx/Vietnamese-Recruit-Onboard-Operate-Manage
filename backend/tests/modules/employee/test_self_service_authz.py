@@ -30,6 +30,7 @@ from src.modules.employee.api.router import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_user(role: str = "user"):
     user = MagicMock()
     user.id = uuid4()
@@ -38,12 +39,26 @@ def _make_user(role: str = "user"):
 
 
 def _make_employee(employee_id=None, is_active=True):
-    emp = MagicMock(spec=[
-        "id", "is_active", "employee_code", "full_name", "email",
-        "phone", "address", "date_of_birth", "gender",
-        "department_id", "position_id", "start_date",
-        "contract_type", "tax_code", "id_number", "candidate_id",
-    ])
+    emp = MagicMock(
+        spec=[
+            "id",
+            "is_active",
+            "employee_code",
+            "full_name",
+            "email",
+            "phone",
+            "address",
+            "date_of_birth",
+            "gender",
+            "department_id",
+            "position_id",
+            "start_date",
+            "contract_type",
+            "tax_code",
+            "id_number",
+            "candidate_id",
+        ]
+    )
     emp.id = employee_id or uuid4()
     emp.is_active = is_active
     emp.employee_code = "NV-001"
@@ -82,6 +97,7 @@ def _make_document(employee_id=None, doc_id=None):
 # ---------------------------------------------------------------------------
 # Test: get_employee
 # ---------------------------------------------------------------------------
+
 
 class TestGetEmployeeOwnership:
     """Ownership boundary for GET /api/employees/{id}."""
@@ -155,6 +171,7 @@ class TestGetEmployeeOwnership:
 # ---------------------------------------------------------------------------
 # Test: update_employee
 # ---------------------------------------------------------------------------
+
 
 class TestUpdateEmployeeSelfEdit:
     """Self-edit restriction for PUT /api/employees/{id}."""
@@ -294,6 +311,7 @@ class TestUpdateEmployeeSelfEdit:
 # Test: list_documents
 # ---------------------------------------------------------------------------
 
+
 class TestListDocumentsOwnership:
     """Ownership boundary for GET /api/employees/{id}/documents."""
 
@@ -350,6 +368,7 @@ class TestListDocumentsOwnership:
 # Test: download_document
 # ---------------------------------------------------------------------------
 
+
 class TestDownloadDocumentOwnership:
     """Ownership boundary for GET /api/documents/{id}/download."""
 
@@ -366,6 +385,7 @@ class TestDownloadDocumentOwnership:
         svc.download_file.return_value = b"fake content"
 
         from fastapi.responses import Response
+
         result = await download_document(
             document_id=doc_id,
             current_user=user,
@@ -409,6 +429,7 @@ class TestDownloadDocumentOwnership:
         svc.download_file.return_value = b"fake content"
 
         from fastapi.responses import Response
+
         result = await download_document(
             document_id=doc_id,
             current_user=user,
@@ -422,6 +443,7 @@ class TestDownloadDocumentOwnership:
 # ---------------------------------------------------------------------------
 # Test: delete_document
 # ---------------------------------------------------------------------------
+
 
 class TestDeleteDocumentOwnership:
     """Ownership boundary for DELETE /api/documents/{id}.

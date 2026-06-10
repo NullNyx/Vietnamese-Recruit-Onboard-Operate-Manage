@@ -64,9 +64,7 @@ def _build_processor(
     mock_ocr.extract_text = AsyncMock(return_value=ocr_text)
 
     mock_llm = AsyncMock()
-    mock_llm.parse_cv = AsyncMock(
-        return_value=ParsedCVResult(parsed_cv=parsed_cv, token_usage={})
-    )
+    mock_llm.parse_cv = AsyncMock(return_value=ParsedCVResult(parsed_cv=parsed_cv, token_usage={}))
 
     mock_pii = MagicMock()
     mock_pii.redact = MagicMock(return_value="[redacted] " + ocr_text[:50])
@@ -113,6 +111,7 @@ def mock_session():
 @pytest.fixture
 def recruitment_settings():
     from src.modules.recruitment.infrastructure.config import RecruitmentSettings
+
     return RecruitmentSettings()
 
 
@@ -146,7 +145,9 @@ class TestHighConfidenceCreatesCandidate:
             summary="Developer",
         )
         processor, _ = _build_processor(
-            mock_session, recruitment_settings, mock_candidate_creator,
+            mock_session,
+            recruitment_settings,
+            mock_candidate_creator,
             parsed_cv=parsed_cv,
         )
 
@@ -181,7 +182,9 @@ class TestLowConfidenceRoutesToReview:
             summary="",
         )
         processor, _ = _build_processor(
-            mock_session, recruitment_settings, mock_candidate_creator,
+            mock_session,
+            recruitment_settings,
+            mock_candidate_creator,
             parsed_cv=parsed_cv,
         )
 
@@ -205,7 +208,9 @@ class TestCVProcessorCreatesDocuments:
         mock_candidate_creator,
     ) -> None:
         processor, mock_cv_doc_repo = _build_processor(
-            mock_session, recruitment_settings, mock_candidate_creator,
+            mock_session,
+            recruitment_settings,
+            mock_candidate_creator,
         )
 
         cv_doc = await processor.process_single_attachment(
@@ -224,7 +229,9 @@ class TestCVProcessorCreatesDocuments:
         mock_candidate_creator,
     ) -> None:
         processor, _ = _build_processor(
-            mock_session, recruitment_settings, mock_candidate_creator,
+            mock_session,
+            recruitment_settings,
+            mock_candidate_creator,
         )
 
         attachments = [

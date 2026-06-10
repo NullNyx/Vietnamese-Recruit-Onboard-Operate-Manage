@@ -81,9 +81,7 @@ class TestEncryptionProperties:
         encrypted = crypto.encrypt(plaintext)
         assert encrypted != plaintext
 
-    def test_different_nonces_produce_different_ciphertexts(
-        self, crypto: CryptoUtils
-    ) -> None:
+    def test_different_nonces_produce_different_ciphertexts(self, crypto: CryptoUtils) -> None:
         plaintext = "same-input-different-output"
         encrypted1 = crypto.encrypt(plaintext)
         encrypted2 = crypto.encrypt(plaintext)

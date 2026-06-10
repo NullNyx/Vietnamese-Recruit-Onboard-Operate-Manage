@@ -255,9 +255,7 @@ class TestRetentionCleanup:
 
         mock_minio_client.delete_cv.side_effect = minio_side_effect
 
-        with patch(
-            "src.modules.recruitment.application.retention_job.log_audit"
-        ) as mock_log_audit:
+        with patch("src.modules.recruitment.application.retention_job.log_audit") as mock_log_audit:
             mock_log_audit.return_value = None
 
             result = await retention_cleanup(ctx)
@@ -331,9 +329,7 @@ class TestRetentionCleanup:
         mock_minio_client.delete_cv.assert_any_call(cv_doc1.file_path)
         mock_minio_client.delete_cv.assert_any_call(cv_doc2.file_path)
 
-    async def test_candidate_without_cv_documents(
-        self, ctx, mock_session, mock_minio_client
-    ):
+    async def test_candidate_without_cv_documents(self, ctx, mock_session, mock_minio_client):
         """Should handle candidate with no CV documents gracefully."""
         candidate = _make_candidate()
 
@@ -358,9 +354,7 @@ class TestRetentionCleanup:
         assert result == 1
         mock_minio_client.delete_cv.assert_not_called()
 
-    async def test_audit_log_on_successful_deletion(
-        self, ctx, mock_session, mock_minio_client
-    ):
+    async def test_audit_log_on_successful_deletion(self, ctx, mock_session, mock_minio_client):
         """Should create audit log entry with anonymized candidate_id on success."""
         candidate = _make_candidate()
 
@@ -380,9 +374,7 @@ class TestRetentionCleanup:
             MagicMock(),  # audit log create
         ]
 
-        with patch(
-            "src.modules.recruitment.application.retention_job.log_audit"
-        ) as mock_log_audit:
+        with patch("src.modules.recruitment.application.retention_job.log_audit") as mock_log_audit:
             mock_log_audit.return_value = None
 
             result = await retention_cleanup(ctx)
@@ -397,9 +389,7 @@ class TestRetentionCleanup:
             anonymized = _anonymize_candidate_id(candidate.id)
             assert anonymized in call_kwargs["change_summary"]
 
-    async def test_audit_log_on_failed_deletion(
-        self, ctx, mock_session, mock_minio_client
-    ):
+    async def test_audit_log_on_failed_deletion(self, ctx, mock_session, mock_minio_client):
         """Should create audit log entry with success=False on failure."""
         candidate = _make_candidate()
         cv_doc = _make_cv_document(candidate_id=candidate.id)
@@ -418,9 +408,7 @@ class TestRetentionCleanup:
         # MinIO delete fails
         mock_minio_client.delete_cv.side_effect = RuntimeError("Connection refused")
 
-        with patch(
-            "src.modules.recruitment.application.retention_job.log_audit"
-        ) as mock_log_audit:
+        with patch("src.modules.recruitment.application.retention_job.log_audit") as mock_log_audit:
             mock_log_audit.return_value = None
 
             result = await retention_cleanup(ctx)

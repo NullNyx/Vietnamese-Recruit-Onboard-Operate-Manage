@@ -274,29 +274,31 @@ class TestParseCV:
     @pytest.mark.asyncio
     async def test_parses_valid_cv_json(self, adapter: LLMAdapter):
         """Should parse a valid JSON response into ParsedCV."""
-        cv_json = json.dumps({
-            "name": "Nguyễn Văn A",
-            "email": "nguyenvana@gmail.com",
-            "phone": "0901234567",
-            "skills": ["Python", "FastAPI", "PostgreSQL"],
-            "experience": [
-                {
-                    "company": "Tech Corp",
-                    "title": "Backend Developer",
-                    "duration": "2020-2023",
-                    "description": "Developed REST APIs",
-                }
-            ],
-            "education": [
-                {
-                    "institution": "HCMUT",
-                    "degree": "Bachelor",
-                    "field": "Computer Science",
-                    "year": "2020",
-                }
-            ],
-            "summary": "Experienced backend developer",
-        })
+        cv_json = json.dumps(
+            {
+                "name": "Nguyễn Văn A",
+                "email": "nguyenvana@gmail.com",
+                "phone": "0901234567",
+                "skills": ["Python", "FastAPI", "PostgreSQL"],
+                "experience": [
+                    {
+                        "company": "Tech Corp",
+                        "title": "Backend Developer",
+                        "duration": "2020-2023",
+                        "description": "Developed REST APIs",
+                    }
+                ],
+                "education": [
+                    {
+                        "institution": "HCMUT",
+                        "degree": "Bachelor",
+                        "field": "Computer Science",
+                        "year": "2020",
+                    }
+                ],
+                "summary": "Experienced backend developer",
+            }
+        )
         mock_response = _make_completion_response(cv_json, prompt_tokens=200, completion_tokens=150)
 
         with patch.object(
@@ -321,15 +323,17 @@ class TestParseCV:
     @pytest.mark.asyncio
     async def test_handles_markdown_code_block_response(self, adapter: LLMAdapter):
         """Should handle JSON wrapped in markdown code blocks."""
-        cv_json = json.dumps({
-            "name": "Trần Thị B",
-            "email": "tranthib@email.com",
-            "phone": "",
-            "skills": ["Java"],
-            "experience": [],
-            "education": [],
-            "summary": "",
-        })
+        cv_json = json.dumps(
+            {
+                "name": "Trần Thị B",
+                "email": "tranthib@email.com",
+                "phone": "",
+                "skills": ["Java"],
+                "experience": [],
+                "education": [],
+                "summary": "",
+            }
+        )
         wrapped = f"```json\n{cv_json}\n```"
         mock_response = _make_completion_response(wrapped)
 
@@ -347,15 +351,17 @@ class TestParseCV:
     async def test_retries_with_simplified_prompt_on_invalid_json(self, adapter: LLMAdapter):
         """Should retry with simplified prompt when initial response is invalid JSON."""
         invalid_response = _make_completion_response("Here is the parsed CV: {invalid json}")
-        valid_json = json.dumps({
-            "name": "Test User",
-            "email": "test@email.com",
-            "phone": "",
-            "skills": [],
-            "experience": [],
-            "education": [],
-            "summary": "",
-        })
+        valid_json = json.dumps(
+            {
+                "name": "Test User",
+                "email": "test@email.com",
+                "phone": "",
+                "skills": [],
+                "experience": [],
+                "education": [],
+                "summary": "",
+            }
+        )
         valid_response = _make_completion_response(valid_json)
 
         with patch.object(
@@ -386,10 +392,12 @@ class TestParseCV:
     @pytest.mark.asyncio
     async def test_handles_minimal_valid_cv(self, adapter: LLMAdapter):
         """Should parse a CV with only required fields."""
-        cv_json = json.dumps({
-            "name": "Minimal User",
-            "email": "minimal@email.com",
-        })
+        cv_json = json.dumps(
+            {
+                "name": "Minimal User",
+                "email": "minimal@email.com",
+            }
+        )
         mock_response = _make_completion_response(cv_json)
 
         with patch.object(
@@ -407,10 +415,12 @@ class TestParseCV:
     @pytest.mark.asyncio
     async def test_handles_no_usage_in_response(self, adapter: LLMAdapter):
         """Should handle response without usage data gracefully."""
-        cv_json = json.dumps({
-            "name": "Test",
-            "email": "test@test.com",
-        })
+        cv_json = json.dumps(
+            {
+                "name": "Test",
+                "email": "test@test.com",
+            }
+        )
         response = MagicMock()
         response.choices = [MagicMock()]
         response.choices[0].message.content = cv_json

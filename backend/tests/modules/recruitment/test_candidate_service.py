@@ -196,9 +196,7 @@ class TestRejectCandidate:
         "initial_status",
         [CandidateStatus.NEW, CandidateStatus.REVIEWING, CandidateStatus.INTERVIEW_SCHEDULED],
     )
-    async def test_reject_from_valid_statuses(
-        self, service, mock_candidate_repo, initial_status
-    ):
+    async def test_reject_from_valid_statuses(self, service, mock_candidate_repo, initial_status):
         """Should transition to rejected from new, reviewing, interview_scheduled."""
         candidate = _make_candidate(status=initial_status)
         mock_candidate_repo.get_by_id.return_value = candidate
@@ -214,9 +212,7 @@ class TestRejectCandidate:
         candidate = _make_candidate(status=CandidateStatus.NEW)
         mock_candidate_repo.get_by_id.return_value = candidate
 
-        result = await service.reject_candidate(
-            candidate.id, reason="Insufficient experience"
-        )
+        result = await service.reject_candidate(candidate.id, reason="Insufficient experience")
 
         assert result.rejection_reason == "Insufficient experience"
 
@@ -257,9 +253,7 @@ class TestRejectCandidate:
         with pytest.raises(InvalidStatusTransitionError):
             await service.reject_candidate(candidate.id)
 
-    async def test_reject_nonexistent_candidate_raises(
-        self, service, mock_candidate_repo
-    ):
+    async def test_reject_nonexistent_candidate_raises(self, service, mock_candidate_repo):
         """Should raise CandidateNotFoundError for nonexistent candidate."""
         mock_candidate_repo.get_by_id.return_value = None
 
@@ -277,9 +271,7 @@ class TestAcceptCandidate:
         "initial_status",
         [CandidateStatus.REVIEWING, CandidateStatus.INTERVIEW_SCHEDULED],
     )
-    async def test_accept_from_valid_statuses(
-        self, service, mock_candidate_repo, initial_status
-    ):
+    async def test_accept_from_valid_statuses(self, service, mock_candidate_repo, initial_status):
         """Should transition to accepted from reviewing and interview_scheduled."""
         candidate = _make_candidate(status=initial_status)
         mock_candidate_repo.get_by_id.return_value = candidate
@@ -334,9 +326,7 @@ class TestAcceptCandidate:
         with pytest.raises(InvalidStatusTransitionError):
             await service.accept_candidate(candidate.id)
 
-    async def test_accept_nonexistent_candidate_raises(
-        self, service, mock_candidate_repo
-    ):
+    async def test_accept_nonexistent_candidate_raises(self, service, mock_candidate_repo):
         """Should raise CandidateNotFoundError for nonexistent candidate."""
         mock_candidate_repo.get_by_id.return_value = None
 
@@ -354,9 +344,7 @@ class TestArchiveCandidate:
         "initial_status",
         [CandidateStatus.NEW, CandidateStatus.REVIEWING, CandidateStatus.INTERVIEW_SCHEDULED],
     )
-    async def test_archive_from_valid_statuses(
-        self, service, mock_candidate_repo, initial_status
-    ):
+    async def test_archive_from_valid_statuses(self, service, mock_candidate_repo, initial_status):
         """Should transition to archived from new, reviewing, interview_scheduled."""
         candidate = _make_candidate(status=initial_status)
         mock_candidate_repo.get_by_id.return_value = candidate
@@ -366,9 +354,7 @@ class TestArchiveCandidate:
         assert result.status == CandidateStatus.ARCHIVED
         assert result.archived_at is not None
 
-    async def test_archive_idempotent_for_already_archived(
-        self, service, mock_candidate_repo
-    ):
+    async def test_archive_idempotent_for_already_archived(self, service, mock_candidate_repo):
         """Should return existing record without modification for already-archived."""
         archived_at = datetime(2024, 1, 15, 10, 0, 0, tzinfo=UTC)
         candidate = _make_candidate(status=CandidateStatus.ARCHIVED)
@@ -401,9 +387,7 @@ class TestArchiveCandidate:
         with pytest.raises(InvalidStatusTransitionError):
             await service.archive_candidate(candidate.id)
 
-    async def test_archive_nonexistent_candidate_raises(
-        self, service, mock_candidate_repo
-    ):
+    async def test_archive_nonexistent_candidate_raises(self, service, mock_candidate_repo):
         """Should raise CandidateNotFoundError for nonexistent candidate."""
         mock_candidate_repo.get_by_id.return_value = None
 
@@ -583,9 +567,7 @@ class TestScheduleInterview:
         mock_candidate_repo.get_by_id.return_value = candidate
 
         interviewer_id = uuid4()
-        _set_interviewers(
-            mock_session, [SimpleNamespace(id=interviewer_id, email="a@example.com")]
-        )
+        _set_interviewers(mock_session, [SimpleNamespace(id=interviewer_id, email="a@example.com")])
 
         result = await schedule_service.schedule_interview(
             candidate.id,
@@ -700,9 +682,7 @@ class TestScheduleInterview:
         mock_candidate_repo.get_by_id.return_value = candidate
 
         interviewer_id = uuid4()
-        _set_interviewers(
-            mock_session, [SimpleNamespace(id=interviewer_id, email="a@example.com")]
-        )
+        _set_interviewers(mock_session, [SimpleNamespace(id=interviewer_id, email="a@example.com")])
 
         failing_port = _FakeCalendarPort(error=RuntimeError("calendar down"))
         service = CandidateService(
@@ -777,9 +757,7 @@ class TestScheduleInterview:
 class TestSendEmailToCandidate:
     """Tests for send_email_to_candidate action."""
 
-    async def test_send_email_success(
-        self, service, mock_candidate_repo, mock_gmail_sender
-    ):
+    async def test_send_email_success(self, service, mock_candidate_repo, mock_gmail_sender):
         """Should send email via Gmail adapter."""
         candidate = _make_candidate(email="valid@example.com")
         mock_candidate_repo.get_by_id.return_value = candidate
@@ -819,9 +797,7 @@ class TestSendEmailToCandidate:
                 body_html="<p>Test</p>",
             )
 
-    async def test_send_email_invalid_candidate_email_raises(
-        self, service, mock_candidate_repo
-    ):
+    async def test_send_email_invalid_candidate_email_raises(self, service, mock_candidate_repo):
         """Should raise ValueError when candidate email is invalid."""
         candidate = _make_candidate(email="")
         mock_candidate_repo.get_by_id.return_value = candidate
@@ -833,9 +809,7 @@ class TestSendEmailToCandidate:
                 body_html="<p>Test</p>",
             )
 
-    async def test_send_email_invalid_format_raises(
-        self, service, mock_candidate_repo
-    ):
+    async def test_send_email_invalid_format_raises(self, service, mock_candidate_repo):
         """Should raise ValueError when candidate email has no @ sign."""
         candidate = _make_candidate(email="no-at-sign")
         mock_candidate_repo.get_by_id.return_value = candidate
@@ -847,9 +821,7 @@ class TestSendEmailToCandidate:
                 body_html="<p>Test</p>",
             )
 
-    async def test_send_email_nonexistent_candidate_raises(
-        self, service, mock_candidate_repo
-    ):
+    async def test_send_email_nonexistent_candidate_raises(self, service, mock_candidate_repo):
         """Should raise CandidateNotFoundError for nonexistent candidate."""
         mock_candidate_repo.get_by_id.return_value = None
 

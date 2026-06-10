@@ -149,9 +149,7 @@ class TestClassifyEmail:
         assert "[REDACTED]" in call_args.kwargs["snippet"]
         assert "012345678901" not in call_args.kwargs["snippet"]
 
-    async def test_llm_failure_returns_other_and_marks_failed(
-        self, service, mock_llm_adapter
-    ):
+    async def test_llm_failure_returns_other_and_marks_failed(self, service, mock_llm_adapter):
         """When LLM fails after retries, returns OTHER and marks email as failed."""
         mock_llm_adapter.classify_intent = AsyncMock(
             side_effect=LLMParseError("Failed after 3 attempts")
@@ -252,9 +250,7 @@ class TestProcessClassificationResult:
         )
 
         # Verify CV processing was enqueued
-        mock_enqueue_func.assert_called_once_with(
-            "process_cv_from_email", email_message_id
-        )
+        mock_enqueue_func.assert_called_once_with("process_cv_from_email", email_message_id)
 
     async def test_other_intent_does_not_enqueue(
         self, service, mock_gmail_label_service, mock_enqueue_func
@@ -299,17 +295,13 @@ class TestProcessClassificationResult:
         # Label should NOT be applied without access token
         mock_gmail_label_service.add_label.assert_not_called()
         # Enqueue should still be called
-        mock_enqueue_func.assert_called_once_with(
-            "process_cv_from_email", email_message_id
-        )
+        mock_enqueue_func.assert_called_once_with("process_cv_from_email", email_message_id)
 
     async def test_label_failure_does_not_block_enqueue(
         self, service, mock_gmail_label_service, mock_enqueue_func
     ):
         """If label application fails, CV processing is still enqueued."""
-        mock_gmail_label_service.add_label = AsyncMock(
-            side_effect=RuntimeError("Gmail API error")
-        )
+        mock_gmail_label_service.add_label = AsyncMock(side_effect=RuntimeError("Gmail API error"))
 
         intent_result = IntentResult(
             intent=EmailIntent.CV,
@@ -327,9 +319,7 @@ class TestProcessClassificationResult:
         )
 
         # Enqueue should still be called despite label failure
-        mock_enqueue_func.assert_called_once_with(
-            "process_cv_from_email", email_message_id
-        )
+        mock_enqueue_func.assert_called_once_with("process_cv_from_email", email_message_id)
 
     async def test_all_non_cv_intents_skip_enqueue(
         self, service, mock_gmail_label_service, mock_enqueue_func
