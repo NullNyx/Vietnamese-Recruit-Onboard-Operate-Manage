@@ -5,6 +5,8 @@ creation, update, soft-delete, and employee code generation using
 SQLAlchemy async sessions with SQLModel.
 """
 
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -107,6 +109,21 @@ class EmployeeRepository:
         statement = select(Employee).where(Employee.id == employee_id)
         result = await self.session.execute(statement)
         return result.scalars().first()
+
+    async def get_by_ids(self, employee_ids: list[UUID]) -> dict[UUID, Employee]:
+        """Retrieve multiple employees by their IDs in one query.
+
+        Args:
+            employee_ids: List of employee UUIDs to fetch.
+
+        Returns:
+            Dict mapping employee ID to Employee entity.
+        """
+        if not employee_ids:
+            return {}
+        statement = select(Employee).where(Employee.id.in_(employee_ids))  # type: ignore[arg-type]
+        result = await self.session.execute(statement)
+        return {emp.id: emp for emp in result.scalars().all()}
 
     async def get_by_email(self, email: str) -> Employee | None:
         """Retrieve an employee by email address (case-insensitive).

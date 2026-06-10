@@ -5,6 +5,7 @@ async sessions with SQLModel.
 """
 
 from datetime import date, datetime
+from typing import Literal
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
@@ -157,3 +158,105 @@ class AttendanceRecordRepository:
         )
         result = await self.session.execute(statement)
         return list(result.scalars().all())
+
+    async def get_by_id(self, record_id: UUID) -> AttendanceRecord | None:
+        """Retrieve an attendance record by its ID.
+
+        Args:
+            record_id: The UUID of the record.
+
+        Returns:
+            The AttendanceRecord if found, None otherwise.
+        """
+        statement = select(AttendanceRecord).where(
+            AttendanceRecord.id == record_id,  # type: ignore[arg-type]
+        )
+        result = await self.session.execute(statement)
+        return result.scalar_one_or_none()
+
+    async def list_with_filters(
+        self,
+        start_date: date,
+        end_date: date,
+        employee_id: UUID | None = None,
+        status: Literal["checked_in", "completed"] | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[AttendanceRecord], int]:
+        """List attendance records with filters and pagination.
+
+        Args:
+            start_date: Start date for filter range.
+            end_date: End date for filter range.
+            employee_id: Optional filter by employee ID.
+            status: Optional filter by status (checked_in, completed).
+            page: Page number (1-based).
+            page_size: Records per page.
+
+        Returns:
+            Tuple of (list of AttendanceRecord, total count).
+        """
+        from sqlalchemy import func
+
+        # Build base query
+        base_query = select(AttendanceRecord).where(
+            AttendanceRecord.work_date >= start_date,  # type: ignore[arg-type]
+            AttendanceRecord.work_date <= end_date,  # type: ignore[arg-type]
+        )
+
+        count_query = (
+            select(func.count())
+            .select_from(AttendanceRecord)
+            .where(
+                AttendanceRecord.work_date >= start_date,  # type: ignore[arg-type]
+                AttendanceRecord.work_date <= end_date,  # type: ignore[arg-type]
+            )
+        )
+
+        # Apply filters
+        if employee_id is not None:
+            base_query = base_query.where(
+                AttendanceRecord.employee_id == employee_id,  # type: ignore[arg-type]
+            )
+            count_query = count_query.where(
+                AttendanceRecord.employee_id == employee_id,  # type: ignore[arg-type]
+            )
+
+        if status == "checked_in":
+            base_query = base_query.where(
+                AttendanceRecord.check_in_at.isnot(None),  # type: ignore[arg-type]
+                AttendanceRecord.check_out_at.is_(None),  # type: ignore[arg-type]
+            )
+            count_query = count_query.where(
+                AttendanceRecord.check_in_at.isnot(None),  # type: ignore[arg-type]
+                AttendanceRecord.check_out_at.is_(None),  # type: ignore[arg-type]
+            )
+        elif status == "completed":
+            base_query = base_query.where(
+                AttendanceRecord.check_in_at.isnot(None),  # type: ignore[arg-type]
+                AttendanceRecord.check_out_at.isnot(None),  # type: ignore[arg-type]
+            )
+            count_query = count_query.where(
+                AttendanceRecord.check_in_at.isnot(None),  # type: ignore[arg-type]
+                AttendanceRecord.check_out_at.isnot(None),  # type: ignore[arg-type]
+            )
+
+        # Get total count
+        count_result = await self.session.execute(count_query)
+        total = count_result.scalar() or 0
+
+        # Apply pagination and ordering
+        offset = (page - 1) * page_size
+        base_query = (
+            base_query.order_by(
+                AttendanceRecord.work_date.desc(),  # type: ignore[arg-type]
+                AttendanceRecord.created_at.desc(),  # type: ignore[arg-type]
+            )
+            .offset(offset)
+            .limit(page_size)
+        )
+
+        result = await self.session.execute(base_query)
+        records = list(result.scalars().all())
+
+        return records, total

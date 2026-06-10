@@ -6,6 +6,7 @@ Work date is derived from Organization timezone; timestamps stored in UTC.
 
 from calendar import monthrange
 from datetime import UTC, date, datetime
+from typing import Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -20,6 +21,8 @@ from src.modules.attendance.domain.exceptions import (
 from src.modules.attendance.infrastructure.attendance_record_repository import (
     AttendanceRecordRepository,
 )
+from src.modules.identity.application.audit_service import AuditService
+from src.modules.identity.domain.entities import AuditActionType, User
 from src.modules.recruitment.infrastructure.org_settings_repository import (
     OrganizationSettingsRepository,
 )
@@ -75,7 +78,6 @@ class AttendanceService:
         Raises:
             OfficeNetworkRequiredError: If IP not in office network allowlist.
         """
-        # Validate IP before any DB write
         is_allowed = await self._settings_service.is_ip_allowed(client_ip)
         if not is_allowed:
             raise OfficeNetworkRequiredError()
@@ -83,9 +85,6 @@ class AttendanceService:
         work_date = await self._get_work_date()
         now = datetime.now(UTC)
 
-        # Atomic upsert: PostgreSQL ON CONFLICT DO NOTHING handles
-        # the race where two concurrent requests try to check in
-        # for the same employee + work_date simultaneously.
         return await self._attendance_repo.upsert_check_in(
             employee_id=employee_id,
             work_date=work_date,
@@ -117,14 +116,11 @@ class AttendanceService:
             OfficeNetworkRequiredError: If IP not in office network allowlist.
             NotCheckedInError: If employee has not checked in today.
         """
-        # Validate IP before any DB write
         is_allowed = await self._settings_service.is_ip_allowed(client_ip)
         if not is_allowed:
             raise OfficeNetworkRequiredError()
 
         work_date = await self._get_work_date()
-
-        # Get existing record
         existing = await self._attendance_repo.get_by_employee_and_date(employee_id, work_date)
 
         if existing is None:
@@ -133,11 +129,9 @@ class AttendanceService:
         if existing.check_in_at is None:
             raise NotCheckedInError()
 
-        # Idempotent - if already checked out, return existing
         if existing.check_out_at is not None:
             return existing
 
-        # Update with check-out
         now = datetime.now(UTC)
         existing.check_out_at = now
         existing.check_out_ip = client_ip
@@ -180,3 +174,111 @@ class AttendanceService:
             start_date=start_date,
             end_date=end_date,
         )
+
+    async def list_records(
+        self,
+        start_date: date,
+        end_date: date,
+        employee_id: UUID | None = None,
+        status: Literal["checked_in", "completed"] | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[AttendanceRecord], int]:
+        """List attendance records across employees with filters.
+
+        Args:
+            start_date: Start date for filter range.
+            end_date: End date for filter range.
+            employee_id: Optional filter by employee ID.
+            status: Optional filter by status (checked_in, completed).
+            page: Page number (1-based).
+            page_size: Records per page.
+
+        Returns:
+            Tuple of (list of AttendanceRecord, total count).
+        """
+        return await self._attendance_repo.list_with_filters(
+            start_date=start_date,
+            end_date=end_date,
+            employee_id=employee_id,
+            status=status,
+            page=page,
+            page_size=page_size,
+        )
+
+    async def correct_record(
+        self,
+        record_id: UUID,
+        check_in_at: datetime | None,
+        check_out_at: datetime | None,
+        correction_reason: str,
+        corrected_by_user_id: UUID,
+        admin: User,
+        audit_service: AuditService,
+    ) -> AttendanceRecord:
+        """Correct an attendance record atomically with audit log.
+
+        The correction and audit log are written within the same
+        AsyncSession transaction. If either write fails, both are rolled
+        back, preserving the invariant that every correction is audit-logged.
+
+        Args:
+            record_id: The ID of the record to correct.
+            check_in_at: New check-in time (None to clear).
+            check_out_at: New check-out time (None to clear).
+            correction_reason: Required reason for the correction.
+            corrected_by_user_id: The user ID of the HR admin making the correction.
+            admin: The admin User performing the correction.
+            audit_service: The AuditService for writing the audit log.
+
+        Returns:
+            The corrected AttendanceRecord.
+
+        Raises:
+            ValueError: If record not found or correction_reason is empty.
+        """
+        stripped_reason = correction_reason.strip()
+        if not stripped_reason:
+            raise ValueError("Correction reason is required")
+
+        record = await self._attendance_repo.get_by_id(record_id)
+        if record is None:
+            raise ValueError("Attendance record not found")
+
+        previous_check_in_at = record.check_in_at
+        previous_check_out_at = record.check_out_at
+
+        record.check_in_at = check_in_at
+        record.check_out_at = check_out_at
+        record.corrected_by_user_id = corrected_by_user_id
+        record.corrected_at = datetime.now(UTC)
+        record.correction_reason = stripped_reason
+        record.previous_check_in_at = previous_check_in_at
+        record.previous_check_out_at = previous_check_out_at
+        record.updated_at = datetime.now(UTC)
+
+        corrected = await self._attendance_repo.update(record)
+
+        await audit_service.log_action(
+            admin=admin,
+            action_type=AuditActionType.ATTENDANCE_CORRECTION,
+            details={
+                "record_id": str(record_id),
+                "employee_id": str(corrected.employee_id),
+                "previous_check_in_at": (
+                    previous_check_in_at.isoformat() if previous_check_in_at else None
+                ),
+                "previous_check_out_at": (
+                    previous_check_out_at.isoformat() if previous_check_out_at else None
+                ),
+                "new_check_in_at": (
+                    corrected.check_in_at.isoformat() if corrected.check_in_at else None
+                ),
+                "new_check_out_at": (
+                    corrected.check_out_at.isoformat() if corrected.check_out_at else None
+                ),
+                "correction_reason": stripped_reason,
+            },
+        )
+
+        return corrected
