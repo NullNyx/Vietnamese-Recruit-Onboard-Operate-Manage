@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -283,7 +282,10 @@ class JobOpeningService:
             user_id=self.user_id,
             previous_value={"status": previous_status},
             new_value={"status": updated.status},
-            change_summary=f"Job Opening '{updated.title}' {action_name}: {previous_status} → {updated.status}",
+            change_summary=(
+                f"Job Opening '{updated.title}' {action_name}: "
+                f"{previous_status} → {updated.status}"
+            ),
         )
 
         return updated
