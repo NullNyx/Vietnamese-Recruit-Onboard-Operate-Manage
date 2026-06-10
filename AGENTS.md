@@ -140,14 +140,25 @@ Create docs lazily — only when there is something real to record.
   of a real trade-off → add an ADR to `docs/decisions/` (next sequential number,
   short title + 1–3 sentences).
 - Issues, PRDs, and progress/task lists go to Jira Tasks, never into markdown
-  under `docs/`.
+  under `docs/` by default.
+- Exception: when the user or repo owner explicitly asks for implementation-facing
+  working docs so human contributors can understand or execute a task, the agent
+  may create or update supplemental markdown under `docs/<owner-or-team>/...`.
+  Treat these files as temporary working docs, not canonical domain docs or issue
+  tracker replacements.
 
-Allowed layout — do not create anything outside it:
+Default layout:
 
 ```
 /CONTEXT.md            glossary
 /docs/agents/          skill config (issue-tracker, triage-labels, domain)
 /docs/decisions/       ADRs
+```
+
+Allowed exception layout with explicit user approval:
+
+```
+/docs/<owner-or-team>/...   supplemental implementation-facing working docs
 ```
 
 ## Git: branch, commit, push, PR
