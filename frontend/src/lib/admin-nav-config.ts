@@ -47,6 +47,7 @@ export const adminNavConfig: HeaderNavConfig = {
       label: 'Tuyển dụng',
       links: [
         { href: '/recruitment', label: 'Pipeline', icon: UserSearch },
+        { href: '/recruitment/job-openings', label: 'Vị trí TD', icon: Briefcase },
         { href: '/onboarding', label: 'Onboarding', icon: ListChecks },
         { href: '/recruitment/candidates', label: 'Ứng viên', icon: Users },
         { href: '/recruitment/metrics', label: 'Metrics', icon: BarChart3 },
