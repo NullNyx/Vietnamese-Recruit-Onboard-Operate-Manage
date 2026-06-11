@@ -141,9 +141,10 @@ export function EmailList({
               {truncateSnippet(email.snippet)}
             </p>
 
-            {/* Category badge */}
-            {email.category && CATEGORY_META[email.category] && (
-              <div className="mt-2 flex flex-wrap gap-1">
+            {/* Badges row */}
+            <div className="mt-2 flex flex-wrap gap-1">
+              {/* Category badge */}
+              {email.category && CATEGORY_META[email.category] && (
                 <span
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
@@ -154,20 +155,20 @@ export function EmailList({
                   <span>{CATEGORY_META[email.category].icon}</span>
                   {CATEGORY_META[email.category].label}
                 </span>
-                {/* Processing status badge */}
-                {email.processing_status === "needs_review" && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
-                    Cần review
-                  </span>
-                )}
-                {/* Attachment indicator */}
-                {email.has_attachments && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                    📎 CV
-                  </span>
-                )}
-              </div>
-            )}
+              )}
+              {/* Processing status badge — always visible regardless of category */}
+              {email.processing_status === "needs_review" && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
+                  Cần review
+                </span>
+              )}
+              {/* Attachment indicator — always visible regardless of category */}
+              {email.has_attachments && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                  📎 CV
+                </span>
+              )}
+            </div>
           </button>
         );
       })}

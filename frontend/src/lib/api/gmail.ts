@@ -167,7 +167,7 @@ export interface ProcessAttachmentsResponse {
 export async function processAttachments(
   messageId: string,
 ): Promise<ProcessAttachmentsResponse> {
-  const res = await fetch(`${BASE}/messages/${messageId}/process-attachments`, {
+  const res = await fetch(`${BASE}/messages/${encodeURIComponent(messageId)}/process-attachments`, {
     method: "POST",
   });
   return handleResponse<ProcessAttachmentsResponse>(res);

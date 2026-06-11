@@ -1,12 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { PenSquare, Sparkles } from "lucide-react";
+import { PenSquare, RotateCw, Sparkles } from "lucide-react";
 
 import type { ConnectionStatus, EmailMessage } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/types";
 import * as gmailApi from "@/lib/api/gmail";
-import { RotateCw } from "lucide-react";
 
 import { ToastProvider, useToast } from "@/components/gmail/toast-provider";
 import { ConnectionPanel } from "@/components/gmail/connection-panel";
@@ -171,16 +170,16 @@ function GmailPageContent() {
     fetchStatus();
   }, [fetchStatus]);
 
-  // --- When connected: fetch emails ---
+  // --- When connected: fetch emails + review count ---
   React.useEffect(() => {
     if (connectionStatus === "connected") {
       fetchEmails();
-      if (reviewMode) fetchReviewEmails();
+      fetchReviewEmails();
     } else {
       setEmails([]);
       setSelectedEmailId(null);
     }
-  }, [connectionStatus, fetchEmails, reviewMode, fetchReviewEmails]);
+  }, [connectionStatus, fetchEmails, fetchReviewEmails]);
 
   // --- Connect handler ---
   const handleConnect = React.useCallback(async () => {
@@ -218,7 +217,7 @@ function GmailPageContent() {
     } finally {
       setDisconnectLoading(false);
     }
-  }, [addToast, handleApiError]);
+  }, [addToast, handleApiError, fetchEmails, fetchReviewEmails, reviewMode]);
 
   const handleDisconnectCancel = React.useCallback(() => {
     setDisconnectDialogOpen(false);
@@ -271,7 +270,7 @@ function GmailPageContent() {
     } finally {
       setReclassifying(null);
     }
-  }, [addToast, handleApiError]);
+  }, [addToast, handleApiError, fetchEmails, fetchReviewEmails, reviewMode]);
 
   // --- Process attachments handler ---
   const handleProcessAttachments = React.useCallback(async (messageId: string) => {
@@ -283,12 +282,15 @@ function GmailPageContent() {
       } else {
         addToast(result.message || "Không có CV nào để xử lý", "success");
       }
+      // Refetch emails to update processing status + attachment badges
+      await fetchEmails();
+      if (reviewMode) await fetchReviewEmails();
     } catch (err) {
       handleApiError(err);
     } finally {
       setProcessingAttachments(null);
     }
-  }, [addToast, handleApiError]);
+  }, [addToast, handleApiError, fetchEmails, fetchReviewEmails, reviewMode]);
 
   // --- Compose handlers ---
   const handleComposeOpen = React.useCallback(() => {
@@ -369,8 +371,10 @@ function GmailPageContent() {
             <button
               type="button"
               onClick={() => {
-                setReviewMode(!reviewMode);
-                if (!reviewMode) fetchReviewEmails();
+                const newMode = !reviewMode;
+                setReviewMode(newMode);
+                setSelectedEmailId(null);
+                if (newMode) fetchReviewEmails();
               }}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 reviewMode
