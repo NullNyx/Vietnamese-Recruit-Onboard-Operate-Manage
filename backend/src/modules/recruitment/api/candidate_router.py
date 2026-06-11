@@ -27,6 +27,7 @@ from src.modules.recruitment.api.schemas import (
     CandidateResponse,
     CVDocumentResponse,
     CVPresignedUrlResponse,
+    AssignJobOpeningRequest,
     RejectRequest,
     ScheduleInterviewRequest,
     SendEmailRequest,
@@ -446,6 +447,74 @@ async def send_email(
     )
 
     return {"message": "Email sent successfully"}
+
+
+# ---------------------------------------------------------------------------
+# Assign Candidate to Job Opening
+# ---------------------------------------------------------------------------
+
+@candidate_router.post(
+    "/{candidate_id}/assign-job-opening",
+    response_model=CandidateResponse,
+)
+async def assign_job_opening(
+    candidate_id: UUID,
+    body: AssignJobOpeningRequest,
+    current_user: CurrentUserDep,
+    candidate_service: CandidateServiceDep,
+) -> CandidateResponse:
+    """Assign (or reassign) a Candidate to an open Job Opening.
+
+    A Candidate may be assigned to at most one Job Opening at a time.
+    Assignment is allowed only to Job Openings with status open.
+    Reassign and unassign are blocked once the Candidate is accepted,
+    rejected, or archived.
+
+    Args:
+        candidate_id: UUID of the Candidate.
+        body: Request body with the target job_opening_id.
+        current_user: The authenticated user.
+        candidate_service: The candidate service.
+
+    Returns:
+        The updated Candidate record.
+    """
+    candidate = await candidate_service.assign_to_job_opening(
+        candidate_id=candidate_id,
+        job_opening_id=body.job_opening_id,
+    )
+
+    return CandidateResponse.model_validate(candidate)
+
+# ---------------------------------------------------------------------------
+# Unassign Candidate from Job Opening
+# ---------------------------------------------------------------------------
+
+@candidate_router.post(
+    "/{candidate_id}/unassign-job-opening",
+    response_model=CandidateResponse,
+)
+async def unassign_job_opening(
+    candidate_id: UUID,
+    current_user: CurrentUserDep,
+    candidate_service: CandidateServiceDep,
+) -> CandidateResponse:
+    """Remove a Candidate's assignment to a Job Opening.
+
+    Only allowed while the Candidate is in new, reviewing, or
+    interview_scheduled status.
+
+    Args:
+        candidate_id: UUID of the Candidate.
+        current_user: The authenticated user.
+        candidate_service: The candidate service.
+
+    Returns:
+        The updated Candidate record.
+    """
+    candidate = await candidate_service.unassign_job_opening(candidate_id)
+
+    return CandidateResponse.model_validate(candidate)
 
 
 # ---------------------------------------------------------------------------

@@ -226,6 +226,7 @@ class CandidateDetailResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     cv_documents: list[CVDocumentResponse] = Field(default_factory=list)
+    job_opening_id: UUID | None = None
 
 
 class CVReviewItemResponse(BaseModel):
@@ -340,6 +341,7 @@ class CandidateResponse(BaseModel):
     interview_timezone: str | None = None
     calendar_event_id: str | None = None
     meet_link: str | None = None
+    job_opening_id: UUID | None = None
 
 
 class CVPresignedUrlResponse(BaseModel):
@@ -394,6 +396,16 @@ class JobOpeningUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=5000)
     target_headcount: int | None = Field(default=None, ge=1)
 
+
+
+class AssignJobOpeningRequest(BaseModel):
+    """Request schema for assigning a Candidate to a Job Opening.
+
+    Attributes:
+        job_opening_id: UUID of the Job Opening to assign the Candidate to.
+    """
+
+    job_opening_id: UUID
 
 class JobOpeningStatusTransition(BaseModel):
     """Request schema for Job Opening status transitions.

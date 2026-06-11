@@ -66,6 +66,7 @@ class Candidate(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+    job_opening_id: UUID | None = Field(default=None, foreign_key="job_openings.id", index=True)
 
 
 class CVDocument(SQLModel, table=True):

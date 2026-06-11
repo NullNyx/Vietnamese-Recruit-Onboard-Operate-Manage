@@ -23,17 +23,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
 from src.modules.employee.domain.entities import Employee
-from src.modules.recruitment.domain.entities import Candidate, CVDocument
-from src.modules.recruitment.domain.enums import CandidateStatus
+from src.modules.recruitment.domain.entities import Candidate, CVDocument, JobOpening
+from src.modules.recruitment.domain.enums import CandidateStatus, JobOpeningStatus
 from src.modules.recruitment.domain.exceptions import (
     CalendarEventCreateFailedError,
     CalendarEventUpdateFailedError,
     CalendarGrantMissingError,
     CandidateNotFoundError,
+    CandidateTerminalStatusError,
+    CandidateNotAssignedError,
     GmailNotConnectedError,
     InterviewerMissingEmailError,
     InterviewerNotFoundError,
+    JobOpeningNotOpenError,
     InvalidStatusTransitionError,
+    JobOpeningNotFoundError,
     NoInterviewToRescheduleError,
 )
 from src.modules.recruitment.domain.value_objects import (
@@ -372,6 +376,7 @@ class CandidateService:
         oauth_grant_repo: OAuthGrantReader | None = None,
         oauth_service: CalendarGrantChecker | None = None,
         crypto: TokenCipher | None = None,
+        job_opening_repo: JobOpeningRepository | None = None,
     ) -> None:
         self._candidate_repo = candidate_repo
         self._cv_document_repo = cv_document_repo
@@ -389,6 +394,7 @@ class CandidateService:
         self._oauth_grant_repo = oauth_grant_repo
         self._oauth_service = oauth_service
         self._crypto = crypto
+        self._job_opening_repo = job_opening_repo
 
     # ─── Create / Update (CandidateCreator protocol) ───────────────────
 
@@ -1664,3 +1670,134 @@ class CandidateService:
             },
             change_summary=(f"Email sent to candidate: subject='{subject[:100]}'"),
         )
+
+    # ─── Job Opening Assignment ────────────────────────────────────────
+
+    # Candidate statuses that allow assignment changes.
+    _ASSIGNABLE_STATUSES: frozenset[str] = frozenset({
+        CandidateStatus.NEW,
+        CandidateStatus.REVIEWING,
+        CandidateStatus.INTERVIEW_SCHEDULED,
+    })
+
+    async def assign_to_job_opening(
+        self, candidate_id: UUID, job_opening_id: UUID
+    ) -> Candidate:
+        """Assign a Candidate to a Job Opening, or reassign to a different one.
+
+        Rules:
+        - Candidate must exist.
+        - Job Opening must exist and have status ``open``.
+        - Candidate must be in new, reviewing, or interview_scheduled status.
+        - Assignment to closed/cancelled Job Openings is rejected.
+
+        Args:
+            candidate_id: UUID of the Candidate.
+            job_opening_id: UUID of the target Job Opening.
+
+        Returns:
+            The updated Candidate entity.
+
+        Raises:
+            CandidateNotFoundError: If the Candidate does not exist.
+            JobOpeningNotFoundError: If the Job Opening does not exist.
+            JobOpeningNotOpenError: If the Job Opening is not in ``open`` status.
+            CandidateTerminalStatusError: If the Candidate is in a terminal status.
+        """
+        if self._job_opening_repo is None:
+            raise RuntimeError("JobOpeningRepository is not configured")
+
+        candidate = await self._get_candidate_or_raise(candidate_id)
+
+        # Guard: terminal status.
+        if candidate.status not in self._ASSIGNABLE_STATUSES:
+            raise CandidateTerminalStatusError(candidate.status)
+
+        # Load and validate the Job Opening.
+        job_opening = await self._job_opening_repo.get_by_id(job_opening_id)
+        if job_opening is None:
+            raise JobOpeningNotFoundError(f"Job Opening not found: {job_opening_id}")
+        if job_opening.status != JobOpeningStatus.OPEN:
+            raise JobOpeningNotOpenError(
+                f"Job Opening '{job_opening.title}' is {job_opening.status}, not open"
+            )
+
+        previous_job_opening_id = candidate.job_opening_id
+        candidate.job_opening_id = job_opening_id
+        candidate = await self._candidate_repo.update(candidate)
+        await self._session.commit()
+
+        operation = "candidate_reassigned" if previous_job_opening_id else "candidate_assigned"
+        # Note: _job_opening_repo holds no get_by_id within scope of this audit log;
+        # we capture only the IDs to avoid an extra DB hop.
+        await log_audit(
+            session=self._session,
+            operation_type=operation,
+            entity_type="candidate",
+            entity_id=candidate.id,
+            user_id=self._user_id,
+            previous_value=(
+                {"job_opening_id": str(previous_job_opening_id)}
+                if previous_job_opening_id
+                else None
+            ),
+            new_value={"job_opening_id": str(job_opening_id)},
+            change_summary=(
+                f"{'Reassigned' if previous_job_opening_id else 'Assigned'} "
+                f"candidate '{candidate.name}' to Job Opening '{job_opening.title}' "
+                f"({job_opening_id})"
+            ),
+            success=True,
+        )
+        await self._session.commit()
+
+        return candidate
+
+    async def unassign_job_opening(self, candidate_id: UUID) -> Candidate:
+        """Remove a Candidate's assignment to a Job Opening.
+
+        Rules:
+        - Candidate must exist and must currently be assigned.
+        - Candidate must be in new, reviewing, or interview_scheduled status.
+
+        Args:
+            candidate_id: UUID of the Candidate.
+
+        Returns:
+            The updated Candidate entity.
+
+        Raises:
+            CandidateNotFoundError: If the Candidate does not exist.
+            CandidateNotAssignedError: If the Candidate has no job_opening_id.
+            CandidateTerminalStatusError: If the Candidate is in a terminal status.
+        """
+        candidate = await self._get_candidate_or_raise(candidate_id)
+
+        if candidate.job_opening_id is None:
+            raise CandidateNotAssignedError()
+
+        if candidate.status not in self._ASSIGNABLE_STATUSES:
+            raise CandidateTerminalStatusError(candidate.status)
+
+        previous_job_opening_id = candidate.job_opening_id
+        candidate.job_opening_id = None
+        candidate = await self._candidate_repo.update(candidate)
+        await self._session.commit()
+
+        await log_audit(
+            session=self._session,
+            operation_type="candidate_unassigned",
+            entity_type="candidate",
+            entity_id=candidate.id,
+            user_id=self._user_id,
+            previous_value={"job_opening_id": str(previous_job_opening_id)},
+            new_value={"job_opening_id": None},
+            change_summary=(
+                f"Unassigned candidate '{candidate.name}' "
+                f"from Job Opening ({previous_job_opening_id})"
+            ),
+            success=True,
+        )
+        await self._session.commit()
+
+        return candidate
