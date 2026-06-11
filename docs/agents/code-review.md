@@ -2,6 +2,10 @@
 
 This guide defines how the Agent should integrate Jira Task requirements with GitHub Pull Request reviews using the Open Code Review (OCR) CLI.
 
+> [!IMPORTANT]
+> Tất cả các nhận xét, phản hồi review (bao gồm inline comments trên GitHub, review summary, và bình luận trên Jira task) nên được viết bằng **tiếng Việt**, ngoại trừ các thuật ngữ kỹ thuật tiếng Anh (ví dụ: endpoint, database query, validation, test suite, mock...).
+
+
 ## Trigger
 
 When the user requests a code review matching a GitHub PR to a Jira Task, e.g.:
