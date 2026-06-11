@@ -166,9 +166,7 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
         logger.info("Attendance demo seed skipped: no active employees.")
         return False
 
-    from datetime import datetime, timezone
-
-    UTC = timezone.utc
+    from datetime import UTC, datetime
 
     # Demo work week: June 1-5, 2026 (Mon-Fri).
     # Timestamps stored in UTC; work_date is the date in
