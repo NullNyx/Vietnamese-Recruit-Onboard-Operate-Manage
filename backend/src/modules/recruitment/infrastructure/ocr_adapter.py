@@ -168,6 +168,7 @@ class OCRAdapter:
     def _extract_docx_text_sync(file_content: bytes) -> str:
         """Synchronously extract text directly using python-docx."""
         from docx import Document
+
         doc = Document(io.BytesIO(file_content))
         paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
         return "\n".join(paragraphs)
