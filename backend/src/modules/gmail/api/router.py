@@ -756,15 +756,9 @@ async def classify_emails(
     ) -> dict[str, Any]:
         from sqlmodel import select
 
-        from src.modules.gmail.application.classification_service import (
-            ClassificationService,
-        )
-        from src.modules.gmail.application.rules_classifier import RulesClassifier
         from src.modules.gmail.domain.entities import (
             EmailMessage as EmailMessageEntity,
         )
-        from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
-        from src.modules.gmail.infrastructure.audit_logger import AuditLogger
 
         # Only select emails that haven't been classified yet.
         # Exclude "classified" processing_status to avoid re-queuing
@@ -808,119 +802,22 @@ async def classify_emails(
             current_user.id,
         )
 
-        # Run classification
-        rules_classifier = RulesClassifier()
-        ai_classifier = AIClassifier(settings)
-        audit_logger = AuditLogger(email_repo.session, settings)
-
-        classification_service = ClassificationService(
-            rules_classifier=rules_classifier,
-            ai_classifier=ai_classifier,
+        classified_count = await _evaluate_rules(
+            current_user_id=current_user.id,
+            unclassified_emails=unclassified_emails,
             email_repo=email_repo,
-            audit_logger=audit_logger,
             settings=settings,
-            session=email_repo.session,
         )
 
-        classified_count = await classification_service.classify_batch(
-            user_id=current_user.id,
-            emails=unclassified_emails,
+        cv_processed_count = await _update_database_and_process_cvs(
+            current_user=current_user,
+            connection_service=connection_service,
+            gmail_adapter=gmail_adapter,
+            settings=settings,
+            email_repo=email_repo,
+            unclassified_emails=unclassified_emails,
+            classify_logger=classify_logger,
         )
-
-        await email_repo.session.commit()
-
-        # Auto-process CV attachments for classified recruitment emails only.
-        # Skip emails that ended up as needs_review (low confidence) —
-        # those require human review before CV processing.
-        cv_processed_count = 0
-        recruitment_with_attachments = [
-            e
-            for e in unclassified_emails
-            if e.category == "recruitment"
-            and e.has_attachments
-            and e.processing_status == "classified"
-        ]
-
-        if recruitment_with_attachments:
-            classify_logger.info(
-                "Auto-processing CV attachments for %d recruitment emails",
-                len(recruitment_with_attachments),
-            )
-            for email in recruitment_with_attachments:
-                try:
-                    # Import here to avoid circular imports
-                    from src.modules.recruitment.application.cv_processor import AttachmentInput
-                    from src.modules.recruitment.container import get_cv_processor_service
-
-                    # Fetch attachment binary data from Gmail API
-                    access_token = await _get_user_access_token(current_user.id, connection_service)
-
-                    response = await gmail_adapter._http_client.get(
-                        f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{email.gmail_message_id}",
-                        headers={"Authorization": f"Bearer {access_token}"},
-                        params={"format": "full"},
-                    )
-                    response.raise_for_status()
-                    msg_data = response.json()
-
-                    attachments_meta = _extract_attachment_metadata(msg_data.get("payload", {}))
-
-                    if not attachments_meta:
-                        classify_logger.info(
-                            "No attachments found for email %s, skipping CV processing",
-                            email.gmail_message_id,
-                        )
-                        continue
-
-                    # Fetch binary data
-                    attachment_service = AttachmentService(
-                        gmail_adapter=gmail_adapter,
-                        settings=settings,
-                        audit_logger=audit_logger,
-                    )
-                    fetch_result = await attachment_service.fetch_attachments(
-                        user_id=current_user.id,
-                        message_id=email.gmail_message_id,
-                        access_token=access_token,
-                        attachments=attachments_meta,
-                    )
-
-                    if not fetch_result.fetched:
-                        continue
-
-                    # Build AttachmentInput list
-                    attachment_inputs = [
-                        AttachmentInput(
-                            filename=att.filename,
-                            mime_type=att.mime_type,
-                            size_bytes=att.size_bytes,
-                            data=att.data,
-                        )
-                        for att in fetch_result.fetched
-                    ]
-
-                    # Run CV processing pipeline
-                    cv_processor = await get_cv_processor_service(session=email_repo.session)
-                    cv_documents = await cv_processor.process_cv_from_email(
-                        email_message_id=email.id,
-                        attachments=attachment_inputs,
-                        gmail_message_id=email.gmail_message_id,
-                    )
-                    cv_processed_count += len(cv_documents)
-
-                    classify_logger.info(
-                        "Processed %d CV documents for email %s",
-                        len(cv_documents),
-                        email.gmail_message_id,
-                    )
-                except Exception as exc:
-                    classify_logger.error(
-                        "Failed to auto-process CV for email %s: %s",
-                        email.gmail_message_id,
-                        exc,
-                    )
-
-            await email_repo.session.commit()
 
         # Build results summary
         results_summary = []
@@ -1039,6 +936,172 @@ def _walk_parts_for_attachments(
     # Recurse into nested parts
     for sub_part in part.get("parts", []):
         _walk_parts_for_attachments(sub_part, attachments)
+
+
+async def _evaluate_rules(
+    current_user_id: UUID,
+    unclassified_emails: list[Any],
+    email_repo: EmailRepository,
+    settings: Any,
+) -> int:
+    """Evaluate classification rules for a batch of emails.
+
+    Args:
+        current_user_id: The UUID of the user.
+        unclassified_emails: List of unclassified EmailMessage entities.
+        email_repo: The email repository.
+        settings: The Gmail settings.
+
+    Returns:
+        The number of emails successfully classified.
+    """
+    from src.modules.gmail.application.classification_service import (
+        ClassificationService,
+    )
+    from src.modules.gmail.application.rules_classifier import RulesClassifier
+    from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
+    from src.modules.gmail.infrastructure.audit_logger import AuditLogger
+
+    rules_classifier = RulesClassifier()
+    ai_classifier = AIClassifier(settings)
+    audit_logger = AuditLogger(email_repo.session, settings)
+
+    classification_service = ClassificationService(
+        rules_classifier=rules_classifier,
+        ai_classifier=ai_classifier,
+        email_repo=email_repo,
+        audit_logger=audit_logger,
+        settings=settings,
+        session=email_repo.session,
+    )
+
+    return await classification_service.classify_batch(
+        user_id=current_user_id,
+        emails=unclassified_emails,
+    )
+
+
+async def _update_database_and_process_cvs(
+    current_user: User,
+    connection_service: ConnectionService,
+    gmail_adapter: GmailAdapter,
+    settings: Any,
+    email_repo: EmailRepository,
+    unclassified_emails: list[Any],
+    classify_logger: logging.Logger,
+) -> int:
+    """Commit classifications and auto-process CVs.
+
+    Args:
+        current_user: The authenticated user.
+        connection_service: The connection service.
+        gmail_adapter: The Gmail API adapter.
+        settings: The Gmail settings.
+        email_repo: The email repository.
+        unclassified_emails: The original list of unclassified emails.
+        classify_logger: The classification logger.
+
+    Returns:
+        The number of CVs processed.
+    """
+    from src.modules.gmail.infrastructure.audit_logger import AuditLogger
+
+    audit_logger = AuditLogger(email_repo.session, settings)
+
+    await email_repo.session.commit()
+
+    # Auto-process CV attachments for classified recruitment emails only.
+    # Skip emails that ended up as needs_review (low confidence) —
+    # those require human review before CV processing.
+    cv_processed_count = 0
+    recruitment_with_attachments = [
+        e
+        for e in unclassified_emails
+        if e.category == "recruitment" and e.has_attachments and e.processing_status == "classified"
+    ]
+
+    if recruitment_with_attachments:
+        classify_logger.info(
+            "Auto-processing CV attachments for %d recruitment emails",
+            len(recruitment_with_attachments),
+        )
+        for email in recruitment_with_attachments:
+            try:
+                # Import here to avoid circular imports
+                from src.modules.recruitment.application.cv_processor import AttachmentInput
+                from src.modules.recruitment.container import get_cv_processor_service
+
+                # Fetch attachment binary data from Gmail API
+                access_token = await _get_user_access_token(current_user.id, connection_service)
+
+                response = await gmail_adapter._http_client.get(
+                    f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{email.gmail_message_id}",
+                    headers={"Authorization": f"Bearer {access_token}"},
+                    params={"format": "full"},
+                )
+                response.raise_for_status()
+                msg_data = response.json()
+
+                attachments_meta = _extract_attachment_metadata(msg_data.get("payload", {}))
+
+                if not attachments_meta:
+                    classify_logger.info(
+                        "No attachments found for email %s, skipping CV processing",
+                        email.gmail_message_id,
+                    )
+                    continue
+
+                # Fetch binary data
+                attachment_service = AttachmentService(
+                    gmail_adapter=gmail_adapter,
+                    settings=settings,
+                    audit_logger=audit_logger,
+                )
+                fetch_result = await attachment_service.fetch_attachments(
+                    user_id=current_user.id,
+                    message_id=email.gmail_message_id,
+                    access_token=access_token,
+                    attachments=attachments_meta,
+                )
+
+                if not fetch_result.fetched:
+                    continue
+
+                # Build AttachmentInput list
+                attachment_inputs = [
+                    AttachmentInput(
+                        filename=att.filename,
+                        mime_type=att.mime_type,
+                        size_bytes=att.size_bytes,
+                        data=att.data,
+                    )
+                    for att in fetch_result.fetched
+                ]
+
+                # Run CV processing pipeline
+                cv_processor = await get_cv_processor_service(session=email_repo.session)
+                cv_documents = await cv_processor.process_cv_from_email(
+                    email_message_id=email.id,
+                    attachments=attachment_inputs,
+                    gmail_message_id=email.gmail_message_id,
+                )
+                cv_processed_count += len(cv_documents)
+
+                classify_logger.info(
+                    "Processed %d CV documents for email %s",
+                    len(cv_documents),
+                    email.gmail_message_id,
+                )
+            except Exception as exc:
+                classify_logger.error(
+                    "Failed to auto-process CV for email %s: %s",
+                    email.gmail_message_id,
+                    exc,
+                )
+
+        await email_repo.session.commit()
+
+    return cv_processed_count
 
 
 # ---------------------------------------------------------------------------
