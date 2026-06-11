@@ -53,8 +53,7 @@ class OvertimeResponse(BaseModel):
     updated_at: datetime | None = None
     cancellation_reason: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class OvertimeCreateResponse(BaseModel):

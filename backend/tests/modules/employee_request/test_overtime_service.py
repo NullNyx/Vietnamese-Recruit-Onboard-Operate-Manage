@@ -118,20 +118,20 @@ class TestCreateOvertime:
         assert result.duration_minutes == 180
 
     @pytest.mark.asyncio
-    async def test_rejects_end_before_start(
+    async def test_rejects_equal_start_and_end(
         self,
         service,
         mock_repo,
         employee_id,
     ):
-        """end_time == start_time is rejected."""
+        """end_time == start_time (zero duration) is rejected."""
         with pytest.raises(OvertimeEndBeforeStartError):
             await service.create_overtime(
                 employee_id=employee_id,
                 work_date=date(2026, 6, 11),
                 start_time=time(18, 0),
                 end_time=time(18, 0),
-                reason="Invalid",
+                reason="Zero duration",
             )
 
     @pytest.mark.asyncio
