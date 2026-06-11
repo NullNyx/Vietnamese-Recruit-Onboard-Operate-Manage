@@ -150,9 +150,9 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
         logger.info("Attendance demo seed disabled by config.")
         return False
 
-    from src.modules.attendance.domain.entities import AttendanceRecord, AttendanceSource
-
     from datetime import UTC, datetime
+
+    from src.modules.attendance.domain.entities import AttendanceRecord, AttendanceSource
 
     # Only active employees -- Employee Self-Service data.
     statement = select(Employee).where(Employee.is_active.is_(True))  # type: ignore[arg-type]
