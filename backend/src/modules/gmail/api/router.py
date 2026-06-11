@@ -1005,6 +1005,7 @@ async def _update_database_and_process_cvs(
         The number of CVs processed.
     """
     from src.modules.gmail.infrastructure.audit_logger import AuditLogger
+
     audit_logger = AuditLogger(email_repo.session, settings)
 
     await email_repo.session.commit()
@@ -1016,9 +1017,7 @@ async def _update_database_and_process_cvs(
     recruitment_with_attachments = [
         e
         for e in unclassified_emails
-        if e.category == "recruitment"
-        and e.has_attachments
-        and e.processing_status == "classified"
+        if e.category == "recruitment" and e.has_attachments and e.processing_status == "classified"
     ]
 
     if recruitment_with_attachments:
