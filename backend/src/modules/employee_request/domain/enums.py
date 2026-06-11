@@ -7,6 +7,16 @@ class RequestType(str, Enum):
     """Type of employee request."""
 
     OVERTIME = "overtime"
+    LEAVE = "leave"
+
+
+class LeaveType(str, Enum):
+    """Type of leave request."""
+
+    ANNUAL = "annual"
+    SICK = "sick"
+    UNPAID = "unpaid"
+    OTHER = "other"
 
 
 class RequestStatus(str, Enum):

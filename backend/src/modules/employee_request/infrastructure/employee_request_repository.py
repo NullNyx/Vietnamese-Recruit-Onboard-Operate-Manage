@@ -86,13 +86,46 @@ class EmployeeRequestRepository:
         """
         statement = select(EmployeeRequest).where(
             EmployeeRequest.employee_id == employee_id,  # type: ignore[arg-type]
-            EmployeeRequest.work_date == work_date,  # type: ignore[arg-type]
             EmployeeRequest.request_type == RequestType.OVERTIME,  # type: ignore[arg-type]
-            EmployeeRequest.status.in_(
-                [  # type: ignore[arg-type]
-                    RequestStatus.SUBMITTED,
-                    RequestStatus.APPROVED,
-                ]
+            EmployeeRequest.work_date == work_date,  # type: ignore[arg-type]
+            EmployeeRequest.status.in_(  # type: ignore[arg-type]
+                [RequestStatus.SUBMITTED, RequestStatus.APPROVED],
+            ),
+        )
+        if exclude_id is not None:
+            statement = statement.where(EmployeeRequest.id != exclude_id)  # type: ignore[arg-type]
+
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
+    async def find_overlapping_leave(
+        self,
+        employee_id: UUID,
+        start_date: date,
+        end_date: date,
+        exclude_id: UUID | None = None,
+    ) -> list[EmployeeRequest]:
+        """Find submitted or approved leave requests overlapping the date range.
+
+        Two ranges overlap when one's start <= other's end AND other's
+        start <= one's end.
+
+        Args:
+            employee_id: The UUID of the employee.
+            start_date: Start of the leave range.
+            end_date: End of the leave range.
+            exclude_id: Optional request ID to exclude (for updates).
+
+        Returns:
+            List of overlapping EmployeeRequest objects.
+        """
+        statement = select(EmployeeRequest).where(
+            EmployeeRequest.employee_id == employee_id,  # type: ignore[arg-type]
+            EmployeeRequest.request_type == RequestType.LEAVE,  # type: ignore[arg-type]
+            EmployeeRequest.start_date <= end_date,  # type: ignore[arg-type]
+            EmployeeRequest.end_date >= start_date,  # type: ignore[arg-type]
+            EmployeeRequest.status.in_(  # type: ignore[arg-type]
+                [RequestStatus.SUBMITTED, RequestStatus.APPROVED],
             ),
         )
         if exclude_id is not None:

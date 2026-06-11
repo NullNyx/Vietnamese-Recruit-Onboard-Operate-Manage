@@ -1,8 +1,7 @@
 """Domain entities for the Employee Request module.
 
 Defines SQLModel table classes for EmployeeRequest with shared lifecycle
-fields and overtime-specific fields.  Leave-specific fields will be added
-in a future change.
+fields and type-specific fields for overtime and leave.
 """
 
 from datetime import UTC, date, datetime, time, timedelta
@@ -11,14 +10,14 @@ from uuid import UUID, uuid4
 from sqlalchemy import Column, DateTime, Text
 from sqlmodel import Field, SQLModel
 
-from src.modules.employee_request.domain.enums import RequestStatus, RequestType
+from src.modules.employee_request.domain.enums import LeaveType, RequestStatus, RequestType
 
 
 class EmployeeRequest(SQLModel, table=True):
     """Shared lifecycle fields for an employee-submitted request.
 
     Employees submit; HR reviews.  The request_type discriminator
-    separates overtime from future leave.  Type-specific columns are
+    separates overtime from leave.  Type-specific columns are
     nullable and validated by the service layer.
     """
 
@@ -71,6 +70,11 @@ class EmployeeRequest(SQLModel, table=True):
     duration_minutes: int | None = Field(default=None)
     reason: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     project_or_task: str | None = Field(default=None, max_length=255)
+
+    # --- Leave-specific fields (nullable, validated by service) ---
+    leave_type: LeaveType | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    start_date: date | None = Field(default=None, index=True)
+    end_date: date | None = Field(default=None)
 
     # --- Audit ---
     created_at: datetime = Field(
