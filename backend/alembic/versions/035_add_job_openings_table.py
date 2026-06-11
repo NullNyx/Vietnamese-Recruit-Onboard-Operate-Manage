@@ -1,6 +1,6 @@
 """Add job_openings table.
 
-Revision ID: 034
+Revision ID: 035
 Revises: 033
 Create Date: 2026-06-10
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers
-revision = "034"
-down_revision = "033"
+revision = "035"
+down_revision = "034"
 branch_labels = None
 depends_on = None
 
