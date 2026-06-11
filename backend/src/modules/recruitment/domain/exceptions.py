@@ -337,3 +337,36 @@ class PositionNotFoundError(RecruitmentError):
     status_code = 404
     error_code = "POSITION_NOT_FOUND"
     message = "Position not found"
+
+
+class JobOpeningNotOpenError(RecruitmentError):
+    """Job Opening is not in 'open' status for assignment.
+
+    Raised when attempting to assign a Candidate to a Job Opening
+    whose status is not 'open'.
+    """
+
+    status_code = 409
+    error_code = "JOB_OPENING_NOT_OPEN"
+    message = "Cannot assign candidate to a Job Opening that is not open"
+
+    def __init__(self, job_opening_id: UUID, current_status: str) -> None:
+        self.job_opening_id = job_opening_id
+        self.current_status = current_status
+        self.message = (
+            f"Cannot assign candidate to Job Opening {job_opening_id} "
+            f"with status '{current_status}'"
+        )
+        super().__init__(self.message)
+
+
+class CandidateAssignmentBlockedError(RecruitmentError):
+    """Candidate is in a terminal status and cannot be assigned/reassigned/unassigned.
+
+    Raised when attempting to change assignment for a Candidate whose
+    status is accepted, rejected, or archived.
+    """
+
+    status_code = 409
+    error_code = "CANDIDATE_ASSIGNMENT_BLOCKED"
+    message = "Cannot change assignment for a candidate in terminal status"

@@ -225,6 +225,7 @@ class CandidateDetailResponse(BaseModel):
     archived_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+    job_opening_id: UUID | None = None
     cv_documents: list[CVDocumentResponse] = Field(default_factory=list)
 
 
@@ -336,6 +337,7 @@ class CandidateResponse(BaseModel):
     archived_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+    job_opening_id: UUID | None = None
     interview_start_at: datetime | None = None
     interview_timezone: str | None = None
     calendar_event_id: str | None = None
@@ -357,6 +359,29 @@ class CVPresignedUrlResponse(BaseModel):
     mime_type: str
     size_bytes: int
 
+
+# ---------------------------------------------------------------------------
+# Candidate Job Opening Assignment schemas
+# ---------------------------------------------------------------------------
+
+class AssignCandidateRequest(BaseModel):
+    """Request schema for assigning a Candidate to a Job Opening.
+
+    Attributes:
+        job_opening_id: UUID of the target Job Opening (required).
+    """
+
+    job_opening_id: UUID
+
+
+class ReassignCandidateRequest(BaseModel):
+    """Request schema for reassigning a Candidate to a different Job Opening.
+
+    Attributes:
+        job_opening_id: UUID of the new target Job Opening (required).
+    """
+
+    job_opening_id: UUID
 
 # ---------------------------------------------------------------------------
 # Job Opening schemas

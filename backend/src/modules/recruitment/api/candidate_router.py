@@ -21,12 +21,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User
 from src.modules.recruitment.api.schemas import (
+    AssignCandidateRequest,
     CandidateDetailResponse,
     CandidateListItemResponse,
     CandidateListResponse,
     CandidateResponse,
     CVDocumentResponse,
     CVPresignedUrlResponse,
+    ReassignCandidateRequest,
     RejectRequest,
     ScheduleInterviewRequest,
     SendEmailRequest,
@@ -558,3 +560,103 @@ async def archive_candidate(
     """
     candidate = await candidate_service.archive_candidate(candidate_id)
     return CandidateResponse.model_validate(candidate)
+
+# ---------------------------------------------------------------------------
+# Assign candidate to Job Opening
+# ---------------------------------------------------------------------------
+
+@candidate_router.post(
+    "/{candidate_id}/assign",
+    response_model=CandidateResponse,
+)
+async def assign_candidate(
+    candidate_id: UUID,
+    body: AssignCandidateRequest,
+    current_user: CurrentUserDep,
+    candidate_service: CandidateServiceDep,
+) -> CandidateResponse:
+    """Assign an unassigned Candidate to an open Job Opening.
+
+    Candidate must not already be assigned. Candidate status must be
+    new, reviewing, or interview_scheduled. Job Opening must be open.
+
+    Args:
+        candidate_id: UUID of the candidate.
+        body: AssignCandidateRequest with the target job_opening_id.
+        current_user: The authenticated user.
+        candidate_service: The candidate service.
+
+    Returns:
+        The updated candidate record.
+    """
+    candidate = await candidate_service.assign_candidate(
+        candidate_id=candidate_id,
+        job_opening_id=body.job_opening_id,
+    )
+    return CandidateResponse.model_validate(candidate)
+
+
+# ---------------------------------------------------------------------------
+# Reassign candidate to different Job Opening
+# ---------------------------------------------------------------------------
+
+@candidate_router.post(
+    "/{candidate_id}/reassign",
+    response_model=CandidateResponse,
+)
+async def reassign_candidate(
+    candidate_id: UUID,
+    body: ReassignCandidateRequest,
+    current_user: CurrentUserDep,
+    candidate_service: CandidateServiceDep,
+) -> CandidateResponse:
+    """Reassign a Candidate to a different open Job Opening.
+
+    Candidate must already be assigned. Candidate status must be
+    new, reviewing, or interview_scheduled. New Job Opening must be open.
+
+    Args:
+        candidate_id: UUID of the candidate.
+        body: ReassignCandidateRequest with the new job_opening_id.
+        current_user: The authenticated user.
+        candidate_service: The candidate service.
+
+    Returns:
+        The updated candidate record.
+    """
+    candidate = await candidate_service.reassign_candidate(
+        candidate_id=candidate_id,
+        new_job_opening_id=body.job_opening_id,
+    )
+    return CandidateResponse.model_validate(candidate)
+
+
+# ---------------------------------------------------------------------------
+# Unassign candidate from Job Opening
+# ---------------------------------------------------------------------------
+
+@candidate_router.post(
+    "/{candidate_id}/unassign",
+    response_model=CandidateResponse,
+)
+async def unassign_candidate(
+    candidate_id: UUID,
+    current_user: CurrentUserDep,
+    candidate_service: CandidateServiceDep,
+) -> CandidateResponse:
+    """Remove a Candidate's assignment to a Job Opening.
+
+    Candidate must currently be assigned. Candidate status must be
+    new, reviewing, or interview_scheduled.
+
+    Args:
+        candidate_id: UUID of the candidate.
+        current_user: The authenticated user.
+        candidate_service: The candidate service.
+
+    Returns:
+        The updated candidate record.
+    """
+    candidate = await candidate_service.unassign_candidate(candidate_id)
+    return CandidateResponse.model_validate(candidate)
+
