@@ -80,20 +80,41 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="px-6 py-5 border-b">
-        <div className="flex items-center gap-3">
-          <div className="size-10 rounded-lg bg-muted flex items-center justify-center text-sm font-medium">
-            {process.employee_full_name?.split(" ").slice(-2).map((w) => w[0]).join("") || "?"}
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold">{process.employee_full_name}</h2>
-            {process.employee_code && (
-              <p className="text-sm text-muted-foreground">{process.employee_code}</p>
-            )}
+gh        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="size-10 rounded-lg bg-muted flex items-center justify-center text-sm font-medium mt-1">
+              {process.employee_full_name?.split(" ").slice(-2).map((w) => w[0]).join("") || "?"}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">{process.employee_full_name}</h2>
+                {process.employee_code && (
+                  <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                    {process.employee_code}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <span className="truncate">{process.employee_email}</span>
+                </div>
+                {(process.accepted_at || process.job_opening) && (
+                  <div className="flex items-center gap-3 text-xs">
+                    {process.accepted_at && (
+                      <span>Nhận việc: {new Date(process.accepted_at).toLocaleDateString("vi-VN")}</span>
+                    )}
+                    {process.job_opening && (
+                      <span>Vị trí: {process.job_opening}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Progress summary */}
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-5 flex items-center gap-3">
           <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
             <div
               className={cn(
@@ -104,11 +125,15 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
             />
           </div>
           <span className="text-sm text-muted-foreground">
-            {process.completed_count}/{process.total_count}
+            {process.completed_count}/{process.total_count} tasks
           </span>
-          {allDone && (
-            <span className="text-xs font-medium text-emerald-600">Hoàn thành!</span>
-          )}
+          {process.status === "complete" ? (
+            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Đã kích hoạt</span>
+          ) : allDone && process.missing_setup_fields && process.missing_setup_fields.length === 0 ? (
+            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Sẵn sàng kích hoạt</span>
+          ) : allDone && process.missing_setup_fields && process.missing_setup_fields.length > 0 ? (
+            <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">Thiếu setup data</span>
+          ) : null}
         </div>
       </div>
 

@@ -123,6 +123,7 @@ class OnboardingProcessListItem(BaseModel):
     employee_code: str | None
     completed_count: int
     total_count: int
+    missing_setup_fields: list[str] = Field(default_factory=list)
 
 
 class OnboardingProcessListResponse(BaseModel):
@@ -170,4 +171,7 @@ class OnboardingProcessDetailResponse(BaseModel):
     employee_code: str | None
     completed_count: int
     total_count: int
+    missing_setup_fields: list[str] = Field(default_factory=list)
+    accepted_at: str | None = None
+    job_opening: str | None = None
     tasks: list[OnboardingTaskResponse] = Field(default_factory=list)

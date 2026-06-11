@@ -102,6 +102,7 @@ class ProcessListItem:
         employee_code: The Employee code, if assigned.
         completed_count: Number of tasks with status ``done``.
         total_count: Total number of tasks in the checklist.
+        missing_setup_fields: List of missing setup field names.
     """
 
     process_id: UUID
@@ -112,6 +113,7 @@ class ProcessListItem:
     employee_code: str | None
     completed_count: int
     total_count: int
+    missing_setup_fields: list[str]
 
 
 @dataclass(frozen=True)
@@ -166,16 +168,20 @@ class ProcessDetail:
         process_id: The OnboardingProcess identifier.
         status: The process status (``in_progress`` or ``complete``).
         employee_id: The linked Employee record identifier.
+        candidate_id: The linked Candidate record identifier.
         completed_count: Number of tasks with status ``done``.
         total_count: Total number of tasks in the checklist.
+        missing_setup_fields: List of missing setup field names.
         tasks: The process's tasks ordered by ``order_index`` ascending.
     """
 
     process_id: UUID
     status: str
     employee_id: UUID
+    candidate_id: UUID
     completed_count: int
     total_count: int
+    missing_setup_fields: list[str]
     tasks: list[ProcessTaskDetail]
 
 
@@ -764,6 +770,15 @@ class OnboardingService:
             employee = None
             if callable(get_employee_by_id):
                 employee = await get_employee_by_id(process.employee_id)
+            missing_setup_fields = []
+            if employee:
+                if not employee.department_id:
+                    missing_setup_fields.append("department")
+                if not employee.position_id:
+                    missing_setup_fields.append("position")
+                if not employee.start_date:
+                    missing_setup_fields.append("start_date")
+
             items.append(
                 ProcessListItem(
                     process_id=process.id,
@@ -774,6 +789,7 @@ class OnboardingService:
                     employee_code=employee.employee_code if employee else None,
                     completed_count=completed_count,
                     total_count=total_count,
+                    missing_setup_fields=missing_setup_fields,
                 )
             )
 
@@ -821,12 +837,28 @@ class OnboardingService:
         ]
         completed_count = sum(1 for task in tasks if task.status == OnboardingTaskStatus.DONE.value)
 
+        employee = None
+        get_employee_by_id = getattr(self.employee_repo, "get_by_id", None)
+        if callable(get_employee_by_id):
+            employee = await get_employee_by_id(process.employee_id)
+
+        missing_setup_fields = []
+        if employee:
+            if not employee.department_id:
+                missing_setup_fields.append("department")
+            if not employee.position_id:
+                missing_setup_fields.append("position")
+            if not employee.start_date:
+                missing_setup_fields.append("start_date")
+
         return ProcessDetail(
             process_id=process.id,
             status=process.status,
             employee_id=process.employee_id,
+            candidate_id=process.candidate_id,
             completed_count=completed_count,
             total_count=len(tasks),
+            missing_setup_fields=missing_setup_fields,
             tasks=task_details,
         )
 
