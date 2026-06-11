@@ -6,7 +6,7 @@ Covers idempotency, active-only employee filtering, and config gating.
 from __future__ import annotations
 
 from datetime import date
-from unittest.mock import AsyncMock, MagicMock, PropertyMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -120,7 +120,12 @@ class TestSeedDemoAttendance:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_creates_records_for_active_employees(self, mock_session, monkeypatch, mock_active_employee):
+    async def test_creates_records_for_active_employees(
+        self,
+        mock_session,
+        monkeypatch,
+        mock_active_employee,
+    ):
         """Seed creates attendance records for active employees."""
         monkeypatch.setattr(
             "src.modules.identity.infrastructure.config.AuthSettings",
@@ -152,7 +157,12 @@ class TestSeedDemoAttendance:
         mock_session.flush.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_records_have_correct_structure(self, mock_session, monkeypatch, mock_active_employee):
+    async def test_records_have_correct_structure(
+        self,
+        mock_session,
+        monkeypatch,
+        mock_active_employee,
+    ):
         """Each created record has correct required fields."""
         monkeypatch.setattr(
             "src.modules.identity.infrastructure.config.AuthSettings",

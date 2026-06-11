@@ -240,15 +240,15 @@ class TestWorkDateBoundary:
     """Regression: work_date is always derived from Organization timezone."""
 
     @pytest.mark.asyncio
-    async def test_work_date_midnight_boundary(
-        self, attendance_service, mock_org_settings_repo
-    ):
+    async def test_work_date_midnight_boundary(self, attendance_service, mock_org_settings_repo):
         """Work date in UTC+7 timezone (Asia/Ho_Chi_Minh) is computed correctly."""
         mock_org_settings_repo.get_timezone = AsyncMock(return_value="Asia/Ho_Chi_Minh")
 
         work_date = await attendance_service._get_work_date()
 
-        expected = datetime.now(UTC).astimezone(tz=__import__("zoneinfo").ZoneInfo("Asia/Ho_Chi_Minh")).date()
+        from zoneinfo import ZoneInfo
+
+        expected = datetime.now(UTC).astimezone(tz=ZoneInfo("Asia/Ho_Chi_Minh")).date()
         assert work_date == expected, "work_date must be derived from Asia/Ho_Chi_Minh timezone"
 
 
@@ -283,6 +283,7 @@ class TestCorrectionAuditBoundary:
         # Return a deep-ish copy so in-place mutation by service doesn't
         # alter the snapshot we compare against.
         import copy
+
         mock_attendance_repo.get_by_id = AsyncMock(return_value=original)
         mock_attendance_repo.update = AsyncMock(side_effect=lambda r: copy.copy(r))
 
@@ -359,7 +360,7 @@ class TestEmptyStateBoundary:
         """Correcting a non-existent record raises ValueError."""
         mock_attendance_repo.get_by_id = AsyncMock(return_value=None)
 
-        from src.modules.identity.domain.entities import AuditActionType, User, UserRole
+        from src.modules.identity.domain.entities import User, UserRole
 
         admin = User(id=uuid4(), role=UserRole.ADMIN, email="admin@test.com")
         audit_service = AsyncMock()
