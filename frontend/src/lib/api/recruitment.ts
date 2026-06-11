@@ -455,3 +455,82 @@ export async function getMetrics(): Promise<MetricsResponse> {
   const res = await fetchWithTimeout(`${BASE}/metrics`);
   return handleResponse<MetricsResponse>(res);
 }
+
+// ---------------------------------------------------------------------------
+// Job Opening Types
+// ---------------------------------------------------------------------------
+
+export type JobOpeningStatus = "draft" | "open" | "closed" | "cancelled";
+
+export interface JobOpeningListItem {
+  id: string;
+  title: string;
+  position_id: string;
+  target_headcount: number;
+  status: JobOpeningStatus;
+  created_at: string;
+  total_candidates: number;
+  accepted_count: number;
+}
+
+export interface JobOpeningListResponse {
+  job_openings: JobOpeningListItem[];
+  total_count: number;
+  page: number;
+  page_size: number;
+}
+
+export interface JobOpeningDetail {
+  id: string;
+  title: string;
+  description: string;
+  position_id: string;
+  target_headcount: number;
+  status: JobOpeningStatus;
+  opened_at: string | null;
+  closed_at: string | null;
+  cancelled_at: string | null;
+  created_at: string;
+  updated_at: string;
+  candidate_counts: Record<string, number>;
+}
+
+export interface JobOpeningListParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  status?: JobOpeningStatus[];
+  position_id?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Job Opening API Functions
+// ---------------------------------------------------------------------------
+
+/** List Job Openings with pagination and optional filters. */
+export async function listJobOpenings(
+  params: JobOpeningListParams = {},
+): Promise<JobOpeningListResponse> {
+  const searchParams = new URLSearchParams();
+
+  if (params.page) searchParams.set("page", String(params.page));
+  if (params.page_size) searchParams.set("page_size", String(params.page_size));
+  if (params.search) searchParams.set("search", params.search);
+  if (params.status && params.status.length > 0) {
+    for (const s of params.status) {
+      searchParams.append("status", s);
+    }
+  }
+  if (params.position_id) searchParams.set("position_id", params.position_id);
+
+  const query = searchParams.toString();
+  const url = `${BASE}/job-openings${query ? `?${query}` : ""}`;
+  const res = await fetchWithTimeout(url);
+  return handleResponse<JobOpeningListResponse>(res);
+}
+
+/** Get a single Job Opening by ID. */
+export async function getJobOpening(id: string): Promise<JobOpeningDetail> {
+  const res = await fetchWithTimeout(`${BASE}/job-openings/${id}`);
+  return handleResponse<JobOpeningDetail>(res);
+}

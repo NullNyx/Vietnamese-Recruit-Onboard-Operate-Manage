@@ -330,3 +330,17 @@ class JobOpeningService:
             The updated JobOpening entity.
         """
         return await self._transition_status(job_opening_id, JobOpeningStatus.CANCELLED, "cancel")
+
+    async def get_candidate_counts(
+        self,
+        job_opening_ids: list[UUID],
+    ) -> dict[UUID, dict[str, int]]:
+        """Return per-status Candidate counts for a batch of Job Openings.
+
+        Args:
+            job_opening_ids: List of Job Opening UUIDs.
+
+        Returns:
+            Nested dict: {job_opening_id: {"new": 0, ...}}.
+        """
+        return await self.job_opening_repo.count_candidates_by_status(job_opening_ids)

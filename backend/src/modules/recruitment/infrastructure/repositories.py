@@ -470,3 +470,51 @@ class JobOpeningRepository:
         job_openings = list(result.scalars().all())
 
         return job_openings, total
+
+    async def count_candidates_by_status(
+        self,
+        job_opening_ids: list[UUID],
+    ) -> dict[UUID, dict[str, int]]:
+        """Return candidate counts per status for a batch of Job Opening IDs.
+
+        Returns a dict keyed by job_opening_id, where each value is a dict
+        mapping Candidate.status → count. Only counts Candidates with a
+        non-null job_opening_id.
+
+        Args:
+            job_opening_ids: List of Job Opening UUIDs to query.
+
+        Returns:
+            Nested dict: {job_opening_id: {"new": 3, "reviewing": 1, ...}}
+        """
+        if not job_opening_ids:
+            return {}
+
+        from collections import defaultdict
+
+        from sqlmodel import select as sqlmodel_select
+
+        stmt = (
+            sqlmodel_select(
+                Candidate.job_opening_id,
+                Candidate.status,
+                func.count().label("cnt"),
+            )
+            .where(Candidate.job_opening_id.in_(job_opening_ids))  # type: ignore[union-attr]
+            .group_by(Candidate.job_opening_id, Candidate.status)  # type: ignore[arg-type]
+            .order_by(Candidate.job_opening_id)  # type: ignore[arg-type]
+        )
+        result = await self.session.execute(stmt)
+        rows = result.all()
+
+        counts: dict[UUID, dict[str, int]] = defaultdict(dict)
+        for row in rows:
+            jo_id, status, cnt = row
+            counts[jo_id][status] = cnt
+
+        # Ensure every requested job_opening_id has at least an empty dict
+        for jo_id in job_opening_ids:
+            if jo_id not in counts:
+                counts[jo_id] = {}
+
+        return dict(counts)

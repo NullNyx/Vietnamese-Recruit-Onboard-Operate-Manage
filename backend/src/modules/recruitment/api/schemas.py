@@ -434,6 +434,7 @@ class JobOpeningResponse(BaseModel):
     cancelled_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+    candidate_counts: dict[str, int] = Field(default_factory=dict)
 
 
 class JobOpeningListItemResponse(BaseModel):
@@ -455,6 +456,8 @@ class JobOpeningListItemResponse(BaseModel):
     position_id: UUID
     target_headcount: int
     status: JobOpeningStatus
+    total_candidates: int = 0
+    accepted_count: int = 0
     created_at: datetime
 
 
