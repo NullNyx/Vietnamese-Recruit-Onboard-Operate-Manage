@@ -44,12 +44,12 @@ const JO_STATUS_LABELS: Record<JobOpeningStatus, string> = {
 
 const JO_STATUS_COLORS: Record<JobOpeningStatus, string> = {
   draft:
-    "bg-gray-100 text-gray-700800300",
-  open: "bg-green-100 text-green-800900200",
+    "bg-gray-100 text-gray-700",
+  open: "bg-green-100 text-green-800",
   closed:
-    "bg-yellow-100 text-yellow-800900200",
+    "bg-yellow-100 text-yellow-800",
   cancelled:
-    "bg-red-100 text-red-800900200",
+    "bg-red-100 text-red-800",
 };
 
 // ---------------------------------------------------------------------------
@@ -191,7 +191,6 @@ export default function JobOpeningsPage() {
               <TableBody>
                 {data.map((jo) => {
                   const remaining = jo.target_headcount - jo.accepted_count;
-                  const overfilled = remaining <= 0 && jo.accepted_count > 0;
                   return (
                     <TableRow
                       key={jo.id}
@@ -207,7 +206,7 @@ export default function JobOpeningsPage() {
                         }
                       }}
                     >
-                      <TableCell className="font-medium">
+                      <TableCell className="max-w-[200px] truncate font-medium">
                         {jo.title}
                       </TableCell>
                       <TableCell className="tabular-nums">
@@ -220,10 +219,16 @@ export default function JobOpeningsPage() {
                         <span
                           className={cn(
                             "tabular-nums",
-                            overfilled && "text-green-600 font-medium",
+                            remaining > 0 && "",
+                            remaining === 0 && "text-green-600 font-medium",
+                            remaining < 0 && "text-orange-600 font-medium",
                           )}
                         >
-                          {overfilled ? "Đã đủ" : remaining}
+                          {remaining > 0
+                            ? remaining
+                            : remaining === 0
+                              ? "Đã đủ"
+                              : `Vượt ${Math.abs(remaining)}`}
                         </span>
                       </TableCell>
                       <TableCell className="tabular-nums">
@@ -247,7 +252,6 @@ export default function JobOpeningsPage() {
           <div className="space-y-3 md:hidden">
             {data.map((jo) => {
               const remaining = jo.target_headcount - jo.accepted_count;
-              const overfilled = remaining <= 0 && jo.accepted_count > 0;
               return (
                 <Card
                   key={jo.id}
@@ -265,7 +269,7 @@ export default function JobOpeningsPage() {
                 >
                   <CardContent className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">{jo.title}</span>
+                      <span className="font-medium text-sm truncate">{jo.title}</span>
                       <Badge
                         className={JO_STATUS_COLORS[jo.status]}
                       >
@@ -287,10 +291,16 @@ export default function JobOpeningsPage() {
                         <span
                           className={cn(
                             "text-xs",
-                            overfilled && "text-green-600 font-medium",
+                            remaining > 0 && "",
+                            remaining === 0 && "text-green-600 font-medium",
+                            remaining < 0 && "text-orange-600 font-medium",
                           )}
                         >
-                          {overfilled ? "Đã đủ" : `Còn: ${remaining}`}
+                          {remaining > 0
+                            ? `Còn: ${remaining}`
+                            : remaining === 0
+                              ? "Đã đủ"
+                              : `Vượt ${Math.abs(remaining)}`}
                         </span>
                       </div>
                       <div>

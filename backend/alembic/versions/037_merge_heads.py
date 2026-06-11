@@ -5,9 +5,6 @@ Revises: 035, 036
 Create Date: 2026-06-11
 """
 
-from alembic import op
-import sqlalchemy as sa
-
 revision = "037"
 down_revision = ("035", "036")
 branch_labels = None

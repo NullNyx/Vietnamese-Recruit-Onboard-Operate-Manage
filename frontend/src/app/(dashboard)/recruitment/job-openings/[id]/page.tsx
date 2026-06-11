@@ -30,12 +30,12 @@ const JO_STATUS_LABELS: Record<JobOpeningStatus, string> = {
 
 const JO_STATUS_COLORS: Record<JobOpeningStatus, string> = {
   draft:
-    "bg-gray-100 text-gray-700800300",
-  open: "bg-green-100 text-green-800900200",
+    "bg-gray-100 text-gray-700",
+  open: "bg-green-100 text-green-800",
   closed:
-    "bg-yellow-100 text-yellow-800900200",
+    "bg-yellow-100 text-yellow-800",
   cancelled:
-    "bg-red-100 text-red-800900200",
+    "bg-red-100 text-red-800",
 };
 
 // ---------------------------------------------------------------------------
@@ -174,7 +174,6 @@ export default function JobOpeningDetailPage() {
   const totalCandidates = Object.values(counts).reduce((a, b) => a + b, 0);
   const acceptedCount = counts.accepted ?? 0;
   const remaining = jo.target_headcount - acceptedCount;
-  const overfilled = remaining <= 0 && acceptedCount > 0;
 
   return (
     <div className="p-6 space-y-6">
@@ -196,7 +195,7 @@ export default function JobOpeningDetailPage() {
 
       {/* Header */}
       <div className="space-y-3">
-        <h1 className="text-2xl font-bold text-foreground">{jo.title}</h1>
+        <h1 className="text-2xl font-bold text-foreground break-words">{jo.title}</h1>
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
           <span>Ngày tạo: {formatDate(jo.created_at)}</span>
           {jo.opened_at && (
@@ -228,9 +227,21 @@ export default function JobOpeningDetailPage() {
         <StatBox label="Chỉ tiêu" value={jo.target_headcount} />
         <StatBox label="Đã nhận" value={acceptedCount} />
         <StatBox
-          label="Còn thiếu"
-          value={overfilled ? "Đã đủ" : remaining}
-          highlight={overfilled ? "positive" : undefined}
+          label={
+            remaining > 0
+              ? "Còn thiếu"
+              : remaining === 0
+                ? "Đã đủ"
+                : "Vượt chỉ tiêu"
+          }
+          value={remaining <= 0 ? Math.abs(remaining) : remaining}
+          highlight={
+            remaining === 0
+              ? "positive"
+              : remaining < 0
+                ? "overfilled"
+                : undefined
+          }
         />
         <StatBox label="Tổng ứng viên" value={totalCandidates} />
       </div>
@@ -285,7 +296,7 @@ function StatBox({
 }: {
   label: string;
   value: string | number;
-  highlight?: "positive";
+  highlight?: "positive" | "overfilled";
 }) {
   return (
     <div className="rounded-md border p-4">
@@ -294,6 +305,7 @@ function StatBox({
         className={cn(
           "block text-2xl font-semibold tabular-nums mt-1",
           highlight === "positive" && "text-green-600",
+          highlight === "overfilled" && "text-orange-600",
         )}
       >
         {value}
