@@ -65,8 +65,11 @@ from src.modules.onboarding.api.schemas import (
 from src.modules.onboarding.application.onboarding_service import OnboardingService
 from src.modules.onboarding.container import get_onboarding_service
 from src.modules.onboarding.domain.enums import OnboardingStatus, OnboardingTaskStatus
-from src.modules.recruitment.infrastructure.repositories import CandidateRepository, JobOpeningRepository
 from src.modules.recruitment.domain.entities import Candidate
+from src.modules.recruitment.infrastructure.repositories import (
+    CandidateRepository,
+    JobOpeningRepository,
+)
 
 # ---------------------------------------------------------------------------
 # Type aliases for injected dependencies
