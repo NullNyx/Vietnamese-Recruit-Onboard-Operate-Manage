@@ -1013,7 +1013,7 @@ class CandidateService:
             CandidateAssignmentBlockedError: If the Candidate is in a terminal status.
             InvalidStatusTransitionError: If the Candidate is already assigned.
         """
-        candidate = await self._get_candidate_or_raise(candidate_id)
+        candidate = await self._get_candidate_locked_or_raise(candidate_id)
 
         if candidate.job_opening_id is not None:
             raise InvalidStatusTransitionError(
@@ -1030,7 +1030,6 @@ class CandidateService:
 
         candidate.job_opening_id = job_opening_id
         candidate = await self._candidate_repo.update(candidate)
-        await self._session.commit()
 
         await log_audit(
             session=self._session,
@@ -1071,7 +1070,7 @@ class CandidateService:
             CandidateAssignmentBlockedError: If the Candidate is in a terminal status.
             InvalidStatusTransitionError: If the Candidate is not currently assigned.
         """
-        candidate = await self._get_candidate_or_raise(candidate_id)
+        candidate = await self._get_candidate_locked_or_raise(candidate_id)
 
         if candidate.job_opening_id is None:
             raise InvalidStatusTransitionError(
@@ -1079,20 +1078,19 @@ class CandidateService:
                 attempted_action="reassign",
             )
 
-        if candidate.job_opening_id == new_job_opening_id:
-            return candidate
-
         if candidate.status not in self._ASSIGNABLE_STATUSES:
             raise CandidateAssignmentBlockedError(
                 f"Cannot reassign candidate {candidate_id} with status '{candidate.status}'"
             )
+
+        if candidate.job_opening_id == new_job_opening_id:
+            return candidate
 
         job_opening = await self._get_open_job_opening_or_raise(new_job_opening_id)
 
         previous_jo_id = candidate.job_opening_id
         candidate.job_opening_id = new_job_opening_id
         candidate = await self._candidate_repo.update(candidate)
-        await self._session.commit()
 
         await log_audit(
             session=self._session,
@@ -1145,7 +1143,6 @@ class CandidateService:
         previous_jo_id = candidate.job_opening_id
         candidate.job_opening_id = None
         candidate = await self._candidate_repo.update(candidate)
-        await self._session.commit()
 
         await log_audit(
             session=self._session,

@@ -256,6 +256,7 @@ class TestAssignCandidate:
         self, service, mock_candidate_repo
     ):
         mock_candidate_repo.get_by_id = AsyncMock(return_value=None)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=None)
 
         with pytest.raises(CandidateNotFoundError):
             await service.assign_candidate(uuid4(), uuid4())
