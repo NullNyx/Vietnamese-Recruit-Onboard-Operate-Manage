@@ -25,10 +25,12 @@ def upgrade() -> None:
     op.add_column("employee_requests", sa.Column("leave_type", sa.Text(), nullable=True))
     op.add_column("employee_requests", sa.Column("start_date", sa.Date(), nullable=True))
     op.add_column("employee_requests", sa.Column("end_date", sa.Date(), nullable=True))
+    op.create_index("ix_employee_requests_start_date", "employee_requests", ["start_date"])
 
 
 def downgrade() -> None:
     """Remove leave-specific columns."""
+    op.drop_index("ix_employee_requests_start_date", table_name="employee_requests")
     op.drop_column("employee_requests", "end_date")
     op.drop_column("employee_requests", "start_date")
     op.drop_column("employee_requests", "leave_type")

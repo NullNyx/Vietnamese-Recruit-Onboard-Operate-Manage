@@ -29,15 +29,6 @@ from src.modules.employee_request.api.schemas import (
 from src.modules.employee_request.application.leave_service import LeaveService
 from src.modules.employee_request.application.overtime_service import OvertimeService
 from src.modules.employee_request.container import get_leave_service, get_overtime_service
-from src.modules.employee_request.domain.exceptions import (
-    LeaveEndBeforeStartError,
-    LeaveOverlapError,
-    OvertimeEndBeforeStartError,
-    OvertimeOverlapError,
-    RequestNotCancellableError,
-    RequestNotFoundError,
-    RequestNotOwnedByEmployeeError,
-)
 
 employee_request_router = APIRouter(
     prefix="/api/employee-requests",
@@ -70,20 +61,14 @@ async def create_overtime(
     service: OvertimeService = Depends(get_overtime_service),
 ) -> OvertimeCreateResponse:
     """Create a new overtime request."""
-    try:
-        request = await service.create_overtime(
-            employee_id=employee.id,
-            work_date=body.work_date,
-            start_time=body.start_time,
-            end_time=body.end_time,
-            reason=body.reason,
-            project_or_task=body.project_or_task,
-        )
-    except OvertimeEndBeforeStartError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    except OvertimeOverlapError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-
+    request = await service.create_overtime(
+        employee_id=employee.id,
+        work_date=body.work_date,
+        start_time=body.start_time,
+        end_time=body.end_time,
+        reason=body.reason,
+        project_or_task=body.project_or_task,
+    )
     return OvertimeCreateResponse(
         message="Overtime request submitted",
         request=OvertimeResponse.model_validate(request),
@@ -101,19 +86,11 @@ async def cancel_overtime(
     service: OvertimeService = Depends(get_overtime_service),
 ) -> OvertimeCancelResponse:
     """Cancel own submitted overtime request."""
-    try:
-        request = await service.cancel_overtime(
-            request_id=request_id,
-            employee_id=employee.id,
-            cancellation_reason=body.cancellation_reason,
-        )
-    except RequestNotFoundError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    except RequestNotOwnedByEmployeeError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    except RequestNotCancellableError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-
+    request = await service.cancel_overtime(
+        request_id=request_id,
+        employee_id=employee.id,
+        cancellation_reason=body.cancellation_reason,
+    )
     return OvertimeCancelResponse(
         message="Overtime request cancelled",
         request=OvertimeResponse.model_validate(request),
@@ -151,21 +128,15 @@ async def create_leave(
     service: LeaveService = Depends(get_leave_service),
 ) -> LeaveCreateResponse:
     """Create a new leave request."""
-    try:
-        from src.modules.employee_request.domain.enums import LeaveType
+    from src.modules.employee_request.domain.enums import LeaveType
 
-        request = await service.create_leave(
-            employee_id=employee.id,
-            leave_type=LeaveType(body.leave_type),
-            start_date=body.start_date,
-            end_date=body.end_date,
-            reason=body.reason,
-        )
-    except LeaveEndBeforeStartError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    except LeaveOverlapError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-
+    request = await service.create_leave(
+        employee_id=employee.id,
+        leave_type=LeaveType(body.leave_type),
+        start_date=body.start_date,
+        end_date=body.end_date,
+        reason=body.reason,
+    )
     return LeaveCreateResponse(
         message="Leave request submitted",
         request=LeaveResponse.model_validate(request),
@@ -183,19 +154,11 @@ async def cancel_leave(
     service: LeaveService = Depends(get_leave_service),
 ) -> LeaveCancelResponse:
     """Cancel own submitted leave request."""
-    try:
-        request = await service.cancel_leave(
-            request_id=request_id,
-            employee_id=employee.id,
-            cancellation_reason=body.cancellation_reason,
-        )
-    except RequestNotFoundError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    except RequestNotOwnedByEmployeeError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    except RequestNotCancellableError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-
+    request = await service.cancel_leave(
+        request_id=request_id,
+        employee_id=employee.id,
+        cancellation_reason=body.cancellation_reason,
+    )
     return LeaveCancelResponse(
         message="Leave request cancelled",
         request=LeaveResponse.model_validate(request),
