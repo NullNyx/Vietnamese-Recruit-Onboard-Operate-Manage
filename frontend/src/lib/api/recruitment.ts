@@ -264,7 +264,7 @@ export async function listCandidates(
 
   if (params.page !== undefined) searchParams.set("page", String(params.page));
   if (params.page_size !== undefined) searchParams.set("page_size", String(params.page_size));
-  if (params.search !== undefined) searchParams.set("search", params.search);
+  if (params.search) searchParams.set("search", params.search);
   if (params.status && params.status.length > 0) {
     for (const s of params.status) {
       searchParams.append("status", s);
@@ -515,13 +515,13 @@ export async function listJobOpenings(
   const searchParams = new URLSearchParams();
   if (params.page !== undefined) searchParams.set("page", String(params.page));
   if (params.page_size !== undefined) searchParams.set("page_size", String(params.page_size));
-  if (params.search !== undefined) searchParams.set("search", params.search);
+  if (params.search) searchParams.set("search", params.search);
   if (params.status && params.status.length > 0) {
     for (const s of params.status) {
       searchParams.append("status", s);
     }
   }
-  if (params.position_id !== undefined) searchParams.set("position_id", params.position_id);
+  if (params.position_id) searchParams.set("position_id", params.position_id);
   const query = searchParams.toString();
   const url = `${BASE}/job-openings${query ? `?${query}` : ""}`;
   const res = await fetchWithTimeout(url);

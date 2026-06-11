@@ -290,7 +290,7 @@ export default function JobOpeningsPage() {
                       </Badge>
                     </div>
                     {jo.position_name && (
-                      <span className="text-xs text-muted-foreground">{jo.position_name}</span>
+                      <span className="text-xs text-muted-foreground truncate block">{jo.position_name}</span>
                     )}
                     <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                       <div>
