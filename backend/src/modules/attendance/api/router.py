@@ -137,13 +137,19 @@ TRUSTED_PROXIES: frozenset[str] = frozenset({"127.0.0.1", "::1"})
 
 async def get_client_ip(request: Request) -> str:
     """Extract client IP, respecting X-Forwarded-For from trusted proxies."""
+    remote_addr = request.client.host if request.client else ""
     forwarded_for = request.headers.get("x-forwarded-for")
-    if forwarded_for:
-        first_ip = forwarded_for.split(",")[0].strip()
-        remote_addr = request.client.host if request.client else ""
-        if remote_addr in TRUSTED_PROXIES:
-            return first_ip
-    return request.client.host if request.client else "127.0.0.1"
+
+    if forwarded_for and remote_addr in TRUSTED_PROXIES:
+        ips = [ip.strip() for ip in forwarded_for.split(",") if ip.strip()]
+        # Traverse IPs from right to left, stopping at the first untrusted IP
+        for ip in reversed(ips):
+            if ip not in TRUSTED_PROXIES:
+                return ip
+        # If all IPs in the chain are trusted, the real client is the leftmost one
+        return ips[0]
+
+    return remote_addr if remote_addr else "127.0.0.1"
 
 
 def _require_active_employee(
