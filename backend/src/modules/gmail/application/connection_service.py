@@ -224,7 +224,7 @@ class ConnectionService:
                     },
                 )
         except httpx.HTTPError as exc:
-            logger.error("OAuth2 token exchange HTTP error: %s", exc)
+            logger.error("OAuth2 token exchange HTTP error: %s", type(exc).__name__)
             raise GmailConnectFailedException("Failed to connect to Google token endpoint") from exc
 
         if response.status_code != 200:
