@@ -79,38 +79,9 @@ def upgrade() -> None:
         ["id"],
     )
 
-    # Add nullable FK from candidates to job_openings (Candidate assignment per ADR-0014).
-    op.add_column(
-        "candidates",
-        sa.Column(
-            "job_opening_id",
-            postgresql.UUID(as_uuid=True),
-            nullable=True,
-        ),
-    )
-    op.create_index(
-        "ix_candidates_job_opening_id",
-        "candidates",
-        ["job_opening_id"],
-    )
-    op.create_foreign_key(
-        "fk_candidates_job_opening_id",
-        "candidates",
-        "job_openings",
-        ["job_opening_id"],
-        ["id"],
-    )
-
 
 def downgrade() -> None:
-    """Drop job_openings table and FK from candidates."""
-    op.drop_constraint(
-        "fk_candidates_job_opening_id",
-        table_name="candidates",
-    )
-    op.drop_index("ix_candidates_job_opening_id", table_name="candidates")
-    op.drop_column("candidates", "job_opening_id")
-
+    """Drop job_openings table."""
     op.drop_constraint(
         "fk_job_openings_position_id",
         table_name="job_openings",

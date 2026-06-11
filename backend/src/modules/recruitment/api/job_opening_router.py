@@ -185,6 +185,7 @@ async def list_job_openings(
     position_names: dict[str, str] = {}
     if position_ids:
         from sqlmodel import col as sa_col
+
         pos_stmt = sqlmodel_select(Position).where(sa_col(Position.id).in_(position_ids))
         pos_result = await session.execute(pos_stmt)
         for p in pos_result.scalars().all():
