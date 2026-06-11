@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -164,7 +165,7 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
         return False
 
     # Compute dynamic work week: Monday of current week + 4 days.
-    today = date.today()
+    today = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
     monday = today - timedelta(days=today.weekday())
 
     # Idempotent: skip if records already exist for these employees + dates.
@@ -179,7 +180,7 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
         )
     )
     count_result = await session.execute(count_stmt)
-    if count_result.scalar_one() > 0:
+    if count_result.scalar_one() >= len(emp_ids) * 4:
         logger.info("Attendance demo seed skipped: existing records found for target week.")
         return False
 
@@ -192,7 +193,8 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
 
     def _hcm_utc(d: date, hour: int, minute: int = 0) -> datetime:
         """Convert Asia/Ho_Chi_Minh time (UTC+7) to aware UTC datetime."""
-        return datetime(d.year, d.month, d.day, hour - 7, minute, 0, tzinfo=UTC)
+        hcm = ZoneInfo("Asia/Ho_Chi_Minh")
+        return datetime(d.year, d.month, d.day, hour, minute, 0, tzinfo=hcm).astimezone(UTC)
 
     day1 = monday
     day2 = monday + timedelta(days=1)

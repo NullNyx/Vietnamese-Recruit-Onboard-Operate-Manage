@@ -244,11 +244,18 @@ class TestWorkDateBoundary:
         """Work date in UTC+7 timezone (Asia/Ho_Chi_Minh) is computed correctly."""
         mock_org_settings_repo.get_timezone = AsyncMock(return_value="Asia/Ho_Chi_Minh")
 
-        work_date = await attendance_service._get_work_date()
-
+        from unittest.mock import patch
         from zoneinfo import ZoneInfo
 
-        expected = datetime.now(UTC).astimezone(tz=ZoneInfo("Asia/Ho_Chi_Minh")).date()
+        frozen = datetime(2026, 6, 11, 17, 0, 0, tzinfo=UTC)
+        # Patch datetime.now in the service module to return frozen time
+        module_path = attendance_service.__module__
+        with patch(f"{module_path}.datetime") as mock_dt:
+            mock_dt.now.return_value = frozen
+            mock_dt.UTC = UTC
+            work_date = await attendance_service._get_work_date()
+
+        expected = frozen.astimezone(tz=ZoneInfo("Asia/Ho_Chi_Minh")).date()
         assert work_date == expected, "work_date must be derived from Asia/Ho_Chi_Minh timezone"
 
 
@@ -319,6 +326,10 @@ class TestCorrectionAuditBoundary:
         details = call_args[1]["details"]
         assert details["correction_reason"] == "Late arrival adjusted"
         assert details["record_id"] == str(original.id)
+        assert details["previous_check_in_at"] == previous_check_in_at.isoformat()
+        assert details["previous_check_out_at"] == previous_check_out_at.isoformat()
+        assert details["new_check_in_at"] == datetime(2026, 6, 1, 2, 0, 0, tzinfo=UTC).isoformat()
+        assert details["new_check_out_at"] == datetime(2026, 6, 1, 11, 0, 0, tzinfo=UTC).isoformat()
 
 
 # ---------------------------------------------------------------------------

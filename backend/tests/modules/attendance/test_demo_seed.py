@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -30,6 +31,15 @@ def mock_active_employee():
     emp = MagicMock()
     emp.id = uuid4()
     emp.is_active = True
+    return emp
+
+
+@pytest.fixture
+def mock_inactive_employee():
+    """Return a minimal inactive employee stub."""
+    emp = MagicMock()
+    emp.id = uuid4()
+    emp.is_active = False
     return emp
 
 
@@ -91,7 +101,7 @@ class TestSeedDemoAttendance:
                 result.scalars.return_value = scalars
             else:
                 # Count query → return > 0
-                result.scalar_one.return_value = 1
+                result.scalar_one.return_value = 4
             return result
 
         mock_session.execute.side_effect = side_effect
@@ -119,6 +129,52 @@ class TestSeedDemoAttendance:
 
         result = await seed_demo_attendance(mock_session)
         assert result is False
+
+    @pytest.mark.asyncio
+    async def test_skips_inactive_employees(
+        self,
+        mock_session,
+        monkeypatch,
+        mock_active_employee,
+        mock_inactive_employee,
+    ):
+        """Seed does not create records for inactive employees."""
+        monkeypatch.setattr(
+            "src.modules.identity.infrastructure.config.AuthSettings",
+            lambda: MagicMock(auto_seed_sample_data=True),
+        )
+
+        call_count = 0
+
+        async def side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            result = MagicMock()
+            if call_count == 1:
+                # Employee query: mock simulates SQL WHERE is_active.is_(True)
+                # Only active employee returned; inactive employee filtered out
+                scalars = MagicMock()
+                scalars.all.return_value = [mock_active_employee]
+                result.scalars.return_value = scalars
+            else:
+                # Count query → return 0 (no existing records)
+                result.scalar_one.return_value = 0
+            return result
+
+        mock_session.execute.side_effect = side_effect
+
+        result = await seed_demo_attendance(mock_session)
+        assert result is True
+        mock_session.add_all.assert_called_once()
+        added_records = mock_session.add_all.call_args[0][0]
+        # Records created only for the active employee (not inactive)
+        assert len(added_records) == 4
+        for record in added_records:
+            assert record.employee_id == mock_active_employee.id
+        # Verify the employee query included the is_active filter
+        call_stmt = mock_session.execute.call_args_list[0][0][0]
+        stmt_str = str(call_stmt)
+        assert "is_active" in stmt_str
 
     @pytest.mark.asyncio
     async def test_creates_records_for_active_employees(
@@ -202,7 +258,9 @@ class TestSeedDemoAttendance:
             assert record.source.value == "web"
 
         # Day 4 (Thursday = Monday + 3) has no check_out (incomplete)
-        today = date.today()
+        from datetime import UTC, datetime
+
+        today = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
         monday = today - timedelta(days=today.weekday())
         thursday = monday + timedelta(days=3)
         incomplete = [r for r in added_records if r.check_out_at is None]
