@@ -5,7 +5,7 @@ Covers idempotency, active-only employee filtering, and config gating.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -20,7 +20,7 @@ def mock_session():
     session = AsyncMock()
     session.execute = AsyncMock()
     session.flush = AsyncMock()
-    session.add_all = AsyncMock()
+    session.add_all = MagicMock()
     return session
 
 
@@ -71,19 +71,28 @@ class TestSeedDemoAttendance:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_skips_when_records_exist(self, mock_session, monkeypatch):
-        """Seed returns False when attendance records already exist."""
+    async def test_skips_when_records_exist(self, mock_session, monkeypatch, mock_active_employee):
+        """Seed returns False when records exist for the target week."""
         monkeypatch.setattr(
             "src.modules.identity.infrastructure.config.AuthSettings",
             lambda: MagicMock(auto_seed_sample_data=True),
         )
 
-        # Simulate > 0 existing attendance records
-        scalar_result = MagicMock()
-        scalar_result.scalar_one.return_value = 1
+        call_count = 0
 
         async def side_effect(*args, **kwargs):
-            return scalar_result
+            nonlocal call_count
+            call_count += 1
+            result = MagicMock()
+            if call_count == 1:
+                # Employee query → return active employees
+                scalars = MagicMock()
+                scalars.all.return_value = [mock_active_employee]
+                result.scalars.return_value = scalars
+            else:
+                # Count query → return > 0
+                result.scalar_one.return_value = 1
+            return result
 
         mock_session.execute.side_effect = side_effect
 
@@ -98,21 +107,13 @@ class TestSeedDemoAttendance:
             lambda: MagicMock(auto_seed_sample_data=True),
         )
 
-        # First call: count = 0 (no existing records)
-        # Second call: employee query returns empty list
-        call_count = 0
-
+        # Employee query returns empty list → skip immediately, no count query.
         async def side_effect(*args, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            scalar_result = MagicMock()
-            if call_count == 1:
-                scalar_result.scalar_one.return_value = 0
-            else:
-                scalars_part = MagicMock()
-                scalars_part.all.return_value = []
-                scalar_result.scalars.return_value = scalars_part
-            return scalar_result
+            result = MagicMock()
+            scalars = MagicMock()
+            scalars.all.return_value = []
+            result.scalars.return_value = scalars
+            return result
 
         mock_session.execute.side_effect = side_effect
 
@@ -137,14 +138,16 @@ class TestSeedDemoAttendance:
         async def side_effect(*args, **kwargs):
             nonlocal call_count
             call_count += 1
-            scalar_result = MagicMock()
+            result = MagicMock()
             if call_count == 1:
-                scalar_result.scalar_one.return_value = 0
+                # Employee query → return active employees
+                scalars = MagicMock()
+                scalars.all.return_value = [mock_active_employee]
+                result.scalars.return_value = scalars
             else:
-                scalars_part = MagicMock()
-                scalars_part.all.return_value = [mock_active_employee]
-                scalar_result.scalars.return_value = scalars_part
-            return scalar_result
+                # Count query → return 0 (no existing records)
+                result.scalar_one.return_value = 0
+            return result
 
         mock_session.execute.side_effect = side_effect
 
@@ -174,14 +177,16 @@ class TestSeedDemoAttendance:
         async def side_effect(*args, **kwargs):
             nonlocal call_count
             call_count += 1
-            scalar_result = MagicMock()
+            result = MagicMock()
             if call_count == 1:
-                scalar_result.scalar_one.return_value = 0
+                # Employee query → return active employees
+                scalars = MagicMock()
+                scalars.all.return_value = [mock_active_employee]
+                result.scalars.return_value = scalars
             else:
-                scalars_part = MagicMock()
-                scalars_part.all.return_value = [mock_active_employee]
-                scalar_result.scalars.return_value = scalars_part
-            return scalar_result
+                # Count query → return 0 (no existing records)
+                result.scalar_one.return_value = 0
+            return result
 
         mock_session.execute.side_effect = side_effect
 
@@ -196,7 +201,10 @@ class TestSeedDemoAttendance:
             assert record.check_in_ip == "192.168.1.100"
             assert record.source.value == "web"
 
-        # Day 4 has no check_out (incomplete)
+        # Day 4 (Thursday = Monday + 3) has no check_out (incomplete)
+        today = date.today()
+        monday = today - timedelta(days=today.weekday())
+        thursday = monday + timedelta(days=3)
         incomplete = [r for r in added_records if r.check_out_at is None]
         assert len(incomplete) == 1
-        assert incomplete[0].work_date == date(2026, 6, 4)
+        assert incomplete[0].work_date == thursday

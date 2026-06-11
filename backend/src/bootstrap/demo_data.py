@@ -8,7 +8,7 @@ plus demo attendance records for active employees.
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -137,11 +137,11 @@ async def seed_demo_data(session: AsyncSession) -> bool:
 async def seed_demo_attendance(session: AsyncSession) -> bool:
     """Seed demo attendance records for active employees.
 
-    Creates Attendance Records for the work week of June 1-5, 2026 (Mon-Fri)
+    Creates Attendance Records for the current work week (Mon-Thu)
     to demonstrate both completed and incomplete states.  Skips when the
-    config flag is off, records already exist, or no active employees are found.
-    Inactive employees are intentionally excluded -- attendance is Employee
-    Self-Service data.
+    config flag is off, records already exist for the target week, or no
+    active employees are found.  Inactive employees are intentionally
+    excluded -- attendance is Employee Self-Service data.
     """
     from src.modules.identity.infrastructure.config import AuthSettings
 
@@ -152,10 +152,7 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
 
     from src.modules.attendance.domain.entities import AttendanceRecord, AttendanceSource
 
-    # Idempotent: skip if attendance records already exist.
-    if await _count_rows(session, AttendanceRecord) > 0:
-        logger.info("Attendance demo seed skipped: existing records found.")
-        return False
+    from datetime import UTC, datetime
 
     # Only active employees -- Employee Self-Service data.
     statement = select(Employee).where(Employee.is_active.is_(True))  # type: ignore[arg-type]
@@ -166,35 +163,47 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
         logger.info("Attendance demo seed skipped: no active employees.")
         return False
 
-    from datetime import UTC, datetime
+    # Compute dynamic work week: Monday of current week + 4 days.
+    today = date.today()
+    monday = today - timedelta(days=today.weekday())
 
-    # Demo work week: June 1-5, 2026 (Mon-Fri).
+    # Idempotent: skip if records already exist for these employees + dates.
+    emp_ids = [emp.id for emp in active_employees]
+    week_end = monday + timedelta(days=4)
+    count_stmt = (
+        select(func.count())
+        .select_from(AttendanceRecord)
+        .where(
+            AttendanceRecord.employee_id.in_(emp_ids),  # type: ignore[arg-type]
+            AttendanceRecord.work_date.between(monday, week_end),
+        )
+    )
+    count_result = await session.execute(count_stmt)
+    if count_result.scalar_one() > 0:
+        logger.info("Attendance demo seed skipped: existing records found for target week.")
+        return False
+
+    # Demo work week: Monday - Thursday of current week.
     # Timestamps stored in UTC; work_date is the date in
     # Asia/Ho_Chi_Minh (UTC+7).
     # Day 1-3: completed (check-in + check-out).
     # Day 4:   checked-in only (incomplete).
     # Day 5:   no record (absent -- implicit state).
+
+    def _hcm_utc(d: date, hour: int, minute: int = 0) -> datetime:
+        """Convert Asia/Ho_Chi_Minh time (UTC+7) to aware UTC datetime."""
+        return datetime(d.year, d.month, d.day, hour - 7, minute, 0, tzinfo=UTC)
+
+    day1 = monday
+    day2 = monday + timedelta(days=1)
+    day3 = monday + timedelta(days=2)
+    day4 = monday + timedelta(days=3)
+
     week_data: list[tuple[date, datetime, datetime | None]] = [
-        (
-            date(2026, 6, 1),
-            datetime(2026, 6, 1, 1, 0, 0, tzinfo=UTC),
-            datetime(2026, 6, 1, 10, 30, 0, tzinfo=UTC),
-        ),  # 08:00-17:30 HCM
-        (
-            date(2026, 6, 2),
-            datetime(2026, 6, 2, 1, 15, 0, tzinfo=UTC),
-            datetime(2026, 6, 2, 10, 45, 0, tzinfo=UTC),
-        ),  # 08:15-17:45 HCM
-        (
-            date(2026, 6, 3),
-            datetime(2026, 6, 3, 0, 55, 0, tzinfo=UTC),
-            datetime(2026, 6, 3, 11, 0, 0, tzinfo=UTC),
-        ),  # 07:55-18:00 HCM
-        (
-            date(2026, 6, 4),
-            datetime(2026, 6, 4, 2, 0, 0, tzinfo=UTC),
-            None,
-        ),  # 09:00 HCM, no check-out
+        (day1, _hcm_utc(day1, 8, 0),  _hcm_utc(day1, 17, 30)),   # 08:00-17:30 HCM
+        (day2, _hcm_utc(day2, 8, 15), _hcm_utc(day2, 17, 45)),   # 08:15-17:45 HCM
+        (day3, _hcm_utc(day3, 7, 55), _hcm_utc(day3, 18, 0)),    # 07:55-18:00 HCM
+        (day4, _hcm_utc(day4, 9, 0),  None),                      # 09:00 HCM, no check-out
     ]
 
     records: list[AttendanceRecord] = []
