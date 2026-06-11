@@ -14,8 +14,8 @@ from uuid import uuid4
 import pytest
 
 from src.modules.recruitment.application.job_opening_service import (
-    JobOpeningService,
     _JOB_OPENING_TRANSITIONS,
+    JobOpeningService,
 )
 from src.modules.recruitment.domain.entities import JobOpening
 from src.modules.recruitment.domain.enums import JobOpeningStatus
@@ -24,7 +24,6 @@ from src.modules.recruitment.domain.exceptions import (
     JobOpeningNotFoundError,
 )
 from src.modules.recruitment.infrastructure.repositories import JobOpeningRepository
-
 
 # ─── Fixtures ──────────────────────────────────────────────────────────
 
@@ -44,7 +43,9 @@ def mock_session():
     session.commit = AsyncMock()
     # Default to returning a position for create tests
     mock_position = SimpleNamespace(id=uuid4(), name="Senior Developer")
-    session.execute = AsyncMock(return_value=MagicMock(scalars=MagicMock(first=MagicMock(return_value=mock_position))))
+    session.execute = AsyncMock(
+        return_value=MagicMock(scalars=MagicMock(first=MagicMock(return_value=mock_position)))
+    )
     return session
 
 
@@ -463,7 +464,10 @@ class TestAuditLogging:
         # Verify session.add was called with audit log
         assert mock_session.add.called
         # Check the add calls for audit log entry
-        audit_calls = [c for c in mock_session.add.call_args_list if c[0] and hasattr(c[0][0], 'operation_type')]
+        audit_calls = [
+            c for c in mock_session.add.call_args_list
+            if c[0] and hasattr(c[0][0], "operation_type")
+        ]
         assert len(audit_calls) >= 1
         assert audit_calls[0][0][0].operation_type == "job_opening_create"
 
@@ -489,7 +493,10 @@ class TestAuditLogging:
         await service.open_job_opening(job_opening.id)
 
         # Verify audit log was emitted
-        audit_calls = [c for c in mock_session.add.call_args_list if c[0] and hasattr(c[0][0], 'operation_type')]
+        audit_calls = [
+            c for c in mock_session.add.call_args_list
+            if c[0] and hasattr(c[0][0], "operation_type")
+        ]
         assert len(audit_calls) >= 1
         assert audit_calls[0][0][0].operation_type == "job_opening_open"
 
@@ -516,7 +523,10 @@ class TestAuditLogging:
         await service.close_job_opening(job_opening.id)
 
         # Verify audit log was emitted
-        audit_calls = [c for c in mock_session.add.call_args_list if c[0] and hasattr(c[0][0], 'operation_type')]
+        audit_calls = [
+            c for c in mock_session.add.call_args_list
+            if c[0] and hasattr(c[0][0], "operation_type")
+        ]
         assert len(audit_calls) >= 1
         assert audit_calls[0][0][0].operation_type == "job_opening_close"
 
@@ -542,9 +552,44 @@ class TestAuditLogging:
         await service.cancel_job_opening(job_opening.id)
 
         # Verify audit log was emitted
-        audit_calls = [c for c in mock_session.add.call_args_list if c[0] and hasattr(c[0][0], 'operation_type')]
+        audit_calls = [
+            c for c in mock_session.add.call_args_list
+            if c[0] and hasattr(c[0][0], "operation_type")
+        ]
         assert len(audit_calls) >= 1
         assert audit_calls[0][0][0].operation_type == "job_opening_cancel"
+
+    async def test_update_emits_audit_log(
+        self, mock_session: AsyncMock, mock_job_opening_repo: AsyncMock, user_id: uuid4
+    ):
+        """Update should emit an audit log entry."""
+        job_opening = JobOpening(
+            id=uuid4(),
+            title="Old Title",
+            position_id=uuid4(),
+            target_headcount=2,
+            status=JobOpeningStatus.DRAFT,
+        )
+        mock_job_opening_repo.get_by_id = AsyncMock(return_value=job_opening)
+
+        service = JobOpeningService(
+            session=mock_session,
+            job_opening_repo=mock_job_opening_repo,
+            user_id=user_id,
+        )
+
+        await service.update_job_opening(
+            job_opening_id=job_opening.id,
+            title="New Title",
+        )
+
+        # Verify audit log was emitted
+        audit_calls = [
+            c for c in mock_session.add.call_args_list
+            if c[0] and hasattr(c[0][0], "operation_type")
+        ]
+        assert len(audit_calls) >= 1
+        assert audit_calls[0][0][0].operation_type == "job_opening_update"
 
 
 class TestTimestampCleanup:

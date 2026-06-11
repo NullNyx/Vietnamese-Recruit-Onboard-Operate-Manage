@@ -1,13 +1,14 @@
 """Add job_openings table.
 
 Revision ID: 035
-Revises: 033
+Revises: 034
 Create Date: 2026-06-10
 """
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 # revision identifiers
 revision = "035"
