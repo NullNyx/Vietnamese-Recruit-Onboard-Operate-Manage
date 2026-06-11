@@ -139,3 +139,33 @@ class OnboardingTaskRepository:
         )
         result = await self.session.execute(statement)
         return {str(status): int(count) for status, count in result.all()}
+
+    async def count_by_status_for_processes(
+        self, process_ids: list[UUID]
+    ) -> dict[UUID, dict[str, int]]:
+        """Count tasks grouped by process ID and status.
+
+        Allows bulk fetching of status counts for multiple processes in a single
+        query, avoiding N+1 issues when listing processes.
+
+        Args:
+            process_ids: A list of process UUIDs to fetch counts for.
+
+        Returns:
+            A dictionary mapping process UUID to a dict of status strings to integer counts.
+        """
+        if not process_ids:
+            return {}
+
+        statement = (
+            select(OnboardingTask.process_id, OnboardingTask.status, func.count())
+            .where(OnboardingTask.process_id.in_(process_ids))  # type: ignore[attr-defined]
+            .group_by(OnboardingTask.process_id, OnboardingTask.status)  # type: ignore[arg-type]
+        )
+        result = await self.session.execute(statement)
+
+        counts_by_process: dict[UUID, dict[str, int]] = {pid: {} for pid in process_ids}
+        for process_id, status, count in result.all():
+            counts_by_process[process_id][str(status)] = int(count)
+
+        return counts_by_process
