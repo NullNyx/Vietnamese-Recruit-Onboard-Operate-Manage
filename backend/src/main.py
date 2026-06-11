@@ -105,6 +105,23 @@ async def _seed_demo_data() -> None:
             await session.commit()
 
 
+async def _seed_demo_attendance() -> None:
+    """Seed demo attendance records when enabled."""
+    from src.modules.identity.container import _get_async_session_maker, get_settings
+
+    settings = get_settings()
+    if not settings.auto_seed_sample_data:
+        return
+
+    from src.bootstrap.demo_data import seed_demo_attendance
+
+    session_maker = _get_async_session_maker()
+    async with session_maker() as session:
+        seeded = await seed_demo_attendance(session)
+        if seeded:
+            await session.commit()
+
+
 async def _seed_assistant_tool_configs() -> None:
     """Seed default assistant tool configs at startup.
 
@@ -145,6 +162,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     await _bootstrap_super_admin()
     await _seed_demo_data()
+    await _seed_demo_attendance()
     await _seed_assistant_tool_configs()
     yield
     # Shutdown (nothing to clean up currently)
