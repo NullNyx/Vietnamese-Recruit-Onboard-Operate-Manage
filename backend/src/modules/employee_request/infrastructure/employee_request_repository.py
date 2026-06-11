@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.employee_request.domain.entities import EmployeeRequest
-from src.modules.employee_request.domain.enums import RequestStatus
+from src.modules.employee_request.domain.enums import RequestStatus, RequestType
 
 
 class EmployeeRequestRepository:
@@ -87,6 +87,7 @@ class EmployeeRequestRepository:
         statement = select(EmployeeRequest).where(
             EmployeeRequest.employee_id == employee_id,  # type: ignore[arg-type]
             EmployeeRequest.work_date == work_date,  # type: ignore[arg-type]
+            EmployeeRequest.request_type == RequestType.OVERTIME,  # type: ignore[arg-type]
             EmployeeRequest.status.in_(
                 [  # type: ignore[arg-type]
                     RequestStatus.SUBMITTED,

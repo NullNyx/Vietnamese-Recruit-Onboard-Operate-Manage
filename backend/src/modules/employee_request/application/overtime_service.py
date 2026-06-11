@@ -59,7 +59,7 @@ class OvertimeService:
             OvertimeEndBeforeStartError: If end_time <= start_time.
             OvertimeOverlapError: If overlapping request exists on same date.
         """
-        if end_time == start_time:
+        if end_time <= start_time:
             raise OvertimeEndBeforeStartError()
 
         # Check overlap
@@ -120,6 +120,9 @@ class OvertimeService:
 
         if request.employee_id != employee_id:
             raise RequestNotOwnedByEmployeeError()
+
+        if request.request_type != RequestType.OVERTIME:
+            raise RequestNotCancellableError()
 
         if request.status != RequestStatus.SUBMITTED:
             raise RequestNotCancellableError()

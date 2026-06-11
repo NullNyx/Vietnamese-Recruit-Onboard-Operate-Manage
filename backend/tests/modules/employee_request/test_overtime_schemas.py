@@ -57,3 +57,23 @@ class TestOvertimeCreateRequest:
                 end_time=time(20, 30),
                 reason="   ",
             )
+
+    def test_rejects_equal_start_end(self):
+        """end_time == start_time is rejected by schema."""
+        with pytest.raises(ValidationError):
+            OvertimeCreateRequest(
+                work_date=date(2026, 6, 11),
+                start_time=time(18, 0),
+                end_time=time(18, 0),
+                reason="Equal times",
+            )
+
+    def test_rejects_end_before_start(self):
+        """end_time before start_time is rejected by schema."""
+        with pytest.raises(ValidationError):
+            OvertimeCreateRequest(
+                work_date=date(2026, 6, 11),
+                start_time=time(18, 0),
+                end_time=time(17, 0),
+                reason="End before start",
+            )

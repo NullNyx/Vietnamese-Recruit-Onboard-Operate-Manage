@@ -96,26 +96,21 @@ class TestCreateOvertime:
         assert result.duration_minutes == 150
 
     @pytest.mark.asyncio
-    async def test_duration_handles_midnight(
+    async def test_rejects_end_before_start_midnight(
         self,
         service,
         mock_repo,
         employee_id,
     ):
-        """Duration spans midnight correctly."""
-        mock_repo.find_overlapping_overtime = AsyncMock(return_value=[])
-        mock_repo.create = AsyncMock(side_effect=lambda r: r)
-
-        result = await service.create_overtime(
-            employee_id=employee_id,
-            work_date=date(2026, 6, 11),
-            start_time=time(22, 0),
-            end_time=time(1, 0),
-            reason="Night shift",
-        )
-
-        # 22:00 → 01:00 (next day) = 180 minutes
-        assert result.duration_minutes == 180
+        """end_time (01:00) before start_time (22:00) is rejected."""
+        with pytest.raises(OvertimeEndBeforeStartError):
+            await service.create_overtime(
+                employee_id=employee_id,
+                work_date=date(2026, 6, 11),
+                start_time=time(22, 0),
+                end_time=time(1, 0),
+                reason="Night shift",
+            )
 
     @pytest.mark.asyncio
     async def test_rejects_equal_start_and_end(
@@ -135,25 +130,21 @@ class TestCreateOvertime:
             )
 
     @pytest.mark.asyncio
-    async def test_allows_overnight_overtime(
+    async def test_rejects_end_before_start(
         self,
         service,
         mock_repo,
         employee_id,
     ):
-        """end_time before start_time is treated as next-day overnight."""
-        mock_repo.find_overlapping_overtime = AsyncMock(return_value=[])
-        mock_repo.create = AsyncMock(side_effect=lambda r: r)
-
-        result = await service.create_overtime(
-            employee_id=employee_id,
-            work_date=date(2026, 6, 11),
-            start_time=time(22, 0),
-            end_time=time(2, 0),
-            reason="Night shift",
-        )
-        # 22:00 → 02:00 next day = 240 minutes
-        assert result.duration_minutes == 240
+        """end_time before start_time is rejected (overnight not allowed)."""
+        with pytest.raises(OvertimeEndBeforeStartError):
+            await service.create_overtime(
+                employee_id=employee_id,
+                work_date=date(2026, 6, 11),
+                start_time=time(22, 0),
+                end_time=time(2, 0),
+                reason="Overnight shift",
+            )
 
     @pytest.mark.asyncio
     async def test_blocks_overlap_with_submitted(
@@ -249,6 +240,7 @@ class TestCancelOvertime:
         existing = MagicMock(spec=EmployeeRequest)
         existing.id = request_id
         existing.employee_id = employee_id
+        existing.request_type = RequestType.OVERTIME
         existing.status = RequestStatus.SUBMITTED
 
         mock_repo.get_by_id = AsyncMock(return_value=existing)
@@ -283,6 +275,7 @@ class TestCancelOvertime:
         existing = MagicMock(spec=EmployeeRequest)
         existing.id = request_id
         existing.employee_id = other_employee_id  # Different employee
+        existing.request_type = RequestType.OVERTIME
         existing.status = RequestStatus.SUBMITTED
 
         mock_repo.get_by_id = AsyncMock(return_value=existing)
@@ -302,6 +295,7 @@ class TestCancelOvertime:
         existing.employee_id = employee_id
 
         for status in [RequestStatus.APPROVED, RequestStatus.REJECTED, RequestStatus.CANCELLED]:
+            existing.request_type = RequestType.OVERTIME
             existing.status = status
             mock_repo.get_by_id = AsyncMock(return_value=existing)
 
@@ -318,6 +312,7 @@ class TestCancelOvertime:
         existing = MagicMock(spec=EmployeeRequest)
         existing.id = request_id
         existing.employee_id = employee_id
+        existing.request_type = RequestType.OVERTIME
         existing.status = RequestStatus.SUBMITTED
 
         mock_repo.get_by_id = AsyncMock(return_value=existing)

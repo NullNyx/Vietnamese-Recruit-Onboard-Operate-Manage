@@ -26,6 +26,14 @@ class OvertimeCreateRequest(BaseModel):
             raise ValueError("Reason cannot be whitespace-only")
         return v.strip()
 
+    @field_validator("end_time")
+    @classmethod
+    def reject_end_before_start(cls, v: time, info) -> time:
+        start = info.data.get("start_time") if info.data else None
+        if start is not None and v <= start:
+            raise ValueError("End time must be after start time")
+        return v
+
 
 class OvertimeCancelRequest(BaseModel):
     """Request schema for cancelling an overtime request."""
