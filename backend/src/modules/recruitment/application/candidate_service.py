@@ -977,15 +977,15 @@ class CandidateService:
 
     # ─── Job Opening assignment ──────────────────────────────────────────
 
-    _ASSIGNABLE_STATUSES: frozenset[str] = frozenset({
-        CandidateStatus.NEW,
-        CandidateStatus.REVIEWING,
-        CandidateStatus.INTERVIEW_SCHEDULED,
-    })
+    _ASSIGNABLE_STATUSES: frozenset[str] = frozenset(
+        {
+            CandidateStatus.NEW,
+            CandidateStatus.REVIEWING,
+            CandidateStatus.INTERVIEW_SCHEDULED,
+        }
+    )
 
-    async def assign_candidate(
-        self, candidate_id: UUID, job_opening_id: UUID
-    ) -> Candidate:
+    async def assign_candidate(self, candidate_id: UUID, job_opening_id: UUID) -> Candidate:
         """Assign an unassigned Candidate to an open Job Opening.
 
         Rules:
@@ -1042,9 +1042,7 @@ class CandidateService:
 
         return candidate
 
-    async def reassign_candidate(
-        self, candidate_id: UUID, new_job_opening_id: UUID
-    ) -> Candidate:
+    async def reassign_candidate(self, candidate_id: UUID, new_job_opening_id: UUID) -> Candidate:
         """Reassign a Candidate to a different open Job Opening.
 
         Rules:
@@ -1151,17 +1149,13 @@ class CandidateService:
             user_id=self._user_id,
             previous_value={"job_opening_id": str(previous_jo_id)},
             new_value={"job_opening_id": None},
-            change_summary=(
-                f"Candidate unassigned from Job Opening {previous_jo_id}"
-            ),
+            change_summary=(f"Candidate unassigned from Job Opening {previous_jo_id}"),
         )
         await self._session.commit()
 
         return candidate
 
-    async def _get_open_job_opening_or_raise(
-        self, job_opening_id: UUID
-    ) -> "JobOpening":
+    async def _get_open_job_opening_or_raise(self, job_opening_id: UUID) -> JobOpening:
         """Retrieve a Job Opening and verify it is in 'open' status.
 
         Args:
@@ -1180,9 +1174,7 @@ class CandidateService:
 
         job_opening = await self._job_opening_repo.get_by_id(job_opening_id)
         if job_opening is None:
-            raise JobOpeningNotFoundError(
-                f"Job Opening not found: {job_opening_id}"
-            )
+            raise JobOpeningNotFoundError(f"Job Opening not found: {job_opening_id}")
 
         if job_opening.status != JobOpeningStatus.OPEN:
             raise JobOpeningNotOpenError(job_opening_id, job_opening.status)

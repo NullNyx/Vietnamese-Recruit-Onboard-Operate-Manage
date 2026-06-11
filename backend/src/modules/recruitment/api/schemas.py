@@ -364,6 +364,7 @@ class CVPresignedUrlResponse(BaseModel):
 # Candidate Job Opening Assignment schemas
 # ---------------------------------------------------------------------------
 
+
 class AssignCandidateRequest(BaseModel):
     """Request schema for assigning a Candidate to a Job Opening.
 
@@ -382,6 +383,7 @@ class ReassignCandidateRequest(BaseModel):
     """
 
     job_opening_id: UUID
+
 
 # ---------------------------------------------------------------------------
 # Job Opening schemas

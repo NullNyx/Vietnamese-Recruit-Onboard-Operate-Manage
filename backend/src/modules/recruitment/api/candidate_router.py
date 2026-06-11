@@ -561,9 +561,11 @@ async def archive_candidate(
     candidate = await candidate_service.archive_candidate(candidate_id)
     return CandidateResponse.model_validate(candidate)
 
+
 # ---------------------------------------------------------------------------
 # Assign candidate to Job Opening
 # ---------------------------------------------------------------------------
+
 
 @candidate_router.post(
     "/{candidate_id}/assign",
@@ -600,6 +602,7 @@ async def assign_candidate(
 # Reassign candidate to different Job Opening
 # ---------------------------------------------------------------------------
 
+
 @candidate_router.post(
     "/{candidate_id}/reassign",
     response_model=CandidateResponse,
@@ -635,6 +638,7 @@ async def reassign_candidate(
 # Unassign candidate from Job Opening
 # ---------------------------------------------------------------------------
 
+
 @candidate_router.post(
     "/{candidate_id}/unassign",
     response_model=CandidateResponse,
@@ -659,4 +663,3 @@ async def unassign_candidate(
     """
     candidate = await candidate_service.unassign_candidate(candidate_id)
     return CandidateResponse.model_validate(candidate)
-

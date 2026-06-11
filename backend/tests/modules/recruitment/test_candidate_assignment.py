@@ -7,9 +7,8 @@ validating rules: open-only assignment, terminal-status guards, audit logging.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -34,8 +33,8 @@ from src.modules.recruitment.infrastructure.repositories import (
 def _make_candidate(
     *,
     status: str = CandidateStatus.NEW,
-    job_opening_id: str | None = None,
-    candidate_id: str | None = None,
+    job_opening_id: UUID | None = None,
+    candidate_id: UUID | None = None,
 ) -> Candidate:
     return Candidate(
         id=uuid4() if candidate_id is None else candidate_id,
@@ -51,7 +50,7 @@ def _make_job_opening(
     *,
     status: str = JobOpeningStatus.OPEN,
     title: str = "Software Engineer",
-    jo_id: str | None = None,
+    jo_id: UUID | None = None,
 ) -> JobOpening:
     return JobOpening(
         id=uuid4() if jo_id is None else jo_id,
@@ -66,26 +65,26 @@ def _make_job_opening(
 # ─── Fixtures ──────────────────────────────────────────────────────────
 
 @pytest.fixture
-def mock_candidate_repo():
+def mock_candidate_repo() -> AsyncMock:
     repo = AsyncMock(spec=CandidateRepository)
     repo.update = AsyncMock(side_effect=lambda c: c)
     return repo
 
 @pytest.fixture
-def mock_cv_doc_repo():
+def mock_cv_doc_repo() -> AsyncMock:
     return AsyncMock(spec=CVDocumentRepository)
 
 @pytest.fixture
-def mock_minio_client():
+def mock_minio_client() -> AsyncMock:
     return AsyncMock()
 
 @pytest.fixture
-def mock_job_opening_repo():
+def mock_job_opening_repo() -> AsyncMock:
     repo = AsyncMock(spec=JobOpeningRepository)
     return repo
 
 @pytest.fixture
-def mock_session():
+def mock_session() -> AsyncMock:
     session = AsyncMock()
     session.add = MagicMock()
     session.commit = AsyncMock()
@@ -93,11 +92,14 @@ def mock_session():
     return session
 
 @pytest.fixture
-def user_id():
+def user_id() -> UUID:
     return uuid4()
 
 @pytest.fixture
-def service(mock_session, mock_candidate_repo, mock_cv_doc_repo, mock_minio_client, mock_job_opening_repo, user_id):
+def service(
+    mock_session, mock_candidate_repo, mock_cv_doc_repo,
+    mock_minio_client, mock_job_opening_repo, user_id,
+) -> CandidateService:
     return CandidateService(
         candidate_repo=mock_candidate_repo,
         cv_document_repo=mock_cv_doc_repo,
