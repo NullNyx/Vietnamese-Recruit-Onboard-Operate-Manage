@@ -155,7 +155,8 @@ class OCRAdapter:
         chunks_text: list[str] = []
         for i, chunk_bytes in enumerate(chunks):
             chunk_start = i * max_pages
-            chunk_end = chunk_start + max_pages  # Note: not exact for the last chunk, but good enough for logging
+            # Note: chunk_end is not exact for the last chunk, but good enough for logging
+            chunk_end = chunk_start + max_pages
 
             chunk_filename = f"{filename}_chunk_{chunk_start + 1}-{chunk_end}.pdf"
             chunk_text = await self._send_to_ocr(chunk_bytes, chunk_filename, _PDF_MIME)
