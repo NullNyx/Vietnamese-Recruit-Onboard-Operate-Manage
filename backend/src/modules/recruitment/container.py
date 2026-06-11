@@ -48,7 +48,6 @@ from src.modules.recruitment.infrastructure.pii_redactor import PIIRedactor
 from src.modules.recruitment.infrastructure.repositories import (
     CandidateRepository,
     CVDocumentRepository,
-    JobOpeningRepository,
 )
 
 # ---------------------------------------------------------------------------
@@ -205,7 +204,6 @@ async def get_candidate_service(
         oauth_grant_repo=oauth_grant_repo,
         oauth_service=oauth_service,
         crypto=crypto,
-        job_opening_repo=JobOpeningRepository(session),
     )
 
 
@@ -230,7 +228,6 @@ async def get_review_service(
         cv_document_repo=cv_document_repo,
         minio_client=minio_client,
         session=session,
-        job_opening_repo=JobOpeningRepository(session),
     )
 
     # CVProcessorService acts as the CVRetryParserProtocol
@@ -277,7 +274,6 @@ async def get_cv_processor_service(
         cv_document_repo=cv_document_repo,
         minio_client=minio_client,
         session=session,
-        job_opening_repo=JobOpeningRepository(session),
     )
 
     return CVProcessorService(
@@ -346,7 +342,6 @@ async def arq_process_cv_from_email(ctx: dict[str, Any], email_message_id: UUID)
                 cv_document_repo=cv_document_repo,
                 minio_client=minio_client,
                 session=session,
-                job_opening_repo=JobOpeningRepository(session),
             )
 
             cv_processor = CVProcessorService(
