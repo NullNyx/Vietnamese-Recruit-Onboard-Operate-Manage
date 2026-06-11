@@ -1213,7 +1213,6 @@ class CandidateService:
             raise RuntimeError("Calendar port is not configured")
         if self._user_id is None:
             raise RuntimeError("Acting HR user id is not configured")
-        calendar_port = self._calendar_port
         user_id = self._user_id
 
         # Step 1: load the Candidate and require an existing event (R7.5). When
