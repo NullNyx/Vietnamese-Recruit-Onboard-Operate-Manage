@@ -762,14 +762,46 @@ class OnboardingService:
         )
 
         items: list[ProcessListItem] = []
-        get_employee_by_id = getattr(self.employee_repo, "get_by_id", None)
+        if not processes:
+            return PaginatedProcesses(
+                items=items,
+                total=total,
+                page=effective_page,
+                page_size=effective_page_size,
+            )
+
+        process_ids = [process.id for process in processes]
+        employee_ids = [process.employee_id for process in processes]
+
+        # Bulk fetch data
+        if hasattr(self.task_repo, "count_by_status_for_processes"):
+            fetch_bulk = getattr(self.task_repo, "count_by_status_for_processes")
+            task_counts: dict[UUID, dict[str, int]] = await fetch_bulk(process_ids)
+        else:
+            task_counts = {p.id: await self.task_repo.count_by_status(p.id) for p in processes}
+
+        get_employees_by_ids = getattr(self.employee_repo, "get_by_ids", None)
+        employees: dict[UUID, Employee] = {}
+        if callable(get_employees_by_ids):
+            employees_result = await get_employees_by_ids(employee_ids)
+            if isinstance(employees_result, dict):
+                employees = employees_result
+            else:
+                employees = {emp.id: emp for emp in employees_result}
+        else:
+            get_employee_by_id = getattr(self.employee_repo, "get_by_id", None)
+            if callable(get_employee_by_id):
+                for emp_id in set(employee_ids):
+                    emp = await get_employee_by_id(emp_id)
+                    if emp:
+                        employees[emp_id] = emp
+
         for process in processes:
-            counts = await self.task_repo.count_by_status(process.id)
+            counts = task_counts.get(process.id, {})
             total_count = sum(counts.values())
             completed_count = counts.get(OnboardingTaskStatus.DONE.value, 0)
-            employee = None
-            if callable(get_employee_by_id):
-                employee = await get_employee_by_id(process.employee_id)
+            employee = employees.get(process.employee_id)
+
             missing_setup_fields = []
             if employee:
                 if not employee.department_id:
