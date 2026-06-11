@@ -1081,65 +1081,27 @@ class CandidateService:
 
         # Step 6: create the Calendar event BEFORE committing (R2.1). On failure
         # roll back, audit the failure, and raise (R3.1-R3.4, R12.4).
-        try:
-            event = await self._with_calendar_token(
-                user_id,
-                lambda token: calendar_port.create_event(token, spec),
-            )
-        except Exception as exc:
-            await self._session.rollback()
-            await log_audit(
-                session=self._session,
-                operation_type="interview_schedule_failed",
-                entity_type="candidate",
-                entity_id=candidate_id,
-                user_id=user_id,
-                new_value={
-                    "attempted_action": "schedule_interview",
-                    "candidate_id": str(candidate_id),
-                    "error": str(exc),
-                },
-                change_summary="Interview schedule failed: Calendar event creation error",
-                success=False,
-            )
-            await self._session.commit()
-            raise CalendarEventCreateFailedError() from exc
+        event = await self._create_calendar_event(user_id, candidate_id, calendar_port, spec)
 
         # Step 7: persist the event reference, start, timezone, and status, then
         # commit (R2.3, R4.1-R4.3). Attendee/Meet sub-failures are non-fatal: the
         # event exists, so the schedule succeeds even without a Meet link (R5.3,
         # R6.2, R6.3).
-        candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
-        candidate.calendar_event_id = event.event_id
-        candidate.interview_start_at = start_resolved
-        candidate.interview_timezone = timezone
-        candidate = await self._candidate_repo.update(candidate)
-        await self._session.commit()
+        candidate = await self._persist_interview_schedule(
+            candidate, event.event_id, start_resolved, timezone
+        )
 
         # Step 9: success audit (R12.1). Audit failure never rolls back (R12.5):
         # ``log_audit`` swallows its own failures.
-        await log_audit(
-            session=self._session,
-            operation_type="interview_scheduled",
-            entity_type="candidate",
-            entity_id=candidate.id,
-            user_id=user_id,
-            previous_value={"status": previous_status},
-            new_value={
-                "status": CandidateStatus.INTERVIEW_SCHEDULED,
-                "calendar_event_id": event.event_id,
-                "candidate_id": str(candidate.id),
-                "start": start_resolved.isoformat(),
-                "timezone": timezone,
-                "interviewer_ids": [str(id_) for id_ in interviewer_ids],
-            },
-            change_summary=(
-                f"Interview scheduled with {len(interviewer_ids)} interviewer(s); "
-                f"event {event.event_id}"
-            ),
-            success=True,
+        await self._audit_interview_schedule(
+            user_id,
+            candidate,
+            event.event_id,
+            start_resolved,
+            timezone,
+            interviewer_ids,
+            previous_status,
         )
-        await self._session.commit()
 
         if event.meet_link is not None:
             logger.info("Interview scheduled for candidate %s with Meet link", candidate.id)
@@ -1683,3 +1645,175 @@ class CandidateService:
             },
             change_summary=(f"Email sent to candidate: subject='{subject[:100]}'"),
         )
+
+    async def _create_calendar_event(
+        self,
+        user_id: UUID,
+        candidate_id: UUID,
+        spec: CalendarEventSpec,
+    ) -> CalendarEvent:
+        if self._calendar_port is None:
+            raise RuntimeError("Calendar port is not configured")
+        try:
+            return await self._with_calendar_token(
+                user_id,
+                lambda token: self._calendar_port.create_event(token, spec),
+            )
+        except Exception as exc:
+            await self._session.rollback()
+            await log_audit(
+                session=self._session,
+                operation_type="interview_schedule_failed",
+                entity_type="candidate",
+                entity_id=candidate_id,
+                user_id=user_id,
+                new_value={
+                    "attempted_action": "schedule_interview",
+                    "candidate_id": str(candidate_id),
+                    "error": str(exc),
+                },
+                change_summary="Interview schedule failed: Calendar event creation error",
+                success=False,
+            )
+            await self._session.commit()
+            raise CalendarEventCreateFailedError() from exc
+
+    async def _persist_interview_schedule(
+        self,
+        candidate: Candidate,
+        event_id: str,
+        start_resolved: datetime,
+        timezone: str,
+    ) -> Candidate:
+        candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
+        candidate.calendar_event_id = event_id
+        candidate.interview_start_at = start_resolved
+        candidate.interview_timezone = timezone
+        candidate = await self._candidate_repo.update(candidate)
+        await self._session.commit()
+        return candidate
+
+    async def _send_interview_email_notification(
+        self,
+        candidate: Candidate,
+        spec: CalendarEventSpec,
+    ) -> None:
+        if not candidate.email:
+            return
+        subject = f"Interview Scheduled: {spec.summary}"
+        body_html = f"<p>Your interview has been scheduled for {spec.start.isoformat()}.</p>"
+        # We don't fail the whole process if email fails
+        try:
+            await self.send_email_to_candidate(candidate.id, subject, body_html)
+        except Exception as e:
+            logger.warning(f"Failed to send interview notification email to {candidate.id}: {e}")
+
+    async def _audit_interview_schedule(
+        self,
+        user_id: UUID,
+        candidate: Candidate,
+        event_id: str,
+        start_resolved: datetime,
+        timezone: str,
+        interviewer_ids: list[UUID],
+        previous_status: str,
+    ) -> None:
+        await log_audit(
+            session=self._session,
+            operation_type="interview_scheduled",
+            entity_type="candidate",
+            entity_id=candidate.id,
+            user_id=user_id,
+            previous_value={"status": previous_status},
+            new_value={
+                "status": CandidateStatus.INTERVIEW_SCHEDULED,
+                "calendar_event_id": event_id,
+                "candidate_id": str(candidate.id),
+                "start": start_resolved.isoformat(),
+                "timezone": timezone,
+                "interviewer_ids": [str(id_) for id_ in interviewer_ids],
+            },
+            change_summary=(
+                f"Interview scheduled with {len(interviewer_ids)} interviewer(s); event {event_id}"
+            ),
+            success=True,
+        )
+        await self._session.commit()
+
+    async def _create_calendar_event(
+        self,
+        user_id: UUID,
+        candidate_id: UUID,
+        calendar_port: Any,
+        spec: CalendarEventSpec,
+    ) -> CalendarEvent:
+        try:
+            return await self._with_calendar_token(
+                user_id,
+                lambda token: calendar_port.create_event(token, spec),
+            )
+        except Exception as exc:
+            await self._session.rollback()
+            await log_audit(
+                session=self._session,
+                operation_type="interview_schedule_failed",
+                entity_type="candidate",
+                entity_id=candidate_id,
+                user_id=user_id,
+                new_value={
+                    "attempted_action": "schedule_interview",
+                    "candidate_id": str(candidate_id),
+                    "error": str(exc),
+                },
+                change_summary="Interview schedule failed: Calendar event creation error",
+                success=False,
+            )
+            await self._session.commit()
+            raise CalendarEventCreateFailedError() from exc
+
+    async def _persist_interview_schedule(
+        self,
+        candidate: Candidate,
+        event_id: str,
+        start_resolved: datetime,
+        timezone: str,
+    ) -> Candidate:
+        candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
+        candidate.calendar_event_id = event_id
+        candidate.interview_start_at = start_resolved
+        candidate.interview_timezone = timezone
+        candidate = await self._candidate_repo.update(candidate)
+        await self._session.commit()
+        return candidate
+
+    async def _audit_interview_schedule(
+        self,
+        user_id: UUID,
+        candidate: Candidate,
+        event_id: str,
+        start_resolved: datetime,
+        timezone: str,
+        interviewer_ids: list[UUID],
+        previous_status: str,
+    ) -> None:
+        await log_audit(
+            session=self._session,
+            operation_type="interview_scheduled",
+            entity_type="candidate",
+            entity_id=candidate.id,
+            user_id=user_id,
+            previous_value={"status": previous_status},
+            new_value={
+                "status": CandidateStatus.INTERVIEW_SCHEDULED,
+                "calendar_event_id": event_id,
+                "candidate_id": str(candidate.id),
+                "start": start_resolved.isoformat(),
+                "timezone": timezone,
+                "interviewer_ids": [str(id_) for id_ in interviewer_ids],
+            },
+            change_summary=(
+                f"Interview scheduled with {len(interviewer_ids)} interviewer(s); event {event_id}"
+            ),
+            success=True,
+        )
+        await self._session.commit()
