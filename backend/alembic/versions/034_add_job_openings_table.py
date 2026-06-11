@@ -30,7 +30,6 @@ def upgrade() -> None:
         sa.Column(
             "position_id",
             postgresql.UUID(as_uuid=True),
-            sa.ForeignKey("positions.id"),
             nullable=False,
         ),
         sa.Column("target_headcount", sa.Integer(), nullable=False),
@@ -71,10 +70,21 @@ def upgrade() -> None:
         "job_openings",
         ["created_at"],
     )
+    op.create_foreign_key(
+        "fk_job_openings_position_id",
+        "job_openings",
+        "positions",
+        ["position_id"],
+        ["id"],
+    )
 
 
 def downgrade() -> None:
     """Drop job_openings table."""
+    op.drop_constraint(
+        "fk_job_openings_position_id",
+        table_name="job_openings",
+    )
     op.drop_index("ix_job_openings_created_at", table_name="job_openings")
     op.drop_index("ix_job_openings_status", table_name="job_openings")
     op.drop_index("ix_job_openings_position_id", table_name="job_openings")
