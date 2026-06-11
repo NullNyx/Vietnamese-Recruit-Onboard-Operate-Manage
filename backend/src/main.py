@@ -25,6 +25,10 @@ from src.modules.employee.api.error_handler import (  # noqa: E402
     register_employee_error_handlers,
 )
 from src.modules.employee.api.router import router as employee_router  # noqa: E402
+from src.modules.employee_request.api.error_handler import (  # noqa: E402
+    register_employee_request_error_handlers,
+)
+from src.modules.employee_request.api.router import employee_request_router  # noqa: E402
 from src.modules.gmail.api.error_handler import (  # noqa: E402
     register_gmail_error_handlers,
 )
@@ -187,6 +191,7 @@ app.include_router(onboarding_router)
 app.include_router(attendance_router)
 app.include_router(runtime_router)
 app.include_router(assistant_router)
+app.include_router(employee_request_router)
 
 # Register exception handlers.
 register_auth_error_handlers(app)
@@ -196,6 +201,7 @@ register_recruitment_error_handlers(app)
 register_onboarding_error_handlers(app)
 register_attendance_error_handlers(app)
 register_assistant_error_handlers(app)
+register_employee_request_error_handlers(app)
 
 
 @app.get("/health")
