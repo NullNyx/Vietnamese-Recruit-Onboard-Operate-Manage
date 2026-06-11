@@ -688,9 +688,12 @@ async def process_attachments(
         ) from exc
 
     # Set final status based on CV processing results.
-    # If any CVDocument ended up as needs_review, propagate that.
-    # Otherwise mark as classified (CV pipeline handles its own status).
-    email.processing_status = "classified"
+    # If any CVDocument ended up as needs_review or failed, propagate that.
+    # Otherwise mark as classified.
+    if any(doc.processing_status in {"needs_review", "failed"} for doc in cv_documents):
+        email.processing_status = "needs_review"
+    else:
+        email.processing_status = "classified"
     email_repo.session.add(email)
     await email_repo.session.commit()
 

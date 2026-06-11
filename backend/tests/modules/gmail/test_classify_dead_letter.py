@@ -1,9 +1,9 @@
 """Tests for dead-letter queue / needs_review classification flow.
 
 Tests:
-1. Email with low confidence (below review threshold) -> needs_review status
-2. Email with classification failure -> needs_review status
-3. API endpoint to reclassify and mark as reviewed
+1. Email with low confidence (below needs_review threshold) -> needs_review
+2. AI failure with rules fallback success -> needs_review (low confidence)
+3. High confidence email -> classified normally
 
 **Validates: Dead-letter queue feature**
 """
@@ -126,7 +126,7 @@ class TestDeadLetterQueue:
         assert classified_count == 1
         assert email.processing_status == "needs_review"
 
-    async def test_ai_failure_fallback_marked_needs_review(
+    async def test_ai_failure_with_rules_fallback_marked_needs_review(
         self,
         settings: GmailSettings,
         session: AsyncMock,

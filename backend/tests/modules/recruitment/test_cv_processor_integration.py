@@ -246,3 +246,5 @@ class TestCVProcessorCreatesDocuments:
         )
 
         assert len(cv_documents) == 2
+        assert cv_documents[0].original_filename == "cv1.pdf"
+        assert cv_documents[1].original_filename == "cv2.pdf"
