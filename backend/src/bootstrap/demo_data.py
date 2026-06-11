@@ -1,7 +1,8 @@
-"""Minimal bootstrap seed for local development.
+"""Bootstrap seed for local development.
 
 Creates departments, positions, and one demo employee linked to
-the configured super admin email so ESS can be tested immediately.
+the configured super admin email so ESS can be tested immediately,
+plus demo attendance records for active employees.
 """
 
 from __future__ import annotations
@@ -130,4 +131,80 @@ async def seed_demo_data(session: AsyncSession) -> bool:
         await session.flush()
 
     logger.info("Demo seed completed: departments, positions, 1 employee + 3 documents.")
+    return True
+
+
+async def seed_demo_attendance(session: AsyncSession) -> bool:
+    """Seed demo attendance records for active employees.
+
+    Creates Attendance Records for the work week of June 1-5, 2026 (Mon-Fri)
+    to demonstrate both completed and incomplete states.  Skips when the
+    config flag is off, records already exist, or no active employees are found.
+    Inactive employees are intentionally excluded -- attendance is Employee
+    Self-Service data.
+    """
+    from src.modules.identity.infrastructure.config import AuthSettings
+
+    settings = AuthSettings()  # type: ignore[call-arg]
+    if not settings.auto_seed_sample_data:
+        logger.info("Attendance demo seed disabled by config.")
+        return False
+
+    from src.modules.attendance.domain.entities import AttendanceRecord, AttendanceSource
+
+    # Idempotent: skip if attendance records already exist.
+    if await _count_rows(session, AttendanceRecord) > 0:
+        logger.info("Attendance demo seed skipped: existing records found.")
+        return False
+
+    # Only active employees -- Employee Self-Service data.
+    statement = select(Employee).where(Employee.is_active.is_(True))  # type: ignore[arg-type]
+    result = await session.execute(statement)
+    active_employees = list(result.scalars().all())
+
+    if not active_employees:
+        logger.info("Attendance demo seed skipped: no active employees.")
+        return False
+
+    from datetime import datetime, timezone
+
+    UTC = timezone.utc
+
+    # Demo work week: June 1-5, 2026 (Mon-Fri).
+    # Timestamps stored in UTC; work_date is the date in
+    # Asia/Ho_Chi_Minh (UTC+7).
+    # Day 1-3: completed (check-in + check-out).
+    # Day 4:     checked-in only (incomplete).
+    # Day 5:     no record (absent -- implicit state).
+    week_data: list[tuple[date, datetime, datetime | None]] = [
+        (date(2026, 6, 1), datetime(2026, 6, 1, 1, 0, 0, tzinfo=UTC), datetime(2026, 6, 1, 10, 30, 0, tzinfo=UTC)),  # 08:00-17:30 HCM
+        (date(2026, 6, 2), datetime(2026, 6, 2, 1, 15, 0, tzinfo=UTC), datetime(2026, 6, 2, 10, 45, 0, tzinfo=UTC)),  # 08:15-17:45 HCM
+        (date(2026, 6, 3), datetime(2026, 6, 3, 0, 55, 0, tzinfo=UTC), datetime(2026, 6, 3, 11, 0, 0, tzinfo=UTC)),  # 07:55-18:00 HCM
+        (date(2026, 6, 4), datetime(2026, 6, 4, 2, 0, 0, tzinfo=UTC), None),  # 09:00 HCM, no check-out
+    ]
+
+    records: list[AttendanceRecord] = []
+    for emp in active_employees:
+        for work_date, check_in, check_out in week_data:
+            record = AttendanceRecord(
+                employee_id=emp.id,
+                work_date=work_date,
+                check_in_at=check_in,
+                check_out_at=check_out,
+                check_in_ip="192.168.1.100",
+                check_out_ip="192.168.1.100" if check_out else None,
+                check_in_user_agent="VroomHR-Demo/1.0",
+                check_out_user_agent="VroomHR-Demo/1.0" if check_out else None,
+                source=AttendanceSource.WEB,
+            )
+            records.append(record)
+
+    session.add_all(records)
+    await session.flush()
+
+    logger.info(
+        "Attendance demo seed completed: %d records for %d active employee(s).",
+        len(records),
+        len(active_employees),
+    )
     return True
