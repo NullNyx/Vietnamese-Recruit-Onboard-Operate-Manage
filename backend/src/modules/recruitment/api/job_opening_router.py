@@ -174,6 +174,10 @@ async def list_job_openings(
         page_size=page_size,
     )
 
+    job_openings = result[0]
+    jo_ids = [jo.id for jo in job_openings]
+    counts_by_jo = await service.get_candidate_counts(jo_ids) if jo_ids else {}
+
     items = [
         JobOpeningListItemResponse(
             id=jo.id,
@@ -182,8 +186,10 @@ async def list_job_openings(
             target_headcount=jo.target_headcount,
             status=JobOpeningStatus(jo.status),
             created_at=jo.created_at,
+            total_candidates=sum(counts_by_jo.get(jo.id, {}).values()),
+            accepted_count=counts_by_jo.get(jo.id, {}).get("accepted", 0),
         )
-        for jo in result[0]
+        for jo in job_openings
     ]
 
     return JobOpeningListResponse(
@@ -217,7 +223,11 @@ async def get_job_opening(
     """
     service = get_job_opening_service(session, current_user)
     job_opening = await service.get_job_opening(job_opening_id)
-    return JobOpeningResponse.model_validate(job_opening)
+    counts_by_jo = await service.get_candidate_counts([job_opening.id])
+    candidate_counts = counts_by_jo.get(job_opening.id, {})
+    resp = JobOpeningResponse.model_validate(job_opening)
+    resp.candidate_counts = candidate_counts
+    return resp
 
 
 # ---------------------------------------------------------------------------
