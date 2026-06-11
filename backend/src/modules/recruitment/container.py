@@ -48,6 +48,7 @@ from src.modules.recruitment.infrastructure.pii_redactor import PIIRedactor
 from src.modules.recruitment.infrastructure.repositories import (
     CandidateRepository,
     CVDocumentRepository,
+    JobOpeningRepository,
 )
 
 # ---------------------------------------------------------------------------
@@ -181,6 +182,7 @@ async def get_candidate_service(
     candidate_repo = CandidateRepository(session)
     cv_document_repo = CVDocumentRepository(session)
     minio_client = get_minio_client()
+    job_opening_repo = JobOpeningRepository(session)
 
     # Calendar scheduling dependencies (ADR-0008).
     org_settings_repo = OrganizationSettingsRepository(session, get_recruitment_settings())
@@ -204,6 +206,7 @@ async def get_candidate_service(
         oauth_grant_repo=oauth_grant_repo,
         oauth_service=oauth_service,
         crypto=crypto,
+        job_opening_repo=job_opening_repo,
     )
 
 
