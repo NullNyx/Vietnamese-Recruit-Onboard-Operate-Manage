@@ -65,7 +65,8 @@ from src.modules.onboarding.api.schemas import (
 from src.modules.onboarding.application.onboarding_service import OnboardingService
 from src.modules.onboarding.container import get_onboarding_service
 from src.modules.onboarding.domain.enums import OnboardingStatus, OnboardingTaskStatus
-from src.modules.recruitment.infrastructure.repositories import CandidateRepository
+from src.modules.recruitment.infrastructure.repositories import CandidateRepository, JobOpeningRepository
+from src.modules.recruitment.domain.entities import Candidate
 
 # ---------------------------------------------------------------------------
 # Type aliases for injected dependencies
@@ -227,7 +228,7 @@ async def get_process(
         accepted_at=(
             candidate.accepted_at.isoformat() if candidate and candidate.accepted_at else None
         ),
-        job_opening=None,  # Job Opening is optional and model doesn't exist yet
+        job_opening=await _resolve_job_opening(candidate, db_session),
         tasks=[
             OnboardingTaskResponse(
                 id=task.id,
@@ -238,6 +239,18 @@ async def get_process(
             for task in detail.tasks
         ],
     )
+
+
+async def _resolve_job_opening(
+    candidate: Candidate | None,
+    db_session: AsyncSession,
+) -> str | None:
+    """Resolve Job Opening title from candidate, if assigned."""
+    if not candidate or not candidate.job_opening_id:
+        return None
+    jo_repo = JobOpeningRepository(db_session)
+    jo = await jo_repo.get_by_id(candidate.job_opening_id)
+    return jo.title if jo else None
 
 
 # ---------------------------------------------------------------------------

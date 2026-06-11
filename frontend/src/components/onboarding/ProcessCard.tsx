@@ -22,18 +22,9 @@ function Progress({ value }: { value: number }) {
 }
 
 function getReadiness(process: OnboardingProcess) {
-  if (process.status === "complete") {
-    return {
-      badgeText: "Hoàn thành",
-      badgeColor: "bg-emerald-100 text-emerald-700",
-      icon: Check,
-      hint: "Đã kích hoạt",
-    };
-  }
-
   const isSetupMissing = process.missing_setup_fields && process.missing_setup_fields.length > 0;
   const tasksRemaining = process.total_count - process.completed_count;
-  
+
   if (isSetupMissing) {
     const fieldMap: Record<string, string> = {
       department: "phòng ban",
@@ -48,6 +39,15 @@ function getReadiness(process: OnboardingProcess) {
       badgeColor: "bg-amber-100 text-amber-700",
       icon: AlertCircle,
       hint: missingCount > 1 ? `Thiếu ${firstMissing} & ${missingCount - 1} mục` : `Thiếu ${firstMissing}`,
+    };
+  }
+
+  if (process.status === "complete") {
+    return {
+      badgeText: "Hoàn thành",
+      badgeColor: "bg-emerald-100 text-emerald-700",
+      icon: Check,
+      hint: "Đã kích hoạt",
     };
   }
 
