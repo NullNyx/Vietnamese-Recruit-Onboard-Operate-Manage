@@ -69,6 +69,7 @@ class Candidate(SQLModel, table=True):
 
     job_opening_id: UUID | None = Field(default=None, foreign_key="job_openings.id", index=True)
 
+
 class CVDocument(SQLModel, table=True):
     """Represents a CV file stored in MinIO object storage.
 
