@@ -44,12 +44,12 @@ const JO_STATUS_LABELS: Record<JobOpeningStatus, string> = {
 
 const JO_STATUS_COLORS: Record<JobOpeningStatus, string> = {
   draft:
-    "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-  open: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    "bg-gray-100 text-gray-700800300",
+  open: "bg-green-100 text-green-800900200",
   closed:
-    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    "bg-yellow-100 text-yellow-800900200",
   cancelled:
-    "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+    "bg-red-100 text-red-800900200",
 };
 
 // ---------------------------------------------------------------------------
