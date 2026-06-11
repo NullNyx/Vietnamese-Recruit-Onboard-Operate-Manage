@@ -277,6 +277,17 @@ class TestParseExcelValidation:
 class TestParseExcelEdgeCases:
     """Tests for edge cases."""
 
+    def test_invalid_excel_file_bytes(self):
+        """A non-Excel byte sequence should be caught and handled gracefully."""
+        file_bytes = b"garbage bytes string"
+
+        parsed, errors = parse_excel(file_bytes)
+
+        assert parsed == []
+        assert len(errors) == 1
+        assert errors[0]["row"] == 0
+        assert "Failed to read Excel file" in errors[0]["error"]
+
     def test_empty_file(self):
         """An empty workbook should return empty results."""
         wb = Workbook()
