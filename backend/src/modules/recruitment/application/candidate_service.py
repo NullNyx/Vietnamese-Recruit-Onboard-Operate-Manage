@@ -1259,30 +1259,12 @@ class CandidateService:
         # Step 5: patch the EXACT existing event BEFORE committing (R7.1). On
         # failure, roll back, audit, and raise; references stay unchanged (R7.4,
         # R12.4).
-        try:
-            await self._with_calendar_token(
-                user_id,
-                lambda token: calendar_port.patch_event(token, event_id, spec),
-            )
-        except Exception as exc:
-            await self._session.rollback()
-            await log_audit(
-                session=self._session,
-                operation_type="interview_reschedule_failed",
-                entity_type="candidate",
-                entity_id=candidate_id,
-                user_id=user_id,
-                new_value={
-                    "attempted_action": "reschedule_interview",
-                    "candidate_id": str(candidate_id),
-                    "calendar_event_id": event_id,
-                    "error": str(exc),
-                },
-                change_summary="Interview reschedule failed: Calendar event patch error",
-                success=False,
-            )
-            await self._session.commit()
-            raise CalendarEventUpdateFailedError() from exc
+        await self._patch_calendar_event(
+            user_id=user_id,
+            candidate_id=candidate_id,
+            event_id=event_id,
+            spec=spec,
+        )
 
         # Step 6: update only the stored start and timezone, leaving the
         # calendar_event_id unchanged, then commit (R7.1, R7.3).
@@ -1355,6 +1337,44 @@ class CandidateService:
             raise ValueError("start must be strictly in the future")
 
     # ─── Calendar scheduling helpers ───────────────────────────────────
+
+    async def _patch_calendar_event(
+        self,
+        user_id: UUID,
+        candidate_id: UUID,
+        event_id: str,
+        spec: CalendarEventSpec,
+    ) -> None:
+        """Patch an existing Calendar event, logging and rolling back on failure."""
+        if self._calendar_port is None:
+            raise RuntimeError("Calendar port is not configured")
+
+        calendar_port = self._calendar_port
+
+        try:
+            await self._with_calendar_token(
+                user_id,
+                lambda token: calendar_port.patch_event(token, event_id, spec),
+            )
+        except Exception as exc:
+            await self._session.rollback()
+            await log_audit(
+                session=self._session,
+                operation_type="interview_reschedule_failed",
+                entity_type="candidate",
+                entity_id=candidate_id,
+                user_id=user_id,
+                new_value={
+                    "attempted_action": "reschedule_interview",
+                    "candidate_id": str(candidate_id),
+                    "calendar_event_id": event_id,
+                    "error": str(exc),
+                },
+                change_summary="Interview reschedule failed: Calendar event patch error",
+                success=False,
+            )
+            await self._session.commit()
+            raise CalendarEventUpdateFailedError() from exc
 
     async def _assert_calendar_grant(self, user_id: UUID) -> None:
         """Assert the acting HR user has a valid Google Calendar grant.
