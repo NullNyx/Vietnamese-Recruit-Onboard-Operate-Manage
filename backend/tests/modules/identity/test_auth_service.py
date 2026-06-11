@@ -299,9 +299,7 @@ class TestHandleCallback:
         with pytest.raises(InvalidStateError):
             await auth_service.handle_callback("auth-code", "bad-state", "test-verifier")
 
-    async def test_whitelist_check_denies_access(
-        self, auth_service, mock_whitelist_service
-    ):
+    async def test_whitelist_check_denies_access(self, auth_service, mock_whitelist_service):
         """Non-whitelisted email should raise AccessDeniedError."""
         mock_whitelist_service.is_allowed.return_value = False
 
@@ -366,9 +364,7 @@ class TestHandleCallback:
 
         mock_token_service.revoke_user_tokens.assert_called_once()
 
-    async def test_stores_refresh_token_hash(
-        self, auth_service, mock_refresh_token_repository
-    ):
+    async def test_stores_refresh_token_hash(self, auth_service, mock_refresh_token_repository):
         """Callback should store the new refresh token hash."""
         with patch("src.modules.identity.application.auth_service.jose_jwt") as mock_jose:
             mock_jose.get_unverified_claims.return_value = {
@@ -387,18 +383,14 @@ class TestHandleCallback:
 class TestLogout:
     """Tests for AuthService.logout."""
 
-    async def test_revokes_refresh_token(
-        self, auth_service, mock_refresh_token_repository
-    ):
+    async def test_revokes_refresh_token(self, auth_service, mock_refresh_token_repository):
         """Logout should hash the token and revoke it."""
         raw_token = "my-refresh-token"
         expected_hash = hashlib.sha256(raw_token.encode()).hexdigest()
 
         await auth_service.logout(raw_token)
 
-        mock_refresh_token_repository.find_by_token_hash.assert_called_once_with(
-            expected_hash
-        )
+        mock_refresh_token_repository.find_by_token_hash.assert_called_once_with(expected_hash)
         mock_refresh_token_repository.revoke.assert_called_once_with(expected_hash)
 
     async def test_logout_nonexistent_token_does_not_raise(
@@ -411,6 +403,8 @@ class TestLogout:
         await auth_service.logout("nonexistent-token")
 
         mock_refresh_token_repository.revoke.assert_not_called()
+
+
 from src.modules.identity.domain.exceptions import DomainAccessDeniedError
 
 
@@ -440,18 +434,16 @@ class TestDomainGate:
                         id_token="eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwibmFtZSI6IlRlc3QifQ.sig",
                         expires_in=3600,
                         scope=(
-                "openid email profile "
-                "https://www.googleapis.com/auth/gmail.readonly "
-                "https://www.googleapis.com/auth/gmail.modify "
-                "https://www.googleapis.com/auth/gmail.send "
-                "https://www.googleapis.com/auth/calendar.events"
-            ),
+                            "openid email profile "
+                            "https://www.googleapis.com/auth/gmail.readonly "
+                            "https://www.googleapis.com/auth/gmail.modify "
+                            "https://www.googleapis.com/auth/gmail.send "
+                            "https://www.googleapis.com/auth/calendar.events"
+                        ),
                     )
                 ),
                 determine_grant_status=MagicMock(
-                    return_value=GrantStatus(
-                        gmail_grant_valid=True, calendar_grant_valid=True
-                    )
+                    return_value=GrantStatus(gmail_grant_valid=True, calendar_grant_valid=True)
                 ),
             ),
             token_service=MagicMock(

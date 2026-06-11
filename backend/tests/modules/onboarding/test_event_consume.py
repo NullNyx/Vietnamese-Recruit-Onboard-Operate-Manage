@@ -60,12 +60,12 @@ async def test_process_candidate_accepted_creates_onboarding(
     }
 
     with patch(
-        "src.modules.onboarding.container._build_service",
-        return_value=mock_onboarding_service
+        "src.modules.onboarding.container._build_service", return_value=mock_onboarding_service
     ):
         await process_candidate_accepted(ctx, payload)
 
     from uuid import UUID as _UUID
+
     mock_onboarding_service.start_from_event.assert_awaited_once_with(
         candidate_id=_UUID(payload["candidate_id"]),
         full_name=payload["name"],
@@ -94,8 +94,7 @@ async def test_process_candidate_accepted_rejects_malformed_event(
     }
 
     with patch(
-        "src.modules.onboarding.container._build_service",
-        return_value=mock_onboarding_service
+        "src.modules.onboarding.container._build_service", return_value=mock_onboarding_service
     ):
         result = await process_candidate_accepted(ctx, payload)
 
@@ -128,8 +127,7 @@ async def test_process_candidate_accepted_retries_on_transient_error(
     )
 
     with patch(
-        "src.modules.onboarding.container._build_service",
-        return_value=mock_onboarding_service
+        "src.modules.onboarding.container._build_service", return_value=mock_onboarding_service
     ):
         with pytest.raises(Exception, match="Database connection lost"):
             await process_candidate_accepted(ctx, payload)
@@ -155,17 +153,12 @@ async def test_process_candidate_accepted_records_failure_on_final_attempt(
         "email": "pham.van.d@example.com",
     }
 
-    mock_onboarding_service.start_from_event = AsyncMock(
-        side_effect=Exception("Permanent failure")
-    )
+    mock_onboarding_service.start_from_event = AsyncMock(side_effect=Exception("Permanent failure"))
 
     with patch(
-        "src.modules.onboarding.container._build_service",
-        return_value=mock_onboarding_service
+        "src.modules.onboarding.container._build_service", return_value=mock_onboarding_service
     ):
-        with patch(
-            "src.modules.onboarding.container.OnboardingAuditRepository"
-        ) as mock_audit_repo:
+        with patch("src.modules.onboarding.container.OnboardingAuditRepository") as mock_audit_repo:
             mock_audit_instance = MagicMock()
             mock_audit_instance.append = AsyncMock()
             mock_audit_repo.return_value = mock_audit_instance

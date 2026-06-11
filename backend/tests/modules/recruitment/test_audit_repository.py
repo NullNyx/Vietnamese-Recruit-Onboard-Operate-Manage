@@ -55,9 +55,7 @@ class TestAuditRepositoryCreate:
         mock_session.flush.assert_awaited_once()
         assert result is sample_audit_log
 
-    async def test_create_returns_the_log_entry(
-        self, mock_session: AsyncMock
-    ):
+    async def test_create_returns_the_log_entry(self, mock_session: AsyncMock):
         """create() should return the persisted log entry."""
         log = RecruitmentAuditLog(
             operation_type="cv_parse",
@@ -172,9 +170,7 @@ class TestAuditRepositoryFindByOperationType:
 
     async def test_find_by_operation_type_returns_matching_logs(self, mock_session: AsyncMock):
         """find_by_operation_type() should return logs matching the operation type."""
-        log1 = RecruitmentAuditLog(
-            operation_type="intent_classify", entity_type="email_message"
-        )
+        log1 = RecruitmentAuditLog(operation_type="intent_classify", entity_type="email_message")
 
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [log1]
@@ -198,9 +194,7 @@ class TestAuditRepositoryFindByTimestampRange:
         start = now - timedelta(days=7)
         end = now
 
-        log1 = RecruitmentAuditLog(
-            operation_type="cv_parse", entity_type="cv_document"
-        )
+        log1 = RecruitmentAuditLog(operation_type="cv_parse", entity_type="cv_document")
 
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [log1]
@@ -343,9 +337,7 @@ class TestLogAuditHelper:
         """log_audit() should log the error when audit logging fails."""
         mock_session.flush.side_effect = Exception("Database connection lost")
 
-        with patch(
-            "src.modules.recruitment.infrastructure.audit_repository.logger"
-        ) as mock_logger:
+        with patch("src.modules.recruitment.infrastructure.audit_repository.logger") as mock_logger:
             await log_audit(
                 session=mock_session,
                 operation_type="candidate_rejected",

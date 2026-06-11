@@ -65,9 +65,7 @@ class TestGetCurrentUser:
         self, mock_request, mock_token_service, mock_user_repository, mock_user
     ):
         """Should return the User entity when the token is valid."""
-        result = await get_current_user(
-            mock_request, mock_token_service, mock_user_repository
-        )
+        result = await get_current_user(mock_request, mock_token_service, mock_user_repository)
 
         assert result == mock_user
 
@@ -75,17 +73,11 @@ class TestGetCurrentUser:
         self, mock_request, mock_token_service, mock_user_repository
     ):
         """Should read the access_token from request cookies."""
-        await get_current_user(
-            mock_request, mock_token_service, mock_user_repository
-        )
+        await get_current_user(mock_request, mock_token_service, mock_user_repository)
 
-        mock_token_service.verify_access_token.assert_called_once_with(
-            "valid-jwt-token"
-        )
+        mock_token_service.verify_access_token.assert_called_once_with("valid-jwt-token")
 
-    async def test_raises_401_when_cookie_missing(
-        self, mock_token_service, mock_user_repository
-    ):
+    async def test_raises_401_when_cookie_missing(self, mock_token_service, mock_user_repository):
         """Should raise HTTPException 401 when access_token cookie is absent."""
         request = MagicMock()
         request.cookies = {}
@@ -103,9 +95,7 @@ class TestGetCurrentUser:
         mock_token_service.verify_access_token.side_effect = InvalidTokenError()
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(
-                mock_request, mock_token_service, mock_user_repository
-            )
+            await get_current_user(mock_request, mock_token_service, mock_user_repository)
 
         assert exc_info.value.status_code == 401
         assert exc_info.value.detail == "Invalid or expired token"
@@ -117,9 +107,7 @@ class TestGetCurrentUser:
         mock_user_repository.get_by_id = AsyncMock(return_value=None)
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(
-                mock_request, mock_token_service, mock_user_repository
-            )
+            await get_current_user(mock_request, mock_token_service, mock_user_repository)
 
         assert exc_info.value.status_code == 401
         assert exc_info.value.detail == "Invalid or expired token"
@@ -128,9 +116,7 @@ class TestGetCurrentUser:
         self, mock_request, mock_token_service, mock_user_repository
     ):
         """Should look up the user using the sub claim from the token payload."""
-        await get_current_user(
-            mock_request, mock_token_service, mock_user_repository
-        )
+        await get_current_user(mock_request, mock_token_service, mock_user_repository)
 
         expected_user_id = mock_token_service.verify_access_token.return_value.sub
         mock_user_repository.get_by_id.assert_called_once_with(expected_user_id)

@@ -11,7 +11,6 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-import pytest
 from httpx import ASGITransport, AsyncClient
 
 from src.modules.gmail.infrastructure.config import GmailSettings
@@ -97,12 +96,24 @@ class TestClassifyEndpointTimeout:
 
         app = _create_test_app()
 
-        from src.modules.gmail.container import get_email_repository
+        # Override dependencies
+        from src.modules.gmail.container import get_connection_service, get_email_repository
         from src.modules.identity.container import get_current_user
 
-        # Override dependencies
+        mock_connection_service = AsyncMock()
+        mock_connection_service.get_status = AsyncMock(return_value=MagicMock(status="connected"))
+
+        async def _mock_get_connection_service():
+            return mock_connection_service
+
         app.dependency_overrides[get_current_user] = lambda: mock_user
         app.dependency_overrides[get_email_repository] = lambda: mock_email_repo
+        app.dependency_overrides[get_connection_service] = _mock_get_connection_service
+
+        from src.modules.gmail.container import get_gmail_adapter
+
+        mock_gmail_adapter = MagicMock()
+        app.dependency_overrides[get_gmail_adapter] = lambda: mock_gmail_adapter
 
         with patch(
             "src.modules.gmail.infrastructure.config.GmailSettings",
@@ -162,6 +173,21 @@ class TestClassifyEndpointTimeout:
 
         app.dependency_overrides[get_current_user] = lambda: mock_user
         app.dependency_overrides[get_email_repository] = lambda: mock_email_repo
+
+        from src.modules.gmail.container import get_connection_service
+
+        mock_connection_service = AsyncMock()
+        mock_connection_service.get_status = AsyncMock(return_value=MagicMock(status="connected"))
+
+        async def _mock_get_connection_service():
+            return mock_connection_service
+
+        app.dependency_overrides[get_connection_service] = _mock_get_connection_service
+
+        from src.modules.gmail.container import get_gmail_adapter
+
+        mock_gmail_adapter = MagicMock()
+        app.dependency_overrides[get_gmail_adapter] = lambda: mock_gmail_adapter
 
         with patch(
             "src.modules.gmail.infrastructure.config.GmailSettings",
@@ -227,6 +253,21 @@ class TestClassifyEndpointTimeout:
 
         app.dependency_overrides[get_current_user] = lambda: mock_user
         app.dependency_overrides[get_email_repository] = lambda: mock_email_repo
+
+        from src.modules.gmail.container import get_connection_service
+
+        mock_connection_service = AsyncMock()
+        mock_connection_service.get_status = AsyncMock(return_value=MagicMock(status="connected"))
+
+        async def _mock_get_connection_service():
+            return mock_connection_service
+
+        app.dependency_overrides[get_connection_service] = _mock_get_connection_service
+
+        from src.modules.gmail.container import get_gmail_adapter
+
+        mock_gmail_adapter = MagicMock()
+        app.dependency_overrides[get_gmail_adapter] = lambda: mock_gmail_adapter
 
         with patch(
             "src.modules.gmail.infrastructure.config.GmailSettings",

@@ -14,6 +14,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.gmail.application.attachment_service import AttachmentService
+from src.modules.gmail.application.classification_service import ClassificationService
 from src.modules.gmail.application.connection_service import ConnectionService
 from src.modules.gmail.application.email_sync_service import EmailSyncService
 from src.modules.gmail.application.label_service import LabelService
@@ -305,4 +306,31 @@ async def get_attachment_service(
         gmail_adapter=gmail_adapter,
         settings=get_gmail_settings(),
         audit_logger=audit_logger,
+    )
+
+
+async def get_classification_service(
+    email_repo: EmailRepository = Depends(get_email_repository),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+) -> ClassificationService:
+    """Provide a ClassificationService instance.
+
+    Args:
+        email_repo: The email repository from DI.
+        audit_logger: The audit logger from DI.
+
+    Returns:
+        A ClassificationService configured with all dependencies.
+    """
+    from src.modules.gmail.application.rules_classifier import RulesClassifier
+    from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
+
+    settings = get_gmail_settings()
+    return ClassificationService(
+        rules_classifier=RulesClassifier(),
+        ai_classifier=AIClassifier(settings),
+        email_repo=email_repo,
+        audit_logger=audit_logger,
+        settings=settings,
+        session=email_repo.session,
     )

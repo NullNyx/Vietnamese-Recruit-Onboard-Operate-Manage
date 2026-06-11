@@ -86,9 +86,7 @@ class TestAuthSettingsValidation:
         with pytest.raises(ValidationError, match="jwt_algorithm"):
             AuthSettings()
 
-    def test_access_token_expire_must_be_positive(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_access_token_expire_must_be_positive(self, monkeypatch: pytest.MonkeyPatch) -> None:
         for key, value in _REQUIRED_ENV.items():
             monkeypatch.setenv(key, value)
         monkeypatch.setenv("AUTH_ACCESS_TOKEN_EXPIRE_MINUTES", "0")
@@ -96,9 +94,7 @@ class TestAuthSettingsValidation:
         with pytest.raises(ValidationError):
             AuthSettings()
 
-    def test_refresh_token_expire_must_be_positive(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_refresh_token_expire_must_be_positive(self, monkeypatch: pytest.MonkeyPatch) -> None:
         for key, value in _REQUIRED_ENV.items():
             monkeypatch.setenv(key, value)
         monkeypatch.setenv("AUTH_REFRESH_TOKEN_EXPIRE_DAYS", "-1")
@@ -106,9 +102,7 @@ class TestAuthSettingsValidation:
         with pytest.raises(ValidationError):
             AuthSettings()
 
-    def test_rate_limit_max_must_be_positive(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_rate_limit_max_must_be_positive(self, monkeypatch: pytest.MonkeyPatch) -> None:
         for key, value in _REQUIRED_ENV.items():
             monkeypatch.setenv(key, value)
         monkeypatch.setenv("AUTH_RATE_LIMIT_LOGIN_MAX", "0")

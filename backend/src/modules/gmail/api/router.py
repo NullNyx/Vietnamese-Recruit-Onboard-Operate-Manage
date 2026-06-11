@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import logging
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -54,6 +55,8 @@ from src.modules.gmail.infrastructure.email_repository import EmailRepository
 from src.modules.gmail.infrastructure.gmail_adapter import GmailAdapter
 from src.modules.identity.container import get_current_user
 from src.modules.identity.domain.entities import User
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Type aliases for injected dependencies
@@ -288,6 +291,7 @@ async def list_messages(
             label_ids=msg.label_ids,
             has_attachments=msg.has_attachments,
             category=msg.category,
+            processing_status=msg.processing_status,
         )
         for msg in messages
     ]
@@ -541,6 +545,172 @@ async def fetch_attachments(
     }
 
 
+@router.post(
+    "/messages/{message_id}/process-attachments",
+    responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+        502: {"model": ErrorResponse},
+    },
+)
+async def process_attachments(
+    message_id: str,
+    current_user: CurrentUserDep,
+    attachment_service: AttachmentServiceDep,
+    connection_service: ConnectionServiceDep,
+    email_repo: EmailRepositoryDep,
+    gmail_adapter: GmailAdapterDep,
+) -> dict[str, Any]:
+    """Fetch email attachments and trigger CV processing pipeline.
+
+    Downloads attachments from Gmail API, then runs the recruitment
+    CV processor pipeline (OCR -> LLM parse -> confidence check).
+    Creates CVDocument records and either creates a Candidate
+    (high confidence) or flags for review (low confidence).
+
+    Args:
+        message_id: The Gmail message ID containing attachments.
+        current_user: The authenticated user.
+        attachment_service: The attachment service.
+        connection_service: The connection service for token access.
+        email_repo: The email repository.
+
+    Returns:
+        Dictionary with processing results.
+    """
+    from fastapi import HTTPException
+    from sqlmodel import select
+
+    from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
+    from src.modules.gmail.domain.exceptions import GmailNotConnectedException
+    from src.modules.recruitment.application.cv_processor import AttachmentInput
+    from src.modules.recruitment.container import get_cv_processor_service
+
+    # Verify connection
+    status_result = await connection_service.get_status(current_user.id)
+    if status_result.status != "connected":
+        raise GmailNotConnectedException()
+
+    # Get access token
+    access_token = await _get_user_access_token(current_user.id, connection_service)
+
+    # Find email record
+    stmt = select(EmailMessageEntity).where(EmailMessageEntity.gmail_message_id == message_id)
+    result = await email_repo.session.execute(stmt)
+    email = result.scalar_one_or_none()
+
+    if email is None:
+        raise HTTPException(status_code=404, detail="Email not found")
+    if email.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Guard: only classified recruitment emails with attachments
+    if email.category != "recruitment":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Email category is '{email.category}', expected 'recruitment'",
+        )
+    if email.processing_status != "classified":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Email status is '{email.processing_status}', expected 'classified'",
+        )
+
+    # Atomically transition to cv_processing to prevent race conditions.
+    # A second concurrent request will see processing_status != "classified"
+    # and get 400 before starting the expensive pipeline.
+    email.processing_status = "cv_processing"
+    email_repo.session.add(email)
+    await email_repo.session.commit()
+
+    # Fetch attachment binary data from Gmail API
+    response = await gmail_adapter._http_client.get(
+        f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{message_id}",
+        headers={"Authorization": f"Bearer {access_token}"},
+        params={"format": "full"},
+    )
+    response.raise_for_status()
+    msg_data = response.json()
+
+    attachments_meta = _extract_attachment_metadata(msg_data.get("payload", {}))
+
+    if not attachments_meta:
+        email.processing_status = "classified"
+        email_repo.session.add(email)
+        await email_repo.session.commit()
+        return {"processed_count": 0, "message": "No attachments found"}
+
+    # Fetch binary data
+    fetch_result = await attachment_service.fetch_attachments(
+        user_id=current_user.id,
+        message_id=message_id,
+        access_token=access_token,
+        attachments=attachments_meta,
+    )
+
+    if not fetch_result.fetched:
+        # Revert: no valid attachments to process
+        email.processing_status = "classified"
+        email_repo.session.add(email)
+        await email_repo.session.commit()
+        return {"processed_count": 0, "message": "No valid attachments to process"}
+
+    # Build AttachmentInput list
+    attachment_inputs = [
+        AttachmentInput(
+            filename=att.filename,
+            mime_type=att.mime_type,
+            size_bytes=att.size_bytes,
+            data=att.data,
+        )
+        for att in fetch_result.fetched
+    ]
+
+    # Run CV processing pipeline
+    cv_processor = await get_cv_processor_service(session=email_repo.session)
+
+    try:
+        cv_documents = await cv_processor.process_cv_from_email(
+            email_message_id=email.id,
+            attachments=attachment_inputs,
+            gmail_message_id=message_id,
+        )
+    except Exception as exc:
+        logger.error("CV processing failed for email %s: %s", message_id, exc)
+        # Revert to needs_review so HR can retry via reclassify
+        email.processing_status = "needs_review"
+        email_repo.session.add(email)
+        await email_repo.session.commit()
+        raise HTTPException(
+            status_code=500,
+            detail=f"CV processing failed: {exc}",
+        ) from exc
+
+    # Set final status based on CV processing results.
+    # If any CVDocument ended up as needs_review or failed, propagate that.
+    # Otherwise mark as classified.
+    if any(doc.processing_status in {"needs_review", "failed"} for doc in cv_documents):
+        email.processing_status = "needs_review"
+    else:
+        email.processing_status = "classified"
+    email_repo.session.add(email)
+    await email_repo.session.commit()
+
+    return {
+        "processed_count": len(cv_documents),
+        "cv_documents": [
+            {
+                "id": str(doc.id),
+                "original_filename": doc.original_filename,
+                "processing_status": doc.processing_status,
+                "confidence_score": doc.confidence_score,
+            }
+            for doc in cv_documents
+        ],
+    }
+
+
 # ---------------------------------------------------------------------------
 # Classification endpoints
 # ---------------------------------------------------------------------------
@@ -557,6 +727,8 @@ async def fetch_attachments(
 async def classify_emails(
     current_user: CurrentUserDep,
     email_repo: EmailRepositoryDep,
+    connection_service: ConnectionServiceDep,
+    gmail_adapter: GmailAdapterDep,
     limit: int = Query(default=5, ge=1, le=20, description="Max emails to classify per request"),
 ) -> dict[str, Any] | JSONResponse:
     """Trigger AI classification for all unclassified emails.
@@ -578,7 +750,10 @@ async def classify_emails(
 
     settings = GmailSettings()
 
-    async def _do_classify() -> dict[str, Any]:
+    async def _do_classify(
+        connection_service: ConnectionService,
+        gmail_adapter: GmailAdapter,
+    ) -> dict[str, Any]:
         from sqlmodel import select
 
         from src.modules.gmail.application.classification_service import (
@@ -654,6 +829,99 @@ async def classify_emails(
 
         await email_repo.session.commit()
 
+        # Auto-process CV attachments for classified recruitment emails only.
+        # Skip emails that ended up as needs_review (low confidence) —
+        # those require human review before CV processing.
+        cv_processed_count = 0
+        recruitment_with_attachments = [
+            e
+            for e in unclassified_emails
+            if e.category == "recruitment"
+            and e.has_attachments
+            and e.processing_status == "classified"
+        ]
+
+        if recruitment_with_attachments:
+            classify_logger.info(
+                "Auto-processing CV attachments for %d recruitment emails",
+                len(recruitment_with_attachments),
+            )
+            for email in recruitment_with_attachments:
+                try:
+                    # Import here to avoid circular imports
+                    from src.modules.recruitment.application.cv_processor import AttachmentInput
+                    from src.modules.recruitment.container import get_cv_processor_service
+
+                    # Fetch attachment binary data from Gmail API
+                    access_token = await _get_user_access_token(current_user.id, connection_service)
+
+                    response = await gmail_adapter._http_client.get(
+                        f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{email.gmail_message_id}",
+                        headers={"Authorization": f"Bearer {access_token}"},
+                        params={"format": "full"},
+                    )
+                    response.raise_for_status()
+                    msg_data = response.json()
+
+                    attachments_meta = _extract_attachment_metadata(msg_data.get("payload", {}))
+
+                    if not attachments_meta:
+                        classify_logger.info(
+                            "No attachments found for email %s, skipping CV processing",
+                            email.gmail_message_id,
+                        )
+                        continue
+
+                    # Fetch binary data
+                    attachment_service = AttachmentService(
+                        gmail_adapter=gmail_adapter,
+                        settings=settings,
+                        audit_logger=audit_logger,
+                    )
+                    fetch_result = await attachment_service.fetch_attachments(
+                        user_id=current_user.id,
+                        message_id=email.gmail_message_id,
+                        access_token=access_token,
+                        attachments=attachments_meta,
+                    )
+
+                    if not fetch_result.fetched:
+                        continue
+
+                    # Build AttachmentInput list
+                    attachment_inputs = [
+                        AttachmentInput(
+                            filename=att.filename,
+                            mime_type=att.mime_type,
+                            size_bytes=att.size_bytes,
+                            data=att.data,
+                        )
+                        for att in fetch_result.fetched
+                    ]
+
+                    # Run CV processing pipeline
+                    cv_processor = await get_cv_processor_service(session=email_repo.session)
+                    cv_documents = await cv_processor.process_cv_from_email(
+                        email_message_id=email.id,
+                        attachments=attachment_inputs,
+                        gmail_message_id=email.gmail_message_id,
+                    )
+                    cv_processed_count += len(cv_documents)
+
+                    classify_logger.info(
+                        "Processed %d CV documents for email %s",
+                        len(cv_documents),
+                        email.gmail_message_id,
+                    )
+                except Exception as exc:
+                    classify_logger.error(
+                        "Failed to auto-process CV for email %s: %s",
+                        email.gmail_message_id,
+                        exc,
+                    )
+
+            await email_repo.session.commit()
+
         # Build results summary
         results_summary = []
         for email in unclassified_emails[:20]:  # Limit to first 20 for response size
@@ -665,22 +933,27 @@ async def classify_emails(
             )
 
         classify_logger.info(
-            "Classification complete: %d/%d emails classified",
+            "Classification complete: %d/%d emails classified, %d CVs processed",
             classified_count,
             len(unclassified_emails),
+            cv_processed_count,
         )
 
         return {
             "classified_count": classified_count,
             "total": len(unclassified_emails),
             "remaining": max(0, total_remaining - classified_count),
-            "message": (f"AI đã phân loại {classified_count}/{len(unclassified_emails)} email"),
+            "cv_processed_count": cv_processed_count,
+            "message": (
+                f"AI đã phân loại {classified_count}/{len(unclassified_emails)} email"
+                + (f", xử lý {cv_processed_count} CV" if cv_processed_count > 0 else "")
+            ),
             "results": results_summary,
         }
 
     try:
         return await asyncio.wait_for(
-            _do_classify(),
+            _do_classify(connection_service, gmail_adapter),
             timeout=settings.classification_request_timeout_seconds,
         )
     except TimeoutError:
@@ -766,3 +1039,176 @@ def _walk_parts_for_attachments(
     # Recurse into nested parts
     for sub_part in part.get("parts", []):
         _walk_parts_for_attachments(sub_part, attachments)
+
+
+# ---------------------------------------------------------------------------
+# Dead-letter queue endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/review/emails",
+    response_model=MessageListResponse,
+    responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+    },
+)
+async def list_emails_needing_review(
+    current_user: CurrentUserDep,
+    email_repo: EmailRepositoryDep,
+    limit: int = Query(default=50, ge=1, le=100, description="Max emails to return"),
+    offset: int = Query(default=0, ge=0, description="Pagination offset"),
+) -> MessageListResponse:
+    """List emails that need human review (needs_review status).
+
+    Returns emails with processing_status='needs_review' that require
+    manual classification by HR. These are emails where classification
+    confidence was too low or classification failed.
+
+    Args:
+        current_user: The authenticated user.
+        email_repo: The email repository.
+        limit: Maximum number of emails to return.
+        offset: Number of emails to skip for pagination.
+
+    Returns:
+        MessageListResponse with list of emails needing review.
+    """
+    from sqlalchemy import desc
+    from sqlmodel import select
+
+    from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
+
+    statement = (
+        select(EmailMessageEntity)
+        .where(EmailMessageEntity.user_id == current_user.id)
+        .where(EmailMessageEntity.processing_status == "needs_review")
+        .order_by(desc(EmailMessageEntity.received_at))  # type: ignore[arg-type]
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await email_repo.session.execute(statement)
+    messages = list(result.scalars().all())
+
+    items = [
+        MessageListItem(
+            id=str(msg.id),
+            gmail_message_id=msg.gmail_message_id,
+            gmail_thread_id=msg.gmail_thread_id,
+            subject=msg.subject,
+            sender_email=msg.sender_email,
+            sender_name=msg.sender_name,
+            recipient_emails=msg.recipient_emails,
+            cc_emails=msg.cc_emails,
+            received_at=msg.received_at.isoformat(),
+            snippet=msg.snippet,
+            label_ids=msg.label_ids,
+            has_attachments=msg.has_attachments,
+            category=msg.category,
+            processing_status=msg.processing_status,
+        )
+        for msg in messages
+    ]
+
+    # Get total count for pagination
+    from sqlalchemy import func
+
+    count_stmt = (
+        select(func.count())
+        .select_from(EmailMessageEntity)
+        .where(EmailMessageEntity.user_id == current_user.id)
+        .where(EmailMessageEntity.processing_status == "needs_review")
+    )
+    total_result = await email_repo.session.execute(count_stmt)
+    total = total_result.scalar() or 0
+
+    return MessageListResponse(messages=items, total=total)
+
+
+@router.post(
+    "/review/emails/{message_id}/reclassify",
+    response_model=MessageListItem,
+    responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+    },
+)
+async def reclassify_email(
+    message_id: str,
+    current_user: CurrentUserDep,
+    email_repo: EmailRepositoryDep,
+) -> MessageListItem:
+    """Reclassify a needs_review email and mark as reviewed.
+
+    Runs the classification pipeline on the given email and updates
+    its status. Only emails with processing_status='needs_review' can
+    be reclassified.
+
+    Args:
+        message_id: The UUID of the email to reclassify.
+        current_user: The authenticated user.
+        email_repo: The email repository.
+
+    Returns:
+        MessageListItem with updated classification info.
+    """
+    from fastapi import HTTPException
+    from sqlalchemy import select
+
+    from src.modules.gmail.domain.entities import (
+        EmailMessage as EmailMessageEntity,
+    )
+
+    # Fetch the email
+    statement = select(EmailMessageEntity).where(EmailMessageEntity.id == message_id)  # type: ignore[arg-type]
+    result = await email_repo.session.execute(statement)
+    email = result.scalar_one_or_none()
+
+    if email is None:
+        raise HTTPException(status_code=404, detail="Email not found")
+
+    if email.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Guard: only needs_review emails can be reclassified
+    if email.processing_status != "needs_review":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Email status is '{email.processing_status}', expected 'needs_review'",
+        )
+
+    from src.modules.gmail.container import get_classification_service
+    from src.modules.gmail.infrastructure.audit_logger import AuditLogger
+    from src.modules.gmail.infrastructure.config import GmailSettings
+
+    gmail_settings = GmailSettings()
+    audit_logger_instance = AuditLogger(email_repo.session, gmail_settings)
+
+    classification_service = await get_classification_service(
+        email_repo=email_repo,
+        audit_logger=audit_logger_instance,
+    )
+    await classification_service.classify_single_email(
+        user_id=current_user.id,
+        email=email,
+    )
+    await email_repo.session.commit()
+
+    return MessageListItem(
+        id=str(email.id),
+        gmail_message_id=email.gmail_message_id,
+        gmail_thread_id=email.gmail_thread_id,
+        subject=email.subject,
+        sender_email=email.sender_email,
+        sender_name=email.sender_name,
+        recipient_emails=email.recipient_emails,
+        cc_emails=email.cc_emails,
+        received_at=email.received_at.isoformat(),
+        snippet=email.snippet,
+        label_ids=email.label_ids,
+        has_attachments=email.has_attachments,
+        category=email.category,
+        processing_status=email.processing_status,
+    )

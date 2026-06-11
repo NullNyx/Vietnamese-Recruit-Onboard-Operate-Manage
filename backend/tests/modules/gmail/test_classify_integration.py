@@ -9,7 +9,7 @@ session flush, and audit logging.
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, call
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest

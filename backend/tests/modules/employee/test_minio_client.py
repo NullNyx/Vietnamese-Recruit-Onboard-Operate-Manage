@@ -106,9 +106,7 @@ class TestMinIOClientDownload:
 
         assert result == b"file-content"
 
-    async def test_download_file_uses_correct_bucket_and_key(
-        self, client: MinIOClient
-    ) -> None:
+    async def test_download_file_uses_correct_bucket_and_key(self, client: MinIOClient) -> None:
         mock_body = AsyncMock()
         mock_body.read = AsyncMock(return_value=b"data")
 
@@ -122,9 +120,7 @@ class TestMinIOClientDownload:
         with patch.object(client, "_client_context", return_value=mock_context):
             await client.download_file("some/path/doc.pdf")
 
-        mock_s3.get_object.assert_called_once_with(
-            Bucket="test-bucket", Key="some/path/doc.pdf"
-        )
+        mock_s3.get_object.assert_called_once_with(Bucket="test-bucket", Key="some/path/doc.pdf")
 
 
 class TestMinIOClientDelete:

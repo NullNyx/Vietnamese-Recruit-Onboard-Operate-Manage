@@ -109,13 +109,15 @@ class TestAuthServiceSuperAdminProvisioning:
         mock_whitelist.is_allowed.return_value = True
 
         mock_oauth_service = MagicMock()
-        mock_oauth_service.exchange_code = AsyncMock(return_value=MagicMock(
-            access_token="at",
-            refresh_token="rt",
-            id_token="eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjMiLCJlbWFpbCI6InN1cGVyYWRtaW5AZXhhbXBsZS5jb20iLCJuYW1lIjoiU3VwZXIgQWRtaW4ifQ.sig",
-            expires_in=3600,
-            scope="openid email profile",
-        ))
+        mock_oauth_service.exchange_code = AsyncMock(
+            return_value=MagicMock(
+                access_token="at",
+                refresh_token="rt",
+                id_token="eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjMiLCJlbWFpbCI6InN1cGVyYWRtaW5AZXhhbXBsZS5jb20iLCJuYW1lIjoiU3VwZXIgQWRtaW4ifQ.sig",
+                expires_in=3600,
+                scope="openid email profile",
+            )
+        )
         mock_oauth_service.determine_grant_status.return_value = MagicMock(
             gmail_grant_valid=True, calendar_grant_valid=True
         )
@@ -184,13 +186,15 @@ class TestAuthServiceSuperAdminProvisioning:
         mock_whitelist.is_allowed.return_value = True
 
         mock_oauth_service = MagicMock()
-        mock_oauth_service.exchange_code = AsyncMock(return_value=MagicMock(
-            access_token="at",
-            refresh_token="rt",
-            id_token="eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjMiLCJlbWFpbCI6InJlZ3VsYXJAZXhhbXBsZS5jb20iLCJuYW1lIjoiUmVndWxhciBVc2VyIn0.sig",
-            expires_in=3600,
-            scope="openid email profile",
-        ))
+        mock_oauth_service.exchange_code = AsyncMock(
+            return_value=MagicMock(
+                access_token="at",
+                refresh_token="rt",
+                id_token="eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjMiLCJlbWFpbCI6InJlZ3VsYXJAZXhhbXBsZS5jb20iLCJuYW1lIjoiUmVndWxhciBVc2VyIn0.sig",
+                expires_in=3600,
+                scope="openid email profile",
+            )
+        )
         mock_oauth_service.determine_grant_status.return_value = MagicMock(
             gmail_grant_valid=True, calendar_grant_valid=True
         )
@@ -259,13 +263,15 @@ class TestAuthServiceSuperAdminProvisioning:
         mock_whitelist.is_allowed.return_value = True
 
         mock_oauth_service = MagicMock()
-        mock_oauth_service.exchange_code = AsyncMock(return_value=MagicMock(
-            access_token="at",
-            refresh_token="rt",
-            id_token="eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjMiLCJlbWFpbCI6ImFueW9uZUBleGFtcGxlLmNvbSIsIm5hbWUiOiJBbnlvbmUifQ.sig",
-            expires_in=3600,
-            scope="openid email profile",
-        ))
+        mock_oauth_service.exchange_code = AsyncMock(
+            return_value=MagicMock(
+                access_token="at",
+                refresh_token="rt",
+                id_token="eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjMiLCJlbWFpbCI6ImFueW9uZUBleGFtcGxlLmNvbSIsIm5hbWUiOiJBbnlvbmUifQ.sig",
+                expires_in=3600,
+                scope="openid email profile",
+            )
+        )
         mock_oauth_service.determine_grant_status.return_value = MagicMock(
             gmail_grant_valid=True, calendar_grant_valid=True
         )
@@ -325,9 +331,14 @@ class TestBootstrapSuperAdminFunction:
         mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_maker.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("src.modules.identity.container.get_settings", return_value=mock_settings), \
-             patch("src.modules.identity.container._get_async_session_maker", return_value=mock_session_maker), \
-             patch("src.modules.identity.application.role_service.RoleService") as MockRoleService:
+        with (
+            patch("src.modules.identity.container.get_settings", return_value=mock_settings),
+            patch(
+                "src.modules.identity.container._get_async_session_maker",
+                return_value=mock_session_maker,
+            ),
+            patch("src.modules.identity.application.role_service.RoleService") as MockRoleService,
+        ):
             mock_role_service = AsyncMock()
             MockRoleService.return_value = mock_role_service
 
@@ -356,10 +367,14 @@ class TestBootstrapSuperAdminFunction:
         mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_maker.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("src.modules.identity.container.get_settings", return_value=mock_settings), \
-             patch("src.modules.identity.container._get_async_session_maker", return_value=mock_session_maker), \
-             patch("src.main.logger") as mock_logger:
-
+        with (
+            patch("src.modules.identity.container.get_settings", return_value=mock_settings),
+            patch(
+                "src.modules.identity.container._get_async_session_maker",
+                return_value=mock_session_maker,
+            ),
+            patch("src.main.logger") as mock_logger,
+        ):
             await _bootstrap_super_admin()
 
             mock_logger.warning.assert_called_once()
@@ -383,10 +398,14 @@ class TestBootstrapSuperAdminFunction:
         mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_maker.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("src.modules.identity.container.get_settings", return_value=mock_settings), \
-             patch("src.modules.identity.container._get_async_session_maker", return_value=mock_session_maker), \
-             patch("src.main.logger") as mock_logger:
-
+        with (
+            patch("src.modules.identity.container.get_settings", return_value=mock_settings),
+            patch(
+                "src.modules.identity.container._get_async_session_maker",
+                return_value=mock_session_maker,
+            ),
+            patch("src.main.logger") as mock_logger,
+        ):
             await _bootstrap_super_admin()
 
             mock_logger.warning.assert_not_called()
@@ -399,12 +418,16 @@ class TestConfigSuperAdminEmail:
         """super_admin_email should default to None when not set."""
         from src.modules.identity.infrastructure.config import AuthSettings
 
-        with patch.dict("os.environ", {
-            "AUTH_GOOGLE_CLIENT_ID": "test",
-            "AUTH_GOOGLE_CLIENT_SECRET": "test",
-            "AUTH_JWT_SECRET_KEY": "test",
-            "AUTH_OAUTH_TOKEN_ENCRYPTION_KEY": "dGVzdGtleXRlc3RrZXl0ZXN0a2V5dGVzdGtleXM=",
-        }, clear=False):
+        with patch.dict(
+            "os.environ",
+            {
+                "AUTH_GOOGLE_CLIENT_ID": "test",
+                "AUTH_GOOGLE_CLIENT_SECRET": "test",
+                "AUTH_JWT_SECRET_KEY": "test",
+                "AUTH_OAUTH_TOKEN_ENCRYPTION_KEY": "dGVzdGtleXRlc3RrZXl0ZXN0a2V5dGVzdGtleXM=",
+            },
+            clear=False,
+        ):
             settings = AuthSettings()  # type: ignore[call-arg]
             assert settings.super_admin_email is None
 
@@ -413,12 +436,16 @@ class TestConfigSuperAdminEmail:
         import os
         from src.modules.identity.infrastructure.config import AuthSettings
 
-        with patch.dict("os.environ", {
-            "AUTH_GOOGLE_CLIENT_ID": "test",
-            "AUTH_GOOGLE_CLIENT_SECRET": "test",
-            "AUTH_JWT_SECRET_KEY": "test",
-            "AUTH_OAUTH_TOKEN_ENCRYPTION_KEY": "dGVzdGtleXRlc3RrZXl0ZXN0a2V5dGVzdGtleXM=",
-            "AUTH_SUPER_ADMIN_EMAIL": "admin@company.com",
-        }, clear=False):
+        with patch.dict(
+            "os.environ",
+            {
+                "AUTH_GOOGLE_CLIENT_ID": "test",
+                "AUTH_GOOGLE_CLIENT_SECRET": "test",
+                "AUTH_JWT_SECRET_KEY": "test",
+                "AUTH_OAUTH_TOKEN_ENCRYPTION_KEY": "dGVzdGtleXRlc3RrZXl0ZXN0a2V5dGVzdGtleXM=",
+                "AUTH_SUPER_ADMIN_EMAIL": "admin@company.com",
+            },
+            clear=False,
+        ):
             settings = AuthSettings()  # type: ignore[call-arg]
             assert settings.super_admin_email == "admin@company.com"

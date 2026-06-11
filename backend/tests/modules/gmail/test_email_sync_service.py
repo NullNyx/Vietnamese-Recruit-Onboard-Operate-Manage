@@ -1,14 +1,14 @@
 """Unit tests for EmailSyncService."""
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import httpx
 import pytest
 
 from src.modules.gmail.application.email_sync_service import EmailSyncService
-from src.modules.gmail.domain.entities import EmailMessage, SyncCursor
+from src.modules.gmail.domain.entities import SyncCursor
 from src.modules.gmail.domain.exceptions import (
     GmailNotConnectedException,
     RateLimitedException,
@@ -118,9 +118,7 @@ def _make_grant(
         "https://www.googleapis.com/auth/gmail.modify",
         "https://www.googleapis.com/auth/gmail.send",
     ]
-    grant.token_expires_at = token_expires_at or (
-        datetime.now(UTC) + timedelta(hours=1)
-    )
+    grant.token_expires_at = token_expires_at or (datetime.now(UTC) + timedelta(hours=1))
     return grant
 
 
@@ -230,16 +228,12 @@ class TestPollEmails:
         """Should update sync cursor after successful fetch."""
         oauth_grant_repo.get_by_user_id.return_value = _make_grant()
         sync_cursor_repo.get_cursor.return_value = None
-        gmail_adapter.fetch_messages.return_value = [
-            _make_message_metadata(history_id="55555")
-        ]
+        gmail_adapter.fetch_messages.return_value = [_make_message_metadata(history_id="55555")]
         email_repo.batch_upsert.return_value = 1
 
         await sync_service.poll_emails(user_id)
 
-        sync_cursor_repo.upsert_cursor.assert_called_once_with(
-            user_id=user_id, history_id="55555"
-        )
+        sync_cursor_repo.upsert_cursor.assert_called_once_with(user_id=user_id, history_id="55555")
 
     async def test_no_new_emails_returns_zero(
         self,
@@ -681,9 +675,7 @@ class TestMetadataToEntity:
         assert entity.recipient_emails == ["recipient@example.com"]
         assert entity.has_attachments is False
 
-    def test_truncates_subject_to_998_chars(
-        self, sync_service: EmailSyncService
-    ) -> None:
+    def test_truncates_subject_to_998_chars(self, sync_service: EmailSyncService) -> None:
         """Should truncate subject to 998 characters."""
         user_id = uuid4()
         metadata = _make_message_metadata()
@@ -693,9 +685,7 @@ class TestMetadataToEntity:
 
         assert len(entity.subject) == 998
 
-    def test_defaults_empty_string_for_missing_fields(
-        self, sync_service: EmailSyncService
-    ) -> None:
+    def test_defaults_empty_string_for_missing_fields(self, sync_service: EmailSyncService) -> None:
         """Should use empty string for None/empty fields."""
         user_id = uuid4()
         metadata = _make_message_metadata()

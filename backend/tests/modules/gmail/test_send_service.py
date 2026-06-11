@@ -456,9 +456,7 @@ class TestSendEmail:
         mock_response = MagicMock()
         mock_response.status_code = 401
         mock_response.text = "Unauthorized"
-        http_error = httpx.HTTPStatusError(
-            "401", request=MagicMock(), response=mock_response
-        )
+        http_error = httpx.HTTPStatusError("401", request=MagicMock(), response=mock_response)
         gmail_adapter.send_message.side_effect = [
             http_error,
             SentMessageInfo(message_id="msg_retry", thread_id="thread_retry"),
@@ -489,9 +487,7 @@ class TestSendEmail:
         mock_response = MagicMock()
         mock_response.status_code = 401
         mock_response.text = "Unauthorized"
-        http_error = httpx.HTTPStatusError(
-            "401", request=MagicMock(), response=mock_response
-        )
+        http_error = httpx.HTTPStatusError("401", request=MagicMock(), response=mock_response)
         gmail_adapter.send_message.side_effect = http_error
         gmail_adapter.refresh_access_token.side_effect = Exception("Refresh failed")
 
@@ -543,9 +539,7 @@ class TestSendEmail:
     ) -> None:
         """Refreshes token when token_expires_at is in the past."""
         user_id = uuid4()
-        grant = _make_grant(
-            token_expires_at=datetime.now(UTC) - timedelta(minutes=5)
-        )
+        grant = _make_grant(token_expires_at=datetime.now(UTC) - timedelta(minutes=5))
         oauth_grant_repo.get_by_user_id.return_value = grant
         gmail_adapter.refresh_access_token.return_value = (
             "refreshed_token",

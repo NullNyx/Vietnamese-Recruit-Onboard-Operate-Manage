@@ -37,9 +37,7 @@ def whitelist_file(tmp_path: Path) -> Path:
     """Create a temporary whitelist file with sample entries."""
     file = tmp_path / "whitelist.txt"
     file.write_text(
-        "alice@example.com\n"
-        "bob@company.org\n"
-        "@allowed-domain.com\n",
+        "alice@example.com\nbob@company.org\n@allowed-domain.com\n",
         encoding="utf-8",
     )
     return file
@@ -162,12 +160,8 @@ class TestWhitelistManagerIsAllowed:
 class TestWhitelistManagerAddEntry:
     """Tests for add_entry method."""
 
-    async def test_add_valid_email(
-        self, mock_repo: MagicMock, admin_user: User
-    ) -> None:
-        mock_repo.add = AsyncMock(
-            side_effect=lambda entry: entry
-        )
+    async def test_add_valid_email(self, mock_repo: MagicMock, admin_user: User) -> None:
+        mock_repo.add = AsyncMock(side_effect=lambda entry: entry)
         manager = WhitelistManager(repo=mock_repo, file_loader=None)
         await manager.refresh_cache()
 
@@ -176,12 +170,8 @@ class TestWhitelistManagerAddEntry:
         assert result.entry_type == WhitelistEntryType.EXACT_EMAIL
         assert result.added_by_user_id == admin_user.id
 
-    async def test_add_valid_domain_pattern(
-        self, mock_repo: MagicMock, admin_user: User
-    ) -> None:
-        mock_repo.add = AsyncMock(
-            side_effect=lambda entry: entry
-        )
+    async def test_add_valid_domain_pattern(self, mock_repo: MagicMock, admin_user: User) -> None:
+        mock_repo.add = AsyncMock(side_effect=lambda entry: entry)
         manager = WhitelistManager(repo=mock_repo, file_loader=None)
         await manager.refresh_cache()
 
@@ -214,9 +204,7 @@ class TestWhitelistManagerAddEntry:
             await manager.add_entry("@", admin_user)
         assert exc_info.value.status_code == 422
 
-    async def test_add_duplicate_raises_409(
-        self, mock_repo: MagicMock, admin_user: User
-    ) -> None:
+    async def test_add_duplicate_raises_409(self, mock_repo: MagicMock, admin_user: User) -> None:
         mock_repo.exists = AsyncMock(return_value=True)
         manager = WhitelistManager(repo=mock_repo, file_loader=None)
         await manager.refresh_cache()
@@ -411,8 +399,7 @@ class TestWhitelistManagerEntryTypeDetection:
 
     def test_valid_domain_pattern(self) -> None:
         assert (
-            WhitelistManager._detect_entry_type("@example.com")
-            == WhitelistEntryType.DOMAIN_PATTERN
+            WhitelistManager._detect_entry_type("@example.com") == WhitelistEntryType.DOMAIN_PATTERN
         )
 
     def test_invalid_no_at_sign(self) -> None:

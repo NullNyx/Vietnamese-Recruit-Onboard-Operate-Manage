@@ -104,7 +104,10 @@ class TestLogOperation:
         )
 
         audit_entry = session.add.call_args[0][0]
-        assert audit_entry.metadata_ == {"gmail_message_id": "msg123", "label_name": "VroomHR/processed"}
+        assert audit_entry.metadata_ == {
+            "gmail_message_id": "msg123",
+            "label_name": "VroomHR/processed",
+        }
 
     @pytest.mark.asyncio
     async def test_sanitizes_case_insensitive(
@@ -219,9 +222,7 @@ class TestLogSend:
     """Tests for AuditLogger.log_send."""
 
     @pytest.mark.asyncio
-    async def test_logs_send_operation(
-        self, audit_logger: AuditLogger, session: AsyncMock
-    ) -> None:
+    async def test_logs_send_operation(self, audit_logger: AuditLogger, session: AsyncMock) -> None:
         """Logs a send operation with recipients and subject."""
         user_id = uuid4()
 

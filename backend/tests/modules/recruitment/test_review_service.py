@@ -259,9 +259,7 @@ class TestListReviewQueue:
         assert result.total_count == 1
         assert result.page == 1
         assert result.page_size == 20
-        mock_cv_document_repo.find_needs_review.assert_called_once_with(
-            page=1, page_size=20
-        )
+        mock_cv_document_repo.find_needs_review.assert_called_once_with(page=1, page_size=20)
 
     @pytest.mark.asyncio
     async def test_empty_queue(self, service, mock_cv_document_repo):
@@ -280,9 +278,7 @@ class TestListReviewQueue:
 
         await service.list_review_queue(page=3, page_size=50)
 
-        mock_cv_document_repo.find_needs_review.assert_called_once_with(
-            page=3, page_size=50
-        )
+        mock_cv_document_repo.find_needs_review.assert_called_once_with(page=3, page_size=50)
 
     @pytest.mark.asyncio
     async def test_invalid_page_raises_error(self, service):
@@ -341,9 +337,7 @@ class TestSubmitCorrection:
         mock_cv_document_repo.update.assert_called()
 
     @pytest.mark.asyncio
-    async def test_validation_failure_raises_error(
-        self, service, mock_cv_document_repo
-    ):
+    async def test_validation_failure_raises_error(self, service, mock_cv_document_repo):
         """Should raise ReviewValidationError when corrected data is invalid."""
         invalid_cv = ParsedCV(name="", email="invalid")
 
@@ -438,14 +432,10 @@ class TestRetryParse:
             result = await service.retry_parse(sample_cv_document.id)
 
         assert result.processing_status == ProcessingStatus.COMPLETED
-        mock_cv_retry_parser.retry_llm_parse.assert_called_once_with(
-            sample_cv_document.id
-        )
+        mock_cv_retry_parser.retry_llm_parse.assert_called_once_with(sample_cv_document.id)
 
     @pytest.mark.asyncio
-    async def test_document_not_found_raises_error(
-        self, service, mock_cv_document_repo
-    ):
+    async def test_document_not_found_raises_error(self, service, mock_cv_document_repo):
         """Should raise CVDocumentNotFoundError when document doesn't exist."""
         mock_cv_document_repo.get_by_id.return_value = None
 
@@ -469,12 +459,15 @@ class TestRetryParse:
         mock_cv_retry_parser.retry_llm_parse.side_effect = slow_parse
         mock_cv_document_repo.get_by_id.return_value = sample_cv_document
 
-        with patch(
-            "src.modules.recruitment.application.review_service.log_audit",
-            new_callable=AsyncMock,
-        ), patch(
-            "src.modules.recruitment.application.review_service._RETRY_TIMEOUT_SECONDS",
-            0.1,  # Use very short timeout for test
+        with (
+            patch(
+                "src.modules.recruitment.application.review_service.log_audit",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "src.modules.recruitment.application.review_service._RETRY_TIMEOUT_SECONDS",
+                0.1,  # Use very short timeout for test
+            ),
         ):
             result = await service.retry_parse(sample_cv_document.id)
 
@@ -490,9 +483,7 @@ class TestRetryParse:
         sample_cv_document,
     ):
         """Should set status to needs_review when retry fails with exception."""
-        mock_cv_retry_parser.retry_llm_parse.side_effect = RuntimeError(
-            "LLM service unavailable"
-        )
+        mock_cv_retry_parser.retry_llm_parse.side_effect = RuntimeError("LLM service unavailable")
         mock_cv_document_repo.get_by_id.return_value = sample_cv_document
 
         with patch(
@@ -533,9 +524,7 @@ class TestDismiss:
         mock_session.commit.assert_called()
 
     @pytest.mark.asyncio
-    async def test_document_not_found_raises_error(
-        self, service, mock_cv_document_repo
-    ):
+    async def test_document_not_found_raises_error(self, service, mock_cv_document_repo):
         """Should raise CVDocumentNotFoundError when document doesn't exist."""
         mock_cv_document_repo.get_by_id.return_value = None
 

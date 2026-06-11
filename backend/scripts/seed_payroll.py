@@ -135,7 +135,7 @@ async def seed_payroll() -> None:
                         {
                             "id": uuid4(),
                             "emp_id": emp_id,
-                            "name": f"Người thân {i+1}",
+                            "name": f"Người thân {i + 1}",
                             "rel": random.choice(relationships),
                             "dob": date(1980, 1, 1) + timedelta(days=random.randint(0, 15000)),
                             "now": text("now()"),

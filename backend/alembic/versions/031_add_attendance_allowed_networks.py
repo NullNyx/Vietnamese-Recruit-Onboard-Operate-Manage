@@ -14,6 +14,7 @@ down_revision = "030"
 branch_labels = None
 depends_on = None
 
+
 def upgrade() -> None:
     """Add attendance_allowed_networks column to organization_settings table."""
     op.add_column(
@@ -25,6 +26,7 @@ def upgrade() -> None:
             server_default="{}",
         ),
     )
+
 
 def downgrade() -> None:
     """Remove attendance_allowed_networks column."""

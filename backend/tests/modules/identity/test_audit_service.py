@@ -232,9 +232,7 @@ class TestGetLogs:
         start = datetime(2024, 1, 1, tzinfo=UTC)
         end = datetime(2024, 12, 31, tzinfo=UTC)
 
-        await audit_service.get_logs(
-            page=1, page_size=10, start_date=start, end_date=end
-        )
+        await audit_service.get_logs(page=1, page_size=10, start_date=start, end_date=end)
 
         call_filters = mock_repo.get_paginated.call_args[1]["filters"]
         assert call_filters["start_date"] == start

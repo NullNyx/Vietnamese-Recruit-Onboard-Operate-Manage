@@ -47,9 +47,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["employee_id"], ["employees.id"]),
         sa.ForeignKeyConstraint(["leave_type_id"], ["leave_types.id"]),
-        sa.UniqueConstraint(
-            "employee_id", "leave_type_id", "year", name="uq_leave_balance"
-        ),
+        sa.UniqueConstraint("employee_id", "leave_type_id", "year", name="uq_leave_balance"),
     )
 
     op.create_index("ix_leave_balances_employee_id", "leave_balances", ["employee_id"])

@@ -4,7 +4,6 @@ Tests retry logic, rate limiting integration, and Gmail API method behavior
 using respx to mock HTTP responses.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
@@ -21,9 +20,6 @@ from src.modules.gmail.infrastructure.config import GmailSettings
 from src.modules.gmail.infrastructure.gmail_adapter import (
     GMAIL_API_BASE,
     GmailAdapter,
-    GmailLabel,
-    GmailMessageMetadata,
-    MessageBody,
     SentMessageInfo,
 )
 from src.modules.gmail.infrastructure.quota_tracker import QuotaTracker
@@ -74,6 +70,7 @@ class TestRetryWithBackoff:
 
     async def test_success_on_first_attempt(self, adapter):
         """Should return result on first successful call."""
+
         async def _func():
             return "success"
 
@@ -95,9 +92,7 @@ class TestRetryWithBackoff:
             async def _func():
                 nonlocal call_count
                 call_count += 1
-                response = await adapter._http_client.get(
-                    f"{GMAIL_API_BASE}test"
-                )
+                response = await adapter._http_client.get(f"{GMAIL_API_BASE}test")
                 response.raise_for_status()
                 return response.json()
 
@@ -111,9 +106,7 @@ class TestRetryWithBackoff:
             respx.get(f"{GMAIL_API_BASE}test").respond(400, text="Bad Request")
 
             async def _func():
-                response = await adapter._http_client.get(
-                    f"{GMAIL_API_BASE}test"
-                )
+                response = await adapter._http_client.get(f"{GMAIL_API_BASE}test")
                 response.raise_for_status()
                 return response.json()
 
@@ -131,9 +124,7 @@ class TestRetryWithBackoff:
             ]
 
             async def _func():
-                response = await adapter._http_client.get(
-                    f"{GMAIL_API_BASE}test"
-                )
+                response = await adapter._http_client.get(f"{GMAIL_API_BASE}test")
                 response.raise_for_status()
                 return response.json()
 
@@ -150,9 +141,7 @@ class TestRetryWithBackoff:
             ]
 
             async def _func():
-                response = await adapter._http_client.get(
-                    f"{GMAIL_API_BASE}test"
-                )
+                response = await adapter._http_client.get(f"{GMAIL_API_BASE}test")
                 response.raise_for_status()
                 return response.json()
 
@@ -165,14 +154,10 @@ class TestRetryWithBackoff:
     async def test_429_retry_after_exceeds_max_aborts(self, adapter):
         """Should abort when Retry-After exceeds max allowed."""
         with respx.mock:
-            respx.get(f"{GMAIL_API_BASE}test").respond(
-                429, headers={"Retry-After": "200"}
-            )
+            respx.get(f"{GMAIL_API_BASE}test").respond(429, headers={"Retry-After": "200"})
 
             async def _func():
-                response = await adapter._http_client.get(
-                    f"{GMAIL_API_BASE}test"
-                )
+                response = await adapter._http_client.get(f"{GMAIL_API_BASE}test")
                 response.raise_for_status()
                 return response.json()
 
@@ -183,14 +168,10 @@ class TestRetryWithBackoff:
     async def test_3_consecutive_429s_aborts(self, adapter):
         """Should abort after 3 consecutive 429 responses."""
         with respx.mock:
-            respx.get(f"{GMAIL_API_BASE}test").respond(
-                429, headers={"Retry-After": "1"}
-            )
+            respx.get(f"{GMAIL_API_BASE}test").respond(429, headers={"Retry-After": "1"})
 
             async def _func():
-                response = await adapter._http_client.get(
-                    f"{GMAIL_API_BASE}test"
-                )
+                response = await adapter._http_client.get(f"{GMAIL_API_BASE}test")
                 response.raise_for_status()
                 return response.json()
 
@@ -198,10 +179,9 @@ class TestRetryWithBackoff:
                 await adapter.retry_with_backoff(_func)
             assert "3 consecutive" in exc_info.value.message
 
-    async def test_quota_consumed_before_each_attempt(
-        self, adapter, mock_quota_tracker
-    ):
+    async def test_quota_consumed_before_each_attempt(self, adapter, mock_quota_tracker):
         """Should consume quota before each retry attempt."""
+
         async def _func():
             return "ok"
 
@@ -216,9 +196,7 @@ class TestFetchMessages:
     async def test_fetch_messages_empty(self, adapter):
         """Should return empty list when no messages."""
         with respx.mock:
-            respx.get(f"{GMAIL_API_BASE}messages").respond(
-                200, json={"resultSizeEstimate": 0}
-            )
+            respx.get(f"{GMAIL_API_BASE}messages").respond(200, json={"resultSizeEstimate": 0})
 
             result = await adapter.fetch_messages("token123")
             assert result == []
@@ -357,9 +335,7 @@ class TestSendMessage:
     async def test_send_message_4xx_raises(self, adapter):
         """Should raise GmailSendFailedException on 4xx."""
         with respx.mock:
-            respx.post(f"{GMAIL_API_BASE}messages/send").respond(
-                400, text="Bad Request"
-            )
+            respx.post(f"{GMAIL_API_BASE}messages/send").respond(400, text="Bad Request")
 
             with pytest.raises(GmailSendFailedException):
                 await adapter.send_message("token", b"bad")
@@ -384,9 +360,7 @@ class TestBatchModifyLabels:
 
             # 150 messages should result in 2 batch calls
             message_ids = [f"msg{i}" for i in range(150)]
-            await adapter.batch_modify_labels(
-                "token", message_ids, add_labels=["label1"]
-            )
+            await adapter.batch_modify_labels("token", message_ids, add_labels=["label1"])
             assert call_count == 2
 
 
@@ -471,11 +445,7 @@ class TestRefreshAccessToken:
     async def test_refresh_failure_raises(self, adapter):
         """Should raise GmailFetchError on refresh failure."""
         with respx.mock:
-            respx.post("https://oauth2.googleapis.com/token").respond(
-                401, text="Invalid"
-            )
+            respx.post("https://oauth2.googleapis.com/token").respond(401, text="Invalid")
 
             with pytest.raises(GmailFetchError):
-                await adapter.refresh_access_token(
-                    "bad_refresh", "client_id", "client_secret"
-                )
+                await adapter.refresh_access_token("bad_refresh", "client_id", "client_secret")

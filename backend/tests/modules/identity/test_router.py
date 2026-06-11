@@ -49,9 +49,7 @@ def mock_auth_service():
             access_token="new-access-token",
             refresh_token="new-refresh-token",
             user=MagicMock(),
-            grant_status=GrantStatus(
-                gmail_grant_valid=True, calendar_grant_valid=True
-            ),
+            grant_status=GrantStatus(gmail_grant_valid=True, calendar_grant_valid=True),
         )
     )
     service.logout = AsyncMock()
@@ -183,9 +181,7 @@ class TestLoginEndpoint:
         cookies = response.cookies
         assert "code_verifier" in cookies
 
-    def test_rate_limit_exceeded_raises_429(
-        self, app, mock_rate_limiter
-    ):
+    def test_rate_limit_exceeded_raises_429(self, app, mock_rate_limiter):
         """Should raise RateLimitExceededError when rate limit is exceeded."""
         mock_rate_limiter.check_rate_limit = AsyncMock(return_value=False)
         client = TestClient(app, follow_redirects=False)
@@ -194,9 +190,7 @@ class TestLoginEndpoint:
 
         assert response.status_code == 429
 
-    def test_calls_rate_limiter_with_client_ip(
-        self, client, mock_rate_limiter
-    ):
+    def test_calls_rate_limiter_with_client_ip(self, client, mock_rate_limiter):
         """Should check rate limit using the client's IP address."""
         client.get("/api/auth/login")
 
@@ -208,45 +202,33 @@ class TestCallbackEndpoint:
 
     def test_returns_302_redirect_to_frontend(self, client):
         """Should redirect to the frontend URL after successful callback."""
-        response = client.get(
-            "/api/auth/callback?code=auth-code&state=state-token"
-        )
+        response = client.get("/api/auth/callback?code=auth-code&state=state-token")
 
         assert response.status_code == 302
         assert response.headers["location"] == "http://localhost:3000"
 
     def test_sets_access_token_cookie(self, client):
         """Should set an access_token httpOnly cookie."""
-        response = client.get(
-            "/api/auth/callback?code=auth-code&state=state-token"
-        )
+        response = client.get("/api/auth/callback?code=auth-code&state=state-token")
 
         assert "access_token" in response.cookies
 
     def test_sets_refresh_token_cookie(self, client):
         """Should set a refresh_token httpOnly cookie."""
-        response = client.get(
-            "/api/auth/callback?code=auth-code&state=state-token"
-        )
+        response = client.get("/api/auth/callback?code=auth-code&state=state-token")
 
         assert "refresh_token" in response.cookies
 
-    def test_rate_limit_exceeded_raises_429(
-        self, app, mock_rate_limiter
-    ):
+    def test_rate_limit_exceeded_raises_429(self, app, mock_rate_limiter):
         """Should raise RateLimitExceededError when rate limit is exceeded."""
         mock_rate_limiter.check_rate_limit = AsyncMock(return_value=False)
         client = TestClient(app, follow_redirects=False)
 
-        response = client.get(
-            "/api/auth/callback?code=auth-code&state=state-token"
-        )
+        response = client.get("/api/auth/callback?code=auth-code&state=state-token")
 
         assert response.status_code == 429
 
-    def test_calls_handle_callback_with_code_and_state(
-        self, client, mock_auth_service
-    ):
+    def test_calls_handle_callback_with_code_and_state(self, client, mock_auth_service):
         """Should pass code and state to AuthService.handle_callback."""
         client.get("/api/auth/callback?code=my-code&state=my-state")
 
@@ -279,13 +261,9 @@ class TestRefreshEndpoint:
 
         assert response.status_code == 401
 
-    def test_raises_401_when_token_service_rejects(
-        self, app, mock_token_service
-    ):
+    def test_raises_401_when_token_service_rejects(self, app, mock_token_service):
         """Should return 401 when TokenService raises InvalidTokenError."""
-        mock_token_service.refresh_access_token = AsyncMock(
-            side_effect=InvalidTokenError()
-        )
+        mock_token_service.refresh_access_token = AsyncMock(side_effect=InvalidTokenError())
         client = TestClient(app)
         client.cookies.set("refresh_token", "expired-token")
 
@@ -321,8 +299,7 @@ class TestLogoutEndpoint:
         # Cookie should be cleared (set to empty with max_age=0)
         set_cookie_headers = response.headers.get_list("set-cookie")
         access_cookie_cleared = any(
-            'access_token=""' in h or "access_token=;" in h
-            for h in set_cookie_headers
+            'access_token=""' in h or "access_token=;" in h for h in set_cookie_headers
         )
         assert access_cookie_cleared
 
@@ -333,8 +310,7 @@ class TestLogoutEndpoint:
 
         set_cookie_headers = response.headers.get_list("set-cookie")
         refresh_cookie_cleared = any(
-            'refresh_token=""' in h or "refresh_token=;" in h
-            for h in set_cookie_headers
+            'refresh_token=""' in h or "refresh_token=;" in h for h in set_cookie_headers
         )
         assert refresh_cookie_cleared
 
@@ -395,13 +371,9 @@ class TestGrantStatusEndpoint:
         assert data["gmail_grant_valid"] is True
         assert data["calendar_grant_valid"] is True
 
-    def test_returns_invalid_grants_when_no_grant(
-        self, app, mock_oauth_service, mock_current_user
-    ):
+    def test_returns_invalid_grants_when_no_grant(self, app, mock_oauth_service, mock_current_user):
         """Should return False for both grants when no OAuth grant exists."""
-        mock_oauth_service._grant_repository.get_by_user_id = AsyncMock(
-            return_value=None
-        )
+        mock_oauth_service._grant_repository.get_by_user_id = AsyncMock(return_value=None)
         client = TestClient(app)
 
         response = client.get("/api/auth/grant-status")

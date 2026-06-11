@@ -45,9 +45,7 @@ class TestExtractTextRouting:
         mock_pdf.assert_called_once_with(b"pdf-data", "test.pdf")
 
     async def test_docx_routes_to_handle_docx(self, adapter: OCRAdapter) -> None:
-        docx_mime = (
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
+        docx_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         with patch.object(adapter, "_handle_docx", new_callable=AsyncMock) as mock_docx:
             mock_docx.return_value = "docx text"
             result = await adapter.extract_text(b"docx-data", "test.docx", docx_mime)
@@ -123,9 +121,7 @@ class TestSendToOCR:
     async def test_connect_error_retries(self, adapter: OCRAdapter) -> None:
         with patch("httpx.AsyncClient") as mock_client_cls:
             mock_client = AsyncMock()
-            mock_client.post = AsyncMock(
-                side_effect=httpx.ConnectError("Connection refused")
-            )
+            mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
             mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
 
@@ -138,9 +134,7 @@ class TestSendToOCR:
     async def test_timeout_error_retries(self, adapter: OCRAdapter) -> None:
         with patch("httpx.AsyncClient") as mock_client_cls:
             mock_client = AsyncMock()
-            mock_client.post = AsyncMock(
-                side_effect=httpx.ReadTimeout("Read timed out")
-            )
+            mock_client.post = AsyncMock(side_effect=httpx.ReadTimeout("Read timed out"))
             mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
 
@@ -174,9 +168,7 @@ class TestSendToOCR:
 
         with patch("httpx.AsyncClient") as mock_client_cls:
             mock_client = AsyncMock()
-            mock_client.post = AsyncMock(
-                side_effect=[fail_response, success_response]
-            )
+            mock_client.post = AsyncMock(side_effect=[fail_response, success_response])
             mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
 
@@ -279,16 +271,16 @@ class TestHandlePDF:
 class TestHandleDOCX:
     """Verify DOCX handling with fallback logic."""
 
-    async def test_docx_with_sufficient_text_returns_directly(
-        self, adapter: OCRAdapter
-    ) -> None:
+    async def test_docx_with_sufficient_text_returns_directly(self, adapter: OCRAdapter) -> None:
         """DOCX with >= 50 chars of text should return extracted text directly."""
         from docx import Document
         import io
 
         # Create a DOCX with enough text
         doc = Document()
-        doc.add_paragraph("This is a test paragraph with more than fifty characters of content for testing.")
+        doc.add_paragraph(
+            "This is a test paragraph with more than fifty characters of content for testing."
+        )
         buffer = io.BytesIO()
         doc.save(buffer)
         docx_bytes = buffer.getvalue()
@@ -320,17 +312,15 @@ class TestHandleDOCX:
         small_docx = buffer.getvalue()
         large_docx = small_docx + b"\x00" * (600 * 1024)
 
-        with patch.object(
-            adapter, "_convert_docx_to_pdf", new_callable=AsyncMock
-        ) as mock_convert:
+        with patch.object(adapter, "_convert_docx_to_pdf", new_callable=AsyncMock) as mock_convert:
             mock_convert.return_value = b"fake-pdf-bytes"
-            with patch.object(
-                adapter, "_send_to_ocr", new_callable=AsyncMock
-            ) as mock_send:
+            with patch.object(adapter, "_send_to_ocr", new_callable=AsyncMock) as mock_send:
                 mock_send.return_value = "OCR result from converted PDF"
 
                 # We need to patch Document to handle the padded bytes
-                with patch("src.modules.recruitment.infrastructure.ocr_adapter.io.BytesIO") as mock_bytesio:
+                with patch(
+                    "src.modules.recruitment.infrastructure.ocr_adapter.io.BytesIO"
+                ) as mock_bytesio:
                     # Let the real BytesIO work for the Document creation
                     mock_bytesio.side_effect = io.BytesIO
 

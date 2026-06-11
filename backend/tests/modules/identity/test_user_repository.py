@@ -147,9 +147,7 @@ class TestUpsert:
         assert result.google_sub == "google-sub-12345"
         assert result.is_active is True
 
-    async def test_creates_user_without_picture(
-        self, another_google_user: GoogleUserInfo
-    ) -> None:
+    async def test_creates_user_without_picture(self, another_google_user: GoogleUserInfo) -> None:
         session = _make_mock_session(query_result=None)
         repo = UserRepository(session)
 
@@ -204,9 +202,7 @@ class TestUpsert:
         # Should return the same user object (updated in place)
         assert result is existing_user
 
-    async def test_new_user_has_uuid_id(
-        self, sample_google_user: GoogleUserInfo
-    ) -> None:
+    async def test_new_user_has_uuid_id(self, sample_google_user: GoogleUserInfo) -> None:
         session = _make_mock_session(query_result=None)
         repo = UserRepository(session)
 
@@ -214,9 +210,7 @@ class TestUpsert:
 
         assert isinstance(result.id, UUID)
 
-    async def test_new_user_has_timestamps(
-        self, sample_google_user: GoogleUserInfo
-    ) -> None:
+    async def test_new_user_has_timestamps(self, sample_google_user: GoogleUserInfo) -> None:
         session = _make_mock_session(query_result=None)
         repo = UserRepository(session)
 

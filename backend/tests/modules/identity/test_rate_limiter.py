@@ -48,9 +48,7 @@ class TestRateLimiterInit:
     ) -> None:
         assert rate_limiter._window_seconds == auth_settings.rate_limit_login_window_seconds
 
-    def test_stores_redis_client(
-        self, rate_limiter: RateLimiter, mock_redis: AsyncMock
-    ) -> None:
+    def test_stores_redis_client(self, rate_limiter: RateLimiter, mock_redis: AsyncMock) -> None:
         assert rate_limiter._redis is mock_redis
 
 
@@ -195,9 +193,7 @@ class TestCheckRateLimit:
 
         await rate_limiter.check_rate_limit("192.168.1.1")
 
-        pipeline_mock.expire.assert_called_once_with(
-            "rate_limit:login:192.168.1.1", 60
-        )
+        pipeline_mock.expire.assert_called_once_with("rate_limit:login:192.168.1.1", 60)
 
     async def test_does_not_add_entry_when_blocked(
         self, rate_limiter: RateLimiter, mock_redis: AsyncMock

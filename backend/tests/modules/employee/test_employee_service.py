@@ -160,9 +160,7 @@ class TestCreateEmployee:
             await service.create_employee({"full_name": f"Employee {i}", "email": email})
 
         # Verify all three codes were assigned sequentially
-        codes = [
-            employee_repo.create.call_args_list[i][0][0].employee_code for i in range(3)
-        ]
+        codes = [employee_repo.create.call_args_list[i][0][0].employee_code for i in range(3)]
         assert codes == ["NV-001", "NV-002", "NV-003"]
 
     async def test_raises_duplicate_email_error(
@@ -172,9 +170,7 @@ class TestCreateEmployee:
         employee_repo.get_by_email.return_value = AsyncMock(spec=Employee)
 
         with pytest.raises(DuplicateEmailError):
-            await service.create_employee(
-                {"full_name": "Test", "email": "existing@example.com"}
-            )
+            await service.create_employee({"full_name": "Test", "email": "existing@example.com"})
 
     async def test_raises_department_not_found(
         self,

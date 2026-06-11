@@ -134,9 +134,9 @@ async def _make_employee(db_session: AsyncSession) -> Employee:
     ``onboarding_processes.employee_id`` is a NOT NULL FK to ``employees.id``,
     so a parent employee must exist before a process row is created.
     """
-    suffix = uuid4().hex[:8]
+    suffix = uuid4().hex[:12]
     employee = Employee(
-        employee_code=f"NV-{suffix[:3]}",
+        employee_code=f"NV-{suffix}",
         full_name="Onboarding Test Employee",
         email=f"emp-{suffix}@example.com",
     )

@@ -55,7 +55,9 @@ def mock_repo() -> AsyncMock:
 
 
 @pytest.fixture
-def token_service(jwt_utils: JWTUtils, settings: AuthSettings, mock_repo: AsyncMock) -> TokenService:
+def token_service(
+    jwt_utils: JWTUtils, settings: AuthSettings, mock_repo: AsyncMock
+) -> TokenService:
     """Create a TokenService with test dependencies."""
     return TokenService(
         jwt_utils=jwt_utils,
@@ -111,7 +113,9 @@ class TestCreateAccessToken:
 
         assert "employee_id" not in decoded
 
-    def test_token_has_15_minute_expiry(self, token_service: TokenService, jwt_utils: JWTUtils) -> None:
+    def test_token_has_15_minute_expiry(
+        self, token_service: TokenService, jwt_utils: JWTUtils
+    ) -> None:
         user_id = uuid4()
         email = "hr@example.com"
 
@@ -123,7 +127,9 @@ class TestCreateAccessToken:
 
     def test_custom_expiry_from_settings(self, jwt_utils: JWTUtils, mock_repo: AsyncMock) -> None:
         settings = _make_settings(access_token_expire_minutes=30)
-        service = TokenService(jwt_utils=jwt_utils, settings=settings, refresh_token_repository=mock_repo)
+        service = TokenService(
+            jwt_utils=jwt_utils, settings=settings, refresh_token_repository=mock_repo
+        )
 
         token = service.create_access_token(uuid4(), "test@example.com")
         decoded = jwt_utils.decode(token)
@@ -160,7 +166,8 @@ class TestCreateRefreshToken:
 
         # URL-safe base64 characters only
         import re
-        assert re.match(r'^[A-Za-z0-9_-]+$', raw_token)
+
+        assert re.match(r"^[A-Za-z0-9_-]+$", raw_token)
 
     def test_hash_is_64_char_hex(self, token_service: TokenService) -> None:
         _, token_hash = token_service.create_refresh_token(uuid4())
@@ -213,7 +220,9 @@ class TestVerifyAccessToken:
     def test_expired_token_raises_invalid_token_error(
         self, jwt_utils: JWTUtils, settings: AuthSettings, mock_repo: AsyncMock
     ) -> None:
-        service = TokenService(jwt_utils=jwt_utils, settings=settings, refresh_token_repository=mock_repo)
+        service = TokenService(
+            jwt_utils=jwt_utils, settings=settings, refresh_token_repository=mock_repo
+        )
         # Create a token that's already expired
         expired_token = jwt_utils.encode(
             {"sub": str(uuid4()), "email": "test@example.com"},
@@ -230,7 +239,9 @@ class TestVerifyAccessToken:
     def test_missing_claims_raises_invalid_token_error(
         self, jwt_utils: JWTUtils, settings: AuthSettings, mock_repo: AsyncMock
     ) -> None:
-        service = TokenService(jwt_utils=jwt_utils, settings=settings, refresh_token_repository=mock_repo)
+        service = TokenService(
+            jwt_utils=jwt_utils, settings=settings, refresh_token_repository=mock_repo
+        )
         # Token without email claim
         token = jwt_utils.encode({"sub": str(uuid4())}, timedelta(minutes=15))
 
@@ -241,7 +252,9 @@ class TestVerifyAccessToken:
         self, settings: AuthSettings, mock_repo: AsyncMock
     ) -> None:
         other_jwt = JWTUtils(secret_key="different-secret", algorithm=ALGORITHM)
-        service = TokenService(jwt_utils=other_jwt, settings=settings, refresh_token_repository=mock_repo)
+        service = TokenService(
+            jwt_utils=other_jwt, settings=settings, refresh_token_repository=mock_repo
+        )
 
         # Token signed with the test secret
         correct_jwt = JWTUtils(secret_key=SECRET_KEY, algorithm=ALGORITHM)
@@ -269,7 +282,11 @@ class TestRefreshAccessToken:
         return record
 
     async def test_issues_new_access_token(
-        self, token_service: TokenService, mock_repo: AsyncMock, valid_record: AsyncMock, jwt_utils: JWTUtils
+        self,
+        token_service: TokenService,
+        mock_repo: AsyncMock,
+        valid_record: AsyncMock,
+        jwt_utils: JWTUtils,
     ) -> None:
         raw_token = "test-raw-refresh-token"
         token_hash = hashlib.sha256(raw_token.encode()).hexdigest()

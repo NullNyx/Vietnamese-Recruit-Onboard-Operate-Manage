@@ -6,6 +6,7 @@ import type {
   SendEmailRequest,
   SendEmailResponse,
   AttachmentsResponse,
+  EmailMessage,
 } from "./types";
 import { ApiError } from "./types";
 
@@ -99,6 +100,7 @@ export async function getAttachments(
 
 export interface ClassifyResponse {
   classified_count: number;
+  cv_processed_count?: number;
   total: number;
   remaining: number;
   message: string;
@@ -116,4 +118,57 @@ export async function classifyBatch(
     method: "POST",
   });
   return handleResponse<ClassifyResponse>(res);
+}
+
+export interface ReviewEmailsResponse {
+  messages: EmailMessage[];
+  total: number;
+}
+
+/**
+ * List emails that need human review (needs_review status).
+ */
+export async function listEmailsNeedingReview(
+  limit: number = 50,
+  offset: number = 0,
+): Promise<ReviewEmailsResponse> {
+  const res = await fetch(
+    `${BASE}/review/emails?limit=${limit}&offset=${offset}`,
+  );
+  return handleResponse<ReviewEmailsResponse>(res);
+}
+
+/**
+ * Reclassify a needs_review email.
+ */
+export async function reclassifyEmail(
+  messageId: string,
+): Promise<EmailMessage> {
+  const res = await fetch(`${BASE}/review/emails/${messageId}/reclassify`, {
+    method: "POST",
+  });
+  return handleResponse<EmailMessage>(res);
+}
+
+export interface ProcessAttachmentsResponse {
+  processed_count: number;
+  cv_documents?: Array<{
+    id: string;
+    original_filename: string;
+    processing_status: string;
+    confidence_score: number | null;
+  }>;
+  message?: string;
+}
+
+/**
+ * Fetch attachments and trigger CV processing pipeline for an email.
+ */
+export async function processAttachments(
+  messageId: string,
+): Promise<ProcessAttachmentsResponse> {
+  const res = await fetch(`${BASE}/messages/${encodeURIComponent(messageId)}/process-attachments`, {
+    method: "POST",
+  });
+  return handleResponse<ProcessAttachmentsResponse>(res);
 }

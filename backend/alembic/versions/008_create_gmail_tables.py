@@ -38,10 +38,14 @@ def upgrade() -> None:
         sa.Column("label_ids", JSONB(), nullable=False, server_default="[]"),
         sa.Column("has_attachments", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("raw_payload_enc", sa.Text(), nullable=True),
-        sa.Column("processing_status", sa.String(length=20), nullable=False, server_default="unprocessed"),
+        sa.Column(
+            "processing_status", sa.String(length=20), nullable=False, server_default="unprocessed"
+        ),
         sa.Column("category", sa.String(length=20), nullable=True),
         sa.Column("retry_count", sa.Integer(), nullable=False, server_default=sa.text("0")),
-        sa.Column("is_permanently_failed", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column(
+            "is_permanently_failed", sa.Boolean(), nullable=False, server_default=sa.text("false")
+        ),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -109,7 +113,9 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
-        sa.UniqueConstraint("user_id", "label_name", name="uq_gmail_label_mappings_user_id_label_name"),
+        sa.UniqueConstraint(
+            "user_id", "label_name", name="uq_gmail_label_mappings_user_id_label_name"
+        ),
     )
 
     op.create_index("ix_gmail_label_mappings_user_id", "gmail_label_mappings", ["user_id"])
@@ -134,7 +140,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["email_message_id"], ["email_messages.id"]),
     )
 
-    op.create_index("ix_email_attachments_email_message_id", "email_attachments", ["email_message_id"])
+    op.create_index(
+        "ix_email_attachments_email_message_id", "email_attachments", ["email_message_id"]
+    )
 
     # --- gmail_audit_logs ---
     op.create_table(

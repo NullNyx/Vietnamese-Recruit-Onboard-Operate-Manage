@@ -193,6 +193,7 @@ class MessageListItem(BaseModel):
     label_ids: list[str]
     has_attachments: bool
     category: str | None = None
+    processing_status: str = "unprocessed"
 
 
 class MessageListResponse(BaseModel):

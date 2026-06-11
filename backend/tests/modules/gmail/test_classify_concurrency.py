@@ -305,10 +305,6 @@ class TestSemaphoreLimitsConcurrency:
 
         assert result == 4
         # With concurrency=1, peak should be exactly 1
-        assert peak_concurrent == 1, (
-            f"With concurrency=1, peak should be 1, got {peak_concurrent}"
-        )
+        assert peak_concurrent == 1, f"With concurrency=1, peak should be 1, got {peak_concurrent}"
         # Time should be approximately sequential: 4 × 0.2s = 0.8s
-        assert elapsed >= 0.7, (
-            f"With concurrency=1, 4 emails should take ~0.8s, got {elapsed:.2f}s"
-        )
+        assert elapsed >= 0.7, f"With concurrency=1, 4 emails should take ~0.8s, got {elapsed:.2f}s"
