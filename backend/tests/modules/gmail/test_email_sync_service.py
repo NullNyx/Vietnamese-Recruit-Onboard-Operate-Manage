@@ -32,7 +32,8 @@ def gmail_adapter() -> AsyncMock:
 @pytest.fixture
 def email_repo() -> AsyncMock:
     """Create a mocked EmailRepository."""
-    return AsyncMock()
+    repo = AsyncMock()
+    return repo
 
 
 @pytest.fixture
@@ -605,11 +606,16 @@ class TestPartialFailureHandling:
         email_repo: AsyncMock,
     ) -> None:
         """Should increment retry count for each failed message."""
-        email_repo.increment_retry_count.return_value = MagicMock(retry_count=1)
+        msg1 = MagicMock(retry_count=0, is_permanently_failed=False)
+        msg2 = MagicMock(retry_count=0, is_permanently_failed=False)
+        email_repo.get_by_gmail_ids.return_value = [msg1, msg2]
 
         await sync_service._handle_failed_messages(["msg_1", "msg_2"])
 
-        assert email_repo.increment_retry_count.call_count == 2
+        email_repo.get_by_gmail_ids.assert_called_once_with(["msg_1", "msg_2"])
+        assert msg1.retry_count == 1
+        assert msg2.retry_count == 1
+        email_repo.save_all.assert_called_once_with([msg1, msg2])
 
     async def test_marks_permanently_failed_at_threshold(
         self,
@@ -617,13 +623,14 @@ class TestPartialFailureHandling:
         email_repo: AsyncMock,
     ) -> None:
         """Should mark message as permanently failed at 5 retries."""
-        updated_msg = MagicMock()
-        updated_msg.retry_count = 5
-        email_repo.increment_retry_count.return_value = updated_msg
+        msg = MagicMock(retry_count=4, is_permanently_failed=False)
+        email_repo.get_by_gmail_ids.return_value = [msg]
 
         await sync_service._handle_failed_messages(["msg_1"])
 
-        email_repo.mark_permanently_failed.assert_called_once_with("msg_1")
+        assert msg.retry_count == 5
+        assert msg.is_permanently_failed is True
+        email_repo.save_all.assert_called_once_with([msg])
 
     async def test_does_not_mark_permanent_below_threshold(
         self,
@@ -631,29 +638,28 @@ class TestPartialFailureHandling:
         email_repo: AsyncMock,
     ) -> None:
         """Should not mark as permanently failed below threshold."""
-        updated_msg = MagicMock()
-        updated_msg.retry_count = 4
-        email_repo.increment_retry_count.return_value = updated_msg
+        msg = MagicMock(retry_count=3, is_permanently_failed=False)
+        email_repo.get_by_gmail_ids.return_value = [msg]
 
         await sync_service._handle_failed_messages(["msg_1"])
 
-        email_repo.mark_permanently_failed.assert_not_called()
+        assert msg.retry_count == 4
+        assert msg.is_permanently_failed is False
+        email_repo.save_all.assert_called_once_with([msg])
 
-    async def test_continues_on_individual_failure(
+    async def test_does_not_raise_on_repository_error(
         self,
         sync_service: EmailSyncService,
         email_repo: AsyncMock,
     ) -> None:
-        """Should continue processing other messages if one fails."""
-        email_repo.increment_retry_count.side_effect = [
-            Exception("DB error"),
-            MagicMock(retry_count=1),
-        ]
+        """Should not raise exception if repository operations fail."""
+        email_repo.get_by_gmail_ids.side_effect = Exception("DB error")
 
         # Should not raise
         await sync_service._handle_failed_messages(["msg_1", "msg_2"])
 
-        assert email_repo.increment_retry_count.call_count == 2
+        email_repo.get_by_gmail_ids.assert_called_once_with(["msg_1", "msg_2"])
+        email_repo.save_all.assert_not_called()
 
 
 class TestMetadataToEntity:
