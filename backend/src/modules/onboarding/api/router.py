@@ -65,6 +65,11 @@ from src.modules.onboarding.api.schemas import (
 from src.modules.onboarding.application.onboarding_service import OnboardingService
 from src.modules.onboarding.container import get_onboarding_service
 from src.modules.onboarding.domain.enums import OnboardingStatus, OnboardingTaskStatus
+from src.modules.recruitment.domain.entities import Candidate
+from src.modules.recruitment.infrastructure.repositories import (
+    CandidateRepository,
+    JobOpeningRepository,
+)
 
 # ---------------------------------------------------------------------------
 # Type aliases for injected dependencies
@@ -157,6 +162,7 @@ async def list_processes(
                 employee_code=item.employee_code,
                 completed_count=item.completed_count,
                 total_count=item.total_count,
+                missing_setup_fields=item.missing_setup_fields,
             )
         )
 
@@ -208,6 +214,10 @@ async def get_process(
     emp_repo = EmployeeRepository(db_session)
     employee = await emp_repo.get_by_id(detail.employee_id)
 
+    # Enrich with candidate data
+    candidate_repo = CandidateRepository(db_session)
+    candidate = await candidate_repo.get_by_id(detail.candidate_id)
+
     return OnboardingProcessDetailResponse(
         id=detail.process_id,
         status=OnboardingStatus(detail.status),
@@ -217,6 +227,11 @@ async def get_process(
         employee_code=employee.employee_code if employee else None,
         completed_count=detail.completed_count,
         total_count=detail.total_count,
+        missing_setup_fields=detail.missing_setup_fields,
+        accepted_at=(
+            candidate.accepted_at.isoformat() if candidate and candidate.accepted_at else None
+        ),
+        job_opening=await _resolve_job_opening(candidate, db_session),
         tasks=[
             OnboardingTaskResponse(
                 id=task.id,
@@ -227,6 +242,18 @@ async def get_process(
             for task in detail.tasks
         ],
     )
+
+
+async def _resolve_job_opening(
+    candidate: Candidate | None,
+    db_session: AsyncSession,
+) -> str | None:
+    """Resolve Job Opening title from candidate, if assigned."""
+    if not candidate or not candidate.job_opening_id:
+        return None
+    jo_repo = JobOpeningRepository(db_session)
+    jo = await jo_repo.get_by_id(candidate.job_opening_id)
+    return jo.title if jo else None
 
 
 # ---------------------------------------------------------------------------

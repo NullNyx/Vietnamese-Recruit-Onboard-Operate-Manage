@@ -25,6 +25,9 @@ export interface OnboardingProcess {
   employee_code?: string;
   completed_count: number;
   total_count: number;
+  missing_setup_fields: string[];
+  accepted_at?: string | null;
+  job_opening?: string | null;
   tasks?: OnboardingTask[];
 }
 

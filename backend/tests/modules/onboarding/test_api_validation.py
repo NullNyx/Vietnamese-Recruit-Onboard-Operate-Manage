@@ -91,6 +91,7 @@ class FakeOnboardingService:
                     employee_code="NV-001",
                     completed_count=1,
                     total_count=4,
+                    missing_setup_fields=[],
                 )
             ],
             total=1,
@@ -99,10 +100,12 @@ class FakeOnboardingService:
         )
         self.detail_result = ProcessDetail(
             process_id=_PROCESS_ID,
+            candidate_id=uuid4(),
             status="in_progress",
             employee_id=_EMPLOYEE_ID,
             completed_count=1,
             total_count=4,
+            missing_setup_fields=[],
             tasks=[
                 ProcessTaskDetail(
                     id=_TASK_ID,
