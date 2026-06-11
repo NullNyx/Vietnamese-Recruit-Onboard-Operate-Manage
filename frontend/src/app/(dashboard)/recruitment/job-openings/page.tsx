@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Briefcase, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -68,12 +68,13 @@ export default function JobOpeningsPage() {
   const [statusFilter, setStatusFilter] = useState<JobOpeningStatus | "all">("all");
   const [announcement, setAnnouncement] = useState("");
 
+  const latestReqId = useRef<symbol | null>(null);
+
   const fetchData = useCallback(async () => {
+    const requestId = Symbol();
+    latestReqId.current = requestId;
     setLoading(true);
     setError(null);
-    const requestId = Symbol();
-    // @ts-expect-error: requestId stored on mutable ref for race-condition guard
-    fetchData._reqId = requestId;
     try {
       const params: JobOpeningListParams = {
         page,
@@ -81,16 +82,14 @@ export default function JobOpeningsPage() {
         status: statusFilter !== "all" ? [statusFilter] : undefined,
       };
       const result = await listJobOpenings(params);
-      // @ts-expect-error: ignore stale responses
-      if (fetchData._reqId !== requestId) return;
+      if (latestReqId.current !== requestId) return;
       setData(result.job_openings);
       setTotalCount(result.total_count);
       setAnnouncement(
         `Đã tải ${result.job_openings.length} vị trí trong tổng số ${result.total_count}`
       );
     } catch (err) {
-      // @ts-expect-error: ignore stale responses
-      if (fetchData._reqId !== requestId) return;
+      if (latestReqId.current !== requestId) return;
       const message =
         err instanceof Error
           ? err.message
@@ -98,7 +97,9 @@ export default function JobOpeningsPage() {
       setError(message);
       setAnnouncement("Lỗi khi tải danh sách vị trí");
     } finally {
-      setLoading(false);
+      if (latestReqId.current === requestId) {
+        setLoading(false);
+      }
     }
   }, [page, pageSize, statusFilter]);
 

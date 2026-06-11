@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatDate } from "@/lib/recruitment-utils";
+import { formatDate, STATUS_LABELS, type CandidateStatus } from "@/lib/recruitment-utils";
 import {
   getJobOpening,
   type JobOpeningDetail,
@@ -38,17 +38,16 @@ const JO_STATUS_COLORS: Record<JobOpeningStatus, string> = {
     "bg-red-100 text-red-800",
 };
 
-// ---------------------------------------------------------------------------
-// Candidate status labels (matching the pipeline states per CONTEXT.md)
-// ---------------------------------------------------------------------------
-
-const CANDIDATE_STATUS_LABELS: Record<string, string> = {
-  new: "Mới",
-  reviewing: "Đang xét",
-  interview_scheduled: "Đã lên lịch PV",
-  accepted: "Đã nhận",
-  rejected: "Đã từ chối",
-  archived: "Đã lưu trữ",
+// Re-use canonical status labels and ordering from recruitment-utils.
+// The backend uses "reviewing" but the frontend canonical type calls it "screening".
+// Map backend status strings to frontend keys for display.
+const BACKEND_STATUS_MAP: Record<string, string> = {
+  new: "new",
+  reviewing: "screening",
+  interview_scheduled: "interview_scheduled",
+  accepted: "accepted",
+  rejected: "rejected",
+  archived: "archived",
 };
 
 const CANDIDATE_STATUS_ORDER = [
@@ -262,6 +261,8 @@ export default function JobOpeningDetailPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {CANDIDATE_STATUS_ORDER.map((statusKey) => {
               const count = counts[statusKey] ?? 0;
+              const frontendKey = BACKEND_STATUS_MAP[statusKey] ?? statusKey;
+              const label = STATUS_LABELS[frontendKey as CandidateStatus] ?? statusKey;
               return (
                 <div
                   key={statusKey}
@@ -273,7 +274,7 @@ export default function JobOpeningDetailPage() {
                   )}
                 >
                   <span className="text-xs text-muted-foreground">
-                    {CANDIDATE_STATUS_LABELS[statusKey] ?? statusKey}
+                    {label}
                   </span>
                   <span className="text-2xl font-semibold tabular-nums mt-1">
                     {count}
