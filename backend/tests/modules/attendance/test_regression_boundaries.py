@@ -176,6 +176,15 @@ class TestIdempotencyBoundary:
         assert result.id == existing.id
         assert result.check_in_at == existing.check_in_at
 
+        # Second call returns same record (idempotent)
+        result2 = await attendance_service.check_in(
+            employee_id=employee_id,
+            client_ip="192.168.1.100",
+            user_agent="test",
+        )
+        assert result2.id == existing.id
+        assert result2.check_in_at == existing.check_in_at
+
     @pytest.mark.asyncio
     async def test_repeated_check_out_returns_same_record(
         self, attendance_service, mock_settings_service, mock_attendance_repo
@@ -205,6 +214,14 @@ class TestIdempotencyBoundary:
 
         assert result.check_out_at == existing.check_out_at
         mock_attendance_repo.update.assert_not_called()
+
+        # Second call returns same record (idempotent, no update)
+        result2 = await attendance_service.check_out(
+            employee_id=employee_id,
+            client_ip="192.168.1.100",
+            user_agent="test",
+        )
+        assert result2.check_out_at == existing.check_out_at
 
 
 # ---------------------------------------------------------------------------

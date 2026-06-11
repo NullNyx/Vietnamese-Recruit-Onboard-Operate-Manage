@@ -5,10 +5,9 @@ Covers idempotency, active-only employee filtering, and config gating.
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
-from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -257,12 +256,8 @@ class TestSeedDemoAttendance:
             assert record.check_in_ip == "192.168.1.100"
             assert record.source.value == "web"
 
-        # Day 4 (Thursday = Monday + 3) has no check_out (incomplete)
-        from datetime import UTC, datetime
-
-        today = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
-        monday = today - timedelta(days=today.weekday())
-        thursday = monday + timedelta(days=3)
+        # Day 4 (last work day) has no check_out (incomplete)
+        work_dates = sorted(r.work_date for r in added_records)
         incomplete = [r for r in added_records if r.check_out_at is None]
         assert len(incomplete) == 1
-        assert incomplete[0].work_date == thursday
+        assert incomplete[0].work_date == work_dates[3]

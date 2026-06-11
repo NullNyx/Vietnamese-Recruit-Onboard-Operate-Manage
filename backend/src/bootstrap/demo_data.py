@@ -165,8 +165,12 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
         return False
 
     # Compute dynamic work week: Monday of current week + 4 days.
+    # All seed dates must be in the past or present (not future).
     today = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
     monday = today - timedelta(days=today.weekday())
+    # Shift back one week if Thursday of current week is still ahead.
+    if monday + timedelta(days=3) > today:
+        monday -= timedelta(days=7)
 
     # Idempotent: skip if records already exist for these employees + dates.
     emp_ids = [emp.id for emp in active_employees]
@@ -180,7 +184,7 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
         )
     )
     count_result = await session.execute(count_stmt)
-    if count_result.scalar_one() >= len(emp_ids) * 4:
+    if count_result.scalar_one() > 0:
         logger.info("Attendance demo seed skipped: existing records found for target week.")
         return False
 
