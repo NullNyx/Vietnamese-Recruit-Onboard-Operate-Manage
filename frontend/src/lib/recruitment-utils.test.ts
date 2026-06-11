@@ -86,6 +86,13 @@ describe("recruitment-utils", () => {
       expect(getValidActions("rejected")).toEqual([]);
       expect(getValidActions("archived")).toEqual([]);
     });
+
+    it("returns empty array for invalid or unknown statuses", () => {
+      expect(getValidActions("unknown" as CandidateStatus)).toEqual([]);
+      expect(getValidActions("" as CandidateStatus)).toEqual([]);
+      expect(getValidActions(undefined as unknown as CandidateStatus)).toEqual([]);
+      expect(getValidActions(null as unknown as CandidateStatus)).toEqual([]);
+    });
   });
 
   describe("formatConfidence", () => {
@@ -105,6 +112,15 @@ describe("recruitment-utils", () => {
       expect(formatConfidence(0.856)).toBe("86%");
       expect(formatConfidence(0.854)).toBe("85%");
     });
+
+    it("handles out of bounds numbers", () => {
+      expect(formatConfidence(-0.1)).toBe("-10%");
+      expect(formatConfidence(1.5)).toBe("150%");
+    });
+
+    it("handles NaN", () => {
+      expect(formatConfidence(NaN)).toBe("0%");
+    });
   });
 
   describe("formatDate", () => {
@@ -118,6 +134,11 @@ describe("recruitment-utils", () => {
 
     it("handles date-only ISO strings", () => {
       expect(formatDate("2023-12-25")).toBe("25/12/2023");
+    });
+
+    it("handles invalid date strings", () => {
+      expect(formatDate("not-a-date")).toBe("Invalid Date");
+      expect(formatDate("")).toBe("Invalid Date");
     });
   });
 });
