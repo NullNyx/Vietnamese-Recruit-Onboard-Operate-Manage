@@ -175,14 +175,26 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
     # Day 4:   checked-in only (incomplete).
     # Day 5:   no record (absent -- implicit state).
     week_data: list[tuple[date, datetime, datetime | None]] = [
-        (date(2026, 6, 1), datetime(2026, 6, 1, 1, 0, 0, tzinfo=UTC),
-         datetime(2026, 6, 1, 10, 30, 0, tzinfo=UTC)),  # 08:00-17:30 HCM
-        (date(2026, 6, 2), datetime(2026, 6, 2, 1, 15, 0, tzinfo=UTC),
-         datetime(2026, 6, 2, 10, 45, 0, tzinfo=UTC)),  # 08:15-17:45 HCM
-        (date(2026, 6, 3), datetime(2026, 6, 3, 0, 55, 0, tzinfo=UTC),
-         datetime(2026, 6, 3, 11, 0, 0, tzinfo=UTC)),  # 07:55-18:00 HCM
-        (date(2026, 6, 4), datetime(2026, 6, 4, 2, 0, 0, tzinfo=UTC),
-         None),  # 09:00 HCM, no check-out
+        (
+            date(2026, 6, 1),
+            datetime(2026, 6, 1, 1, 0, 0, tzinfo=UTC),
+            datetime(2026, 6, 1, 10, 30, 0, tzinfo=UTC),
+        ),  # 08:00-17:30 HCM
+        (
+            date(2026, 6, 2),
+            datetime(2026, 6, 2, 1, 15, 0, tzinfo=UTC),
+            datetime(2026, 6, 2, 10, 45, 0, tzinfo=UTC),
+        ),  # 08:15-17:45 HCM
+        (
+            date(2026, 6, 3),
+            datetime(2026, 6, 3, 0, 55, 0, tzinfo=UTC),
+            datetime(2026, 6, 3, 11, 0, 0, tzinfo=UTC),
+        ),  # 07:55-18:00 HCM
+        (
+            date(2026, 6, 4),
+            datetime(2026, 6, 4, 2, 0, 0, tzinfo=UTC),
+            None,
+        ),  # 09:00 HCM, no check-out
     ]
 
     records: list[AttendanceRecord] = []
