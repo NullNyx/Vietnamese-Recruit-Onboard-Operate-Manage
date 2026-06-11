@@ -466,6 +466,7 @@ export interface JobOpeningListItem {
   id: string;
   title: string;
   position_id: string;
+  position_name: string;
   target_headcount: number;
   status: JobOpeningStatus;
   created_at: string;
@@ -485,6 +486,7 @@ export interface JobOpeningDetail {
   title: string;
   description: string;
   position_id: string;
+  position_name: string;
   target_headcount: number;
   status: JobOpeningStatus;
   opened_at: string | null;

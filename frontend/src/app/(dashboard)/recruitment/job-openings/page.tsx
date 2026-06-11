@@ -71,6 +71,9 @@ export default function JobOpeningsPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
+    const requestId = Symbol();
+    // @ts-expect-error: requestId stored on mutable ref for race-condition guard
+    fetchData._reqId = requestId;
     try {
       const params: JobOpeningListParams = {
         page,
@@ -78,12 +81,16 @@ export default function JobOpeningsPage() {
         status: statusFilter !== "all" ? [statusFilter] : undefined,
       };
       const result = await listJobOpenings(params);
+      // @ts-expect-error: ignore stale responses
+      if (fetchData._reqId !== requestId) return;
       setData(result.job_openings);
       setTotalCount(result.total_count);
       setAnnouncement(
         `Đã tải ${result.job_openings.length} vị trí trong tổng số ${result.total_count}`
       );
     } catch (err) {
+      // @ts-expect-error: ignore stale responses
+      if (fetchData._reqId !== requestId) return;
       const message =
         err instanceof Error
           ? err.message
@@ -128,7 +135,7 @@ export default function JobOpeningsPage() {
       </div>
 
       {/* Status filter tabs */}
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Lọc theo trạng thái">
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Lọc theo trạng thái">
         <FilterTab
           active={statusFilter === "all"}
           onClick={() => handleFilterChange("all")}
@@ -206,8 +213,13 @@ export default function JobOpeningsPage() {
                         }
                       }}
                     >
-                      <TableCell className="max-w-[200px] truncate font-medium">
+                      <TableCell className="max-w-[200px] truncate font-medium" title={jo.title}>
                         {jo.title}
+                        {jo.position_name && (
+                          <span className="block text-xs text-muted-foreground truncate">
+                            {jo.position_name}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="tabular-nums">
                         {jo.target_headcount}
@@ -268,14 +280,17 @@ export default function JobOpeningsPage() {
                   }}
                 >
                   <CardContent className="p-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm truncate">{jo.title}</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium text-sm truncate min-w-0 flex-1">{jo.title}</span>
                       <Badge
-                        className={JO_STATUS_COLORS[jo.status]}
+                        className={JO_STATUS_COLORS[jo.status] + " shrink-0"}
                       >
                         {JO_STATUS_LABELS[jo.status]}
                       </Badge>
                     </div>
+                    {jo.position_name && (
+                      <span className="text-xs text-muted-foreground">{jo.position_name}</span>
+                    )}
                     <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                       <div>
                         <span className="text-xs">
@@ -383,8 +398,8 @@ function FilterTab({
 }) {
   return (
     <button
-      role="tab"
-      aria-selected={active}
+      role="radio"
+      aria-checked={active}
       onClick={onClick}
       className={cn(
         "inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors",

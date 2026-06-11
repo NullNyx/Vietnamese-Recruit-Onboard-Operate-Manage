@@ -196,6 +196,9 @@ export default function JobOpeningDetailPage() {
       {/* Header */}
       <div className="space-y-3">
         <h1 className="text-2xl font-bold text-foreground break-words">{jo.title}</h1>
+        {jo.position_name && (
+          <span className="text-sm text-muted-foreground">{jo.position_name}</span>
+        )}
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
           <span>Ngày tạo: {formatDate(jo.created_at)}</span>
           {jo.opened_at && (

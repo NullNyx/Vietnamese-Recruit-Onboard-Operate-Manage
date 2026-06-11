@@ -13,7 +13,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select as sqlmodel_select
 
+from src.modules.employee.domain.entities import Position
 from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User, UserRole
 from src.modules.recruitment.api.schemas import (
@@ -178,6 +180,16 @@ async def list_job_openings(
     jo_ids = [jo.id for jo in job_openings]
     counts_by_jo = await service.get_candidate_counts(jo_ids) if jo_ids else {}
 
+    # Resolve position names for display
+    position_ids = list({jo.position_id for jo in job_openings})
+    position_names: dict[str, str] = {}
+    if position_ids:
+        from sqlmodel import col as sa_col
+        pos_stmt = sqlmodel_select(Position).where(sa_col(Position.id).in_(position_ids))
+        pos_result = await session.execute(pos_stmt)
+        for p in pos_result.scalars().all():
+            position_names[str(p.id)] = p.name
+
     items = [
         JobOpeningListItemResponse(
             id=jo.id,
@@ -186,6 +198,7 @@ async def list_job_openings(
             target_headcount=jo.target_headcount,
             status=JobOpeningStatus(jo.status),
             created_at=jo.created_at,
+            position_name=position_names.get(str(jo.position_id), ""),
             total_candidates=sum(counts_by_jo.get(jo.id, {}).values()),
             accepted_count=counts_by_jo.get(jo.id, {}).get("accepted", 0),
         )
@@ -227,6 +240,12 @@ async def get_job_opening(
     candidate_counts = counts_by_jo.get(job_opening.id, {})
     resp = JobOpeningResponse.model_validate(job_opening)
     resp.candidate_counts = candidate_counts
+    # Resolve position name
+    pos_stmt = sqlmodel_select(Position).where(Position.id == job_opening.position_id)
+    pos_result = await session.execute(pos_stmt)
+    position = pos_result.scalars().first()
+    if position:
+        resp.position_name = position.name
     return resp
 
 

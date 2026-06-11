@@ -435,6 +435,7 @@ class JobOpeningResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     candidate_counts: dict[str, int] = Field(default_factory=dict)
+    position_name: str = ""
 
 
 class JobOpeningListItemResponse(BaseModel):
@@ -459,6 +460,7 @@ class JobOpeningListItemResponse(BaseModel):
     created_at: datetime
     total_candidates: int = 0
     accepted_count: int = 0
+    position_name: str = ""
 
 
 class JobOpeningListResponse(BaseModel):
