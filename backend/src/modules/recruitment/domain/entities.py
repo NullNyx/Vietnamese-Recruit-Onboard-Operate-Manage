@@ -162,3 +162,34 @@ class OrganizationSettings(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+
+
+class JobOpening(SQLModel, table=True):
+    """Represents a Job Opening in recruitment planning.
+
+    A Job Opening is tied to exactly one Position and tracks target headcount
+    separately from the Candidate pipeline. It has its own lifecycle:
+    draft → open → closed/cancelled, and closed → open (reopen).
+    Cancelled is terminal. This is an optional concept that does not become
+    a required parent of Candidate.
+    """
+
+    __tablename__ = "job_openings"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    title: str = Field(max_length=255, nullable=False, index=True)
+    description: str = Field(default="", max_length=5000)
+    position_id: UUID = Field(foreign_key="positions.id", nullable=False, index=True)
+    target_headcount: int = Field(nullable=False, ge=1)
+    status: str = Field(default="draft", max_length=20, nullable=False, index=True)
+    opened_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    closed_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    cancelled_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )

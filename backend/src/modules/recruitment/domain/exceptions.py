@@ -283,3 +283,57 @@ class NoInterviewToRescheduleError(RecruitmentError):
     status_code = 409
     error_code = "NO_INTERVIEW_TO_RESCHEDULE"
     message = "No interview exists to reschedule for this candidate"
+
+
+class JobOpeningNotFoundError(RecruitmentError):
+    """Job Opening with given ID does not exist.
+
+    Raised when an operation targets a Job Opening ID that cannot be
+    found in the database.
+    """
+
+    status_code = 404
+    error_code = "JOB_OPENING_NOT_FOUND"
+    message = "Job Opening not found"
+
+
+class JobOpeningInvalidStatusTransitionError(RecruitmentError):
+    """Attempted status transition is not allowed for Job Opening.
+
+    Raised when an action would result in an invalid state machine
+    transition for a Job Opening's lifecycle status.
+
+    Attributes:
+        current_status: The Job Opening's current status.
+        attempted_action: The action that was attempted.
+    """
+
+    status_code = 409
+    error_code = "JOB_OPENING_INVALID_STATUS_TRANSITION"
+    message = "Invalid status transition for Job Opening"
+
+    def __init__(self, current_status: str, attempted_action: str) -> None:
+        """Initialize JobOpeningInvalidStatusTransitionError.
+
+        Args:
+            current_status: The Job Opening's current status value.
+            attempted_action: The action that was attempted.
+        """
+        self.current_status = current_status
+        self.attempted_action = attempted_action
+        self.message = (
+            f"Cannot perform '{attempted_action}' on Job Opening with status '{current_status}'"
+        )
+        super().__init__(self.message)
+
+
+class PositionNotFoundError(RecruitmentError):
+    """Position with given ID does not exist.
+
+    Raised when a Job Opening is created with a position_id that
+    cannot be found in the database.
+    """
+
+    status_code = 404
+    error_code = "POSITION_NOT_FOUND"
+    message = "Position not found"

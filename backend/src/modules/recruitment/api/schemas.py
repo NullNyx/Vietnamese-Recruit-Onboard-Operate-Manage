@@ -10,7 +10,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from src.modules.recruitment.domain.enums import CandidateStatus, ProcessingStatus
+from src.modules.recruitment.domain.enums import CandidateStatus, JobOpeningStatus, ProcessingStatus
 from src.modules.recruitment.domain.value_objects import EducationItem, ExperienceItem
 
 # ---------------------------------------------------------------------------
@@ -356,3 +356,119 @@ class CVPresignedUrlResponse(BaseModel):
     filename: str
     mime_type: str
     size_bytes: int
+
+
+# ---------------------------------------------------------------------------
+# Job Opening schemas
+# ---------------------------------------------------------------------------
+
+
+class JobOpeningCreate(BaseModel):
+    """Request schema for creating a Job Opening.
+
+    Attributes:
+        title: Title for the Job Opening (required, 1-255 chars).
+        position_id: UUID of the Position (required).
+        target_headcount: Number of people to hire (required, >= 1).
+        description: Optional description (max 5000 chars).
+        status: Initial status (default: draft).
+    """
+
+    title: str = Field(min_length=1, max_length=255)
+    position_id: UUID
+    target_headcount: int = Field(ge=1)
+    description: str = Field(default="", max_length=5000)
+    status: JobOpeningStatus = Field(default=JobOpeningStatus.DRAFT, description="Initial status")
+
+
+class JobOpeningUpdate(BaseModel):
+    """Request schema for updating a Job Opening's editable fields.
+
+    Attributes:
+        title: New title (optional, 1-255 chars).
+        description: New description (optional, max 5000 chars).
+        target_headcount: New target headcount (optional, >= 1).
+    """
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=5000)
+    target_headcount: int | None = Field(default=None, ge=1)
+
+
+class JobOpeningStatusTransition(BaseModel):
+    """Request schema for Job Opening status transitions.
+
+    No fields needed - the action is determined by the HTTP method/endpoint.
+    """
+
+    pass
+
+
+class JobOpeningResponse(BaseModel):
+    """Response schema for a Job Opening.
+
+    Attributes:
+        id: Job Opening UUID.
+        title: Job Opening title.
+        description: Job Opening description.
+        position_id: UUID of the Position.
+        target_headcount: Target number of hires.
+        status: Current lifecycle status.
+        opened_at: Timestamp when opened (None if not open).
+        closed_at: Timestamp when closed (None if not closed).
+        cancelled_at: Timestamp when cancelled (None if not cancelled).
+        created_at: Creation timestamp.
+        updated_at: Last update timestamp.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    title: str
+    description: str
+    position_id: UUID
+    target_headcount: int
+    status: JobOpeningStatus
+    opened_at: datetime | None = None
+    closed_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class JobOpeningListItemResponse(BaseModel):
+    """Response schema for a Job Opening in list view.
+
+    Attributes:
+        id: Job Opening UUID.
+        title: Job Opening title.
+        position_id: UUID of the Position.
+        target_headcount: Target number of hires.
+        status: Current lifecycle status.
+        created_at: Creation timestamp.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    title: str
+    position_id: UUID
+    target_headcount: int
+    status: JobOpeningStatus
+    created_at: datetime
+
+
+class JobOpeningListResponse(BaseModel):
+    """Paginated response for the Job Opening list endpoint.
+
+    Attributes:
+        job_openings: List of Job Opening records for the current page.
+        total_count: Total number of matching Job Openings.
+        page: Current page number (1-indexed).
+        page_size: Number of items per page.
+    """
+
+    job_openings: list[JobOpeningListItemResponse]
+    total_count: int
+    page: int
+    page_size: int
