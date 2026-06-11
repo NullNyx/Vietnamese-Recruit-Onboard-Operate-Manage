@@ -1,5 +1,6 @@
 """Domain exceptions for the Employee Request module."""
 
+from datetime import date as _date
 from uuid import UUID
 
 
@@ -35,6 +36,30 @@ class OvertimeOverlapError(EmployeeRequestError):
         self.message = (
             f"You already have a submitted or approved overtime request on {work_date.isoformat()}"
         )
+        super().__init__(self.message)
+
+
+class LeaveEndBeforeStartError(EmployeeRequestError):
+    """Leave end_date is before start_date."""
+
+    status_code = 400
+    error_code = "LEAVE_END_BEFORE_START"
+    message = "End date must be on or after start date"
+
+
+class LeaveOverlapError(EmployeeRequestError):
+    """Employee already has a submitted/approved leave overlapping the date range."""
+
+    status_code = 409
+    error_code = "LEAVE_OVERLAP"
+    message = "You already have a submitted or approved leave in this date range"
+
+    def __init__(self, start: _date | None = None, end: _date | None = None) -> None:
+        if start and end:
+            self.message = (
+                f"You already have a submitted or approved leave "
+                f"overlapping {start.isoformat()} to {end.isoformat()}"
+            )
         super().__init__(self.message)
 
 

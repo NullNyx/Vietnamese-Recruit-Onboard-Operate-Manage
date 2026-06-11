@@ -5,6 +5,8 @@ from fastapi.responses import JSONResponse
 
 from src.modules.employee_request.domain.exceptions import (
     EmployeeRequestError,
+    LeaveEndBeforeStartError,
+    LeaveOverlapError,
     OvertimeEndBeforeStartError,
     OvertimeOverlapError,
     RequestNotCancellableError,
@@ -46,6 +48,32 @@ def register_employee_request_error_handlers(app: FastAPI) -> None:
     async def overtime_overlap_handler(
         request: Request,
         exc: OvertimeOverlapError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error_code": exc.error_code,
+                "detail": exc.message,
+            },
+        )
+
+    @app.exception_handler(LeaveEndBeforeStartError)
+    async def leave_end_before_start_handler(
+        request: Request,
+        exc: LeaveEndBeforeStartError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error_code": exc.error_code,
+                "detail": exc.message,
+            },
+        )
+
+    @app.exception_handler(LeaveOverlapError)
+    async def leave_overlap_handler(
+        request: Request,
+        exc: LeaveOverlapError,
     ) -> JSONResponse:
         return JSONResponse(
             status_code=exc.status_code,
