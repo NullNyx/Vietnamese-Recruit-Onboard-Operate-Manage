@@ -200,10 +200,10 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
     day4 = monday + timedelta(days=3)
 
     week_data: list[tuple[date, datetime, datetime | None]] = [
-        (day1, _hcm_utc(day1, 8, 0),  _hcm_utc(day1, 17, 30)),   # 08:00-17:30 HCM
-        (day2, _hcm_utc(day2, 8, 15), _hcm_utc(day2, 17, 45)),   # 08:15-17:45 HCM
-        (day3, _hcm_utc(day3, 7, 55), _hcm_utc(day3, 18, 0)),    # 07:55-18:00 HCM
-        (day4, _hcm_utc(day4, 9, 0),  None),                      # 09:00 HCM, no check-out
+        (day1, _hcm_utc(day1, 8, 0), _hcm_utc(day1, 17, 30)),  # 08:00-17:30 HCM
+        (day2, _hcm_utc(day2, 8, 15), _hcm_utc(day2, 17, 45)),  # 08:15-17:45 HCM
+        (day3, _hcm_utc(day3, 7, 55), _hcm_utc(day3, 18, 0)),  # 07:55-18:00 HCM
+        (day4, _hcm_utc(day4, 9, 0), None),  # 09:00 HCM, no check-out
     ]
 
     records: list[AttendanceRecord] = []
