@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.identity.container import get_current_user, get_db_session
-from src.modules.identity.domain.entities import User
+from src.modules.identity.domain.entities import User, UserRole
 from src.modules.recruitment.api.schemas import (
     AssignCandidateRequest,
     CandidateDetailResponse,
@@ -73,6 +73,17 @@ def _get_minio_client() -> RecruitmentMinIOClient:
 # ---------------------------------------------------------------------------
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+
+async def require_admin(current_user: CurrentUserDep) -> User:
+    from fastapi import HTTPException
+
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+
+AdminUserDep = Annotated[User, Depends(require_admin)]
 CandidateServiceDep = Annotated[CandidateService, Depends(get_candidate_service)]
 
 
@@ -574,7 +585,7 @@ async def archive_candidate(
 async def assign_candidate(
     candidate_id: UUID,
     body: AssignCandidateRequest,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     candidate_service: CandidateServiceDep,
 ) -> CandidateResponse:
     """Assign an unassigned Candidate to an open Job Opening.
@@ -610,7 +621,7 @@ async def assign_candidate(
 async def reassign_candidate(
     candidate_id: UUID,
     body: ReassignCandidateRequest,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     candidate_service: CandidateServiceDep,
 ) -> CandidateResponse:
     """Reassign a Candidate to a different open Job Opening.
@@ -645,7 +656,7 @@ async def reassign_candidate(
 )
 async def unassign_candidate(
     candidate_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     candidate_service: CandidateServiceDep,
 ) -> CandidateResponse:
     """Remove a Candidate's assignment to a Job Opening.

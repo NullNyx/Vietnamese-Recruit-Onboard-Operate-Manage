@@ -118,6 +118,8 @@ class TestAssignCandidate:
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.OPEN)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=jo)
 
         result = await service.assign_candidate(candidate.id, jo.id)
@@ -133,6 +135,8 @@ class TestAssignCandidate:
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.CLOSED)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=jo)
 
         with pytest.raises(JobOpeningNotOpenError):
@@ -144,6 +148,8 @@ class TestAssignCandidate:
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.DRAFT)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=jo)
 
         with pytest.raises(JobOpeningNotOpenError):
@@ -155,6 +161,8 @@ class TestAssignCandidate:
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.CANCELLED)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=jo)
 
         with pytest.raises(JobOpeningNotOpenError):
@@ -165,6 +173,8 @@ class TestAssignCandidate:
     ):
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=None)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=None)
 
         with pytest.raises(JobOpeningNotFoundError):
@@ -177,6 +187,8 @@ class TestAssignCandidate:
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=existing_jo_id)
         jo = _make_job_opening(status=JobOpeningStatus.OPEN)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=jo)
 
         with pytest.raises(InvalidStatusTransitionError):
@@ -188,6 +200,8 @@ class TestAssignCandidate:
         candidate = _make_candidate(status=CandidateStatus.ACCEPTED, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.OPEN)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=jo)
 
         with pytest.raises(CandidateAssignmentBlockedError):
@@ -199,6 +213,8 @@ class TestAssignCandidate:
         candidate = _make_candidate(status=CandidateStatus.REJECTED, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.OPEN)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=jo)
 
         with pytest.raises(CandidateAssignmentBlockedError):
@@ -210,6 +226,8 @@ class TestAssignCandidate:
         candidate = _make_candidate(status=CandidateStatus.ARCHIVED, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.OPEN)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=jo)
 
         with pytest.raises(CandidateAssignmentBlockedError):
@@ -226,6 +244,8 @@ class TestAssignCandidate:
         candidate = _make_candidate(status=status, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.OPEN)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=jo)
 
         result = await service.assign_candidate(candidate.id, jo.id)
@@ -251,6 +271,8 @@ class TestReassignCandidate:
         candidate = _make_candidate(status=CandidateStatus.REVIEWING, job_opening_id=old_jo_id)
         new_jo = _make_job_opening(status=JobOpeningStatus.OPEN)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=new_jo)
 
         result = await service.reassign_candidate(candidate.id, new_jo.id)
@@ -263,6 +285,8 @@ class TestReassignCandidate:
         jo = _make_job_opening(status=JobOpeningStatus.OPEN)
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=jo.id)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=jo)
 
         result = await service.reassign_candidate(candidate.id, jo.id)
@@ -276,6 +300,8 @@ class TestReassignCandidate:
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.OPEN)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=jo)
 
         with pytest.raises(InvalidStatusTransitionError):
@@ -288,6 +314,8 @@ class TestReassignCandidate:
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=old_jo_id)
         jo = _make_job_opening(status=JobOpeningStatus.CLOSED)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=jo)
 
         with pytest.raises(JobOpeningNotOpenError):
@@ -300,6 +328,8 @@ class TestReassignCandidate:
         candidate = _make_candidate(status=CandidateStatus.ACCEPTED, job_opening_id=jo_id)
         new_jo = _make_job_opening(status=JobOpeningStatus.OPEN)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=new_jo)
 
         with pytest.raises(CandidateAssignmentBlockedError):
@@ -317,6 +347,8 @@ class TestReassignCandidate:
         candidate = _make_candidate(status=status, job_opening_id=old_jo_id)
         new_jo = _make_job_opening(status=JobOpeningStatus.OPEN)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=new_jo)
 
         result = await service.reassign_candidate(candidate.id, new_jo.id)
@@ -333,6 +365,8 @@ class TestUnassignCandidate:
         jo_id = uuid4()
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=jo_id)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
 
         result = await service.unassign_candidate(candidate.id)
 
@@ -343,6 +377,7 @@ class TestUnassignCandidate:
     ):
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=None)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
 
         with pytest.raises(InvalidStatusTransitionError):
             await service.unassign_candidate(candidate.id)
@@ -353,6 +388,7 @@ class TestUnassignCandidate:
         jo_id = uuid4()
         candidate = _make_candidate(status=CandidateStatus.ACCEPTED, job_opening_id=jo_id)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
 
         with pytest.raises(CandidateAssignmentBlockedError):
             await service.unassign_candidate(candidate.id)
@@ -363,6 +399,7 @@ class TestUnassignCandidate:
         jo_id = uuid4()
         candidate = _make_candidate(status=CandidateStatus.REJECTED, job_opening_id=jo_id)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
 
         with pytest.raises(CandidateAssignmentBlockedError):
             await service.unassign_candidate(candidate.id)
@@ -373,6 +410,7 @@ class TestUnassignCandidate:
         jo_id = uuid4()
         candidate = _make_candidate(status=CandidateStatus.ARCHIVED, job_opening_id=jo_id)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
 
         with pytest.raises(CandidateAssignmentBlockedError):
             await service.unassign_candidate(candidate.id)
@@ -388,6 +426,8 @@ class TestUnassignCandidate:
         jo_id = uuid4()
         candidate = _make_candidate(status=status, job_opening_id=jo_id)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
 
         result = await service.unassign_candidate(candidate.id)
 
@@ -403,6 +443,8 @@ class TestAssignmentAuditLogging:
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.OPEN)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=jo)
 
         await service.assign_candidate(candidate.id, jo.id)
@@ -422,6 +464,8 @@ class TestAssignmentAuditLogging:
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=old_jo_id)
         new_jo = _make_job_opening(status=JobOpeningStatus.OPEN)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=new_jo)
 
         await service.reassign_candidate(candidate.id, new_jo.id)
@@ -441,6 +485,8 @@ class TestAssignmentAuditLogging:
         jo_id = uuid4()
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=jo_id)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
+        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
 
         await service.unassign_candidate(candidate.id)
 

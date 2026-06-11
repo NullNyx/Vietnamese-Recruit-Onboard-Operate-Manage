@@ -804,6 +804,12 @@ class CandidateService:
             raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
         return candidate
 
+    async def _get_candidate_locked_or_raise(self, candidate_id: UUID) -> Candidate:
+        candidate = await self._candidate_repo.get_by_id_for_update(candidate_id)
+        if candidate is None:
+            raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
+        return candidate
+
     # ─── Status transition actions ─────────────────────────────────────
 
     async def reject_candidate(self, candidate_id: UUID, reason: str | None = None) -> Candidate:
@@ -1123,7 +1129,7 @@ class CandidateService:
             CandidateAssignmentBlockedError: If the Candidate is in a terminal status.
             InvalidStatusTransitionError: If the Candidate is not currently assigned.
         """
-        candidate = await self._get_candidate_or_raise(candidate_id)
+        candidate = await self._get_candidate_locked_or_raise(candidate_id)
 
         if candidate.job_opening_id is None:
             raise InvalidStatusTransitionError(

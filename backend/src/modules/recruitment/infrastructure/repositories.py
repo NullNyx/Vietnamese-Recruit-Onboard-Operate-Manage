@@ -57,6 +57,11 @@ class CandidateRepository:
         result = await self.session.execute(statement)
         return result.scalars().first()
 
+    async def get_by_id_for_update(self, id: UUID) -> Candidate | None:
+        statement = select(Candidate).where(Candidate.id == id).with_for_update()
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
     async def find_by_email(self, email: str) -> Candidate | None:
         """Retrieve a candidate by email address (case-insensitive).
 
