@@ -170,6 +170,11 @@ class FakeEmployeeRepo:
     def __init__(self, employee: Employee) -> None:
         self.employee = employee
 
+    async def get_by_id(self, employee_id: UUID) -> Employee | None:
+        if self.employee.id == employee_id:
+            return self.employee
+        return None
+
     async def update(self, employee_id: UUID, fields: dict[str, object]) -> Employee | None:
         if self.employee.id != employee_id:
             return None
@@ -215,12 +220,18 @@ def _build_world(
     FakeSession,
 ]:
     """Set up an in-progress process, inactive employee, and pending tasks."""
+    from datetime import date
+    from uuid import uuid4
     employee = Employee(
         employee_code="NV-001",
         full_name=full_name,
         email=email,
         candidate_id=candidate_id,
         is_active=False,
+        department_id=uuid4(),
+        position_id=uuid4(),
+        manager_id=uuid4(),
+        start_date=date(2026, 1, 1),
     )
     process = OnboardingProcess(
         candidate_id=candidate_id,

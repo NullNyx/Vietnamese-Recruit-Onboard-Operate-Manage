@@ -217,7 +217,7 @@ function GmailPageContent() {
     } finally {
       setDisconnectLoading(false);
     }
-  }, [addToast, handleApiError, fetchEmails, fetchReviewEmails, reviewMode]);
+  }, [addToast, handleApiError]);
 
   const handleDisconnectCancel = React.useCallback(() => {
     setDisconnectDialogOpen(false);
@@ -270,7 +270,7 @@ function GmailPageContent() {
     } finally {
       setReclassifying(null);
     }
-  }, [addToast, handleApiError, fetchEmails, fetchReviewEmails, reviewMode]);
+  }, [addToast, handleApiError]);
 
   // --- Process attachments handler ---
   const handleProcessAttachments = React.useCallback(async (messageId: string) => {

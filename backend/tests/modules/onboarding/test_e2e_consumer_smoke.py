@@ -56,7 +56,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 from sqlmodel import select
 
-from src.modules.employee.domain.entities import Employee
+from src.modules.employee.domain.entities import Department, Employee, Position
 from src.modules.identity.domain.entities import User, UserRole
 from src.modules.onboarding import container
 from src.modules.onboarding.container import process_candidate_accepted
@@ -192,6 +192,24 @@ async def _insert_admin_user(maker: async_sessionmaker[AsyncSession]) -> User:
     )
 
 
+async def _insert_setup_dependencies(maker: async_sessionmaker[AsyncSession]) -> tuple[UUID, UUID, UUID]:
+    suffix = uuid4().hex[:8]
+    dept = Department(name=f"Engineering-{suffix}")
+    pos = Position(name=f"Software Engineer-{suffix}")
+    mgr = Employee(
+        employee_code=f"MGR-{suffix}",
+        full_name="Manager",
+        email=f"manager-{suffix}@example.com",
+        is_active=True,
+    )
+    async with maker() as db_session:
+        db_session.add(dept)
+        db_session.add(pos)
+        db_session.add(mgr)
+        await db_session.commit()
+        return dept.id, pos.id, mgr.id
+
+
 # ---------------------------------------------------------------------------
 # Re-read helpers (each opens a fresh session to observe committed state only)
 # ---------------------------------------------------------------------------
@@ -313,6 +331,22 @@ async def test_candidate_accepted_drives_full_chain_to_active_employee(
     assert creation.new_value is not None
     assert creation.new_value["process_id"] == str(process.id)
     assert creation.new_value["employee_id"] == str(employee.id)
+
+    # --- Stage 2.5: update employee setup so completion triggers activation. --
+    dept_id, pos_id, mgr_id = await _insert_setup_dependencies(session_maker)
+    async with session_maker() as svc_session:
+        service = container._build_service(svc_session)
+        from datetime import date
+        await service.update_employee_setup(
+            process_id=process.id,
+            actor=admin,
+            data={
+                "department_id": dept_id,
+                "position_id": pos_id,
+                "manager_id": mgr_id,
+                "start_date": date.today(),
+            }
+        )
 
     # --- Stage 3: complete all four tasks via the service (admin actor). ------
     # Build the service the same way the consumer does: a fresh session per

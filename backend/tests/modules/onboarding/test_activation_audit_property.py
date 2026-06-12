@@ -149,6 +149,12 @@ class FakeEmployeeRepo:
         self.employees.append(employee)
         return employee
 
+    async def get_by_id(self, employee_id: UUID) -> Employee | None:
+        for employee in self.employees:
+            if employee.id == employee_id:
+                return employee
+        return None
+
     async def update(self, employee_id: UUID, values: dict[str, object]) -> Employee | None:
         for employee in self.employees:
             if employee.id == employee_id:
@@ -207,12 +213,17 @@ def _build_fixture(task_count: int) -> _Fixture:
     session = FakeSession()
 
     candidate_id = uuid4()
+    from datetime import date
     employee = Employee(
         employee_code="NV-001",
         full_name="New Hire",
         email="new.hire@example.com",
         candidate_id=candidate_id,
         is_active=False,
+        department_id=uuid4(),
+        position_id=uuid4(),
+        manager_id=uuid4(),
+        start_date=date(2026, 1, 1),
     )
     employee_repo.employees.append(employee)
 

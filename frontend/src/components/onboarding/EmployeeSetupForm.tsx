@@ -1,40 +1,46 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { OnboardingProcess, updateEmployeeSetup, onboardingKeys } from "@/lib/api/onboarding";
-import { listDepartments } from "@/lib/api/departments";
-import { listPositions } from "@/lib/api/positions";
-import { listEmployees } from "@/lib/api/employees";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Loader2, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { listDepartments } from '@/lib/api/departments';
+import { listEmployees } from '@/lib/api/employees';
+import { onboardingKeys, OnboardingProcess, updateEmployeeSetup } from '@/lib/api/onboarding';
+import { listPositions } from '@/lib/api/positions';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertCircle, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 export function EmployeeSetupForm({ process }: { process: OnboardingProcess }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
-    department_id: process.department_id || "",
-    position_id: process.position_id || "",
-    manager_id: process.manager_id || "",
-    start_date: process.start_date || "",
+    department_id: process.department_id || '',
+    position_id: process.position_id || '',
+    manager_id: process.manager_id || '',
+    start_date: process.start_date || '',
   });
 
   const { data: departments } = useQuery({
-    queryKey: ["departments"],
+    queryKey: ['departments'],
     queryFn: listDepartments,
   });
 
   const { data: positions } = useQuery({
-    queryKey: ["positions"],
+    queryKey: ['positions'],
     queryFn: listPositions,
   });
 
   const { data: employeesData } = useQuery({
-    queryKey: ["employees", { is_active: true }],
+    queryKey: ['employees', { is_active: true }],
     queryFn: () => listEmployees({ is_active: true, page_size: 1000 }),
   });
   const managers = employeesData?.items || [];
@@ -51,15 +57,15 @@ export function EmployeeSetupForm({ process }: { process: OnboardingProcess }) {
       queryClient.invalidateQueries({ queryKey: onboardingKeys.detail(process.id) });
       queryClient.invalidateQueries({ queryKey: onboardingKeys.lists() });
       queryClient.invalidateQueries({ queryKey: onboardingKeys.counts() });
-      
-      if (updatedProcess.status === "complete") {
-        toast.success("Thiết lập hoàn tất. Nhân viên đã được kích hoạt!");
+
+      if (updatedProcess.status === 'complete') {
+        toast.success('Thiết lập hoàn tất. Nhân viên đã được kích hoạt!');
       } else {
-        toast.success("Đã lưu thông tin thiết lập");
+        toast.success('Đã lưu thông tin thiết lập');
       }
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Lưu thất bại");
+      toast.error(err.message || 'Lưu thất bại');
     },
   });
 
@@ -68,7 +74,7 @@ export function EmployeeSetupForm({ process }: { process: OnboardingProcess }) {
     updateMutation.mutate(formData);
   };
 
-  const isComplete = process.status === "complete";
+  const isComplete = process.status === 'complete';
   const hasMissing = process.missing_setup_fields && process.missing_setup_fields.length > 0;
 
   return (
@@ -76,13 +82,16 @@ export function EmployeeSetupForm({ process }: { process: OnboardingProcess }) {
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">Thiết lập nhân viên</h3>
       </div>
-      
+
       {!isComplete && hasMissing && (
-        <Alert variant="destructive" className="bg-destructive/5 text-destructive border-destructive/20">
+        <Alert
+          variant="destructive"
+          className="bg-destructive/5 text-destructive border-destructive/20"
+        >
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-xs">
-            Vui lòng hoàn thiện các trường sau để kích hoạt nhân viên:{" "}
-            <span className="font-semibold">{process.missing_setup_fields.join(", ")}</span>
+            Vui lòng hoàn thiện các trường sau để kích hoạt nhân viên:{' '}
+            <span className="font-semibold">{process.missing_setup_fields.join(', ')}</span>
           </AlertDescription>
         </Alert>
       )}
@@ -120,11 +129,15 @@ export function EmployeeSetupForm({ process }: { process: OnboardingProcess }) {
                 <SelectValue placeholder="Chọn vị trí" />
               </SelectTrigger>
               <SelectContent>
-                {positions?.filter(p => !formData.department_id || p.department_id === formData.department_id).map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.title}
-                  </SelectItem>
-                ))}
+                {positions
+                  ?.filter(
+                    (p) => !formData.department_id || p.department_id === formData.department_id,
+                  )
+                  .map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -160,7 +173,7 @@ export function EmployeeSetupForm({ process }: { process: OnboardingProcess }) {
             />
           </div>
         </div>
-        
+
         {!isComplete && (
           <div className="flex justify-end pt-2">
             <Button type="submit" size="sm" disabled={updateMutation.isPending}>

@@ -161,6 +161,11 @@ class FakeEmployeeRepo:
         self._employee = employee
         self.fail_on = fail_on
 
+    async def get_by_id(self, employee_id: UUID) -> Employee | None:
+        if self._employee.id == employee_id:
+            return self._employee
+        return None
+
     async def update(self, employee_id: UUID, fields: dict[str, object]) -> Employee | None:
         if self.fail_on == "employee_update":
             raise _InjectedFailure("injected failure at employee update step")
@@ -258,12 +263,18 @@ def _build_world(
     the whole checklist done and drives the activation path; otherwise a second
     task is left ``pending`` so activation is not reached.
     """
+    from datetime import date
+    from uuid import uuid4
     employee = Employee(
         employee_code="NV-001",
         full_name="Test Employee",
         email="employee@example.com",
         candidate_id=candidate_id,
         is_active=False,
+        department_id=uuid4(),
+        position_id=uuid4(),
+        manager_id=uuid4(),
+        start_date=date(2026, 1, 1),
     )
     process = OnboardingProcess(
         candidate_id=candidate_id,

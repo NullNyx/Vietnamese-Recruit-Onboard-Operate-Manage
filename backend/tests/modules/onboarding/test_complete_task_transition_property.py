@@ -155,6 +155,12 @@ class FakeEmployeeRepo:
     def __init__(self) -> None:
         self.employees: list[Employee] = []
 
+    async def get_by_id(self, employee_id: UUID) -> Employee | None:
+        for employee in self.employees:
+            if employee.id == employee_id:
+                return employee
+        return None
+
     async def update(self, employee_id: UUID, changes: dict[str, object]) -> Employee | None:
         for employee in self.employees:
             if employee.id == employee_id:
@@ -208,12 +214,18 @@ async def _run_transition_property(
     session = FakeSession()
 
     # Linked inactive employee.
+    from datetime import date
+    from uuid import uuid4
     employee = Employee(
         employee_code="NV-001",
         full_name="Onboarding Hire",
         email=f"hire-{candidate_id}@example.com",
         candidate_id=candidate_id,
         is_active=False,
+        department_id=uuid4(),
+        position_id=uuid4(),
+        manager_id=uuid4(),
+        start_date=date(2026, 1, 1),
     )
     employee_repo.employees.append(employee)
 
