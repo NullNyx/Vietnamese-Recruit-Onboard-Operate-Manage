@@ -10,7 +10,13 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
+
+if TYPE_CHECKING:
+    from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
+    from src.modules.gmail.infrastructure.audit_logger import AuditLogger
+    from src.modules.gmail.infrastructure.config import GmailSettings
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -754,15 +760,11 @@ async def classify_emails(
         connection_service: ConnectionService,
         gmail_adapter: GmailAdapter,
     ) -> dict[str, Any]:
-        from sqlmodel import select
 
         from src.modules.gmail.application.classification_service import (
             ClassificationService,
         )
         from src.modules.gmail.application.rules_classifier import RulesClassifier
-        from src.modules.gmail.domain.entities import (
-            EmailMessage as EmailMessageEntity,
-        )
         from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
         from src.modules.gmail.infrastructure.audit_logger import AuditLogger
 
@@ -875,15 +877,14 @@ async def classify_emails(
 # ---------------------------------------------------------------------------
 
 
-
 async def _auto_process_cv_attachments(
-    current_user: "User",
-    email_repo: "EmailRepository",
-    connection_service: "ConnectionService",
-    gmail_adapter: "GmailAdapter",
-    settings: "GmailSettings",
-    audit_logger: "AuditLogger",
-    recruitment_with_attachments: list["EmailMessageEntity"],
+    current_user: User,
+    email_repo: EmailRepository,
+    connection_service: ConnectionService,
+    gmail_adapter: GmailAdapter,
+    settings: GmailSettings,
+    audit_logger: AuditLogger,
+    recruitment_with_attachments: list[EmailMessageEntity],
 ) -> int:
     """Auto-process CV attachments for classified recruitment emails."""
     import logging
@@ -980,11 +981,12 @@ async def _auto_process_cv_attachments(
 
 
 async def _get_unclassified_emails_and_count(
-    current_user: "User", email_repo: "EmailRepository", limit: int
-) -> tuple[list["EmailMessageEntity"], int]:
+    current_user: User, email_repo: EmailRepository, limit: int
+) -> tuple[list[EmailMessageEntity], int]:
     """Fetch unclassified emails and the total remaining count."""
-    from sqlmodel import select
     from sqlalchemy import func
+    from sqlmodel import select
+
     from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
 
     # Only select emails that haven't been classified yet.
@@ -1008,7 +1010,6 @@ async def _get_unclassified_emails_and_count(
     total_remaining = total_remaining_result.scalar() or 0
 
     return unclassified_emails, total_remaining
-
 
 
 async def _get_user_access_token(user_id: UUID, connection_service: ConnectionService) -> str:
