@@ -208,8 +208,40 @@ describe("EmployeeAttendancePage UI states", () => {
     render(<AttendancePage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Chưa có bản ghi chấm công trong tháng này.")).toBeInTheDocument();
+      expect(screen.getByText("Chưa có bản ghi chấm công trong 7 ngày gần nhất.")).toBeInTheDocument();
     });
+  });
+
+  it("shows Xem theo tháng button in recent mode", async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: async () => null })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ records: [], year: 2026, month: 6 }) });
+
+    render(<AttendancePage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Xem theo tháng/i })).toBeInTheDocument();
+    });
+  });
+
+  it("switches to month mode and back to recent mode", async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: async () => null })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ records: [], year: 2026, month: 6 }) });
+
+    render(<AttendancePage />);
+
+    // Default: recent mode, shows "7 ngày gần nhất"
+    await waitFor(() => {
+      expect(screen.getByText("7 ngày gần nhất")).toBeInTheDocument();
+    });
+
+    // Click "Xem theo tháng" to switch to month mode
+    const viewMonthBtn = screen.getByRole("button", { name: /Xem theo tháng/i });
+    await viewMonthBtn.click();
+
+    // Now should show the month selector and "7 ngày" button
+    expect(screen.getByRole("button", { name: /7 ngày/i })).toBeInTheDocument();
   });
 
   it("renders history records in table", async () => {

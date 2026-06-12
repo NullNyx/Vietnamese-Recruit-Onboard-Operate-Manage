@@ -104,6 +104,7 @@ export default function EmployeeAttendancePage() {
   // History state
   const [historyRecords, setHistoryRecords] = useState<AttendanceRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyMode, setHistoryMode] = useState<"recent" | "month">("recent");
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -146,8 +147,14 @@ export default function EmployeeAttendancePage() {
   const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
     try {
-      const [year, month] = selectedMonth.split("-").map(Number);
-      const res = await fetch(`/api/attendance/me/history?year=${year}&month=${month}`, { credentials: "include" });
+      let url: string;
+      if (historyMode === "recent") {
+        url = "/api/attendance/me/history?days=7";
+      } else {
+        const [year, month] = selectedMonth.split("-").map(Number);
+        url = `/api/attendance/me/history?year=${year}&month=${month}`;
+      }
+      const res = await fetch(url, { credentials: "include" });
       if (!res.ok) {
         throw new Error(`Lỗi tải lịch sử (${res.status})`);
       }
@@ -159,7 +166,7 @@ export default function EmployeeAttendancePage() {
     } finally {
       setHistoryLoading(false);
     }
-  }, [selectedMonth]);
+  }, [selectedMonth, historyMode]);
 
   // Check-in
   async function handleCheckIn() {
@@ -362,47 +369,71 @@ export default function EmployeeAttendancePage() {
           <div>
             <CardTitle className="text-lg">Lịch sử chấm công</CardTitle>
             <CardDescription>
-              {monthOptions.find((o) => o.value === selectedMonth)?.label || selectedMonth}
+              {historyMode === "recent"
+                ? "7 ngày gần nhất"
+                : monthOptions.find((o) => o.value === selectedMonth)?.label || selectedMonth}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                const idx = monthOptions.findIndex((o) => o.value === selectedMonth);
-                if (idx < monthOptions.length - 1) {
-                  setSelectedMonth(monthOptions[idx + 1].value);
-                }
-              }}
-              disabled={selectedMonth === monthOptions[monthOptions.length - 1].value}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-            >
-              {monthOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                const idx = monthOptions.findIndex((o) => o.value === selectedMonth);
-                if (idx > 0) {
-                  setSelectedMonth(monthOptions[idx - 1].value);
-                }
-              }}
-              disabled={selectedMonth === monthOptions[0].value}
-            >
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+            {historyMode === "recent" ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setHistoryMode("month")}
+              >
+                Xem theo tháng
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const idx = monthOptions.findIndex((o) => o.value === selectedMonth);
+                    if (idx < monthOptions.length - 1) {
+                      setSelectedMonth(monthOptions[idx + 1].value);
+                    }
+                  }}
+                  disabled={selectedMonth === monthOptions[monthOptions.length - 1].value}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => {
+                    setSelectedMonth(e.target.value);
+                    setHistoryMode("month");
+                  }}
+                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  {monthOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const idx = monthOptions.findIndex((o) => o.value === selectedMonth);
+                    if (idx > 0) {
+                      setSelectedMonth(monthOptions[idx - 1].value);
+                    }
+                  }}
+                  disabled={selectedMonth === monthOptions[0].value}
+                >
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setHistoryMode("recent")}
+                >
+                  7 ngày
+                </Button>
+              </>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -414,7 +445,9 @@ export default function EmployeeAttendancePage() {
             </div>
           ) : historyRecords.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
-              Chưa có bản ghi chấm công trong tháng này.
+              {historyMode === "recent"
+                ? "Chưa có bản ghi chấm công trong 7 ngày gần nhất."
+                : "Chưa có bản ghi chấm công trong tháng này."}
             </p>
           ) : (
             <div className="overflow-x-auto">
