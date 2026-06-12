@@ -130,6 +130,12 @@ class FakeEmployeeRepo:
         self.employees: list[Employee] = []
         self.update_calls: list[tuple[UUID, dict[str, object]]] = []
 
+    async def get_by_id(self, employee_id: UUID) -> Employee | None:
+        for employee in self.employees:
+            if employee.id == employee_id:
+                return employee
+        return None
+
     async def create(self, employee: Employee) -> Employee:
         self.employees.append(employee)
         return employee
@@ -189,12 +195,26 @@ def _build_zero_task_fixture() -> _Fixture:
     session = FakeSession()
 
     candidate_id = uuid4()
+    from datetime import date
+
+    manager = Employee(
+        employee_code="MGR-001",
+        full_name="Manager",
+        email="manager@example.com",
+        is_active=True,
+    )
+    employee_repo.employees.append(manager)
+
     employee = Employee(
         employee_code="NV-001",
-        full_name="New Hire",
-        email="new.hire@example.com",
+        full_name="No Task Employee",
+        email="no.task@example.com",
         candidate_id=candidate_id,
         is_active=False,
+        department_id=uuid4(),
+        position_id=uuid4(),
+        manager_id=manager.id,
+        start_date=date(2026, 1, 1),
     )
     employee_repo.employees.append(employee)
 

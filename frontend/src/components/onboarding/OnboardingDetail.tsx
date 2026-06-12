@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Circle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { EmployeeSetupForm } from './EmployeeSetupForm';
 
 interface OnboardingDetailProps {
   processId: string;
@@ -147,9 +148,13 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
         </div>
       </div>
 
-      {/* Task list */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="space-y-2">
+      <div className="flex-1 overflow-y-auto">
+        {/* Setup Form */}
+        <EmployeeSetupForm process={process} />
+
+        {/* Task list */}
+        <div className="p-6">
+          <div className="space-y-2">
           {tasks.length === 0 ? (
             <EmptyState />
           ) : (
@@ -181,7 +186,8 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
                   </span>
                 </button>
               ))
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

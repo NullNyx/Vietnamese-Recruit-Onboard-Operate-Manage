@@ -26,8 +26,9 @@ and raising on any failure (R5.5, R5.6, R8.2).
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from datetime import UTC, datetime
+from dataclasses import dataclass, field
+from datetime import UTC, date, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
@@ -182,7 +183,13 @@ class ProcessDetail:
     completed_count: int
     total_count: int
     missing_setup_fields: list[str]
-    tasks: list[ProcessTaskDetail]
+    accepted_at: str | None = None
+    job_opening: str | None = None
+    department_id: UUID | None = None
+    position_id: UUID | None = None
+    manager_id: UUID | None = None
+    start_date: date | None = None
+    tasks: list[ProcessTaskDetail] = field(default_factory=list)
 
 
 class OnboardingService:
@@ -662,10 +669,23 @@ class OnboardingService:
             AuditWriteError: If appending the activation audit entry fails.
             OnboardingActivationError: If the linked employee cannot be found.
         """
+        employee = await self.employee_repo.get_by_id(process.employee_id)
+        if employee is None:
+            raise OnboardingActivationError(
+                f"Employee {process.employee_id} for process {process.id} not found"
+            )
+
+        setup_complete = (
+            employee.department_id is not None
+            and employee.position_id is not None
+            and employee.manager_id is not None
+            and employee.start_date is not None
+        )
+
         counts = await self.task_repo.count_by_status(process.id)
         total = sum(counts.values())
         done = counts.get(OnboardingTaskStatus.DONE.value, 0)
-        if total == 0 or done != total:
+        if total == 0 or done != total or not setup_complete:
             # Incomplete (or zero-task): leave in_progress, employee inactive.
             return
 
@@ -714,6 +734,100 @@ class OnboardingService:
             await self.audit_repo.append(entry)
         except Exception as exc:
             raise AuditWriteError() from exc
+
+    async def update_employee_setup(
+        self,
+        process_id: UUID,
+        actor: User,
+        data: dict[str, Any],
+    ) -> OnboardingProcess:
+        if actor.role != UserRole.ADMIN:
+            raise OnboardingAuthorizationError()
+
+        try:
+            process = await self.process_repo.get_for_update(process_id)
+            if process is None:
+                raise OnboardingProcessNotFoundError()
+
+            if process.status == OnboardingStatus.COMPLETE.value:
+                raise OnboardingError("Cannot edit setup for a completed process")
+
+            employee = await self.employee_repo.get_by_id(process.employee_id)
+            if not employee:
+                raise OnboardingError("Employee not found")
+
+            # Validate manager is active
+            if "manager_id" in data and data["manager_id"] is not None:
+                manager = await self.employee_repo.get_by_id(data["manager_id"])
+                if not manager or not manager.is_active:
+                    raise OnboardingError("Manager must be an active employee")
+
+            # Validate department exists
+            dep_id = data.get("department_id", employee.department_id)
+            if dep_id:
+                from src.modules.employee.domain.entities import Department
+
+                dep = await self.session.get(Department, dep_id)
+                if not dep:
+                    raise OnboardingError("Department not found")
+
+            # Validate position exists and matches department
+            pos_id = data.get("position_id", employee.position_id)
+            if pos_id:
+                from src.modules.employee.domain.entities import Position
+
+                pos = await self.session.get(Position, pos_id)
+                if not pos:
+                    raise OnboardingError("Position not found")
+                if pos.department_id is not None and dep_id != pos.department_id:
+                    raise OnboardingError("Department must match Position's department")
+
+            # Convert string start_date to date object if needed
+            if "start_date" in data and isinstance(data["start_date"], str):
+                from datetime import date
+
+                data["start_date"] = date.fromisoformat(data["start_date"])
+
+            previous_state = {k: getattr(employee, k) for k in data.keys()}
+
+            # Serialize UUID and date for audit log
+            def _serialize(v):
+                if isinstance(v, UUID):
+                    return str(v)
+                from datetime import date
+
+                if isinstance(v, date):
+                    return v.isoformat()
+                return v
+
+            audit_prev = {k: _serialize(v) for k, v in previous_state.items()}
+            audit_new = {k: _serialize(v) for k, v in data.items()}
+
+            await self.employee_repo.update(employee.id, data)
+
+            setup_audit = OnboardingAuditLog(
+                user_id=actor.id,
+                actor_email=actor.email,
+                operation_type="employee_setup_updated",
+                entity_type="employee",
+                entity_id=employee.id,
+                candidate_id=process.candidate_id,
+                previous_value=audit_prev,
+                new_value=audit_new,
+                change_summary=f"Employee {employee.id} setup fields updated by {actor.email}",
+                success=True,
+            )
+            await self._append_audit(setup_audit)
+
+            await self._activate_if_complete(process, actor)
+            await self.session.commit()
+            return process
+        except OnboardingError:
+            await self.session.rollback()
+            raise
+        except Exception as exc:
+            await self.session.rollback()
+            raise OnboardingError(f"Failed to update employee setup: {exc}") from exc
 
     async def list_processes(
         self,
@@ -808,6 +922,8 @@ class OnboardingService:
                     missing_setup_fields.append("department")
                 if not employee.position_id:
                     missing_setup_fields.append("position")
+                if not employee.manager_id:
+                    missing_setup_fields.append("manager")
                 if not employee.start_date:
                     missing_setup_fields.append("start_date")
 
@@ -880,6 +996,8 @@ class OnboardingService:
                 missing_setup_fields.append("department")
             if not employee.position_id:
                 missing_setup_fields.append("position")
+            if not employee.manager_id:
+                missing_setup_fields.append("manager")
             if not employee.start_date:
                 missing_setup_fields.append("start_date")
 
@@ -891,6 +1009,10 @@ class OnboardingService:
             completed_count=completed_count,
             total_count=len(tasks),
             missing_setup_fields=missing_setup_fields,
+            department_id=employee.department_id if employee else None,
+            position_id=employee.position_id if employee else None,
+            manager_id=employee.manager_id if employee else None,
+            start_date=employee.start_date if employee else None,
             tasks=task_details,
         )
 

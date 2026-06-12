@@ -21,6 +21,7 @@ schemas; in particular the process ``id`` field is populated from the
 dataclasses' ``process_id``.
 """
 
+from datetime import date
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -35,6 +36,7 @@ __all__ = [
     "OnboardingTaskResponse",
     "TaskStatusUpdate",
     "OnboardingCountsResponse",
+    "EmployeeSetupUpdate",
 ]
 
 
@@ -73,6 +75,15 @@ class TaskStatusUpdate(BaseModel):
     """
 
     status: OnboardingTaskStatus
+
+
+class EmployeeSetupUpdate(BaseModel):
+    """Request body for updating employee core setup fields from onboarding."""
+
+    department_id: UUID | None = None
+    position_id: UUID | None = None
+    manager_id: UUID | None = None
+    start_date: date | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -174,4 +185,8 @@ class OnboardingProcessDetailResponse(BaseModel):
     missing_setup_fields: list[str] = Field(default_factory=list)
     accepted_at: str | None = None
     job_opening: str | None = None
+    department_id: UUID | None = None
+    position_id: UUID | None = None
+    manager_id: UUID | None = None
+    start_date: str | None = None
     tasks: list[OnboardingTaskResponse] = Field(default_factory=list)

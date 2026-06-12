@@ -68,6 +68,7 @@ class Employee(SQLModel, table=True):
     address: str | None = Field(default=None)
     department_id: UUID | None = Field(default=None, foreign_key="departments.id")
     position_id: UUID | None = Field(default=None, foreign_key="positions.id")
+    manager_id: UUID | None = Field(default=None, foreign_key="employees.id")
     start_date: date | None = Field(default=None)
     id_number: str | None = Field(default=None, max_length=20)
     tax_code: str | None = Field(default=None, max_length=20)
