@@ -348,6 +348,20 @@ async def test_candidate_accepted_drives_full_chain_to_active_employee(
             }
         )
 
+    # Verify setup updates
+    employees_after_setup = await _load_employee_by_candidate(session_maker, candidate_id)
+    assert len(employees_after_setup) == 1
+    employee_after_setup = employees_after_setup[0]
+    assert employee_after_setup.department_id == dept_id
+    assert employee_after_setup.position_id == pos_id
+    assert employee_after_setup.manager_id == mgr_id
+    assert employee_after_setup.start_date == date.today()
+    assert employee_after_setup.is_active is False
+
+    processes_after_setup = await _load_processes_by_candidate(session_maker, candidate_id)
+    assert len(processes_after_setup) == 1
+    assert processes_after_setup[0].status == OnboardingStatus.IN_PROGRESS.value
+
     # --- Stage 3: complete all four tasks via the service (admin actor). ------
     # Build the service the same way the consumer does: a fresh session per
     # call, each committing its own transaction (matches the real model).

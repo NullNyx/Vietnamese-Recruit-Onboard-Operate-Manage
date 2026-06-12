@@ -196,15 +196,24 @@ def _build_zero_task_fixture() -> _Fixture:
 
     candidate_id = uuid4()
     from datetime import date
+
+    manager = Employee(
+        employee_code="MGR-001",
+        full_name="Manager",
+        email="manager@example.com",
+        is_active=True,
+    )
+    employee_repo.employees.append(manager)
+
     employee = Employee(
         employee_code="NV-001",
-        full_name="New Hire",
-        email="new.hire@example.com",
+        full_name="No Task Employee",
+        email="no.task@example.com",
         candidate_id=candidate_id,
         is_active=False,
         department_id=uuid4(),
         position_id=uuid4(),
-        manager_id=uuid4(),
+        manager_id=manager.id,
         start_date=date(2026, 1, 1),
     )
     employee_repo.employees.append(employee)

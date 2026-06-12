@@ -17,7 +17,7 @@ import { onboardingKeys, OnboardingProcess, updateEmployeeSetup } from '@/lib/ap
 import { listPositions } from '@/lib/api/positions';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 export function EmployeeSetupForm({ process }: { process: OnboardingProcess }) {
@@ -28,6 +28,20 @@ export function EmployeeSetupForm({ process }: { process: OnboardingProcess }) {
     manager_id: process.manager_id || '',
     start_date: process.start_date || '',
   });
+
+  useEffect(() => {
+    setFormData({
+      department_id: process.department_id || '',
+      position_id: process.position_id || '',
+      manager_id: process.manager_id || '',
+      start_date: process.start_date || '',
+    });
+  }, [
+    process.department_id,
+    process.position_id,
+    process.manager_id,
+    process.start_date,
+  ]);
 
   const { data: departments } = useQuery({
     queryKey: ['departments'],

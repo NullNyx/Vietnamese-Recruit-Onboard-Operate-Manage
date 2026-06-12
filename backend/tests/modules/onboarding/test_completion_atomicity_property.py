@@ -159,11 +159,13 @@ class FakeEmployeeRepo:
 
     def __init__(self, employee: Employee, fail_on: str | None) -> None:
         self._employee = employee
+        self.employees: list[Employee] = [employee]
         self.fail_on = fail_on
 
     async def get_by_id(self, employee_id: UUID) -> Employee | None:
-        if self._employee.id == employee_id:
-            return self._employee
+        for e in self.employees:
+            if e.id == employee_id:
+                return e
         return None
 
     async def update(self, employee_id: UUID, fields: dict[str, object]) -> Employee | None:
@@ -265,6 +267,12 @@ def _build_world(
     """
     from datetime import date
     from uuid import uuid4
+    manager = Employee(
+        employee_code="MGR-001",
+        full_name="Manager",
+        email="manager@example.com",
+        is_active=True,
+    )
     employee = Employee(
         employee_code="NV-001",
         full_name="Test Employee",
@@ -273,7 +281,7 @@ def _build_world(
         is_active=False,
         department_id=uuid4(),
         position_id=uuid4(),
-        manager_id=uuid4(),
+        manager_id=manager.id,
         start_date=date(2026, 1, 1),
     )
     process = OnboardingProcess(
@@ -309,11 +317,13 @@ def _build_world(
     )
     audit_repo = FakeAuditRepo(fail_on)
     session = FakeSession(tasks, process, employee, audit_repo)
+    employee_repo = FakeEmployeeRepo(employee, fail_on)
+    employee_repo.employees.append(manager)
     service = OnboardingService(
         process_repo=FakeProcessRepo(process, fail_on),  # type: ignore[arg-type]
         task_repo=FakeTaskRepo(tasks, fail_on),  # type: ignore[arg-type]
         audit_repo=audit_repo,  # type: ignore[arg-type]
-        employee_repo=FakeEmployeeRepo(employee, fail_on),  # type: ignore[arg-type]
+        employee_repo=employee_repo,  # type: ignore[arg-type]
         session=session,  # type: ignore[arg-type]
     )
     return service, tasks, tasks[0], process, employee, actor, audit_repo, session

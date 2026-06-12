@@ -762,14 +762,24 @@ class OnboardingService:
                 if not manager or not manager.is_active:
                     raise OnboardingError("Manager must be an active employee")
 
-            # Validate department matches position's department
-            pos_id = data.get("position_id", employee.position_id)
+            # Validate department exists
             dep_id = data.get("department_id", employee.department_id)
-            if pos_id and dep_id:
+            if dep_id:
+                from src.modules.employee.domain.entities import Department
+
+                dep = await self.session.get(Department, dep_id)
+                if not dep:
+                    raise OnboardingError("Department not found")
+
+            # Validate position exists and matches department
+            pos_id = data.get("position_id", employee.position_id)
+            if pos_id:
                 from src.modules.employee.domain.entities import Position
 
                 pos = await self.session.get(Position, pos_id)
-                if pos and pos.department_id and pos.department_id != dep_id:
+                if not pos:
+                    raise OnboardingError("Position not found")
+                if dep_id and pos.department_id and pos.department_id != dep_id:
                     raise OnboardingError("Department must match Position's department")
 
             # Convert string start_date to date object if needed
