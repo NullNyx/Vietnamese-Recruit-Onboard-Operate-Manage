@@ -74,6 +74,12 @@ function statusBadgeColor(status: "submitted" | "approved" | "rejected" | "cance
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "—";
+  // Parse YYYY-MM-DD directly to avoid timezone offset shifting the date
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    return `${d}/${m}/${y}`;
+  }
   try {
     return new Date(dateStr).toLocaleDateString("vi-VN");
   } catch {
@@ -196,7 +202,7 @@ function RequestCard({
               </>
             )}
             {request.duration_minutes != null && isOvertime && (
-              <span>{Math.round(request.duration_minutes / 60)}h</span>
+              <span>{Math.floor(request.duration_minutes / 60)}h{request.duration_minutes % 60 > 0 ? request.duration_minutes % 60 + "p" : ""}</span>
             )}
           </div>
         </div>

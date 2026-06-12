@@ -92,10 +92,11 @@ function LeaveForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-[13px] font-medium text-[#f7f8f8]">
+          <label htmlFor="leave_start_date" className="text-[13px] font-medium text-[#f7f8f8]">
             Ngày bắt đầu <span className="text-red-500">*</span>
           </label>
           <input
+            id="leave_start_date"
             type="date"
             value={form.start_date}
             onChange={(e) => onChange({ start_date: e.target.value })}
@@ -107,10 +108,11 @@ function LeaveForm({
         </div>
 
         <div className="space-y-2">
-          <label className="text-[13px] font-medium text-[#f7f8f8]">
+          <label htmlFor="leave_end_date" className="text-[13px] font-medium text-[#f7f8f8]">
             Ngày kết thúc <span className="text-red-500">*</span>
           </label>
           <input
+            id="leave_end_date"
             type="date"
             value={form.end_date}
             onChange={(e) => onChange({ end_date: e.target.value })}
@@ -123,10 +125,11 @@ function LeaveForm({
       </div>
 
       <div className="space-y-2">
-        <label className="text-[13px] font-medium text-[#f7f8f8]">
+        <label htmlFor="leave_reason" className="text-[13px] font-medium text-[#f7f8f8]">
           Lý do <span className="text-red-500">*</span>
         </label>
         <textarea
+          id="leave_reason"
           value={form.reason}
           onChange={(e) => onChange({ reason: e.target.value })}
           placeholder="Nhập lý do nghỉ phép..."
@@ -173,10 +176,11 @@ function OvertimeForm({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <label className="text-[13px] font-medium text-[#f7f8f8]">
+        <label htmlFor="ot_work_date" className="text-[13px] font-medium text-[#f7f8f8]">
           Ngày làm thêm <span className="text-red-500">*</span>
         </label>
         <input
+          id="ot_work_date"
           type="date"
           value={form.work_date}
           onChange={(e) => onChange({ work_date: e.target.value })}
@@ -189,10 +193,11 @@ function OvertimeForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-[13px] font-medium text-[#f7f8f8]">
+          <label htmlFor="ot_start_time" className="text-[13px] font-medium text-[#f7f8f8]">
             Giờ bắt đầu <span className="text-red-500">*</span>
           </label>
           <input
+            id="ot_start_time"
             type="time"
             value={form.start_time}
             onChange={(e) => onChange({ start_time: e.target.value })}
@@ -204,10 +209,11 @@ function OvertimeForm({
         </div>
 
         <div className="space-y-2">
-          <label className="text-[13px] font-medium text-[#f7f8f8]">
+          <label htmlFor="ot_end_time" className="text-[13px] font-medium text-[#f7f8f8]">
             Giờ kết thúc <span className="text-red-500">*</span>
           </label>
           <input
+            id="ot_end_time"
             type="time"
             value={form.end_time}
             onChange={(e) => onChange({ end_time: e.target.value })}
@@ -220,10 +226,11 @@ function OvertimeForm({
       </div>
 
       <div className="space-y-2">
-        <label className="text-[13px] font-medium text-[#f7f8f8]">
+        <label htmlFor="ot_reason" className="text-[13px] font-medium text-[#f7f8f8]">
           Lý do <span className="text-red-500">*</span>
         </label>
         <textarea
+          id="ot_reason"
           value={form.reason}
           onChange={(e) => onChange({ reason: e.target.value })}
           placeholder="Nhập lý do tăng ca..."
@@ -236,10 +243,11 @@ function OvertimeForm({
       </div>
 
       <div className="space-y-2">
-        <label className="text-[13px] font-medium text-[#f7f8f8]">
+        <label htmlFor="ot_project" className="text-[13px] font-medium text-[#f7f8f8]">
           Dự án / công việc
         </label>
         <input
+          id="ot_project"
           type="text"
           value={form.project_or_task}
           onChange={(e) => onChange({ project_or_task: e.target.value })}
