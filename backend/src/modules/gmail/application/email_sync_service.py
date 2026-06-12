@@ -411,22 +411,27 @@ class EmailSyncService:
         Args:
             failed_message_ids: List of Gmail message IDs that failed processing.
         """
-        for gmail_message_id in failed_message_ids:
-            try:
-                updated = await self._email_repo.increment_retry_count(gmail_message_id)
-                if updated and updated.retry_count >= self._settings.permanent_failure_threshold:
-                    await self._email_repo.mark_permanently_failed(gmail_message_id)
+        if not failed_message_ids:
+            return
+
+        try:
+            messages = await self._email_repo.get_by_gmail_ids(failed_message_ids)
+            for message in messages:
+                message.retry_count += 1
+                if message.retry_count >= self._settings.permanent_failure_threshold:
+                    message.is_permanently_failed = True
                     logger.warning(
                         "Message %s marked as permanently failed after %d consecutive failures",
-                        gmail_message_id,
-                        updated.retry_count,
+                        message.gmail_message_id,
+                        message.retry_count,
                     )
-            except Exception:
-                logger.error(
-                    "Failed to update retry count for message %s",
-                    gmail_message_id,
-                    exc_info=True,
-                )
+            await self._email_repo.save_all(messages)
+        except Exception:
+            logger.error(
+                "Failed to bulk update retry counts for %d messages",
+                len(failed_message_ids),
+                exc_info=True,
+            )
 
     def _metadata_to_entity(self, user_id: UUID, metadata: GmailMessageMetadata) -> EmailMessage:
         """Convert GmailMessageMetadata to an EmailMessage domain entity.

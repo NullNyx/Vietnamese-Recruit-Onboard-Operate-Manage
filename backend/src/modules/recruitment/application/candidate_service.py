@@ -23,17 +23,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
 from src.modules.employee.domain.entities import Employee
-from src.modules.recruitment.domain.entities import Candidate, CVDocument
-from src.modules.recruitment.domain.enums import CandidateStatus
+from src.modules.recruitment.domain.entities import Candidate, CVDocument, JobOpening
+from src.modules.recruitment.domain.enums import CandidateStatus, JobOpeningStatus
 from src.modules.recruitment.domain.exceptions import (
     CalendarEventCreateFailedError,
     CalendarEventUpdateFailedError,
     CalendarGrantMissingError,
+    CandidateAssignmentBlockedError,
     CandidateNotFoundError,
     GmailNotConnectedError,
     InterviewerMissingEmailError,
     InterviewerNotFoundError,
     InvalidStatusTransitionError,
+    JobOpeningNotFoundError,
+    JobOpeningNotOpenError,
     NoInterviewToRescheduleError,
 )
 from src.modules.recruitment.domain.value_objects import (
@@ -46,6 +49,7 @@ from src.modules.recruitment.infrastructure.minio_client import RecruitmentMinIO
 from src.modules.recruitment.infrastructure.repositories import (
     CandidateRepository,
     CVDocumentRepository,
+    JobOpeningRepository,
 )
 
 if TYPE_CHECKING:
@@ -372,6 +376,7 @@ class CandidateService:
         oauth_grant_repo: OAuthGrantReader | None = None,
         oauth_service: CalendarGrantChecker | None = None,
         crypto: TokenCipher | None = None,
+        job_opening_repo: JobOpeningRepository | None = None,
     ) -> None:
         self._candidate_repo = candidate_repo
         self._cv_document_repo = cv_document_repo
@@ -389,6 +394,7 @@ class CandidateService:
         self._oauth_grant_repo = oauth_grant_repo
         self._oauth_service = oauth_service
         self._crypto = crypto
+        self._job_opening_repo = job_opening_repo
 
     # ─── Create / Update (CandidateCreator protocol) ───────────────────
 
@@ -798,6 +804,12 @@ class CandidateService:
             raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
         return candidate
 
+    async def _get_candidate_locked_or_raise(self, candidate_id: UUID) -> Candidate:
+        candidate = await self._candidate_repo.get_by_id_for_update(candidate_id)
+        if candidate is None:
+            raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
+        return candidate
+
     # ─── Status transition actions ─────────────────────────────────────
 
     async def reject_candidate(self, candidate_id: UUID, reason: str | None = None) -> Candidate:
@@ -969,6 +981,209 @@ class CandidateService:
 
         return candidate
 
+    # ─── Job Opening assignment ──────────────────────────────────────────
+
+    _ASSIGNABLE_STATUSES: frozenset[str] = frozenset(
+        {
+            CandidateStatus.NEW,
+            CandidateStatus.REVIEWING,
+            CandidateStatus.INTERVIEW_SCHEDULED,
+        }
+    )
+
+    async def assign_candidate(self, candidate_id: UUID, job_opening_id: UUID) -> Candidate:
+        """Assign an unassigned Candidate to an open Job Opening.
+
+        Rules:
+        - Candidate must not already be assigned to a Job Opening.
+        - Candidate status must be new, reviewing, or interview_scheduled.
+        - Job Opening must have status 'open'.
+
+        Args:
+            candidate_id: UUID of the Candidate to assign.
+            job_opening_id: UUID of the target Job Opening.
+
+        Returns:
+            The updated Candidate entity.
+
+        Raises:
+            CandidateNotFoundError: If the Candidate does not exist.
+            JobOpeningNotFoundError: If the Job Opening does not exist.
+            JobOpeningNotOpenError: If the Job Opening is not in 'open' status.
+            CandidateAssignmentBlockedError: If the Candidate is in a terminal status.
+            InvalidStatusTransitionError: If the Candidate is already assigned.
+        """
+        candidate = await self._get_candidate_locked_or_raise(candidate_id)
+
+        if candidate.job_opening_id is not None:
+            raise InvalidStatusTransitionError(
+                current_status=candidate.status,
+                attempted_action="assign",
+            )
+
+        if candidate.status not in self._ASSIGNABLE_STATUSES:
+            raise CandidateAssignmentBlockedError(
+                f"Cannot assign candidate {candidate_id} with status '{candidate.status}'"
+            )
+
+        job_opening = await self._get_open_job_opening_or_raise(job_opening_id)
+
+        candidate.job_opening_id = job_opening_id
+        candidate = await self._candidate_repo.update(candidate)
+
+        await log_audit(
+            session=self._session,
+            operation_type="candidate_assigned",
+            entity_type="candidate",
+            entity_id=candidate.id,
+            user_id=self._user_id,
+            previous_value={"job_opening_id": None},
+            new_value={"job_opening_id": str(job_opening_id)},
+            change_summary=(
+                f"Candidate assigned to Job Opening '{job_opening.title}' ({job_opening_id})"
+            ),
+        )
+        await self._session.commit()
+
+        return candidate
+
+    async def reassign_candidate(self, candidate_id: UUID, new_job_opening_id: UUID) -> Candidate:
+        """Reassign a Candidate to a different open Job Opening.
+
+        Rules:
+        - Candidate must already be assigned to a Job Opening.
+        - new_job_opening_id must differ from the current assignment.
+        - Candidate status must be new, reviewing, or interview_scheduled.
+        - New Job Opening must have status 'open'.
+
+        Args:
+            candidate_id: UUID of the Candidate to reassign.
+            new_job_opening_id: UUID of the new Job Opening.
+
+        Returns:
+            The updated Candidate entity.
+
+        Raises:
+            CandidateNotFoundError: If the Candidate does not exist.
+            JobOpeningNotFoundError: If the Job Opening does not exist.
+            JobOpeningNotOpenError: If the Job Opening is not in 'open' status.
+            CandidateAssignmentBlockedError: If the Candidate is in a terminal status.
+            InvalidStatusTransitionError: If the Candidate is not currently assigned.
+        """
+        candidate = await self._get_candidate_locked_or_raise(candidate_id)
+
+        if candidate.job_opening_id is None:
+            raise InvalidStatusTransitionError(
+                current_status=candidate.status,
+                attempted_action="reassign",
+            )
+
+        if candidate.status not in self._ASSIGNABLE_STATUSES:
+            raise CandidateAssignmentBlockedError(
+                f"Cannot reassign candidate {candidate_id} with status '{candidate.status}'"
+            )
+
+        if candidate.job_opening_id == new_job_opening_id:
+            return candidate
+
+        job_opening = await self._get_open_job_opening_or_raise(new_job_opening_id)
+
+        previous_jo_id = candidate.job_opening_id
+        candidate.job_opening_id = new_job_opening_id
+        candidate = await self._candidate_repo.update(candidate)
+
+        await log_audit(
+            session=self._session,
+            operation_type="candidate_reassigned",
+            entity_type="candidate",
+            entity_id=candidate.id,
+            user_id=self._user_id,
+            previous_value={"job_opening_id": str(previous_jo_id)},
+            new_value={"job_opening_id": str(new_job_opening_id)},
+            change_summary=(
+                f"Candidate reassigned from Job Opening {previous_jo_id} "
+                f"to '{job_opening.title}' ({new_job_opening_id})"
+            ),
+        )
+        await self._session.commit()
+
+        return candidate
+
+    async def unassign_candidate(self, candidate_id: UUID) -> Candidate:
+        """Remove a Candidate's assignment to a Job Opening.
+
+        Rules:
+        - Candidate must currently be assigned to a Job Opening.
+        - Candidate status must be new, reviewing, or interview_scheduled.
+
+        Args:
+            candidate_id: UUID of the Candidate to unassign.
+
+        Returns:
+            The updated Candidate entity.
+
+        Raises:
+            CandidateNotFoundError: If the Candidate does not exist.
+            CandidateAssignmentBlockedError: If the Candidate is in a terminal status.
+            InvalidStatusTransitionError: If the Candidate is not currently assigned.
+        """
+        candidate = await self._get_candidate_locked_or_raise(candidate_id)
+
+        if candidate.job_opening_id is None:
+            raise InvalidStatusTransitionError(
+                current_status=candidate.status,
+                attempted_action="unassign",
+            )
+
+        if candidate.status not in self._ASSIGNABLE_STATUSES:
+            raise CandidateAssignmentBlockedError(
+                f"Cannot unassign candidate {candidate_id} with status '{candidate.status}'"
+            )
+
+        previous_jo_id = candidate.job_opening_id
+        candidate.job_opening_id = None
+        candidate = await self._candidate_repo.update(candidate)
+
+        await log_audit(
+            session=self._session,
+            operation_type="candidate_unassigned",
+            entity_type="candidate",
+            entity_id=candidate.id,
+            user_id=self._user_id,
+            previous_value={"job_opening_id": str(previous_jo_id)},
+            new_value={"job_opening_id": None},
+            change_summary=(f"Candidate unassigned from Job Opening {previous_jo_id}"),
+        )
+        await self._session.commit()
+
+        return candidate
+
+    async def _get_open_job_opening_or_raise(self, job_opening_id: UUID) -> JobOpening:
+        """Retrieve a Job Opening and verify it is in 'open' status.
+
+        Args:
+            job_opening_id: UUID of the Job Opening.
+
+        Returns:
+            The JobOpening entity.
+
+        Raises:
+            JobOpeningNotFoundError: If the Job Opening does not exist.
+            RuntimeError: If job_opening_repo is not configured.
+            JobOpeningNotOpenError: If the Job Opening is not in 'open' status.
+        """
+        if self._job_opening_repo is None:
+            raise RuntimeError("JobOpeningRepository is not configured")
+
+        job_opening = await self._job_opening_repo.get_by_id(job_opening_id)
+        if job_opening is None:
+            raise JobOpeningNotFoundError(f"Job Opening not found: {job_opening_id}")
+
+        if job_opening.status != JobOpeningStatus.OPEN:
+            raise JobOpeningNotOpenError(job_opening_id, job_opening.status)
+
+        return job_opening
+
     async def schedule_interview(
         self,
         candidate_id: UUID,
@@ -1081,65 +1296,27 @@ class CandidateService:
 
         # Step 6: create the Calendar event BEFORE committing (R2.1). On failure
         # roll back, audit the failure, and raise (R3.1-R3.4, R12.4).
-        try:
-            event = await self._with_calendar_token(
-                user_id,
-                lambda token: calendar_port.create_event(token, spec),
-            )
-        except Exception as exc:
-            await self._session.rollback()
-            await log_audit(
-                session=self._session,
-                operation_type="interview_schedule_failed",
-                entity_type="candidate",
-                entity_id=candidate_id,
-                user_id=user_id,
-                new_value={
-                    "attempted_action": "schedule_interview",
-                    "candidate_id": str(candidate_id),
-                    "error": str(exc),
-                },
-                change_summary="Interview schedule failed: Calendar event creation error",
-                success=False,
-            )
-            await self._session.commit()
-            raise CalendarEventCreateFailedError() from exc
+        event = await self._create_calendar_event(user_id, candidate_id, calendar_port, spec)
 
         # Step 7: persist the event reference, start, timezone, and status, then
         # commit (R2.3, R4.1-R4.3). Attendee/Meet sub-failures are non-fatal: the
         # event exists, so the schedule succeeds even without a Meet link (R5.3,
         # R6.2, R6.3).
-        candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
-        candidate.calendar_event_id = event.event_id
-        candidate.interview_start_at = start_resolved
-        candidate.interview_timezone = timezone
-        candidate = await self._candidate_repo.update(candidate)
-        await self._session.commit()
+        candidate = await self._persist_interview_schedule(
+            candidate, event.event_id, start_resolved, timezone
+        )
 
         # Step 9: success audit (R12.1). Audit failure never rolls back (R12.5):
         # ``log_audit`` swallows its own failures.
-        await log_audit(
-            session=self._session,
-            operation_type="interview_scheduled",
-            entity_type="candidate",
-            entity_id=candidate.id,
-            user_id=user_id,
-            previous_value={"status": previous_status},
-            new_value={
-                "status": CandidateStatus.INTERVIEW_SCHEDULED,
-                "calendar_event_id": event.event_id,
-                "candidate_id": str(candidate.id),
-                "start": start_resolved.isoformat(),
-                "timezone": timezone,
-                "interviewer_ids": [str(id_) for id_ in interviewer_ids],
-            },
-            change_summary=(
-                f"Interview scheduled with {len(interviewer_ids)} interviewer(s); "
-                f"event {event.event_id}"
-            ),
-            success=True,
+        await self._audit_interview_schedule(
+            user_id,
+            candidate,
+            event.event_id,
+            start_resolved,
+            timezone,
+            interviewer_ids,
+            previous_status,
         )
-        await self._session.commit()
 
         if event.meet_link is not None:
             logger.info("Interview scheduled for candidate %s with Meet link", candidate.id)
@@ -1213,7 +1390,6 @@ class CandidateService:
             raise RuntimeError("Calendar port is not configured")
         if self._user_id is None:
             raise RuntimeError("Acting HR user id is not configured")
-        calendar_port = self._calendar_port
         user_id = self._user_id
 
         # Step 1: load the Candidate and require an existing event (R7.5). When
@@ -1259,30 +1435,12 @@ class CandidateService:
         # Step 5: patch the EXACT existing event BEFORE committing (R7.1). On
         # failure, roll back, audit, and raise; references stay unchanged (R7.4,
         # R12.4).
-        try:
-            await self._with_calendar_token(
-                user_id,
-                lambda token: calendar_port.patch_event(token, event_id, spec),
-            )
-        except Exception as exc:
-            await self._session.rollback()
-            await log_audit(
-                session=self._session,
-                operation_type="interview_reschedule_failed",
-                entity_type="candidate",
-                entity_id=candidate_id,
-                user_id=user_id,
-                new_value={
-                    "attempted_action": "reschedule_interview",
-                    "candidate_id": str(candidate_id),
-                    "calendar_event_id": event_id,
-                    "error": str(exc),
-                },
-                change_summary="Interview reschedule failed: Calendar event patch error",
-                success=False,
-            )
-            await self._session.commit()
-            raise CalendarEventUpdateFailedError() from exc
+        await self._patch_calendar_event(
+            user_id=user_id,
+            candidate_id=candidate_id,
+            event_id=event_id,
+            spec=spec,
+        )
 
         # Step 6: update only the stored start and timezone, leaving the
         # calendar_event_id unchanged, then commit (R7.1, R7.3).
@@ -1355,6 +1513,44 @@ class CandidateService:
             raise ValueError("start must be strictly in the future")
 
     # ─── Calendar scheduling helpers ───────────────────────────────────
+
+    async def _patch_calendar_event(
+        self,
+        user_id: UUID,
+        candidate_id: UUID,
+        event_id: str,
+        spec: CalendarEventSpec,
+    ) -> None:
+        """Patch an existing Calendar event, logging and rolling back on failure."""
+        if self._calendar_port is None:
+            raise RuntimeError("Calendar port is not configured")
+
+        calendar_port = self._calendar_port
+
+        try:
+            await self._with_calendar_token(
+                user_id,
+                lambda token: calendar_port.patch_event(token, event_id, spec),
+            )
+        except Exception as exc:
+            await self._session.rollback()
+            await log_audit(
+                session=self._session,
+                operation_type="interview_reschedule_failed",
+                entity_type="candidate",
+                entity_id=candidate_id,
+                user_id=user_id,
+                new_value={
+                    "attempted_action": "reschedule_interview",
+                    "candidate_id": str(candidate_id),
+                    "calendar_event_id": event_id,
+                    "error": str(exc),
+                },
+                change_summary="Interview reschedule failed: Calendar event patch error",
+                success=False,
+            )
+            await self._session.commit()
+            raise CalendarEventUpdateFailedError() from exc
 
     async def _assert_calendar_grant(self, user_id: UUID) -> None:
         """Assert the acting HR user has a valid Google Calendar grant.
@@ -1664,3 +1860,175 @@ class CandidateService:
             },
             change_summary=(f"Email sent to candidate: subject='{subject[:100]}'"),
         )
+
+    async def _create_calendar_event(
+        self,
+        user_id: UUID,
+        candidate_id: UUID,
+        spec: CalendarEventSpec,
+    ) -> CalendarEvent:
+        if self._calendar_port is None:
+            raise RuntimeError("Calendar port is not configured")
+        try:
+            return await self._with_calendar_token(
+                user_id,
+                lambda token: self._calendar_port.create_event(token, spec),
+            )
+        except Exception as exc:
+            await self._session.rollback()
+            await log_audit(
+                session=self._session,
+                operation_type="interview_schedule_failed",
+                entity_type="candidate",
+                entity_id=candidate_id,
+                user_id=user_id,
+                new_value={
+                    "attempted_action": "schedule_interview",
+                    "candidate_id": str(candidate_id),
+                    "error": str(exc),
+                },
+                change_summary="Interview schedule failed: Calendar event creation error",
+                success=False,
+            )
+            await self._session.commit()
+            raise CalendarEventCreateFailedError() from exc
+
+    async def _persist_interview_schedule(
+        self,
+        candidate: Candidate,
+        event_id: str,
+        start_resolved: datetime,
+        timezone: str,
+    ) -> Candidate:
+        candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
+        candidate.calendar_event_id = event_id
+        candidate.interview_start_at = start_resolved
+        candidate.interview_timezone = timezone
+        candidate = await self._candidate_repo.update(candidate)
+        await self._session.commit()
+        return candidate
+
+    async def _send_interview_email_notification(
+        self,
+        candidate: Candidate,
+        spec: CalendarEventSpec,
+    ) -> None:
+        if not candidate.email:
+            return
+        subject = f"Interview Scheduled: {spec.summary}"
+        body_html = f"<p>Your interview has been scheduled for {spec.start.isoformat()}.</p>"
+        # We don't fail the whole process if email fails
+        try:
+            await self.send_email_to_candidate(candidate.id, subject, body_html)
+        except Exception as e:
+            logger.warning(f"Failed to send interview notification email to {candidate.id}: {e}")
+
+    async def _audit_interview_schedule(
+        self,
+        user_id: UUID,
+        candidate: Candidate,
+        event_id: str,
+        start_resolved: datetime,
+        timezone: str,
+        interviewer_ids: list[UUID],
+        previous_status: str,
+    ) -> None:
+        await log_audit(
+            session=self._session,
+            operation_type="interview_scheduled",
+            entity_type="candidate",
+            entity_id=candidate.id,
+            user_id=user_id,
+            previous_value={"status": previous_status},
+            new_value={
+                "status": CandidateStatus.INTERVIEW_SCHEDULED,
+                "calendar_event_id": event_id,
+                "candidate_id": str(candidate.id),
+                "start": start_resolved.isoformat(),
+                "timezone": timezone,
+                "interviewer_ids": [str(id_) for id_ in interviewer_ids],
+            },
+            change_summary=(
+                f"Interview scheduled with {len(interviewer_ids)} interviewer(s); event {event_id}"
+            ),
+            success=True,
+        )
+        await self._session.commit()
+
+    async def _create_calendar_event(
+        self,
+        user_id: UUID,
+        candidate_id: UUID,
+        calendar_port: Any,
+        spec: CalendarEventSpec,
+    ) -> CalendarEvent:
+        try:
+            return await self._with_calendar_token(
+                user_id,
+                lambda token: calendar_port.create_event(token, spec),
+            )
+        except Exception as exc:
+            await self._session.rollback()
+            await log_audit(
+                session=self._session,
+                operation_type="interview_schedule_failed",
+                entity_type="candidate",
+                entity_id=candidate_id,
+                user_id=user_id,
+                new_value={
+                    "attempted_action": "schedule_interview",
+                    "candidate_id": str(candidate_id),
+                    "error": str(exc),
+                },
+                change_summary="Interview schedule failed: Calendar event creation error",
+                success=False,
+            )
+            await self._session.commit()
+            raise CalendarEventCreateFailedError() from exc
+
+    async def _persist_interview_schedule(
+        self,
+        candidate: Candidate,
+        event_id: str,
+        start_resolved: datetime,
+        timezone: str,
+    ) -> Candidate:
+        candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
+        candidate.calendar_event_id = event_id
+        candidate.interview_start_at = start_resolved
+        candidate.interview_timezone = timezone
+        candidate = await self._candidate_repo.update(candidate)
+        await self._session.commit()
+        return candidate
+
+    async def _audit_interview_schedule(
+        self,
+        user_id: UUID,
+        candidate: Candidate,
+        event_id: str,
+        start_resolved: datetime,
+        timezone: str,
+        interviewer_ids: list[UUID],
+        previous_status: str,
+    ) -> None:
+        await log_audit(
+            session=self._session,
+            operation_type="interview_scheduled",
+            entity_type="candidate",
+            entity_id=candidate.id,
+            user_id=user_id,
+            previous_value={"status": previous_status},
+            new_value={
+                "status": CandidateStatus.INTERVIEW_SCHEDULED,
+                "calendar_event_id": event_id,
+                "candidate_id": str(candidate.id),
+                "start": start_resolved.isoformat(),
+                "timezone": timezone,
+                "interviewer_ids": [str(id_) for id_ in interviewer_ids],
+            },
+            change_summary=(
+                f"Interview scheduled with {len(interviewer_ids)} interviewer(s); event {event_id}"
+            ),
+            success=True,
+        )
+        await self._session.commit()

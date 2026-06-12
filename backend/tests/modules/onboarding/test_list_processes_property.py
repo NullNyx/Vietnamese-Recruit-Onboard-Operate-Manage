@@ -104,6 +104,13 @@ class FakeTaskRepo:
                 counts[task.status] = counts.get(task.status, 0) + 1
         return counts
 
+    async def count_by_status_for_processes(self, process_ids: list[UUID]) -> dict[UUID, dict[str, int]]:
+        counts_by_process: dict[UUID, dict[str, int]] = {pid: {} for pid in process_ids}
+        for task in self.tasks:
+            if task.process_id in counts_by_process:
+                counts_by_process[task.process_id][task.status] = counts_by_process[task.process_id].get(task.status, 0) + 1
+        return counts_by_process
+
 
 class _UnusedRepo:
     """Placeholder for repositories ``list_processes`` never touches."""

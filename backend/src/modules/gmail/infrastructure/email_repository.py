@@ -117,6 +117,32 @@ class EmailRepository:
         result = await self.session.execute(statement)
         return result.scalars().first()
 
+    async def get_by_gmail_ids(self, gmail_message_ids: list[str]) -> list[EmailMessage]:
+        """Retrieve multiple email messages by their Gmail message IDs.
+
+        Args:
+            gmail_message_ids: A list of unique Gmail message identifiers.
+
+        Returns:
+            A list of EmailMessage entities found.
+        """
+        if not gmail_message_ids:
+            return []
+
+        statement = select(EmailMessage).where(EmailMessage.gmail_message_id.in_(gmail_message_ids))  # type: ignore[attr-defined]
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
+    async def save_all(self, messages: list[EmailMessage]) -> None:
+        """Save a list of EmailMessage entities to the database.
+
+        Args:
+            messages: A list of EmailMessage entities to save.
+        """
+        for message in messages:
+            self.session.add(message)
+        await self.session.flush()
+
     async def update_labels(
         self, gmail_message_id: str, label_ids: list[str]
     ) -> EmailMessage | None:
@@ -137,53 +163,6 @@ class EmailRepository:
             return None
 
         message.label_ids = label_ids
-        message.updated_at = datetime.now(UTC)
-        self.session.add(message)
-        await self.session.flush()
-        return message
-
-    async def mark_permanently_failed(self, gmail_message_id: str) -> EmailMessage | None:
-        """Mark an email message as permanently failed.
-
-        Sets is_permanently_failed=True so the message is excluded from
-        future retry attempts.
-
-        Args:
-            gmail_message_id: The Gmail message ID of the record to mark.
-
-        Returns:
-            The updated EmailMessage entity if found, None otherwise.
-        """
-        statement = select(EmailMessage).where(EmailMessage.gmail_message_id == gmail_message_id)
-        result = await self.session.execute(statement)
-        message = result.scalars().first()
-
-        if message is None:
-            return None
-
-        message.is_permanently_failed = True
-        message.updated_at = datetime.now(UTC)
-        self.session.add(message)
-        await self.session.flush()
-        return message
-
-    async def increment_retry_count(self, gmail_message_id: str) -> EmailMessage | None:
-        """Increment the retry_count for a failed email message.
-
-        Args:
-            gmail_message_id: The Gmail message ID of the record to update.
-
-        Returns:
-            The updated EmailMessage entity if found, None otherwise.
-        """
-        statement = select(EmailMessage).where(EmailMessage.gmail_message_id == gmail_message_id)
-        result = await self.session.execute(statement)
-        message = result.scalars().first()
-
-        if message is None:
-            return None
-
-        message.retry_count += 1
         message.updated_at = datetime.now(UTC)
         self.session.add(message)
         await self.session.flush()

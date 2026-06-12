@@ -35,6 +35,75 @@ _DOCX_MIN_FILE_SIZE: Final[int] = 500 * 1024  # 500KB
 _BASE_BACKOFF_SECONDS: Final[float] = 5.0
 
 
+def _sync_convert_docx_to_pdf(file_content: bytes) -> bytes:
+    """Synchronous helper to convert DOCX to PDF without blocking event loop."""
+    import fitz  # PyMuPDF
+    from docx import Document
+
+    # Extract all text from DOCX
+    doc = Document(io.BytesIO(file_content))
+    full_text = "\n".join(p.text for p in doc.paragraphs)
+
+    # Create a simple PDF with the text content using PyMuPDF
+    pdf_doc = fitz.open()
+    try:
+        # Create pages with text content
+        # Use A4 page size
+        rect = fitz.Rect(0, 0, 595, 842)
+        page = pdf_doc.new_page(width=rect.width, height=rect.height)
+
+        # Insert text with wrapping
+        text_rect = fitz.Rect(50, 50, 545, 792)
+        page.insert_textbox(
+            text_rect,
+            full_text,
+            fontsize=10,
+            fontname="helv",
+        )
+
+        pdf_bytes = pdf_doc.tobytes()
+    finally:
+        pdf_doc.close()
+
+    return bytes(pdf_bytes)
+
+
+def _sync_extract_docx_text(file_content: bytes) -> str:
+    """Synchronous helper to extract text from DOCX without blocking event loop."""
+    from docx import Document
+
+    doc = Document(io.BytesIO(file_content))
+    paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+    return "\n".join(paragraphs)
+
+
+def _sync_chunk_pdf(file_content: bytes, max_pages: int) -> tuple[int, list[tuple[bytes, str]]]:
+    """Synchronous helper to chunk a PDF file."""
+    import fitz  # PyMuPDF
+
+    doc = fitz.open(stream=file_content, filetype="pdf")
+    try:
+        page_count = doc.page_count
+        if page_count <= max_pages:
+            return page_count, []
+
+        chunks = []
+        for chunk_start in range(0, page_count, max_pages):
+            chunk_end = min(chunk_start + max_pages, page_count)
+            chunk_doc = fitz.open()
+            try:
+                chunk_doc.insert_pdf(doc, from_page=chunk_start, to_page=chunk_end - 1)
+                chunk_bytes = chunk_doc.tobytes()
+            finally:
+                chunk_doc.close()
+
+            suffix = f"_chunk_{chunk_start + 1}-{chunk_end}.pdf"
+            chunks.append((bytes(chunk_bytes), suffix))
+        return page_count, chunks
+    finally:
+        doc.close()
+
+
 class OCRAdapter:
     """Communicates with olmOCR server for text extraction.
 
@@ -104,45 +173,29 @@ class OCRAdapter:
         Raises:
             OCRExtractionError: If OCR fails after retries.
         """
-        import fitz  # PyMuPDF
-
         max_pages = self._settings.olmocr_max_pages_per_chunk
 
-        doc = fitz.open(stream=file_content, filetype="pdf")
-        try:
-            page_count = doc.page_count
+        page_count, chunks = await asyncio.to_thread(_sync_chunk_pdf, file_content, max_pages)
 
-            if page_count <= max_pages:
-                # Send entire PDF directly
-                return await self._send_to_ocr(file_content, filename, _PDF_MIME)
+        if not chunks:
+            # Send entire PDF directly
+            return await self._send_to_ocr(file_content, filename, _PDF_MIME)
 
-            # Split into chunks and process each
-            logger.info(
-                "PDF '%s' has %d pages, splitting into chunks of %d",
-                filename,
-                page_count,
-                max_pages,
-            )
+        # Split into chunks and process each
+        logger.info(
+            "PDF '%s' has %d pages, splitting into chunks of %d",
+            filename,
+            page_count,
+            max_pages,
+        )
 
-            chunks_text: list[str] = []
-            for chunk_start in range(0, page_count, max_pages):
-                chunk_end = min(chunk_start + max_pages, page_count)
+        chunks_text: list[str] = []
+        for chunk_bytes, suffix in chunks:
+            chunk_filename = f"{filename}{suffix}"
+            chunk_text = await self._send_to_ocr(chunk_bytes, chunk_filename, _PDF_MIME)
+            chunks_text.append(chunk_text)
 
-                # Create a new PDF with just this chunk's pages
-                chunk_doc = fitz.open()
-                try:
-                    chunk_doc.insert_pdf(doc, from_page=chunk_start, to_page=chunk_end - 1)
-                    chunk_bytes = chunk_doc.tobytes()
-                finally:
-                    chunk_doc.close()
-
-                chunk_filename = f"{filename}_chunk_{chunk_start + 1}-{chunk_end}.pdf"
-                chunk_text = await self._send_to_ocr(chunk_bytes, chunk_filename, _PDF_MIME)
-                chunks_text.append(chunk_text)
-
-            return _CHUNK_SEPARATOR.join(chunks_text)
-        finally:
-            doc.close()
+        return _CHUNK_SEPARATOR.join(chunks_text)
 
     async def _handle_docx(self, file_content: bytes, filename: str) -> str:
         """Handle DOCX files with python-docx extraction and OCR fallback.
@@ -161,13 +214,9 @@ class OCRAdapter:
         Raises:
             OCRExtractionError: If both extraction methods fail.
         """
-        from docx import Document
-
         # Try direct text extraction with python-docx
         try:
-            doc = Document(io.BytesIO(file_content))
-            paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
-            extracted_text = "\n".join(paragraphs)
+            extracted_text = await asyncio.to_thread(_sync_extract_docx_text, file_content)
         except Exception as exc:
             logger.warning(
                 "python-docx extraction failed for '%s': %s, falling back to OCR",
@@ -213,35 +262,8 @@ class OCRAdapter:
             OCRExtractionError: If conversion fails.
         """
         try:
-            import fitz  # PyMuPDF
-            from docx import Document
-
-            # Extract all text from DOCX
-            doc = Document(io.BytesIO(file_content))
-            full_text = "\n".join(p.text for p in doc.paragraphs)
-
-            # Create a simple PDF with the text content using PyMuPDF
-            pdf_doc = fitz.open()
-            try:
-                # Create pages with text content
-                # Use A4 page size
-                rect = fitz.Rect(0, 0, 595, 842)
-                page = pdf_doc.new_page(width=rect.width, height=rect.height)
-
-                # Insert text with wrapping
-                text_rect = fitz.Rect(50, 50, 545, 792)
-                page.insert_textbox(
-                    text_rect,
-                    full_text,
-                    fontsize=10,
-                    fontname="helv",
-                )
-
-                pdf_bytes = pdf_doc.tobytes()
-            finally:
-                pdf_doc.close()
-
-            return bytes(pdf_bytes)
+            pdf_bytes = await asyncio.to_thread(_sync_convert_docx_to_pdf, file_content)
+            return pdf_bytes
         except Exception as exc:
             logger.error("Failed to convert DOCX '%s' to PDF: %s", filename, exc)
             raise OCRExtractionError(

@@ -68,6 +68,7 @@ export function getValidActions(status: CandidateStatus): CandidateStatus[] {
  * Example: 0.85 → "85%"
  */
 export function formatConfidence(score: number): string {
+  if (Number.isNaN(score)) return "0%";
   return `${Math.round(score * 100)}%`;
 }
 
@@ -76,7 +77,10 @@ export function formatConfidence(score: number): string {
  * Example: "2024-03-15T10:30:00Z" → "15/03/2024"
  */
 export function formatDate(isoString: string): string {
+  if (!isoString) return "Invalid Date";
   const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return "Invalid Date";
+
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();

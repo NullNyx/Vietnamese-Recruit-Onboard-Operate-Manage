@@ -103,14 +103,17 @@ def parse_excel(file_bytes: bytes) -> tuple[list[dict[str, Any]], list[dict[str,
         - errors: List of dicts with 'row' (1-indexed Excel row number)
           and 'message' keys describing validation failures.
     """
-    wb = load_workbook(filename=BytesIO(file_bytes), read_only=True, data_only=True)
-    ws = wb.active
-    if ws is None:
-        wb.close()
-        return [], []
+    try:
+        wb = load_workbook(filename=BytesIO(file_bytes), read_only=True, data_only=True)
+        ws = wb.active
+        if ws is None:
+            wb.close()
+            return [], []
 
-    rows = list(ws.iter_rows(values_only=True))
-    wb.close()
+        rows = list(ws.iter_rows(values_only=True))
+        wb.close()
+    except Exception as e:
+        return [], [{"row": 0, "error": f"Failed to read Excel file: {str(e)}"}]
 
     if not rows:
         return [], []
