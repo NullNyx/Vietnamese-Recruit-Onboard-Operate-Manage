@@ -223,7 +223,12 @@ async def get_today_record(
 async def get_attendance_history(
     year: int | None = Query(default=None, description="Year (e.g., 2026)", ge=2020, le=2100),
     month: int | None = Query(default=None, description="Month (1-12)", ge=1, le=12),
-    days: int = Query(default=7, description="Recent days (used when year/month not specified)", ge=1, le=365),
+    days: int = Query(
+        default=7,
+        description="Recent days (used when year/month not specified)",
+        ge=1,
+        le=365,
+    ),
     employee: Employee = Depends(_require_active_employee),
     service: AttendanceService = Depends(get_attendance_service),
 ) -> HistoryResponse:
