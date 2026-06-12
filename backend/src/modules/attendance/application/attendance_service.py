@@ -170,7 +170,12 @@ class AttendanceService:
 
         Returns:
             List of AttendanceRecord for the specified period.
+
+        Raises:
+            ValueError: If only one of year/month is provided.
         """
+        if (year is None) != (month is None):
+            raise ValueError("year and month must be provided together")
         if year is not None and month is not None:
             _, last_day = monthrange(year, month)
             start_date = date(year, month, 1)

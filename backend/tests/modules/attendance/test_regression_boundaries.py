@@ -399,12 +399,10 @@ class TestEmptyStateBoundary:
         self, attendance_service, mock_attendance_repo, mock_org_settings_repo
     ):
         """get_history with days param computes correct date range."""
-        from unittest.mock import AsyncMock
+        from zoneinfo import ZoneInfo
 
-        fixed_date = date(2026, 6, 12)
         mock_org_settings_repo.get_timezone = AsyncMock(return_value="Asia/Ho_Chi_Minh")
         mock_attendance_repo.get_by_employee_and_date_range = AsyncMock(return_value=[])
-        attendance_service._get_work_date = AsyncMock(return_value=fixed_date)
 
         emp_id = uuid4()
         await attendance_service.get_history(
@@ -417,9 +415,10 @@ class TestEmptyStateBoundary:
         assert call_args is not None
         kwargs = call_args[1]
         assert kwargs["employee_id"] == emp_id
-        # start_date should be fixed_date - 6 days (7 days inclusive)
-        assert kwargs["start_date"] == fixed_date - timedelta(days=6)
-        assert kwargs["end_date"] == fixed_date
+        # Use same timezone as service (Asia/Ho_Chi_Minh) for deterministic assertion
+        today = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+        assert kwargs["start_date"] == today - timedelta(days=6)
+        assert kwargs["end_date"] == today
 
     @pytest.mark.asyncio
     async def test_correct_nonexistent_record_raises_value_error(
