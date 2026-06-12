@@ -9,7 +9,7 @@ These tests are kept focused -- no brittle snapshots, no integration DB.
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -380,6 +380,43 @@ class TestEmptyStateBoundary:
             month=1,
         )
         assert result == []
+
+    @pytest.mark.asyncio
+    async def test_get_recent_history_returns_empty_list_when_no_records(
+        self, attendance_service, mock_attendance_repo
+    ):
+        """get_history returns [] (not raises) when no records in recent days."""
+        mock_attendance_repo.get_by_employee_and_date_range = AsyncMock(return_value=[])
+
+        result = await attendance_service.get_history(
+            employee_id=uuid4(),
+            days=7,
+        )
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_get_recent_history_computes_date_range(
+        self, attendance_service, mock_attendance_repo, mock_org_settings_repo
+    ):
+        """get_history with days param computes correct date range."""
+        mock_org_settings_repo.get_timezone = AsyncMock(return_value="Asia/Ho_Chi_Minh")
+        mock_attendance_repo.get_by_employee_and_date_range = AsyncMock(return_value=[])
+
+        emp_id = uuid4()
+        await attendance_service.get_history(
+            employee_id=emp_id,
+            days=7,
+        )
+
+        # Verify the date range was passed correctly
+        call_args = mock_attendance_repo.get_by_employee_and_date_range.call_args
+        assert call_args is not None
+        kwargs = call_args[1]
+        assert kwargs["employee_id"] == emp_id
+        # start_date should be today - 6 days (7 days inclusive)
+        today = date.today()
+        assert kwargs["start_date"] == today - timedelta(days=6)
+        assert kwargs["end_date"] == today
 
     @pytest.mark.asyncio
     async def test_correct_nonexistent_record_raises_value_error(

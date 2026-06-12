@@ -5,7 +5,7 @@ Work date is derived from Organization timezone; timestamps stored in UTC.
 """
 
 from calendar import monthrange
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -153,22 +153,32 @@ class AttendanceService:
     async def get_history(
         self,
         employee_id: UUID,
-        year: int,
-        month: int,
+        year: int | None = None,
+        month: int | None = None,
+        days: int = 7,
     ) -> list[AttendanceRecord]:
-        """Get attendance records for an employee in a given month.
+        """Get attendance records for an employee.
+
+        If year and month are provided, returns records for that month.
+        Otherwise returns records for the last ``days`` days.
 
         Args:
             employee_id: The ID of the employee.
             year: The year (e.g., 2026).
             month: The month (1-12).
+            days: Number of recent days (default 7, used when year/month not specified).
 
         Returns:
-            List of AttendanceRecord for the specified month.
+            List of AttendanceRecord for the specified period.
         """
-        _, last_day = monthrange(year, month)
-        start_date = date(year, month, 1)
-        end_date = date(year, month, last_day)
+        if year is not None and month is not None:
+            _, last_day = monthrange(year, month)
+            start_date = date(year, month, 1)
+            end_date = date(year, month, last_day)
+        else:
+            work_date = await self._get_work_date()
+            end_date = work_date
+            start_date = work_date - timedelta(days=days - 1)
         return await self._attendance_repo.get_by_employee_and_date_range(
             employee_id=employee_id,
             start_date=start_date,
