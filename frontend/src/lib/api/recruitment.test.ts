@@ -14,16 +14,18 @@ describe("getCandidate error paths", () => {
     const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
     vi.stubGlobal("fetch", fetchMock);
 
-    let error: any;
+    let caughtError: unknown;
     try {
       await getCandidate("123");
     } catch (e) {
-      error = e;
+      caughtError = e;
     }
 
-    expect(error).toBeInstanceOf(ApiError);
-    expect(error.statusCode).toBe(0);
-    expect(error.errorCode).toBe("NETWORK_ERROR");
+    expect(caughtError).toBeInstanceOf(ApiError);
+    if (caughtError instanceof ApiError) {
+      expect(caughtError.statusCode).toBe(0);
+      expect(caughtError.errorCode).toBe("NETWORK_ERROR");
+    }
   });
 
   it("should throw ApiError with TIMEOUT when fetch is aborted", async () => {
@@ -31,16 +33,18 @@ describe("getCandidate error paths", () => {
     const fetchMock = vi.fn().mockRejectedValue(domException);
     vi.stubGlobal("fetch", fetchMock);
 
-    let error: any;
+    let caughtError: unknown;
     try {
       await getCandidate("123");
     } catch (e) {
-      error = e;
+      caughtError = e;
     }
 
-    expect(error).toBeInstanceOf(ApiError);
-    expect(error.statusCode).toBe(0);
-    expect(error.errorCode).toBe("TIMEOUT");
+    expect(caughtError).toBeInstanceOf(ApiError);
+    if (caughtError instanceof ApiError) {
+      expect(caughtError.statusCode).toBe(0);
+      expect(caughtError.errorCode).toBe("TIMEOUT");
+    }
   });
 
   it("should throw ApiError when response is not ok", async () => {
@@ -51,16 +55,18 @@ describe("getCandidate error paths", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    let error: any;
+    let caughtError: unknown;
     try {
       await getCandidate("123");
     } catch (e) {
-      error = e;
+      caughtError = e;
     }
 
-    expect(error).toBeInstanceOf(ApiError);
-    expect(error.statusCode).toBe(404);
-    expect(error.errorCode).toBe("NOT_FOUND");
+    expect(caughtError).toBeInstanceOf(ApiError);
+    if (caughtError instanceof ApiError) {
+      expect(caughtError.statusCode).toBe(404);
+      expect(caughtError.errorCode).toBe("NOT_FOUND");
+    }
   });
 
   it("should return candidate data successfully on 200 OK", async () => {
