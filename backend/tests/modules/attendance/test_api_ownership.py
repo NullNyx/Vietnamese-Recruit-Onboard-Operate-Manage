@@ -63,6 +63,9 @@ class FakeAttendanceService:
     async def check_out(self, employee_id, client_ip, user_agent=None):
         return self.check_in_result
 
+    async def get_history(self, employee_id, year=None, month=None, days=7):
+        return []
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -139,6 +142,38 @@ class TestCheckOutOwnership:
         client = TestClient(app)
         resp = client.post("/api/attendance/me/check-out")
         assert resp.status_code == 403
+
+
+class TestHistoryPartialParams:
+    """History endpoint rejects partial year/month params."""
+
+    def test_only_year_returns_422(self) -> None:
+        """Passing year without month -> 422."""
+        app = _build_app(employee=FakeEmployee())
+        client = TestClient(app)
+        resp = client.get("/api/attendance/me/history?year=2026")
+        assert resp.status_code == 422
+
+    def test_only_month_returns_422(self) -> None:
+        """Passing month without year -> 422."""
+        app = _build_app(employee=FakeEmployee())
+        client = TestClient(app)
+        resp = client.get("/api/attendance/me/history?month=6")
+        assert resp.status_code == 422
+
+    def test_both_year_and_month_returns_200(self) -> None:
+        """Passing both year and month -> 200."""
+        app = _build_app(employee=FakeEmployee())
+        client = TestClient(app)
+        resp = client.get("/api/attendance/me/history?year=2026&month=6")
+        assert resp.status_code == 200
+
+    def test_only_days_returns_200(self) -> None:
+        """Passing only days -> 200."""
+        app = _build_app(employee=FakeEmployee())
+        client = TestClient(app)
+        resp = client.get("/api/attendance/me/history?days=7")
+        assert resp.status_code == 200
 
 
 class TestClientIpExtraction:

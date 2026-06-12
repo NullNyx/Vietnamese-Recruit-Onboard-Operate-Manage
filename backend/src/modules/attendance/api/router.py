@@ -237,6 +237,13 @@ async def get_attendance_history(
     If year and month are provided, returns records for that month.
     Otherwise returns records for the last ``days`` days (default 7).
     """
+    # Validate: must provide both year+month or neither
+    if (year is None) != (month is None):
+        raise HTTPException(
+            status_code=422,
+            detail="Either provide both year and month, or neither (use days param)",
+        )
+
     records = await service.get_history(
         employee_id=employee.id,
         year=year,
