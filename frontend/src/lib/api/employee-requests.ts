@@ -17,8 +17,8 @@ async function handleResponse<T>(res: Response): Promise<T> {
 export interface EmployeeRequestListItem {
   id: string;
   employee_id: string;
-  request_type: string;
-  status: string;
+  request_type: "leave" | "overtime";
+  status: "submitted" | "approved" | "rejected" | "cancelled";
   submitted_at: string | null;
   updated_at: string | null;
   /** Overtime fields */
@@ -50,7 +50,7 @@ export interface CreateLeaveData {
 export interface LeaveResponse {
   id: string;
   employee_id: string;
-  status: string;
+  status: "submitted" | "approved" | "rejected" | "cancelled";
   leave_type: string | null;
   start_date: string | null;
   end_date: string | null;
@@ -81,7 +81,7 @@ export interface CreateOvertimeData {
 export interface OvertimeResponse {
   id: string;
   employee_id: string;
-  status: string;
+  status: "submitted" | "approved" | "rejected" | "cancelled";
   work_date: string | null;
   start_time: string | null;
   end_time: string | null;

@@ -41,23 +41,23 @@ import { CreateRequestDialog } from "./create-request-dialog";
 // Helpers
 // ---------------------------------------------------------------------------
 
-const REQUEST_TYPE_LABELS: Record<string, string> = {
+const REQUEST_TYPE_LABELS: Record<"leave" | "overtime", string> = {
   leave: "Nghỉ phép",
   overtime: "Tăng ca",
 };
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<"submitted" | "approved" | "rejected" | "cancelled", string> = {
   submitted: "Đã gửi",
   approved: "Đã duyệt",
   rejected: "Từ chối",
   cancelled: "Đã huỷ",
 };
 
-function typeBadgeVariant(type: string): "default" | "secondary" {
+function typeBadgeVariant(type: "leave" | "overtime"): "default" | "secondary" {
   return type === "overtime" ? "secondary" : "default";
 }
 
-function statusBadgeColor(status: string): string {
+function statusBadgeColor(status: "submitted" | "approved" | "rejected" | "cancelled"): string {
   switch (status) {
     case "submitted":
       return "bg-amber-500/10 text-amber-500 border-amber-500/20";
@@ -330,7 +330,10 @@ export default function EmployeeRequestsPage() {
       if (request.request_type === "leave") {
         return cancelLeave(request.id, reason || null);
       }
-      return cancelOvertime(request.id, reason || null);
+      if (request.request_type === "overtime") {
+        return cancelOvertime(request.id, reason || null);
+      }
+      throw new Error(`Unknown request type: ${request.request_type}`);
     },
     onSuccess: () => {
       toast.success("Đã huỷ yêu cầu thành công");
