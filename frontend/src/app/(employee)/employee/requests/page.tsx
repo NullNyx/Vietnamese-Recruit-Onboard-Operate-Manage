@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   CalendarDays,
   Clock,
@@ -237,8 +237,10 @@ function CancelDialog({
 }) {
   const [reason, setReason] = useState("");
 
-  // Reset reason when opening/closing
-  if (!open && reason) setReason("");
+  // Reset reason when dialog opens
+  useEffect(() => {
+    if (open) setReason("");
+  }, [open]);
 
   const label =
     request?.request_type === "leave" ? "nghỉ phép" : "tăng ca";
@@ -309,10 +311,12 @@ export default function EmployeeRequestsPage() {
     staleTime: 30_000,
   });
 
-  // Show toast on error
-  if (isError && error instanceof Error) {
-    toast.error(error.message || "Không thể tải yêu cầu");
-  }
+  // Show toast on error — wrapped in useEffect to avoid render-phase side effect
+  useEffect(() => {
+    if (isError && error instanceof Error) {
+      toast.error(error.message || "Không thể tải yêu cầu");
+    }
+  }, [isError, error]);
 
   // -- Cancel mutation --
   const cancelMutation = useMutation({

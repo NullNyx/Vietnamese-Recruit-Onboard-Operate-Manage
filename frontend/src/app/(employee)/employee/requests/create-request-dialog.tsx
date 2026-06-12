@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -415,13 +416,11 @@ export function CreateRequestDialog({ onSuccess }: CreateRequestDialogProps) {
         </Tabs>
 
         <div className="flex justify-end gap-3 pt-2">
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isPending}
-          >
-            Huỷ
-          </Button>
+          <DialogClose asChild>
+            <Button variant="outline" disabled={isPending}>
+              Huỷ
+            </Button>
+          </DialogClose>
           <Button
             onClick={requestType === "leave" ? handleSubmitLeave : handleSubmitOvertime}
             disabled={isPending}

@@ -133,7 +133,7 @@ export async function cancelLeave(
   requestId: string,
   cancellationReason?: string | null,
 ): Promise<LeaveCancelResponse> {
-  const res = await fetch(`${BASE}/me/leave/${requestId}/cancel`, {
+  const res = await fetch(`${BASE}/me/leave/${encodeURIComponent(requestId)}/cancel`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -162,7 +162,7 @@ export async function cancelOvertime(
   requestId: string,
   cancellationReason?: string | null,
 ): Promise<OvertimeCancelResponse> {
-  const res = await fetch(`${BASE}/me/overtime/${requestId}/cancel`, {
+  const res = await fetch(`${BASE}/me/overtime/${encodeURIComponent(requestId)}/cancel`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
