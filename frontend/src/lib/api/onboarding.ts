@@ -28,6 +28,10 @@ export interface OnboardingProcess {
   missing_setup_fields: string[];
   accepted_at?: string | null;
   job_opening?: string | null;
+  department_id?: string | null;
+  position_id?: string | null;
+  manager_id?: string | null;
+  start_date?: string | null;
   tasks?: OnboardingTask[];
 }
 
@@ -102,5 +106,21 @@ export async function updateTaskStatus(
   return apiFetch<OnboardingTask>(`/tasks/${taskId}`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
+  });
+}
+
+/** PATCH /api/onboarding/processes/{process_id}/employee-setup */
+export async function updateEmployeeSetup(
+  processId: string,
+  data: {
+    department_id?: string | null;
+    position_id?: string | null;
+    manager_id?: string | null;
+    start_date?: string | null;
+  }
+): Promise<OnboardingProcess> {
+  return apiFetch<OnboardingProcess>(`/processes/${processId}/employee-setup`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
   });
 }

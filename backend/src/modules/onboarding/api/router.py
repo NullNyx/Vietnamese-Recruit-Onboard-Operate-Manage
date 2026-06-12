@@ -55,6 +55,7 @@ from src.modules.identity.api.admin_router import require_admin
 from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User
 from src.modules.onboarding.api.schemas import (
+    EmployeeSetupUpdate,
     OnboardingCountsResponse,
     OnboardingProcessDetailResponse,
     OnboardingProcessListItem,
@@ -228,6 +229,10 @@ async def get_process(
         completed_count=detail.completed_count,
         total_count=detail.total_count,
         missing_setup_fields=detail.missing_setup_fields,
+        department_id=detail.department_id,
+        position_id=detail.position_id,
+        manager_id=detail.manager_id,
+        start_date=detail.start_date.isoformat() if detail.start_date else None,
         accepted_at=(
             candidate.accepted_at.isoformat() if candidate and candidate.accepted_at else None
         ),
@@ -309,3 +314,41 @@ async def update_task(
         status=OnboardingTaskStatus(task.status),
         order_index=task.order_index,
     )
+
+
+# ---------------------------------------------------------------------------
+# Update employee setup fields
+# ---------------------------------------------------------------------------
+
+
+@onboarding_router.patch(
+    "/processes/{process_id}/employee-setup",
+    response_model=OnboardingProcessDetailResponse,
+)
+async def update_employee_setup(
+    process_id: UUID,
+    body: EmployeeSetupUpdate,
+    current_user: CurrentUserDep,
+    onboarding_service: OnboardingServiceDep,
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> OnboardingProcessDetailResponse:
+    """Update an inactive Employee's core setup fields from the onboarding workspace.
+
+    Args:
+        process_id: The identifier of the onboarding process.
+        body: The employee setup fields to update.
+        current_user: The authenticated user performing the action.
+        onboarding_service: The onboarding application service.
+        db_session: Database session for enriching the response.
+
+    Returns:
+        The updated process detail.
+    """
+    await onboarding_service.update_employee_setup(
+        process_id=process_id,
+        actor=current_user,
+        data=body.model_dump(exclude_unset=True),
+    )
+
+    # Delegate back to get_process for enriched response
+    return await get_process(process_id, current_user, onboarding_service, db_session)
