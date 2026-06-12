@@ -221,24 +221,43 @@ async def get_today_record(
 
 @attendance_router.get("/me/history", response_model=HistoryResponse)
 async def get_attendance_history(
-    year: int = Query(..., description="Year (e.g., 2026)", ge=2020, le=2100),
-    month: int = Query(..., description="Month (1-12)", ge=1, le=12),
+    year: int | None = Query(default=None, description="Year (e.g., 2026)", ge=2020, le=2100),
+    month: int | None = Query(default=None, description="Month (1-12)", ge=1, le=12),
+    days: int = Query(
+        default=7,
+        description="Recent days (used when year/month not specified)",
+        ge=1,
+        le=365,
+    ),
     employee: Employee = Depends(_require_active_employee),
     service: AttendanceService = Depends(get_attendance_service),
 ) -> HistoryResponse:
-    """Get attendance records for the current employee in a given month.
+    """Get attendance records for the current employee.
 
-    Returns all attendance records for the specified year and month.
+    If year and month are provided, returns records for that month.
+    Otherwise returns records for the last ``days`` days (default 7).
     """
+    # Validate: must provide both year+month or neither
+    if (year is None) != (month is None):
+        raise HTTPException(
+            status_code=422,
+            detail="Either provide both year and month, or neither (use days param)",
+        )
+
     records = await service.get_history(
         employee_id=employee.id,
         year=year,
         month=month,
+        days=days,
     )
+    # Compute response metadata
+    today = date.today()
+    resp_year = year if year is not None else today.year
+    resp_month = month if month is not None else today.month
     return HistoryResponse(
         records=[AttendanceRecordResponse.model_validate(r) for r in records],
-        year=year,
-        month=month,
+        year=resp_year,
+        month=resp_month,
     )
 
 
