@@ -195,7 +195,7 @@ async def _insert_admin_user(maker: async_sessionmaker[AsyncSession]) -> User:
 async def _insert_setup_dependencies(maker: async_sessionmaker[AsyncSession]) -> tuple[UUID, UUID, UUID]:
     suffix = uuid4().hex[:8]
     dept = Department(name=f"Engineering-{suffix}")
-    pos = Position(name=f"Software Engineer-{suffix}")
+    pos = Position(name=f"Software Engineer-{suffix}", department_id=dept.id)
     mgr = Employee(
         employee_code=f"MGR-{suffix}",
         full_name="Manager",
@@ -337,6 +337,7 @@ async def test_candidate_accepted_drives_full_chain_to_active_employee(
     async with session_maker() as svc_session:
         service = container._build_service(svc_session)
         from datetime import date
+        today = date.today()
         await service.update_employee_setup(
             process_id=process.id,
             actor=admin,
@@ -344,7 +345,7 @@ async def test_candidate_accepted_drives_full_chain_to_active_employee(
                 "department_id": dept_id,
                 "position_id": pos_id,
                 "manager_id": mgr_id,
-                "start_date": date.today(),
+                "start_date": today,
             }
         )
 
@@ -355,7 +356,7 @@ async def test_candidate_accepted_drives_full_chain_to_active_employee(
     assert employee_after_setup.department_id == dept_id
     assert employee_after_setup.position_id == pos_id
     assert employee_after_setup.manager_id == mgr_id
-    assert employee_after_setup.start_date == date.today()
+    assert employee_after_setup.start_date == today
     assert employee_after_setup.is_active is False
 
     processes_after_setup = await _load_processes_by_candidate(session_maker, candidate_id)

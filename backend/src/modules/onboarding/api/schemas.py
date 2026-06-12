@@ -21,6 +21,7 @@ schemas; in particular the process ``id`` field is populated from the
 dataclasses' ``process_id``.
 """
 
+from datetime import date
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -82,7 +83,7 @@ class EmployeeSetupUpdate(BaseModel):
     department_id: UUID | None = None
     position_id: UUID | None = None
     manager_id: UUID | None = None
-    start_date: str | None = None
+    start_date: date | None = None
 
 
 # ---------------------------------------------------------------------------

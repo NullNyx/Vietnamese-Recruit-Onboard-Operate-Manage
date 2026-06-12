@@ -55,7 +55,7 @@ export function EmployeeSetupForm({ process }: { process: OnboardingProcess }) {
 
   const { data: employeesData } = useQuery({
     queryKey: ['employees', { is_active: true }],
-    queryFn: () => listEmployees({ is_active: true, page_size: 1000 }),
+    queryFn: () => listEmployees({ is_active: true, page_size: 100 }),
   });
   const managers = employeesData?.items || [];
 
@@ -117,7 +117,10 @@ export function EmployeeSetupForm({ process }: { process: OnboardingProcess }) {
             <Select
               disabled={isComplete || updateMutation.isPending}
               value={formData.department_id}
-              onValueChange={(val) => setFormData({ ...formData, department_id: val })}
+              onValueChange={(val) => {
+                const isPosValid = !formData.position_id || positions?.find((p) => p.id === formData.position_id)?.department_id === val;
+                setFormData({ ...formData, department_id: val, position_id: isPosValid ? formData.position_id : '' });
+              }}
             >
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Chọn phòng ban" />

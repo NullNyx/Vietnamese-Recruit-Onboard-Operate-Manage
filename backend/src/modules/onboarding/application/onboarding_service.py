@@ -779,7 +779,7 @@ class OnboardingService:
                 pos = await self.session.get(Position, pos_id)
                 if not pos:
                     raise OnboardingError("Position not found")
-                if dep_id and pos.department_id and pos.department_id != dep_id:
+                if pos.department_id is not None and dep_id != pos.department_id:
                     raise OnboardingError("Department must match Position's department")
 
             # Convert string start_date to date object if needed
