@@ -4,14 +4,26 @@ Provides async database access for employee requests using SQLAlchemy
 async sessions with SQLModel.
 """
 
+from __future__ import annotations
+
+from dataclasses import dataclass
 from datetime import date
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.employee.domain.entities import Employee
 from src.modules.employee_request.domain.entities import EmployeeRequest
 from src.modules.employee_request.domain.enums import RequestStatus, RequestType
+
+
+@dataclass(frozen=True)
+class SubmittedRequestWithEmployee:
+    '''An employee request enriched with the submitting employee's full name.'''
+
+    request: EmployeeRequest
+    employee_name: str
 
 
 class EmployeeRequestRepository:

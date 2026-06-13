@@ -178,6 +178,8 @@ class AuditActionType(str, Enum):
     ASSISTANT_TOOL_CONFIG = "assistant_tool_config"
     ASSISTANT_CHAT = "assistant_chat"
     ATTENDANCE_CORRECTION = "attendance_correction"
+    REQUEST_APPROVE = "request_approve"
+    REQUEST_REJECT = "request_reject"
 
 
 class AuditLog(SQLModel, table=True):

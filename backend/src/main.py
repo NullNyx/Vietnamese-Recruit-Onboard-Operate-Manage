@@ -29,6 +29,7 @@ from src.modules.employee_request.api.error_handler import (  # noqa: E402
     register_employee_request_error_handlers,
 )
 from src.modules.employee_request.api.router import employee_request_router  # noqa: E402
+from src.modules.employee_request.api.admin_router import admin_employee_request_router  # noqa: E402
 from src.modules.gmail.api.error_handler import (  # noqa: E402
     register_gmail_error_handlers,
 )
@@ -194,6 +195,7 @@ app.include_router(job_opening_router)
 app.include_router(runtime_router)
 app.include_router(assistant_router)
 app.include_router(employee_request_router)
+app.include_router(admin_employee_request_router)
 
 # Register exception handlers.
 register_auth_error_handlers(app)

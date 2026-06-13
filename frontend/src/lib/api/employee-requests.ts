@@ -170,3 +170,78 @@ export async function cancelOvertime(
   });
   return handleResponse<OvertimeCancelResponse>(res);
 }
+
+// ---------------------------------------------------------------------------
+// Admin / HR Review
+// ---------------------------------------------------------------------------
+
+const ADMIN_BASE = "/api/admin/employee-requests";
+
+export interface AdminEmployeeRequestItem {
+  id: string;
+  employee_id: string;
+  employee_name: string;
+  request_type: "leave" | "overtime";
+  status: "submitted" | "approved" | "rejected" | "cancelled";
+  submitted_at: string | null;
+  updated_at: string | null;
+  reason: string | null;
+  /** Overtime fields */
+  work_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  duration_minutes: number | null;
+  /** Leave fields */
+  leave_type: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  /** Cancellation */
+  cancellation_reason: string | null;
+}
+
+export interface AdminReviewQueueResponse {
+  requests: AdminEmployeeRequestItem[];
+}
+
+export interface ReviewRequest {
+  review_reason?: string | null;
+}
+
+export interface ReviewResponse {
+  message: string;
+  request: AdminEmployeeRequestItem;
+}
+
+/** Fetch all submitted requests for HR review queue (admin only). */
+export async function fetchSubmittedRequests(): Promise<AdminReviewQueueResponse> {
+  const res = await fetch(ADMIN_BASE, { credentials: "include" });
+  return handleResponse<AdminReviewQueueResponse>(res);
+}
+
+/** Approve a submitted employee request (admin only). */
+export async function approveRequest(
+  requestId: string,
+  reviewReason?: string | null,
+): Promise<ReviewResponse> {
+  const res = await fetch(`${ADMIN_BASE}/${encodeURIComponent(requestId)}/approve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ review_reason: reviewReason ?? null }),
+  });
+  return handleResponse<ReviewResponse>(res);
+}
+
+/** Reject a submitted employee request (admin only). */
+export async function rejectRequest(
+  requestId: string,
+  reviewReason?: string | null,
+): Promise<ReviewResponse> {
+  const res = await fetch(`${ADMIN_BASE}/${encodeURIComponent(requestId)}/reject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ review_reason: reviewReason ?? null }),
+  });
+  return handleResponse<ReviewResponse>(res);
+}
