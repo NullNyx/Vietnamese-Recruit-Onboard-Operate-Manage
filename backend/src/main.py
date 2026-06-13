@@ -45,6 +45,8 @@ from src.modules.onboarding.api.error_handler import (  # noqa: E402
     register_onboarding_error_handlers,
 )
 from src.modules.onboarding.api.router import onboarding_router  # noqa: E402
+from src.modules.payslip.api.employee_router import employee_payslip_router  # noqa: E402
+from src.modules.payslip.api.error_handler import register_payslip_error_handlers  # noqa: E402
 from src.modules.recruitment.api.candidate_router import candidate_router  # noqa: E402
 from src.modules.recruitment.api.cv_review_router import cv_review_router  # noqa: E402
 from src.modules.recruitment.api.error_handler import (  # noqa: E402
@@ -130,6 +132,23 @@ async def _seed_demo_attendance() -> None:
             await session.commit()
 
 
+async def _seed_demo_payslips() -> None:
+    """Seed demo payslips when enabled."""
+    from src.modules.identity.container import _get_async_session_maker, get_settings
+
+    settings = get_settings()
+    if not settings.auto_seed_sample_data:
+        return
+
+    from src.bootstrap.demo_data import seed_demo_payslips
+
+    session_maker = _get_async_session_maker()
+    async with session_maker() as session:
+        seeded = await seed_demo_payslips(session)
+        if seeded:
+            await session.commit()
+
+
 async def _seed_assistant_tool_configs() -> None:
     """Seed default assistant tool configs at startup.
 
@@ -171,6 +190,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await _bootstrap_super_admin()
     await _seed_demo_data()
     await _seed_demo_attendance()
+    await _seed_demo_payslips()
     await _seed_assistant_tool_configs()
     yield
     # Shutdown (nothing to clean up currently)
@@ -198,6 +218,7 @@ app.include_router(runtime_router)
 app.include_router(assistant_router)
 app.include_router(employee_request_router)
 app.include_router(admin_employee_request_router)
+app.include_router(employee_payslip_router)
 
 # Register exception handlers.
 register_auth_error_handlers(app)
@@ -207,6 +228,7 @@ register_recruitment_error_handlers(app)
 register_onboarding_error_handlers(app)
 register_attendance_error_handlers(app)
 register_assistant_error_handlers(app)
+register_payslip_error_handlers(app)
 register_employee_request_error_handlers(app)
 
 
