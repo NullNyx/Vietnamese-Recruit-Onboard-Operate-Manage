@@ -6,6 +6,7 @@ Provides review queue listing, approve, and reject operations.
 
 from __future__ import annotations
 
+from datetime import date, datetime, time
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -42,18 +43,18 @@ class AdminEmployeeRequestItem(BaseModel):
     employee_name: str = ""
     request_type: str
     status: str
-    submitted_at: str | None = None
-    updated_at: str | None = None
+    submitted_at: datetime | None = None
+    updated_at: datetime | None = None
     reason: str | None = None
     # Overtime fields
-    work_date: str | None = None
-    start_time: str | None = None
-    end_time: str | None = None
+    work_date: date | None = None
+    start_time: time | None = None
+    end_time: time | None = None
     duration_minutes: int | None = None
     # Leave fields
     leave_type: str | None = None
-    start_date: str | None = None
-    end_date: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
     # Cancellation
     cancellation_reason: str | None = None
 

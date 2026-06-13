@@ -204,6 +204,11 @@ class TestApproveRequest:
         )
 
         assert response.status_code == 400
+        mock_service.approve_request.assert_awaited_once_with(
+            request_id=request_id,
+            admin_user=admin,
+            review_reason=None,
+        )
         data = response.json()
         assert "only submitted" in data["detail"].lower()
 
@@ -225,6 +230,11 @@ class TestApproveRequest:
         )
 
         assert response.status_code == 404
+        mock_service.approve_request.assert_awaited_once_with(
+            request_id=request_id,
+            admin_user=admin,
+            review_reason=None,
+        )
         data = response.json()
         assert str(request_id) in data["detail"]
 

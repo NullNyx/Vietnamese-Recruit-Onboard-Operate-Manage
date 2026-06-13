@@ -197,8 +197,8 @@ function ConfirmReviewDialog({
   const isApprove = action === "approve";
   const title = isApprove ? "Duyệt yêu cầu" : "Từ chối yêu cầu";
   const description = isApprove
-    ? `Bạn có chắc muốn duyệt yêu cầu $\{REQUEST_TYPE_LABELS[request.request_type]?.toLowerCase() ?? request.request_type} của $\{request.employee_name}?`
-    : `Bạn có chắc muốn từ chối yêu cầu $\{REQUEST_TYPE_LABELS[request.request_type]?.toLowerCase() ?? request.request_type} của $\{request.employee_name}?`;
+    ? `Bạn có chắc muốn duyệt yêu cầu ${REQUEST_TYPE_LABELS[request.request_type]?.toLowerCase() ?? request.request_type} của ${request.employee_name}?`
+    : `Bạn có chắc muốn từ chối yêu cầu ${REQUEST_TYPE_LABELS[request.request_type]?.toLowerCase() ?? request.request_type} của ${request.employee_name}?`;
 
   function handleActionClick(e: React.MouseEvent) {
     e.preventDefault();
