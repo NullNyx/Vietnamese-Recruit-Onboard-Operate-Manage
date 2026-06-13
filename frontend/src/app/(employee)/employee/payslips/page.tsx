@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DollarSign, Loader2, FileText } from "lucide-react";
+import { DollarSign, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -18,18 +18,6 @@ function formatCurrency(amount: string): string {
     style: "currency",
     currency: "VND",
   }).format(num);
-}
-
-function formatDate(dateStr: string): string {
-  try {
-    return new Date(dateStr).toLocaleDateString("vi-VN", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  } catch {
-    return dateStr;
-  }
 }
 
 function formatPeriod(start: string, end: string): string {

@@ -31,8 +31,6 @@ from src.modules.employee_request.api.admin_router import (
 from src.modules.employee_request.api.error_handler import (  # noqa: E402
     register_employee_request_error_handlers,
 )
-from src.modules.payslip.api.employee_router import employee_payslip_router  # noqa: E402
-from src.modules.payslip.api.error_handler import register_payslip_error_handlers  # noqa: E402
 from src.modules.employee_request.api.router import employee_request_router  # noqa: E402
 from src.modules.gmail.api.error_handler import (  # noqa: E402
     register_gmail_error_handlers,
@@ -47,6 +45,8 @@ from src.modules.onboarding.api.error_handler import (  # noqa: E402
     register_onboarding_error_handlers,
 )
 from src.modules.onboarding.api.router import onboarding_router  # noqa: E402
+from src.modules.payslip.api.employee_router import employee_payslip_router  # noqa: E402
+from src.modules.payslip.api.error_handler import register_payslip_error_handlers  # noqa: E402
 from src.modules.recruitment.api.candidate_router import candidate_router  # noqa: E402
 from src.modules.recruitment.api.cv_review_router import cv_review_router  # noqa: E402
 from src.modules.recruitment.api.error_handler import (  # noqa: E402
