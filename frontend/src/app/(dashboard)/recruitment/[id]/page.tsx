@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft, Building2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { ConfidenceScore } from "@/components/recruitment/confidence-score";
 import { CVSections } from "@/components/recruitment/cv-sections";
 import { DocumentList } from "@/components/recruitment/document-list";
 import { CandidateActions } from "@/components/recruitment/candidate-actions";
+import { AssignJobOpeningDialog } from "@/components/recruitment/assign-job-opening-dialog";
+import { UnassignDialog } from "@/components/recruitment/unassign-dialog";
 import { RejectDialog } from "@/components/recruitment/reject-dialog";
 import { AcceptDialog } from "@/components/recruitment/accept-dialog";
 import { ArchiveDialog } from "@/components/recruitment/archive-dialog";
@@ -27,6 +29,9 @@ import {
   rejectCandidate,
   acceptCandidate,
   archiveCandidate,
+  assignCandidate,
+  reassignCandidate,
+  unassignCandidate,
   type CandidateDetail,
   type ScheduleInterviewRequest,
   type SendEmailRequest,
@@ -46,6 +51,8 @@ type DialogType =
   | "schedule"
   | "reschedule"
   | "email"
+  | "assign"
+  | "unassign"
   | null;
 
 type PageState =
@@ -58,6 +65,10 @@ type PageState =
 // Page Component
 // ---------------------------------------------------------------------------
 
+function isTerminalStatus(status: string): boolean {
+  return ["accepted", "rejected", "archived"].includes(status);
+}
+
 export default function CandidateDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -67,6 +78,8 @@ export default function CandidateDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionAnnouncement, setActionAnnouncement] = useState("");
   const [errorAnnouncement, setErrorAnnouncement] = useState("");
+  const [currentJobOpeningId, setCurrentJobOpeningId] = useState<string | null>(null);
+  const [currentJobOpeningTitle, setCurrentJobOpeningTitle] = useState("");
 
   // -------------------------------------------------------------------------
   // Data Fetching
@@ -76,6 +89,8 @@ export default function CandidateDetailPage() {
     setPageState({ kind: "loading" });
     try {
       const candidate = await getCandidate(id);
+      setCurrentJobOpeningId(candidate.job_opening_id ?? null);
+      setCurrentJobOpeningTitle(candidate.job_opening_title);
       setPageState({ kind: "loaded", candidate });
     } catch (err) {
       if (err instanceof ApiError && err.statusCode === 404) {
@@ -130,6 +145,31 @@ export default function CandidateDetailPage() {
       // Keep dialog open on 5xx/network errors (data preserved)
     }
     setActionLoading(false);
+  }
+
+  async function handleAssign(jobOpeningId: string) {
+    setActionLoading(true);
+    try {
+      if (currentJobOpeningId) {
+        await reassignCandidate(id, jobOpeningId);
+        await handleActionSuccess("Đã chuyển vị trí tuyển dụng thành công");
+      } else {
+        await assignCandidate(id, jobOpeningId);
+        await handleActionSuccess("Đã gán vị trí tuyển dụng thành công");
+      }
+    } catch (err) {
+      handleActionError(err);
+    }
+  }
+
+  async function handleUnassign() {
+    setActionLoading(true);
+    try {
+      await unassignCandidate(id);
+      await handleActionSuccess("Đã bỏ gán vị trí tuyển dụng thành công");
+    } catch (err) {
+      handleActionError(err);
+    }
   }
 
   async function handleReject(reason: string) {
@@ -360,6 +400,42 @@ export default function CandidateDetailPage() {
         />
       </div>
 
+      {/* Job Opening Assignment */}
+      <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/30 px-4 py-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+          <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="shrink-0 text-muted-foreground">Vị trí tuyển dụng:</span>
+          {candidate.job_opening_id ? (
+            <span className="truncate font-medium">{candidate.job_opening_title || "Đã gán"}</span>
+          ) : (
+            <span className="italic text-muted-foreground">Chưa gán</span>
+          )}
+        </div>
+        {!isTerminalStatus(candidate.status) && (
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setActiveDialog("assign")}
+              disabled={actionLoading}
+            >
+              {candidate.job_opening_id ? "Chuyển vị trí" : "Gán vị trí"}
+            </Button>
+            {candidate.job_opening_id && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveDialog("unassign")}
+                disabled={actionLoading}
+                className="text-destructive hover:text-destructive"
+              >
+                Bỏ gán
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* CV Sections + Documents */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* CV Parsed Data */}
@@ -436,6 +512,26 @@ export default function CandidateDetailPage() {
           if (!open) setActiveDialog(null);
         }}
         onConfirm={handleSendEmail}
+        loading={actionLoading}
+      />
+
+      <AssignJobOpeningDialog
+        open={activeDialog === "assign"}
+        onOpenChange={(open) => {
+          if (!open) setActiveDialog(null);
+        }}
+        onConfirm={handleAssign}
+        currentAssignment={currentJobOpeningTitle || undefined}
+        loading={actionLoading}
+      />
+
+      <UnassignDialog
+        open={activeDialog === "unassign"}
+        onOpenChange={(open) => {
+          if (!open) setActiveDialog(null);
+        }}
+        onConfirm={handleUnassign}
+        jobOpeningTitle={currentJobOpeningTitle || undefined}
         loading={actionLoading}
       />
     </div>

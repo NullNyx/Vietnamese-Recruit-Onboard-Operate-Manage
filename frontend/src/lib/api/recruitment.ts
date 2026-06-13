@@ -45,6 +45,8 @@ export interface CandidateListItem {
   confidence_score: number;
   created_at: string;
   has_cv: boolean;
+  job_opening_id: string | null;
+  job_opening_title: string;
 }
 
 export interface CandidateListResponse {
@@ -94,6 +96,8 @@ export interface CandidateDetail {
   archived_at: string | null;
   created_at: string;
   updated_at: string;
+  job_opening_id: string | null;
+  job_opening_title: string;
   cv_documents: CVDocument[];
   // Interview calendar fields (ADR-0008). Optional/nullable so the UI degrades
   // gracefully when the backend response does not yet include them.
@@ -454,6 +458,71 @@ export async function dismissReview(cvDocumentId: string): Promise<void> {
 export async function getMetrics(): Promise<MetricsResponse> {
   const res = await fetchWithTimeout(`${BASE}/metrics`);
   return handleResponse<MetricsResponse>(res);
+}
+
+
+// ---------------------------------------------------------------------------
+// Candidate Job Opening Assignment Functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Assign an unassigned Candidate to an open Job Opening.
+ */
+export async function assignCandidate(
+  candidateId: string,
+  jobOpeningId: string,
+): Promise<void> {
+  const res = await fetchWithTimeout(
+    `${BASE}/candidates/${candidateId}/assign`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ job_opening_id: jobOpeningId }),
+    },
+  );
+  await handleResponse<unknown>(res);
+}
+
+/**
+ * Reassign a Candidate to a different open Job Opening.
+ */
+export async function reassignCandidate(
+  candidateId: string,
+  jobOpeningId: string,
+): Promise<void> {
+  const res = await fetchWithTimeout(
+    `${BASE}/candidates/${candidateId}/reassign`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ job_opening_id: jobOpeningId }),
+    },
+  );
+  await handleResponse<unknown>(res);
+}
+
+/**
+ * Remove a Candidate's assignment to a Job Opening.
+ */
+export async function unassignCandidate(
+  candidateId: string,
+): Promise<void> {
+  const res = await fetchWithTimeout(
+    `${BASE}/candidates/${candidateId}/unassign`,
+    {
+      method: "POST",
+    },
+  );
+  await handleResponse<unknown>(res);
+}
+
+/**
+ * List only open Job Openings (for the assignment picker).
+ */
+export async function listOpenJobOpenings(
+  params: JobOpeningListParams = {},
+): Promise<JobOpeningListResponse> {
+  return listJobOpenings({ ...params, status: ["open"] });
 }
 
 // ---------------------------------------------------------------------------

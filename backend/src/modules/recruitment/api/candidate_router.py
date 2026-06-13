@@ -17,6 +17,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col, select
 
 from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User, UserRole
@@ -38,6 +39,7 @@ from src.modules.recruitment.application.candidate_service import (
     PaginatedCandidates,
 )
 from src.modules.recruitment.container import get_candidate_service
+from src.modules.recruitment.domain.entities import JobOpening
 from src.modules.recruitment.domain.enums import CandidateStatus, ProcessingStatus
 from src.modules.recruitment.domain.exceptions import (
     CandidateNotFoundError,
@@ -106,6 +108,7 @@ candidate_router = APIRouter(
 async def list_candidates(
     current_user: CurrentUserDep,
     candidate_service: CandidateServiceDep,
+    session: AsyncSession = Depends(get_db_session),
     page: int = Query(default=1, ge=1, description="Page number (1-indexed)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
     search: str | None = Query(
@@ -169,6 +172,15 @@ async def list_candidates(
     )
 
     # Build response items with skills truncated to first 5
+    # Resolve Job Opening titles for list items
+    jo_ids = list({c.job_opening_id for c in result.candidates if c.job_opening_id})
+    jo_titles: dict[UUID, str] = {}
+    if jo_ids:
+        stmt = select(JobOpening).where(col(JobOpening.id).in_(jo_ids))
+        jo_result = await session.execute(stmt)
+        for jo in jo_result.scalars().all():
+            jo_titles[jo.id] = jo.title
+
     items = [
         CandidateListItemResponse(
             id=c.id,
@@ -180,6 +192,8 @@ async def list_candidates(
             confidence_score=c.confidence_score,
             created_at=c.created_at,
             has_cv=True,  # Candidates are created from CVs
+            job_opening_id=c.job_opening_id,
+            job_opening_title=jo_titles.get(c.job_opening_id, "") if c.job_opening_id else "",
         )
         for c in result.candidates
     ]
@@ -202,6 +216,7 @@ async def get_candidate(
     candidate_id: UUID,
     current_user: CurrentUserDep,
     candidate_service: CandidateServiceDep,
+    session: AsyncSession = Depends(get_db_session),
 ) -> CandidateDetailResponse:
     """Get full candidate detail with linked CV documents.
 
@@ -235,6 +250,16 @@ async def get_candidate(
     ]
 
     candidate = detail.candidate
+
+    # Resolve Job Opening title
+    job_opening_title = ""
+    if candidate.job_opening_id:
+        jo_stmt = select(JobOpening).where(JobOpening.id == candidate.job_opening_id)
+        jo_result = await session.execute(jo_stmt)
+        jo = jo_result.scalars().first()
+        if jo:
+            job_opening_title = jo.title
+
     return CandidateDetailResponse(
         id=candidate.id,
         name=candidate.name,
@@ -253,6 +278,8 @@ async def get_candidate(
         archived_at=candidate.archived_at,
         created_at=candidate.created_at,
         updated_at=candidate.updated_at,
+        job_opening_id=candidate.job_opening_id,
+        job_opening_title=job_opening_title,
         cv_documents=cv_docs,
     )
 

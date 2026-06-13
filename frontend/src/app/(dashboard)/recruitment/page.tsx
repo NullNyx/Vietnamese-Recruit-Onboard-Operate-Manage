@@ -178,7 +178,7 @@ export default function RecruitmentPage() {
       {/* Data Table (desktop) */}
       {!loading && !error && data.length > 0 && (
         <>
-          <div className="hidden rounded-md border md:block">
+          <div className="hidden overflow-x-auto rounded-md border md:block">
             <Table aria-label="Danh sách ứng viên">
               <TableHeader>
                 <TableRow>
@@ -187,6 +187,7 @@ export default function RecruitmentPage() {
                   <TableHead scope="col">Số điện thoại</TableHead>
                   <TableHead scope="col">Kỹ năng</TableHead>
                   <TableHead scope="col">Độ tin cậy (%)</TableHead>
+                  <TableHead scope="col">Vị trí TD</TableHead>
                   <TableHead scope="col">Trạng thái</TableHead>
                   <TableHead scope="col">Ngày tạo</TableHead>
                 </TableRow>
@@ -212,6 +213,13 @@ export default function RecruitmentPage() {
                     </TableCell>
                     <TableCell>
                       <ConfidenceScore score={candidate.confidence_score} />
+                    </TableCell>
+                    <TableCell className="max-w-[180px]">
+                      <span className="block truncate text-sm" title={candidate.job_opening_title || undefined}>
+                        {candidate.job_opening_title || (
+                          <span className="text-muted-foreground italic">—</span>
+                        )}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <CandidateStatusBadge
@@ -254,6 +262,11 @@ export default function RecruitmentPage() {
                       {candidate.phone}
                     </div>
                   )}
+                  <div className="break-words text-sm text-muted-foreground">
+                    {candidate.job_opening_title
+                      ? `Vị trí TD: ${candidate.job_opening_title}`
+                      : "Chưa gán vị trí"}
+                  </div>
                   <div className="flex items-center justify-between">
                     <ConfidenceScore score={candidate.confidence_score} />
                     <span className="text-xs text-muted-foreground">
@@ -313,7 +326,7 @@ function CandidateTableSkeleton() {
   return (
     <>
       {/* Desktop skeleton */}
-      <div className="hidden rounded-md border md:block">
+      <div className="hidden overflow-x-auto rounded-md border md:block">
         <Table aria-label="Danh sách ứng viên">
           <TableHeader>
             <TableRow>
@@ -322,6 +335,7 @@ function CandidateTableSkeleton() {
               <TableHead>Số điện thoại</TableHead>
               <TableHead>Kỹ năng</TableHead>
               <TableHead>Độ tin cậy (%)</TableHead>
+              <TableHead>Vị trí TD</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead>Ngày tạo</TableHead>
             </TableRow>
@@ -347,6 +361,9 @@ function CandidateTableSkeleton() {
                 </TableCell>
                 <TableCell>
                   <Skeleton className="h-5 w-16" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-5 w-20" />
                 </TableCell>
                 <TableCell>
                   <Skeleton className="h-5 w-20" />
