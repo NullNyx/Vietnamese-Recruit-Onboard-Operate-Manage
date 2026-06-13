@@ -49,7 +49,7 @@ export function UnassignDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Hủy
           </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={loading}>
+          <Button variant="destructive" onClick={() => { if (!loading) onConfirm(); }} disabled={loading}>
             {loading && <Loader2 className="animate-spin" />}
             Bỏ gán
           </Button>

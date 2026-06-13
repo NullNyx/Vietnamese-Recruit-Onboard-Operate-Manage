@@ -278,6 +278,7 @@ async def get_candidate(
         archived_at=candidate.archived_at,
         created_at=candidate.created_at,
         updated_at=candidate.updated_at,
+        job_opening_id=candidate.job_opening_id,
         job_opening_title=job_opening_title,
         cv_documents=cv_docs,
     )

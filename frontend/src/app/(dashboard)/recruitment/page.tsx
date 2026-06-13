@@ -335,6 +335,7 @@ function CandidateTableSkeleton() {
               <TableHead>Số điện thoại</TableHead>
               <TableHead>Kỹ năng</TableHead>
               <TableHead>Độ tin cậy (%)</TableHead>
+              <TableHead>Vị trí TD</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead>Ngày tạo</TableHead>
             </TableRow>

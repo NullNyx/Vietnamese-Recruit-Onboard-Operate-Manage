@@ -403,11 +403,11 @@ export default function CandidateDetailPage() {
 
       {/* Job Opening Assignment */}
       <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/30 px-4 py-3">
-        <div className="flex items-center gap-2 text-sm">
-          <Building2 className="h-4 w-4 text-muted-foreground" />
-          <span className="text-muted-foreground">Vị trí tuyển dụng:</span>
+        <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+          <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="shrink-0 text-muted-foreground">Vị trí tuyển dụng:</span>
           {candidate.job_opening_id ? (
-            <span className="font-medium">{candidate.job_opening_title || "Đã gán"}</span>
+            <span className="truncate font-medium">{candidate.job_opening_title || "Đã gán"}</span>
           ) : (
             <span className="italic text-muted-foreground">Chưa gán</span>
           )}

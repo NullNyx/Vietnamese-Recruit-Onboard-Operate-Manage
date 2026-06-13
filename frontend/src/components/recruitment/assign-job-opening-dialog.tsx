@@ -72,7 +72,7 @@ export function AssignJobOpeningDialog({
   }
 
   function handleConfirm() {
-    if (selectedId) {
+    if (selectedId && !loading) {
       onConfirm(selectedId);
     }
   }
