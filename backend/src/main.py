@@ -25,11 +25,13 @@ from src.modules.employee.api.error_handler import (  # noqa: E402
     register_employee_error_handlers,
 )
 from src.modules.employee.api.router import router as employee_router  # noqa: E402
+from src.modules.employee_request.api.admin_router import (
+    admin_employee_request_router,  # noqa: E402
+)
 from src.modules.employee_request.api.error_handler import (  # noqa: E402
     register_employee_request_error_handlers,
 )
 from src.modules.employee_request.api.router import employee_request_router  # noqa: E402
-from src.modules.employee_request.api.admin_router import admin_employee_request_router  # noqa: E402
 from src.modules.gmail.api.error_handler import (  # noqa: E402
     register_gmail_error_handlers,
 )

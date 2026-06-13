@@ -13,7 +13,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.employee.domain.entities import Employee
+from src.modules.employee.domain.entities import Employee  # noqa: F401
 from src.modules.employee_request.domain.entities import EmployeeRequest
 from src.modules.employee_request.domain.enums import RequestStatus, RequestType
 

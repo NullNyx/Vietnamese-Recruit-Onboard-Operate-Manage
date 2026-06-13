@@ -6,7 +6,6 @@ Provides review queue listing, approve, and reject operations.
 
 from __future__ import annotations
 
-from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -23,7 +22,6 @@ from src.modules.employee_request.infrastructure.employee_request_repository imp
     EmployeeRequestRepository,
 )
 from src.modules.identity.api.admin_router import AdminUserDep
-from src.modules.identity.domain.entities import User
 
 admin_employee_request_router = APIRouter(
     prefix="/api/admin/employee-requests",

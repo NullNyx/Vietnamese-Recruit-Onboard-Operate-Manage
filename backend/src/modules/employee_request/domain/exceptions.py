@@ -99,5 +99,6 @@ class RequestNotReviewableError(EmployeeRequestError):
     message = "Only submitted requests can be reviewed"
 
     def __init__(self, request_id: UUID, current_status: str) -> None:
-        self.message = f"Request {request_id} is {current_status}, only submitted requests can be reviewed"
+        status = current_status
+        self.message = f"Request {request_id} is {status}, only submitted requests can be reviewed"
         super().__init__(self.message)
