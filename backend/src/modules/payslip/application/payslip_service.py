@@ -11,7 +11,6 @@ from uuid import UUID
 from src.modules.payslip.domain.entities import Payslip
 from src.modules.payslip.domain.exceptions import (
     PayslipNotFoundError,
-    PayslipNotPublishedError,
 )
 from src.modules.payslip.infrastructure.payslip_repository import PayslipRepository
 
@@ -44,6 +43,9 @@ class PayslipService:
     ) -> Payslip:
         """Get a specific published payslip owned by the authenticated employee.
 
+        Fail-closed: single query checks both ownership AND published status.
+        This avoids leaking whether a payslip exists but isn't published.
+
         Args:
             payslip_id: The ID of the payslip to retrieve.
             employee_id: The ID of the authenticated employee.
@@ -54,18 +56,13 @@ class PayslipService:
         Raises:
             PayslipNotFoundError: If the payslip does not exist,
                 is not published, or does not belong to the employee.
-            PayslipNotPublishedError: If the payslip exists but is
-                not yet published.
         """
-        payslip = await self._payslip_repo.get_by_id(payslip_id)
+        payslip = await self._payslip_repo.get_published_by_id_and_employee(
+            payslip_id=payslip_id,
+            employee_id=employee_id,
+        )
 
         if payslip is None:
-            raise PayslipNotFoundError(str(payslip_id))
-
-        if not payslip.published:
-            raise PayslipNotPublishedError(str(payslip_id))
-
-        if payslip.employee_id != employee_id:
             raise PayslipNotFoundError(str(payslip_id))
 
         return payslip

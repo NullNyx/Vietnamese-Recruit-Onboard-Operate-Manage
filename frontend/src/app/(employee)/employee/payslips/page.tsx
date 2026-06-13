@@ -20,10 +20,15 @@ function formatCurrency(amount: string): string {
   }).format(num);
 }
 
+const parseDateOnly = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+
 function formatPeriod(start: string, end: string): string {
   try {
-    const s = new Date(start);
-    const e = new Date(end);
+    const s = parseDateOnly(start);
+    const e = parseDateOnly(end);
     return `${s.toLocaleDateString("vi-VN", { day: "numeric", month: "long" })} - ${e.toLocaleDateString("vi-VN", { day: "numeric", month: "long", year: "numeric" })}`;
   } catch {
     return `${start} - ${end}`;

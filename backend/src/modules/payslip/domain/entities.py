@@ -11,7 +11,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import CheckConstraint, Column, DateTime, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -81,6 +81,15 @@ class Payslip(SQLModel, table=True):
     )
 
     __table_args__ = (
-        # One payslip per employee per pay period
-        # Enforced at application level (no composite PK)
+        UniqueConstraint(
+            "employee_id",
+            "pay_period_start",
+            "pay_period_end",
+            name="uq_payslips_employee_pay_period",
+        ),
+        CheckConstraint(
+            "(published = false AND published_at IS NULL)"
+            " OR (published = true AND published_at IS NOT NULL)",
+            name="ck_payslips_published_at_consistent",
+        ),
     )

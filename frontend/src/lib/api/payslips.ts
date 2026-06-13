@@ -5,7 +5,14 @@ const BASE = "/api/payslips";
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(error.detail || `Request failed: ${res.status}`);
+    const detail = error.detail;
+    const message =
+      typeof detail === "string"
+        ? detail
+        : detail
+          ? JSON.stringify(detail)
+          : `Request failed: ${res.status}`;
+    throw new Error(message);
   }
   return res.json();
 }

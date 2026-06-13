@@ -16,7 +16,8 @@ import type { Payslip } from "@/lib/api/payslips";
 // ---------------------------------------------------------------------------
 
 function formatCurrency(amount: string): string {
-  const num = parseFloat(amount);
+  const num = Number(amount);
+  if (!Number.isFinite(num)) return amount;
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
@@ -24,21 +25,24 @@ function formatCurrency(amount: string): string {
 }
 
 function formatDate(dateStr: string): string {
-  try {
-    return new Date(dateStr).toLocaleDateString("vi-VN", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  } catch {
-    return dateStr;
-  }
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString("vi-VN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
+
+const parseDateOnly = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
 
 function formatPeriod(start: string, end: string): string {
   try {
-    const s = new Date(start);
-    const e = new Date(end);
+    const s = parseDateOnly(start);
+    const e = parseDateOnly(end);
     return `${s.toLocaleDateString("vi-VN", { day: "numeric", month: "long" })} - ${e.toLocaleDateString("vi-VN", { day: "numeric", month: "long", year: "numeric" })}`;
   } catch {
     return `${start} - ${end}`;
@@ -92,12 +96,17 @@ export default function EmployeePayslipDetailPage() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      if (!payslipId) return;
+      if (!payslipId) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      setPayslip(null);
       try {
         const data = await fetchMyPayslip(payslipId);
         if (!cancelled) {
           setPayslip(data);
-          setError(null);
         }
       } catch (err) {
         if (!cancelled) {

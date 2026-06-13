@@ -27,9 +27,9 @@ class PayslipNotFoundError(PayslipError):
 
 
 class PayslipNotPublishedError(PayslipError):
-    """Payslip is not published yet."""
+    """Payslip is not published yet (404 to avoid leaking existence)."""
 
-    status_code = 403
+    status_code = 404
     error_code = "PAYSLIP_NOT_PUBLISHED"
     message = "Payslip is not yet published"
 

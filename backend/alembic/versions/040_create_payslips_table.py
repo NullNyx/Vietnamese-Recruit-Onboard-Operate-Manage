@@ -62,6 +62,17 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "employee_id",
+            "pay_period_start",
+            "pay_period_end",
+            name="uq_payslips_employee_pay_period",
+        ),
+        sa.CheckConstraint(
+            "(published = false AND published_at IS NULL)"
+            " OR (published = true AND published_at IS NOT NULL)",
+            name="ck_payslips_published_at_consistent",
+        ),
     )
     op.create_index("ix_payslips_employee_id", "payslips", ["employee_id"])
     op.create_index(

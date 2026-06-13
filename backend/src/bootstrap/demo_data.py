@@ -266,15 +266,17 @@ async def seed_demo_payslips(session: AsyncSession) -> bool:
         logger.info("Payslip demo seed skipped: no active employees.")
         return False
 
-    # Idempotent: skip if any payslips already exist.
+    # Idempotent: only skip payslips that already exist per (employee_id, period).
     emp_ids = [emp.id for emp in active_employees]
-    count_stmt = (
-        select(func.count()).select_from(Payslip).where(Payslip.employee_id.in_(emp_ids))  # type: ignore[arg-type]
-    )
-    count_result = await session.execute(count_stmt)
-    if count_result.scalar_one() > 0:
-        logger.info("Payslip demo seed skipped: existing payslips found.")
-        return False
+    existing_stmt = select(
+        Payslip.employee_id,
+        Payslip.pay_period_start,
+        Payslip.pay_period_end,
+    ).where(Payslip.employee_id.in_(emp_ids))  # type: ignore[arg-type]
+    existing_result = await session.execute(existing_stmt)
+    existing_periods = {
+        (row.employee_id, row.pay_period_start, row.pay_period_end) for row in existing_result
+    }
 
     # Build 2 demo payslips per employee for the last 2 completed months.
     today = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
@@ -299,6 +301,10 @@ async def seed_demo_payslips(session: AsyncSession) -> bool:
     payslips: list[Payslip] = []
     for emp in active_employees:
         for period_start, period_end in payslip_periods:
+            # Skip if this (employee, period) already exists
+            if (emp.id, period_start, period_end) in existing_periods:
+                continue
+
             # Simple demo amounts
             gross = 15_000_000
             deductions = round(gross * 0.105)  # 10.5% insurance
@@ -328,7 +334,7 @@ async def seed_demo_payslips(session: AsyncSession) -> bool:
     await session.flush()
 
     logger.info(
-        "Payslip demo seed completed: %d payslips for %d active employee(s).",
+        "Payslip demo seed completed: %d new payslips for %d active employee(s).",
         len(payslips),
         len(active_employees),
     )
