@@ -40,15 +40,22 @@ export function AssignJobOpeningDialog({
   // Fetch open Job Openings when dialog opens or search changes
   React.useEffect(() => {
     if (!open) return;
+    let stale = false;
     setFetching(true);
     setFetchError(null);
 
     listOpenJobOpenings({ page_size: 100, search: search || undefined })
-      .then((res) => setJobOpenings(res.job_openings))
-      .catch((err) => {
-        setFetchError(err instanceof Error ? err.message : "Không thể tải danh sách vị trí");
+      .then((res) => {
+        if (!stale) setJobOpenings(res.job_openings);
       })
-      .finally(() => setFetching(false));
+      .catch((err) => {
+        if (!stale) setFetchError(err instanceof Error ? err.message : "Không thể tải danh sách vị trí");
+      })
+      .finally(() => {
+        if (!stale) setFetching(false);
+      });
+
+    return () => { stale = true; };
   }, [open, search]);
 
 
@@ -88,7 +95,10 @@ export function AssignJobOpeningDialog({
             <Input
               placeholder="Tìm vị trí tuyển dụng..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSelectedId(null);
+                setSearch(e.target.value);
+              }}
               className="pl-9"
             />
           </div>

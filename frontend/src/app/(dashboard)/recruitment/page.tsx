@@ -178,7 +178,7 @@ export default function RecruitmentPage() {
       {/* Data Table (desktop) */}
       {!loading && !error && data.length > 0 && (
         <>
-          <div className="hidden rounded-md border md:block">
+          <div className="hidden overflow-x-auto rounded-md border md:block">
             <Table aria-label="Danh sách ứng viên">
               <TableHeader>
                 <TableRow>
@@ -326,7 +326,7 @@ function CandidateTableSkeleton() {
   return (
     <>
       {/* Desktop skeleton */}
-      <div className="hidden rounded-md border md:block">
+      <div className="hidden overflow-x-auto rounded-md border md:block">
         <Table aria-label="Danh sách ứng viên">
           <TableHeader>
             <TableRow>

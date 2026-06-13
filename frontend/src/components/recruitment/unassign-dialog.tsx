@@ -38,7 +38,7 @@ export function UnassignDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Bỏ gán vị trí tuyển dụng</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="break-words">
             {jobOpeningTitle
               ? `Bạn có chắc chắn muốn bỏ gán ứng viên khỏi "${jobOpeningTitle}"?`
               : "Bạn có chắc chắn muốn bỏ gán vị trí tuyển dụng khỏi ứng viên này?"}
