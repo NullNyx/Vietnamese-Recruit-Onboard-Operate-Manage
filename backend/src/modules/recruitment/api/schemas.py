@@ -164,6 +164,8 @@ class CandidateListItemResponse(BaseModel):
     confidence_score: float = 0.0
     created_at: datetime
     has_cv: bool = False
+    job_opening_id: UUID | None = None
+    job_opening_title: str = ""
 
 
 class CandidateListResponse(BaseModel):
@@ -226,6 +228,7 @@ class CandidateDetailResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     job_opening_id: UUID | None = None
+    job_opening_title: str = ""
     cv_documents: list[CVDocumentResponse] = Field(default_factory=list)
 
 

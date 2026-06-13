@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users } from "lucide-react";
+import { Building2, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -187,6 +187,7 @@ export default function RecruitmentPage() {
                   <TableHead scope="col">Số điện thoại</TableHead>
                   <TableHead scope="col">Kỹ năng</TableHead>
                   <TableHead scope="col">Độ tin cậy (%)</TableHead>
+                  <TableHead scope="col">Vị trí TD</TableHead>
                   <TableHead scope="col">Trạng thái</TableHead>
                   <TableHead scope="col">Ngày tạo</TableHead>
                 </TableRow>
@@ -212,6 +213,13 @@ export default function RecruitmentPage() {
                     </TableCell>
                     <TableCell>
                       <ConfidenceScore score={candidate.confidence_score} />
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">
+                        {candidate.job_opening_title || (
+                          <span className="text-muted-foreground italic">—</span>
+                        )}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <CandidateStatusBadge
@@ -254,6 +262,11 @@ export default function RecruitmentPage() {
                       {candidate.phone}
                     </div>
                   )}
+                  <div className="text-sm text-muted-foreground">
+                    {candidate.job_opening_title
+                      ? `${candidate.job_opening_title}`
+                      : "Chưa gán vị trí"}
+                  </div>
                   <div className="flex items-center justify-between">
                     <ConfidenceScore score={candidate.confidence_score} />
                     <span className="text-xs text-muted-foreground">
@@ -347,6 +360,9 @@ function CandidateTableSkeleton() {
                 </TableCell>
                 <TableCell>
                   <Skeleton className="h-5 w-16" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-5 w-20" />
                 </TableCell>
                 <TableCell>
                   <Skeleton className="h-5 w-20" />

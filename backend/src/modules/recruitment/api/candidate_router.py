@@ -106,6 +106,7 @@ candidate_router = APIRouter(
 async def list_candidates(
     current_user: CurrentUserDep,
     candidate_service: CandidateServiceDep,
+    session: AsyncSession = Depends(get_db_session),
     page: int = Query(default=1, ge=1, description="Page number (1-indexed)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
     search: str | None = Query(
@@ -169,6 +170,17 @@ async def list_candidates(
     )
 
     # Build response items with skills truncated to first 5
+    # Resolve Job Opening titles for list items
+    jo_ids = list({c.job_opening_id for c in result.candidates if c.job_opening_id})
+    jo_titles: dict[UUID, str] = {}
+    if jo_ids:
+        from sqlmodel import col as sa_col
+        from src.modules.recruitment.domain.entities import JobOpening
+        stmt = select(JobOpening).where(sa_col(JobOpening.id).in_(jo_ids))
+        jo_result = await session.execute(stmt)
+        for jo in jo_result.scalars().all():
+            jo_titles[jo.id] = jo.title
+
     items = [
         CandidateListItemResponse(
             id=c.id,
@@ -180,6 +192,8 @@ async def list_candidates(
             confidence_score=c.confidence_score,
             created_at=c.created_at,
             has_cv=True,  # Candidates are created from CVs
+            job_opening_id=c.job_opening_id,
+            job_opening_title=jo_titles.get(c.job_opening_id, "") if c.job_opening_id else "",
         )
         for c in result.candidates
     ]
@@ -235,6 +249,17 @@ async def get_candidate(
     ]
 
     candidate = detail.candidate
+
+    # Resolve Job Opening title
+    job_opening_title = ""
+    if candidate.job_opening_id:
+        from src.modules.recruitment.domain.entities import JobOpening
+        jo_stmt = select(JobOpening).where(JobOpening.id == candidate.job_opening_id)
+        jo_result = await session.execute(jo_stmt)
+        jo = jo_result.scalars().first()
+        if jo:
+            job_opening_title = jo.title
+
     return CandidateDetailResponse(
         id=candidate.id,
         name=candidate.name,
@@ -253,6 +278,7 @@ async def get_candidate(
         archived_at=candidate.archived_at,
         created_at=candidate.created_at,
         updated_at=candidate.updated_at,
+        job_opening_title=job_opening_title,
         cv_documents=cv_docs,
     )
 
