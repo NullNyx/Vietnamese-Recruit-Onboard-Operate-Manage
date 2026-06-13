@@ -237,3 +237,101 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
         len(active_employees),
     )
     return True
+
+
+async def seed_demo_payslips(session: AsyncSession) -> bool:
+    """Seed demo published payslips for active employees.
+
+    Creates 2 published payslips per active employee for the last 2
+    completed months. Skips when the config flag is off, payslips
+    already exist, or no active employees are found.
+    """
+    from src.modules.identity.infrastructure.config import AuthSettings
+
+    settings = AuthSettings()  # type: ignore[call-arg]
+    if not settings.auto_seed_sample_data:
+        logger.info("Payslip demo seed disabled by config.")
+        return False
+
+    from datetime import UTC, datetime
+
+    from src.modules.payslip.domain.entities import Payslip
+
+    # Only active employees -- Employee Self-Service data.
+    statement = select(Employee).where(Employee.is_active.is_(True))  # type: ignore[arg-type]
+    result = await session.execute(statement)
+    active_employees = list(result.scalars().all())
+
+    if not active_employees:
+        logger.info("Payslip demo seed skipped: no active employees.")
+        return False
+
+    # Idempotent: skip if any payslips already exist.
+    emp_ids = [emp.id for emp in active_employees]
+    count_stmt = (
+        select(func.count())
+        .select_from(Payslip)
+        .where(Payslip.employee_id.in_(emp_ids))  # type: ignore[arg-type]
+    )
+    count_result = await session.execute(count_stmt)
+    if count_result.scalar_one() > 0:
+        logger.info("Payslip demo seed skipped: existing payslips found.")
+        return False
+
+    # Build 2 demo payslips per employee for the last 2 completed months.
+    today = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+    current_month_start = today.replace(day=1)
+
+    # Compute last 2 completed months.
+    payslip_periods: list[tuple[date, date]] = []
+    for i in range(1, 3):
+        # Go back i months, then get start/end of that month.
+        month = current_month_start.month - i
+        year = current_month_start.year
+        while month < 1:
+            month += 12
+            year -= 1
+        from calendar import monthrange
+
+        _, last_day = monthrange(year, month)
+        period_start = date(year, month, 1)
+        period_end = date(year, month, last_day)
+        payslip_periods.append((period_start, period_end))
+
+    payslips: list[Payslip] = []
+    for emp in active_employees:
+        for period_start, period_end in payslip_periods:
+            # Simple demo amounts
+            gross = 15_000_000
+            deductions = round(gross * 0.105)  # 10.5% insurance
+            net = gross - deductions
+
+            payslip = Payslip(
+                employee_id=emp.id,
+                pay_period_start=period_start,
+                pay_period_end=period_end,
+                gross_amount=gross,
+                total_deductions=deductions,
+                net_amount=net,
+                currency="VND",
+                details={
+                    "bhxh": round(gross * 0.08),
+                    "bhyt": round(gross * 0.015),
+                    "bhtn": round(gross * 0.01),
+                    "work_days": 26,
+                    "actual_work_days": 26,
+                },
+                published=True,
+                published_at=datetime.now(UTC),
+            )
+            payslips.append(payslip)
+
+    session.add_all(payslips)
+    await session.flush()
+
+    logger.info(
+        "Payslip demo seed completed: %d payslips for %d active employee(s).",
+        len(payslips),
+        len(active_employees),
+    )
+    return True
