@@ -4,14 +4,26 @@ Provides async database access for employee requests using SQLAlchemy
 async sessions with SQLModel.
 """
 
+from __future__ import annotations
+
+from dataclasses import dataclass
 from datetime import date
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.employee.domain.entities import Employee  # noqa: F401
 from src.modules.employee_request.domain.entities import EmployeeRequest
 from src.modules.employee_request.domain.enums import RequestStatus, RequestType
+
+
+@dataclass(frozen=True)
+class SubmittedRequestWithEmployee:
+    """An employee request enriched with the submitting employee's full name."""
+
+    request: EmployeeRequest
+    employee_name: str
 
 
 class EmployeeRequestRepository:
@@ -147,3 +159,42 @@ class EmployeeRequestRepository:
         await self.session.flush()
         await self.session.refresh(request)
         return request
+
+    async def get_by_id_with_lock(self, request_id: UUID) -> EmployeeRequest | None:
+        """Retrieve a request by its ID with row-level lock (FOR UPDATE).
+
+        Use this in concurrent scenarios to prevent race conditions:
+        two HR admins reviewing the same request simultaneously.
+
+        Args:
+            request_id: The UUID of the request.
+
+        Returns:
+            The EmployeeRequest if found, None otherwise.
+        """
+        statement = (
+            select(EmployeeRequest)
+            .where(EmployeeRequest.id == request_id)  # type: ignore[arg-type]
+            .with_for_update()
+        )
+        result = await self.session.execute(statement)
+        return result.scalar_one_or_none()
+
+    async def get_all_submitted(self) -> list[SubmittedRequestWithEmployee]:
+        """List all submitted requests with employee name, newest first.
+
+        Joins with the employees table to include the submitting employee's
+        full name for HR review display.
+
+        Returns:
+            List of SubmittedRequestWithEmployee objects.
+        """
+        statement = (
+            select(EmployeeRequest, Employee.full_name)
+            .join(Employee, EmployeeRequest.employee_id == Employee.id)  # type: ignore[arg-type]
+            .where(EmployeeRequest.status == RequestStatus.SUBMITTED)  # type: ignore[arg-type]
+            .order_by(EmployeeRequest.submitted_at.desc())
+        )
+        result = await self.session.execute(statement)
+        rows = result.all()
+        return [SubmittedRequestWithEmployee(request=req, employee_name=name) for req, name in rows]

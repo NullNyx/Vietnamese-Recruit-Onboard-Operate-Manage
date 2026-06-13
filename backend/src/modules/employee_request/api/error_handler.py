@@ -12,6 +12,7 @@ from src.modules.employee_request.domain.exceptions import (
     RequestNotCancellableError,
     RequestNotFoundError,
     RequestNotOwnedByEmployeeError,
+    RequestNotReviewableError,
 )
 
 
@@ -113,6 +114,19 @@ def register_employee_request_error_handlers(app: FastAPI) -> None:
     async def request_not_cancellable_handler(
         request: Request,
         exc: RequestNotCancellableError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error_code": exc.error_code,
+                "detail": exc.message,
+            },
+        )
+
+    @app.exception_handler(RequestNotReviewableError)
+    async def request_not_reviewable_handler(
+        request: Request,
+        exc: RequestNotReviewableError,
     ) -> JSONResponse:
         return JSONResponse(
             status_code=exc.status_code,

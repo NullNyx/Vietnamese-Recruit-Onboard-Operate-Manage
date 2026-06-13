@@ -89,3 +89,16 @@ class RequestNotCancellableError(EmployeeRequestError):
     status_code = 400
     error_code = "REQUEST_NOT_CANCELLABLE"
     message = "Only submitted requests can be cancelled"
+
+
+class RequestNotReviewableError(EmployeeRequestError):
+    """Request is not in a reviewable state (only submitted can be reviewed)."""
+
+    status_code = 400
+    error_code = "REQUEST_NOT_REVIEWABLE"
+    message = "Only submitted requests can be reviewed"
+
+    def __init__(self, request_id: UUID, current_status: str) -> None:
+        status = current_status
+        self.message = f"Request {request_id} is {status}, only submitted requests can be reviewed"
+        super().__init__(self.message)

@@ -24,6 +24,7 @@ import {
   UserCog,
   Users,
   UserSearch,
+  ClipboardCheck,
 } from 'lucide-react';
 import type { HeaderNavConfig } from './header-nav-config';
 
@@ -38,9 +39,10 @@ export const adminNavConfig: HeaderNavConfig = {
         { href: '/settings/departments', label: 'Phòng ban', icon: Building2 },
         { href: '/settings/positions', label: 'Chức vụ', icon: Briefcase },
         { href: '/employee/documents', label: 'Tài liệu', icon: FileText },
+        { href: '/admin/employee-requests', label: 'Yêu cầu NV', icon: ClipboardCheck },
         { href: '/employees/import', label: 'Import', icon: Upload },
       ],
-      activeRoutes: ['/employees', '/settings/departments', '/settings/positions'],
+      activeRoutes: ['/employees', '/admin/employee-requests', '/settings/departments', '/settings/positions'],
     },
     {
       id: 'tuyen-dung',
