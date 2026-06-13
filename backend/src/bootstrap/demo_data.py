@@ -269,9 +269,7 @@ async def seed_demo_payslips(session: AsyncSession) -> bool:
     # Idempotent: skip if any payslips already exist.
     emp_ids = [emp.id for emp in active_employees]
     count_stmt = (
-        select(func.count())
-        .select_from(Payslip)
-        .where(Payslip.employee_id.in_(emp_ids))  # type: ignore[arg-type]
+        select(func.count()).select_from(Payslip).where(Payslip.employee_id.in_(emp_ids))  # type: ignore[arg-type]
     )
     count_result = await session.execute(count_stmt)
     if count_result.scalar_one() > 0:
