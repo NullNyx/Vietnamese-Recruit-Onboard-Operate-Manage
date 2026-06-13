@@ -38,7 +38,7 @@ import {
   type RejectRequest,
 } from "@/lib/api/recruitment";
 import { ApiError } from "@/lib/api/types";
-import { formatDate, type CandidateStatus, getValidActions } from "@/lib/recruitment-utils";
+import { formatDate, type CandidateStatus } from "@/lib/recruitment-utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -66,8 +66,7 @@ type PageState =
 // ---------------------------------------------------------------------------
 
 function isTerminalStatus(status: string): boolean {
-  const validActions = getValidActions(status as CandidateStatus);
-  return validActions.length === 0;
+  return ["accepted", "rejected", "archived"].includes(status);
 }
 
 export default function CandidateDetailPage() {

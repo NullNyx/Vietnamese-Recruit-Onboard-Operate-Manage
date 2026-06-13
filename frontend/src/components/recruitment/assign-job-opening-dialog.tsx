@@ -37,31 +37,21 @@ export function AssignJobOpeningDialog({
   const [fetching, setFetching] = React.useState(false);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
 
-  // Fetch open Job Openings when dialog opens
+  // Fetch open Job Openings when dialog opens or search changes
   React.useEffect(() => {
     if (!open) return;
     setFetching(true);
     setFetchError(null);
-    setSelectedId(null);
-    setSearch("");
 
-    listOpenJobOpenings({ page_size: 100 })
+    listOpenJobOpenings({ page_size: 100, search: search || undefined })
       .then((res) => setJobOpenings(res.job_openings))
       .catch((err) => {
         setFetchError(err instanceof Error ? err.message : "Không thể tải danh sách vị trí");
       })
       .finally(() => setFetching(false));
-  }, [open]);
+  }, [open, search]);
 
-  const filtered = React.useMemo(() => {
-    if (!search) return jobOpenings;
-    const q = search.toLowerCase();
-    return jobOpenings.filter(
-      (jo) =>
-        jo.title.toLowerCase().includes(q) ||
-        jo.position_name.toLowerCase().includes(q),
-    );
-  }, [jobOpenings, search]);
+
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && !loading) {
@@ -111,13 +101,13 @@ export function AssignJobOpeningDialog({
               </div>
             ) : fetchError ? (
               <p className="py-4 text-center text-sm text-destructive">{fetchError}</p>
-            ) : filtered.length === 0 ? (
+            ) : jobOpenings.length === 0 ? (
               <p className="py-4 text-center text-sm text-muted-foreground">
-                {search ? "Không tìm thấy vị trí phù hợp" : "Không có vị trí tuyển dụng đang mở"}
+                {"Không có vị trí tuyển dụng đang mở"}
               </p>
             ) : (
               <div className="divide-y">
-                {filtered.map((jo) => {
+                {jobOpenings.map((jo) => {
                   const isSelected = selectedId === jo.id;
                   return (
                     <button

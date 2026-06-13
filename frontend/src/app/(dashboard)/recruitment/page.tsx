@@ -214,8 +214,8 @@ export default function RecruitmentPage() {
                     <TableCell>
                       <ConfidenceScore score={candidate.confidence_score} />
                     </TableCell>
-                    <TableCell>
-                      <span className="text-sm">
+                    <TableCell className="max-w-[180px]">
+                      <span className="block truncate text-sm" title={candidate.job_opening_title || undefined}>
                         {candidate.job_opening_title || (
                           <span className="text-muted-foreground italic">—</span>
                         )}
@@ -262,9 +262,9 @@ export default function RecruitmentPage() {
                       {candidate.phone}
                     </div>
                   )}
-                  <div className="text-sm text-muted-foreground">
+                  <div className="break-words text-sm text-muted-foreground">
                     {candidate.job_opening_title
-                      ? `${candidate.job_opening_title}`
+                      ? `Vị trí TD: ${candidate.job_opening_title}`
                       : "Chưa gán vị trí"}
                   </div>
                   <div className="flex items-center justify-between">
