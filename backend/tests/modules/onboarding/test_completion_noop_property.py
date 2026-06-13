@@ -324,6 +324,14 @@ async def _run_noop(
     task_status_before = target_task.status
 
     actor = _admin_actor()
+    # The process is locked out once complete
+    if process_status == OnboardingStatus.COMPLETE.value:
+        import pytest
+        from src.modules.onboarding.domain.exceptions import OnboardingProcessAlreadyCompletedError
+        with pytest.raises(OnboardingProcessAlreadyCompletedError):
+            await service.complete_task(target_task.id, actor, status="done")
+        return
+
     returned = await service.complete_task(target_task.id, actor, status="done")
 
     # The method returns the (still done) target task: success.

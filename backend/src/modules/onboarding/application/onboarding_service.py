@@ -553,6 +553,10 @@ class OnboardingService:
         if actor.role != UserRole.ADMIN:
             raise OnboardingAuthorizationError()
 
+        process_check = await self.process_repo.get_by_id(task.process_id)
+        if process_check and process_check.status == OnboardingStatus.COMPLETE.value:
+            raise OnboardingProcessAlreadyCompletedError()
+
         # Step 4: idempotent no-op when the target status matches current status
         if task.status == status:
             logger.info("Task %s is already %s; no-op by %s", task.id, status, actor.email)
@@ -566,8 +570,6 @@ class OnboardingService:
                 raise OnboardingActivationError(
                     f"Onboarding process {task.process_id} for task {task.id} not found"
                 )
-            if process.status == OnboardingStatus.COMPLETE.value:
-                raise OnboardingProcessAlreadyCompletedError()
 
             updated_task = await self._update_task_status(task, actor, process, status)
             if status == OnboardingTaskStatus.DONE.value:

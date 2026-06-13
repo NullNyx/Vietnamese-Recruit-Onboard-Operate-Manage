@@ -138,6 +138,11 @@ class FakeProcessRepo:
         self._process = process
         self.fail_on = fail_on
 
+    async def get_by_id(self, process_id: UUID) -> OnboardingProcess | None:
+        if self._process.id == process_id:
+            return self._process
+        return None
+
     async def get_for_update(self, process_id: UUID) -> OnboardingProcess | None:
         if self._process.id == process_id:
             return self._process
