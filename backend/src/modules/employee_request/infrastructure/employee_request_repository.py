@@ -20,7 +20,7 @@ from src.modules.employee_request.domain.enums import RequestStatus, RequestType
 
 @dataclass(frozen=True)
 class SubmittedRequestWithEmployee:
-    '''An employee request enriched with the submitting employee's full name.'''
+    """An employee request enriched with the submitting employee's full name."""
 
     request: EmployeeRequest
     employee_name: str

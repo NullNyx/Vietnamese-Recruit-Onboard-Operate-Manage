@@ -33,6 +33,7 @@ admin_employee_request_router = APIRouter(
 # Schemas
 # ---------------------------------------------------------------------------
 
+
 class AdminEmployeeRequestItem(BaseModel):
     """List item for HR review queue."""
 

@@ -46,7 +46,7 @@ function statusBadgeColor(status: string): string {
     case "approved":
       return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
     case "rejected":
-      return "bg-red-500/10 text-red-500 border-red-500/20";
+      return "bg-red-500/10 text-red-500 border-destructive/20";
     case "cancelled":
       return "bg-gray-500/10 text-gray-400 border-gray-500/20";
     default:
@@ -73,7 +73,7 @@ function formatDateTime(dateStr: string | null): string {
 
 function ReviewSkeleton() {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+    <div className="rounded-xl border border-border/50 bg-card/50 p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-3 flex-1">
           <div className="flex items-center gap-2">
@@ -113,7 +113,7 @@ function ReviewCard({
     : `${formatDateTime(request.start_date)} → ${formatDateTime(request.end_date)}`;
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 transition-colors hover:bg-white/[0.04]">
+    <div className="rounded-xl border border-border/50 bg-card/50 p-5 transition-colors hover:bg-accent/50">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2 min-w-0 flex-1">
           {/* Badge row */}
@@ -129,20 +129,20 @@ function ReviewCard({
             >
               Đã gửi
             </span>
-            <span className="text-[12px] text-[#8a8f98]">
+            <span className="text-[12px] text-muted-foreground">
               {request.employee_name}
             </span>
           </div>
 
           {/* Reason preview */}
           {request.reason && (
-            <p className="text-[13px] text-[#f7f8f8] leading-relaxed line-clamp-2">
+            <p className="text-[13px] text-foreground leading-relaxed line-clamp-2">
               {request.reason}
             </p>
           )}
 
           {/* Date + submitted time */}
-          <div className="flex items-center gap-4 text-[12px] text-[#8a8f98]">
+          <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
             <span>{dateInfo}</span>
             <span>Gửi lúc: {formatDateTime(request.submitted_at)}</span>
           </div>
@@ -162,7 +162,7 @@ function ReviewCard({
           <Button
             size="sm"
             variant="outline"
-            className="border-red-500/30 text-red-400 hover:bg-red-500/10 text-[12px] h-8 px-4"
+            className="border-red-500/30 text-destructive hover:bg-red-500/10 text-[12px] h-8 px-4"
             onClick={() => onReview(request, "reject")}
           >
             <XCircle className="h-3.5 w-3.5 mr-1.5" />
@@ -308,10 +308,10 @@ export default function AdminEmployeeRequestsPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-[24px] font-semibold tracking-[-0.3px] text-[#f7f8f8]">
+          <h1 className="text-[24px] font-semibold tracking-[-0.3px] text-foreground">
             Yêu cầu chờ duyệt
           </h1>
-          <p className="text-[14px] text-[#8a8f98]">
+          <p className="text-[14px] text-muted-foreground">
             Duyệt hoặc từ chối đơn nghỉ phép và tăng ca từ nhân viên
           </p>
         </div>
@@ -328,12 +328,12 @@ export default function AdminEmployeeRequestsPage() {
 
       {/* Error */}
       {isError && !isLoading && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-12 text-center">
-          <Loader2 className="mx-auto h-10 w-10 text-red-400" />
-          <h3 className="mt-4 text-[14px] font-medium text-[#f7f8f8]">
+        <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-12 text-center">
+          <Loader2 className="mx-auto h-10 w-10 text-destructive" />
+          <h3 className="mt-4 text-[14px] font-medium text-foreground">
             Không thể tải dữ liệu
           </h3>
-          <p className="mt-1 text-[12px] text-[#8a8f98]">
+          <p className="mt-1 text-[12px] text-muted-foreground">
             {error instanceof Error ? error.message : "Đã có lỗi xảy ra. Vui lòng thử lại sau."}
           </p>
         </div>
@@ -341,12 +341,12 @@ export default function AdminEmployeeRequestsPage() {
 
       {/* Empty */}
       {!isLoading && !isError && requests.length === 0 && (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-12 text-center">
-          <ClipboardList className="mx-auto h-10 w-10 text-[#8a8f98]" />
-          <h3 className="mt-4 text-[14px] font-medium text-[#f7f8f8]">
+        <div className="rounded-xl border border-border/50 bg-card/50 p-12 text-center">
+          <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground" />
+          <h3 className="mt-4 text-[14px] font-medium text-foreground">
             Không có yêu cầu nào
           </h3>
-          <p className="mt-1 text-[12px] text-[#8a8f98]">
+          <p className="mt-1 text-[12px] text-muted-foreground">
             Tất cả yêu cầu đã được xử lý. Yêu cầu mới sẽ xuất hiện ở đây.
           </p>
         </div>
