@@ -12,6 +12,8 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -184,6 +186,8 @@ function ConfirmReviewDialog({
   onOpenChange,
   onConfirm,
   isPending,
+  reviewReason,
+  onReviewReasonChange,
 }: {
   request: AdminEmployeeRequestItem | null;
   action: "approve" | "reject" | null;
@@ -191,6 +195,8 @@ function ConfirmReviewDialog({
   onOpenChange: (v: boolean) => void;
   onConfirm: () => void;
   isPending: boolean;
+  reviewReason: string;
+  onReviewReasonChange: (v: string) => void;
 }) {
   if (!request || !action) return null;
 
@@ -200,8 +206,19 @@ function ConfirmReviewDialog({
     ? `Bạn có chắc muốn duyệt yêu cầu ${REQUEST_TYPE_LABELS[request.request_type]?.toLowerCase() ?? request.request_type} của ${request.employee_name}?`
     : `Bạn có chắc muốn từ chối yêu cầu ${REQUEST_TYPE_LABELS[request.request_type]?.toLowerCase() ?? request.request_type} của ${request.employee_name}?`;
 
+  const reasonRequired = !isApprove;
+  const reasonLabel = isApprove ? "Lý do (không bắt buộc)" : "Lý do từ chối (bắt buộc)";
+  const reasonPlaceholder = isApprove
+    ? "Nhập lý do duyệt (nếu có)..."
+    : "Nhập lý do từ chối...";
+  const reasonError = reasonRequired && reviewReason.trim().length === 0;
+
   function handleActionClick(e: React.MouseEvent) {
     e.preventDefault();
+    if (reasonRequired && reviewReason.trim().length === 0) {
+      toast.error("Vui lòng nhập lý do từ chối");
+      return;
+    }
     onConfirm();
   }
 
@@ -212,6 +229,19 @@ function ConfirmReviewDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        <div className="space-y-2 px-6">
+          <Label htmlFor="review-reason" className="text-[13px]">
+            {reasonLabel}
+          </Label>
+          <Input
+            id="review-reason"
+            value={reviewReason}
+            onChange={(e) => onReviewReasonChange(e.target.value)}
+            placeholder={reasonPlaceholder}
+            className={reasonError ? "border-red-500" : ""}
+            disabled={isPending}
+          />
+        </div>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>Huỷ</AlertDialogCancel>
           <Button
@@ -245,6 +275,7 @@ export default function AdminEmployeeRequestsPage() {
     request: AdminEmployeeRequestItem;
     action: "approve" | "reject";
   } | null>(null);
+  const [reviewReason, setReviewReason] = useState("");
   const reviewDialogOpen = reviewTarget !== null;
 
   // -- Query --
@@ -261,13 +292,20 @@ export default function AdminEmployeeRequestsPage() {
 
   // -- Approve mutation --
   const approveMutation = useMutation({
-    mutationFn: async (request: AdminEmployeeRequestItem) => {
-      return approveRequest(request.id);
+    mutationFn: async ({
+      request,
+      reason,
+    }: {
+      request: AdminEmployeeRequestItem;
+      reason: string;
+    }) => {
+      return approveRequest(request.id, reason || null);
     },
     onSuccess: () => {
       toast.success("Đã duyệt yêu cầu thành công");
       queryClient.invalidateQueries({ queryKey: ["admin-employee-requests"] });
       setReviewTarget(null);
+      setReviewReason("");
     },
     onError: (err: Error) => {
       toast.error(err.message || "Duyệt yêu cầu thất bại");
@@ -276,13 +314,20 @@ export default function AdminEmployeeRequestsPage() {
 
   // -- Reject mutation --
   const rejectMutation = useMutation({
-    mutationFn: async (request: AdminEmployeeRequestItem) => {
-      return rejectRequest(request.id);
+    mutationFn: async ({
+      request,
+      reason,
+    }: {
+      request: AdminEmployeeRequestItem;
+      reason: string;
+    }) => {
+      return rejectRequest(request.id, reason);
     },
     onSuccess: () => {
       toast.success("Đã từ chối yêu cầu");
       queryClient.invalidateQueries({ queryKey: ["admin-employee-requests"] });
       setReviewTarget(null);
+      setReviewReason("");
     },
     onError: (err: Error) => {
       toast.error(err.message || "Từ chối yêu cầu thất bại");
@@ -294,14 +339,16 @@ export default function AdminEmployeeRequestsPage() {
     action: "approve" | "reject",
   ) {
     setReviewTarget({ request, action });
+    setReviewReason("");
   }
 
   function handleConfirm() {
     if (!reviewTarget) return;
-    if (reviewTarget.action === "approve") {
-      approveMutation.mutate(reviewTarget.request);
+    const { request, action } = reviewTarget;
+    if (action === "approve") {
+      approveMutation.mutate({ request, reason: reviewReason });
     } else {
-      rejectMutation.mutate(reviewTarget.request);
+      rejectMutation.mutate({ request, reason: reviewReason });
     }
   }
 
@@ -376,10 +423,15 @@ export default function AdminEmployeeRequestsPage() {
         action={reviewTarget?.action ?? null}
         open={reviewDialogOpen}
         onOpenChange={(v) => {
-          if (!v) setReviewTarget(null);
+          if (!v) {
+            setReviewTarget(null);
+            setReviewReason("");
+          }
         }}
         onConfirm={handleConfirm}
         isPending={isPending}
+        reviewReason={reviewReason}
+        onReviewReasonChange={setReviewReason}
       />
     </div>
   );

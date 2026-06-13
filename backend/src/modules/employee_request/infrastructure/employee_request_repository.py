@@ -198,3 +198,57 @@ class EmployeeRequestRepository:
         result = await self.session.execute(statement)
         rows = result.all()
         return [SubmittedRequestWithEmployee(request=req, employee_name=name) for req, name in rows]
+
+    async def get_all_filtered(
+        self,
+        request_type: RequestType | None = None,
+        status: RequestStatus | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+        employee_id: UUID | None = None,
+    ) -> list[SubmittedRequestWithEmployee]:
+        """List requests with optional filters, joined with employee name.
+
+        Supports filtering by request type, status, date range, and employee.
+        Results are ordered newest first by submitted_at.
+
+        Args:
+            request_type: Optional filter by request type (leave/overtime).
+            status: Optional filter by status (submitted/approved/rejected/cancelled).
+            date_from: Optional start date filter (submitted_at >= date_from).
+            date_to: Optional end date filter (submitted_at <= date_to).
+            employee_id: Optional filter by employee UUID.
+
+        Returns:
+            List of SubmittedRequestWithEmployee objects matching the filters.
+        """
+        statement = (
+            select(EmployeeRequest, Employee.full_name)
+            .join(Employee, EmployeeRequest.employee_id == Employee.id)  # type: ignore[arg-type]
+            .order_by(EmployeeRequest.submitted_at.desc())
+        )
+
+        if request_type is not None:
+            statement = statement.where(  # type: ignore[arg-type]
+                EmployeeRequest.request_type == request_type,
+            )
+        if status is not None:
+            statement = statement.where(  # type: ignore[arg-type]
+                EmployeeRequest.status == status,
+            )
+        if date_from is not None:
+            statement = statement.where(  # type: ignore[arg-type]
+                EmployeeRequest.submitted_at >= date_from,  # type: ignore[operator]
+            )
+        if date_to is not None:
+            statement = statement.where(  # type: ignore[arg-type]
+                EmployeeRequest.submitted_at <= date_to,  # type: ignore[operator]
+            )
+        if employee_id is not None:
+            statement = statement.where(  # type: ignore[arg-type]
+                EmployeeRequest.employee_id == employee_id,
+            )
+
+        result = await self.session.execute(statement)
+        rows = result.all()
+        return [SubmittedRequestWithEmployee(request=req, employee_name=name) for req, name in rows]

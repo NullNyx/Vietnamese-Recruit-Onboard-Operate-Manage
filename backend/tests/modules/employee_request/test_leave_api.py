@@ -68,6 +68,8 @@ class TestCreateLeaveAPI:
         created.submitted_at = None
         created.updated_at = None
         created.cancellation_reason = None
+        created.review_reason = None
+        created.reviewed_at = None
 
         mock_leave_service.create_leave = AsyncMock(return_value=created)
 
@@ -171,6 +173,8 @@ class TestCancelLeaveAPI:
         cancelled.employee_id = mock_employee.id
         cancelled.status = RequestStatus.CANCELLED
         cancelled.cancellation_reason = "Changed mind"
+        cancelled.review_reason = None
+        cancelled.reviewed_at = None
         cancelled.leave_type = None
         cancelled.start_date = None
         cancelled.end_date = None

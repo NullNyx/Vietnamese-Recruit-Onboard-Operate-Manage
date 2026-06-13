@@ -6,6 +6,31 @@ from uuid import UUID
 from pydantic import BaseModel, Field, field_validator
 
 
+class ReviewQueueFilterParams(BaseModel):
+    """Query parameters for filtering the HR review queue."""
+
+    request_type: str | None = Field(
+        default=None,
+        description="Filter by type: leave or overtime",
+    )
+    status: str | None = Field(
+        default=None,
+        description="Filter by status: submitted, approved, rejected, cancelled",
+    )
+    date_from: date | None = Field(
+        default=None,
+        description="Filter by submitted_at >= date_from",
+    )
+    date_to: date | None = Field(
+        default=None,
+        description="Filter by submitted_at <= date_to",
+    )
+    employee_id: str | None = Field(
+        default=None,
+        description="Filter by employee UUID",
+    )
+
+
 class OvertimeCreateRequest(BaseModel):
     """Request schema for creating an overtime request."""
 
@@ -60,6 +85,14 @@ class OvertimeResponse(BaseModel):
     submitted_at: datetime | None = None
     updated_at: datetime | None = None
     cancellation_reason: str | None = None
+    review_reason: str | None = Field(
+        default=None,
+        description="Reason for approve/reject decision",
+    )
+    reviewed_at: datetime | None = Field(
+        default=None,
+        description="When the request was reviewed",
+    )
 
     model_config = {"from_attributes": True}
 
@@ -142,6 +175,14 @@ class LeaveResponse(BaseModel):
     submitted_at: datetime | None = None
     updated_at: datetime | None = None
     cancellation_reason: str | None = None
+    review_reason: str | None = Field(
+        default=None,
+        description="Reason for approve/reject decision",
+    )
+    reviewed_at: datetime | None = Field(
+        default=None,
+        description="When the request was reviewed",
+    )
 
     model_config = {"from_attributes": True}
 
@@ -188,6 +229,15 @@ class EmployeeRequestListItem(BaseModel):
     reason: str | None = None
     project_or_task: str | None = None
     cancellation_reason: str | None = None
+    # Review fields
+    review_reason: str | None = Field(
+        default=None,
+        description="Reason for approve/reject decision",
+    )
+    reviewed_at: datetime | None = Field(
+        default=None,
+        description="When the request was reviewed",
+    )
 
     model_config = {"from_attributes": True}
 
@@ -196,3 +246,78 @@ class EmployeeRequestListResponse(BaseModel):
     """Response schema for unified employee request listing."""
 
     requests: list[EmployeeRequestListItem]
+
+
+# --- Admin / HR review schemas ---
+
+
+class AdminEmployeeRequestItem(BaseModel):
+    """List item for HR review queue."""
+
+    id: UUID
+    employee_id: UUID
+    employee_name: str = ""
+    request_type: str
+    status: str
+    submitted_at: datetime | None = None
+    updated_at: datetime | None = None
+    reason: str | None = None
+    # Overtime fields
+    work_date: date | None = None
+    start_time: time | None = None
+    end_time: time | None = None
+    duration_minutes: int | None = None
+    # Leave fields
+    leave_type: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    # Cancellation
+    cancellation_reason: str | None = None
+    # Review fields
+    review_reason: str | None = Field(
+        default=None,
+        description="Reason for approve/reject decision",
+    )
+    reviewed_at: datetime | None = Field(
+        default=None,
+        description="When the request was reviewed",
+    )
+    reviewed_by_user_id: str | None = Field(
+        default=None,
+        description="UUID of the admin who reviewed",
+    )
+
+    model_config = {"from_attributes": True}
+
+
+class AdminReviewQueueResponse(BaseModel):
+    """Response schema for the HR review queue."""
+
+    requests: list[AdminEmployeeRequestItem]
+
+
+class ReviewRequest(BaseModel):
+    """Request schema for approve."""
+
+    review_reason: str | None = Field(
+        default=None,
+        max_length=2000,
+        description="Optional reason for approval",
+    )
+
+
+class RejectRequest(BaseModel):
+    """Request schema for reject - reason is required."""
+
+    review_reason: str = Field(
+        min_length=1,
+        max_length=2000,
+        description="Reason for rejection (required)",
+    )
+
+
+class ReviewResponse(BaseModel):
+    """Response schema for approve/reject actions."""
+
+    message: str
+    request: AdminEmployeeRequestItem
