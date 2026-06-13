@@ -39,7 +39,7 @@ class AdminEmployeeRequestItem(BaseModel):
 
     id: UUID
     employee_id: UUID
-    employee_name: str
+    employee_name: str = ""
     request_type: str
     status: str
     submitted_at: str | None = None

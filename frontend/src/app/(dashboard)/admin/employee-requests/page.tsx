@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -198,8 +197,13 @@ function ConfirmReviewDialog({
   const isApprove = action === "approve";
   const title = isApprove ? "Duyệt yêu cầu" : "Từ chối yêu cầu";
   const description = isApprove
-    ? `Bạn có chắc muốn duyệt yêu cầu ${REQUEST_TYPE_LABELS[request.request_type]?.toLowerCase() ?? request.request_type} của ${request.employee_name}?`
-    : `Bạn có chắc muốn từ chối yêu cầu ${REQUEST_TYPE_LABELS[request.request_type]?.toLowerCase() ?? request.request_type} của ${request.employee_name}?`;
+    ? `Bạn có chắc muốn duyệt yêu cầu $\{REQUEST_TYPE_LABELS[request.request_type]?.toLowerCase() ?? request.request_type} của $\{request.employee_name}?`
+    : `Bạn có chắc muốn từ chối yêu cầu $\{REQUEST_TYPE_LABELS[request.request_type]?.toLowerCase() ?? request.request_type} của $\{request.employee_name}?`;
+
+  function handleActionClick(e: React.MouseEvent) {
+    e.preventDefault();
+    onConfirm();
+  }
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -210,8 +214,9 @@ function ConfirmReviewDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>Huỷ</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
+          <Button
+            type="button"
+            onClick={handleActionClick}
             disabled={isPending}
             className={
               isApprove
@@ -221,7 +226,7 @@ function ConfirmReviewDialog({
           >
             {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {isApprove ? "Xác nhận duyệt" : "Xác nhận từ chối"}
-          </AlertDialogAction>
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

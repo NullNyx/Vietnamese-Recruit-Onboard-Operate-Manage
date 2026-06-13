@@ -49,8 +49,9 @@ class EmployeeRequestReviewService:
     ) -> EmployeeRequest:
         """Approve a submitted employee request.
 
-        Sets status to APPROVED and records review metadata.
-        Only requests in SUBMITTED status can be approved.
+        Uses row-level lock to prevent concurrent HR reviewers from
+        processing the same request. Re-checks the status after
+        acquiring the lock before applying the update.
 
         Args:
             request_id: The UUID of the request to approve.
@@ -64,7 +65,7 @@ class EmployeeRequestReviewService:
             RequestNotFoundError: If the request does not exist.
             RequestNotReviewableError: If the request is not SUBMITTED.
         """
-        request = await self.repo.get_by_id(request_id)
+        request = await self.repo.get_by_id_with_lock(request_id)
         if request is None:
             raise RequestNotFoundError(request_id)
 
@@ -101,8 +102,9 @@ class EmployeeRequestReviewService:
     ) -> EmployeeRequest:
         """Reject a submitted employee request.
 
-        Sets status to REJECTED and records review metadata.
-        Only requests in SUBMITTED status can be rejected.
+        Uses row-level lock to prevent concurrent HR reviewers from
+        processing the same request. Re-checks the status after
+        acquiring the lock before applying the update.
 
         Args:
             request_id: The UUID of the request to reject.
@@ -116,7 +118,7 @@ class EmployeeRequestReviewService:
             RequestNotFoundError: If the request does not exist.
             RequestNotReviewableError: If the request is not SUBMITTED.
         """
-        request = await self.repo.get_by_id(request_id)
+        request = await self.repo.get_by_id_with_lock(request_id)
         if request is None:
             raise RequestNotFoundError(request_id)
 
