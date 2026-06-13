@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Search, Building2, X } from "lucide-react";
+import { Loader2, Search, Building2 } from "lucide-react";
 
 import {
   Dialog,

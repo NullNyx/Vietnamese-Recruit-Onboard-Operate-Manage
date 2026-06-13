@@ -17,6 +17,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col, select
 
 from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User, UserRole
@@ -38,6 +39,7 @@ from src.modules.recruitment.application.candidate_service import (
     PaginatedCandidates,
 )
 from src.modules.recruitment.container import get_candidate_service
+from src.modules.recruitment.domain.entities import JobOpening
 from src.modules.recruitment.domain.enums import CandidateStatus, ProcessingStatus
 from src.modules.recruitment.domain.exceptions import (
     CandidateNotFoundError,
@@ -174,9 +176,7 @@ async def list_candidates(
     jo_ids = list({c.job_opening_id for c in result.candidates if c.job_opening_id})
     jo_titles: dict[UUID, str] = {}
     if jo_ids:
-        from sqlmodel import col as sa_col
-        from src.modules.recruitment.domain.entities import JobOpening
-        stmt = select(JobOpening).where(sa_col(JobOpening.id).in_(jo_ids))
+        stmt = select(JobOpening).where(col(JobOpening.id).in_(jo_ids))
         jo_result = await session.execute(stmt)
         for jo in jo_result.scalars().all():
             jo_titles[jo.id] = jo.title
@@ -216,6 +216,7 @@ async def get_candidate(
     candidate_id: UUID,
     current_user: CurrentUserDep,
     candidate_service: CandidateServiceDep,
+    session: AsyncSession = Depends(get_db_session),
 ) -> CandidateDetailResponse:
     """Get full candidate detail with linked CV documents.
 
@@ -253,7 +254,6 @@ async def get_candidate(
     # Resolve Job Opening title
     job_opening_title = ""
     if candidate.job_opening_id:
-        from src.modules.recruitment.domain.entities import JobOpening
         jo_stmt = select(JobOpening).where(JobOpening.id == candidate.job_opening_id)
         jo_result = await session.execute(jo_stmt)
         jo = jo_result.scalars().first()
