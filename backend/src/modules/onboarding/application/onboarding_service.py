@@ -53,6 +53,7 @@ from src.modules.onboarding.domain.exceptions import (
     OnboardingActivationError,
     OnboardingAuthorizationError,
     OnboardingError,
+    OnboardingProcessAlreadyCompletedError,
     OnboardingProcessNotFoundError,
     OnboardingTaskNotFoundError,
 )
@@ -566,7 +567,7 @@ class OnboardingService:
                     f"Onboarding process {task.process_id} for task {task.id} not found"
                 )
             if process.status == OnboardingStatus.COMPLETE.value:
-                raise OnboardingError("Cannot update task status after process is complete")
+                raise OnboardingProcessAlreadyCompletedError()
 
             updated_task = await self._update_task_status(task, actor, process, status)
             if status == OnboardingTaskStatus.DONE.value:
@@ -753,7 +754,9 @@ class OnboardingService:
                 raise OnboardingProcessNotFoundError()
 
             if process.status == OnboardingStatus.COMPLETE.value:
-                raise OnboardingError("Cannot edit setup for a completed process")
+                raise OnboardingProcessAlreadyCompletedError(
+                    "Cannot edit setup for a completed process"
+                )
 
             employee = await self.employee_repo.get_by_id(process.employee_id)
             if not employee:
