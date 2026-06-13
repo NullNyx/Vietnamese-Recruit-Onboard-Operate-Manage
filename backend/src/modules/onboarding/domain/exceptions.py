@@ -159,6 +159,18 @@ class AuditWriteError(OnboardingError):
     message = "Failed to write onboarding audit entry"
 
 
+class OnboardingProcessAlreadyCompletedError(OnboardingError):
+    """Update attempted on a completed process.
+
+    Raised when an operation attempts to update a task but the parent
+    onboarding process is already marked complete.
+    """
+
+    status_code = 409
+    error_code = "ONBOARDING_PROCESS_ALREADY_COMPLETED"
+    message = "Cannot update task status after process is complete"
+
+
 class InvalidEventPayloadError(OnboardingError):
     """Consumed event payload is malformed or invalid.
 

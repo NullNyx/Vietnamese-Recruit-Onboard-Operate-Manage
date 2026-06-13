@@ -1,10 +1,21 @@
 'use client';
 
-import { getOnboardingProcess, onboardingKeys, updateTaskStatus } from '@/lib/api/onboarding';
+import { getOnboardingProcess, onboardingKeys, updateTaskStatus, type OnboardingTask } from '@/lib/api/onboarding';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Circle, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { EmployeeSetupForm } from './EmployeeSetupForm';
 
 interface OnboardingDetailProps {
@@ -40,6 +51,7 @@ function EmptyState() {
 
 export function OnboardingDetail({ processId }: OnboardingDetailProps) {
   const queryClient = useQueryClient();
+  const [taskToUpdate, setTaskToUpdate] = useState<OnboardingTask | null>(null);
 
   const {
     data: process,
@@ -73,11 +85,30 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
   const tasks = process.tasks ?? [];
   const allDone = tasks.length > 0 && tasks.every((t) => t.status === 'done');
 
-  const handleToggle = (taskId: string, currentStatus: 'pending' | 'done') => {
-    // One-way action: only allow marking pending → done (matching backend semantics).
-    if (currentStatus === 'pending') {
-      updateMutation.mutate({ taskId, status: 'done' });
+  const handleToggle = (task: OnboardingTask) => {
+    if (process.status === 'complete') return;
+    setTaskToUpdate(task);
+  };
+
+  const getReadinessNote = (task: OnboardingTask) => {
+    if (task.order_index === 2) {
+      const missing = process?.missing_setup_fields?.filter((f: string) => ['department_id', 'position_id', 'manager_id'].includes(f));
+      if (missing && missing.length > 0) {
+        return { isReady: false, note: "Vui lòng hoàn thiện thông tin phòng ban, vị trí và quản lý trực tiếp trong phần Setup trước khi hoàn thành task này." };
+      }
     }
+    if (task.order_index === 3) {
+      if (process?.missing_setup_fields?.includes('start_date')) {
+        return { isReady: false, note: "Vui lòng chọn Ngày bắt đầu làm việc trong phần Setup trước khi hoàn thành task này." };
+      }
+    }
+    if (task.order_index === 0) {
+      return { isReady: true, note: "Hãy đảm bảo nhân viên đã ký hợp đồng hợp lệ trước khi xác nhận." };
+    }
+    if (task.order_index === 1) {
+      return { isReady: true, note: "Hãy kiểm tra và đảm bảo nhân viên đã nộp đủ hồ sơ cá nhân theo yêu cầu." };
+    }
+    return { isReady: true, note: "Xác nhận hoàn thành task này?" };
   };
 
   return (
@@ -163,12 +194,12 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
               .map((task) => (
                 <button
                   key={task.id}
-                  onClick={() => handleToggle(task.id, task.status)}
-                  disabled={updateMutation.isPending || task.status === 'done'}
+                  onClick={() => handleToggle(task)}
+                  disabled={updateMutation.isPending || process.status === 'complete'}
                   className={cn(
                     'w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all',
-                    task.status === 'done' ? 'bg-muted/30 cursor-default' : 'hover:bg-muted/50',
-                    updateMutation.isPending && 'opacity-50 cursor-not-allowed',
+                    task.status === 'done' ? 'bg-muted/30 hover:bg-muted/50' : 'hover:bg-muted/50',
+                    (updateMutation.isPending || process.status === 'complete') && 'opacity-50 cursor-not-allowed',
                   )}
                 >
                   {task.status === 'done' ? (
@@ -190,6 +221,54 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
           </div>
         </div>
       </div>
+
+      {/* Task Confirmation Dialog */}
+      <AlertDialog open={!!taskToUpdate} onOpenChange={(open) => !open && setTaskToUpdate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {taskToUpdate?.status === 'done' ? 'Xác nhận hoàn tác (Revert)' : 'Xác nhận hoàn thành task'}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="mt-2 text-sm text-muted-foreground">
+                {taskToUpdate?.status === 'done' ? (
+                  <p>Bạn có chắc muốn đưa task <strong className="text-foreground">{taskToUpdate.name}</strong> về trạng thái chờ (pending)? Việc này có thể ảnh hưởng đến quá trình onboarding.</p>
+                ) : (
+                  taskToUpdate && (
+                    <div className="space-y-3">
+                      <p>Bạn đang xác nhận hoàn thành: <strong className="text-foreground">{taskToUpdate.name}</strong></p>
+                      <div className={cn(
+                        "p-3 rounded-md border",
+                        getReadinessNote(taskToUpdate).isReady ? "bg-muted/50" : "bg-destructive/10 text-destructive border-destructive/20 font-medium"
+                      )}>
+                        {getReadinessNote(taskToUpdate).note}
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (taskToUpdate) {
+                  updateMutation.mutate({
+                    taskId: taskToUpdate.id,
+                    status: taskToUpdate.status === 'done' ? 'pending' : 'done'
+                  });
+                  setTaskToUpdate(null);
+                }
+              }}
+              disabled={taskToUpdate?.status === 'pending' && !getReadinessNote(taskToUpdate).isReady}
+              className={cn(taskToUpdate?.status === 'done' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90')}
+            >
+              {taskToUpdate?.status === 'done' ? 'Xác nhận Revert' : 'Xác nhận Done'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

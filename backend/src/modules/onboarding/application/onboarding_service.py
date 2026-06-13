@@ -53,6 +53,7 @@ from src.modules.onboarding.domain.exceptions import (
     OnboardingActivationError,
     OnboardingAuthorizationError,
     OnboardingError,
+    OnboardingProcessAlreadyCompletedError,
     OnboardingProcessNotFoundError,
     OnboardingTaskNotFoundError,
 )
@@ -552,18 +553,9 @@ class OnboardingService:
         if actor.role != UserRole.ADMIN:
             raise OnboardingAuthorizationError()
 
-        # Step 4: idempotent no-op when the task is already done (R4.3, R5.8).
-        if task.status == OnboardingTaskStatus.DONE.value:
-            logger.info(
-                "Task %s is already done; no-op completion by %s",
-                task.id,
-                actor.email,
-            )
-            return task
-
-        # The task is pending. complete_task only advances pending -> done, so a
-        # pending target leaves the (already pending) task unchanged.
-        if status != OnboardingTaskStatus.DONE.value:
+        # Step 4: idempotent no-op when the target status matches current status
+        if task.status == status:
+            logger.info("Task %s is already %s; no-op by %s", task.id, status, actor.email)
             return task
 
         # Step 5: locked, atomic completion + activation in a single transaction.
@@ -574,8 +566,12 @@ class OnboardingService:
                 raise OnboardingActivationError(
                     f"Onboarding process {task.process_id} for task {task.id} not found"
                 )
-            updated_task = await self._mark_task_done(task, actor, process)
-            await self._activate_if_complete(process, actor)
+            if process.status == OnboardingStatus.COMPLETE.value:
+                raise OnboardingProcessAlreadyCompletedError()
+
+            updated_task = await self._update_task_status(task, actor, process, status)
+            if status == OnboardingTaskStatus.DONE.value:
+                await self._activate_if_complete(process, actor)
             await self.session.commit()
         except OnboardingError:
             await self.session.rollback()
@@ -597,49 +593,57 @@ class OnboardingService:
         logger.info("Task %s marked done by %s", updated_task.id, actor.email)
         return updated_task
 
-    async def _mark_task_done(
+    async def _update_task_status(
         self,
         task: OnboardingTask,
         actor: User,
         process: OnboardingProcess,
+        new_status: str,
     ) -> OnboardingTask:
-        """Set a pending task ``done`` and write its status-change audit entry.
+        """Set a task's status and write its status-change audit entry.
 
         Participates in the caller's locked transaction; the caller commits or
         rolls back. Records the acting HR identity, the task id, the previous
         and new status, and (via the audit entry's ``created_at``) the timestamp
-        of the change (R4.2, R8.1).
+        of the change.
 
         Args:
-            task: The pending OnboardingTask being completed.
+            task: The OnboardingTask being updated.
             actor: The acting admin user.
-            process: The locked OnboardingProcess owning the task (used for the
-                ``candidate_id`` recorded on the audit entry).
+            process: The locked OnboardingProcess owning the task.
+            new_status: The new status to apply.
 
         Returns:
-            The updated OnboardingTask (now ``done``).
+            The updated OnboardingTask.
 
         Raises:
             AuditWriteError: If appending the status-change audit entry fails.
         """
-        now = datetime.now(UTC)
+        now = datetime.now(UTC) if new_status == OnboardingTaskStatus.DONE.value else None
+        user_id = actor.id if new_status == OnboardingTaskStatus.DONE.value else None
         previous_status = task.status
+
         updated_task = await self.task_repo.set_status(
             task,
-            OnboardingTaskStatus.DONE,
+            OnboardingTaskStatus(new_status),
             completed_at=now,
-            completed_by_user_id=actor.id,
+            completed_by_user_id=user_id,
         )
+
+        op_type = (
+            _OP_TASK_COMPLETED if new_status == OnboardingTaskStatus.DONE.value else "task_reverted"
+        )
+
         status_audit = OnboardingAuditLog(
             user_id=actor.id,
             actor_email=actor.email,
-            operation_type=_OP_TASK_COMPLETED,
+            operation_type=op_type,
             entity_type="task",
             entity_id=task.id,
             candidate_id=process.candidate_id,
             previous_value={"status": previous_status},
-            new_value={"status": OnboardingTaskStatus.DONE.value},
-            change_summary=f"Task {task.id} marked done by {actor.email}",
+            new_value={"status": new_status},
+            change_summary=f"Task {task.id} marked {new_status} by {actor.email}",
             success=True,
         )
         await self._append_audit(status_audit)
@@ -750,7 +754,9 @@ class OnboardingService:
                 raise OnboardingProcessNotFoundError()
 
             if process.status == OnboardingStatus.COMPLETE.value:
-                raise OnboardingError("Cannot edit setup for a completed process")
+                raise OnboardingProcessAlreadyCompletedError(
+                    "Cannot edit setup for a completed process"
+                )
 
             employee = await self.employee_repo.get_by_id(process.employee_id)
             if not employee:
