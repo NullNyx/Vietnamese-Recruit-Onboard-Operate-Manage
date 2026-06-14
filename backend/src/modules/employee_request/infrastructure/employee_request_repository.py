@@ -237,8 +237,9 @@ class EmployeeRequestRepository:
                 EmployeeRequest.status == status,
             )
         if date_from is not None:
+            inclusive_start = datetime.combine(date_from, time.min)
             statement = statement.where(  # type: ignore[arg-type]
-                EmployeeRequest.submitted_at >= date_from,  # type: ignore[operator]
+                EmployeeRequest.submitted_at >= inclusive_start,  # type: ignore[operator]
             )
         if date_to is not None:
             exclusive_end = datetime.combine(date_to + timedelta(days=1), time.min)

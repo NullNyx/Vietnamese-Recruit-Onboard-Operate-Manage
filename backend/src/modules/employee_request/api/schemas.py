@@ -317,6 +317,13 @@ class RejectRequest(BaseModel):
         description="Reason for rejection (required)",
     )
 
+    @field_validator("decision_reason")
+    @classmethod
+    def validate_decision_reason(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("decision_reason is required")
+        return value.strip()
+
 
 class ReviewResponse(BaseModel):
     """Response schema for approve/reject actions."""

@@ -25,6 +25,7 @@ from src.modules.employee_request.container import (
     get_employee_request_repository,
     get_employee_request_review_service,
 )
+from src.modules.employee_request.domain.enums import RequestStatus
 from src.modules.employee_request.infrastructure.employee_request_repository import (
     EmployeeRequestRepository,
 )
@@ -56,9 +57,10 @@ async def list_review_queue(
     Defaults to returning all submitted requests when no filters provided.
     Results are newest first with employee name.
     """
+    status_filter = filters.status if filters.status is not None else RequestStatus.SUBMITTED
     results = await repo.get_all_filtered(
         request_type=filters.request_type,
-        status=filters.status,
+        status=status_filter,
         date_from=filters.date_from,
         date_to=filters.date_to,
         employee_id=filters.employee_id,

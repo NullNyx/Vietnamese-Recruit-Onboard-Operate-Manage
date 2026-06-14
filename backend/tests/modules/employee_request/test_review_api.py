@@ -276,6 +276,11 @@ class TestRejectRequest:
         assert data["message"] == "Request rejected"
         assert data["request"]["status"] == "rejected"
         assert data["request"]["id"] == str(request_id)
+        mock_service.reject_request.assert_awaited_once_with(
+            request_id=request_id,
+            admin_user=admin,
+            review_reason="Budget constraints",
+        )
 
     def test_returns_403_when_not_admin(self) -> None:
         """Returns 403 when authenticated user is not admin."""
@@ -411,6 +416,20 @@ class TestListReviewQueueFilters:
         response = client.post(
             f"/api/admin/employee-requests/{uuid4()}/reject",
             json={"decision_reason": ""},
+        )
+
+        assert response.status_code == 422
+
+    def test_reject_with_whitespace_only_reason_returns_422(self) -> None:
+        """Reject with whitespace-only reason returns 422."""
+        admin = _make_admin()
+        mock_service = AsyncMock()
+
+        app = _build_app(admin_user=admin, mock_review_service=mock_service)
+        client = TestClient(app)
+        response = client.post(
+            f"/api/admin/employee-requests/{uuid4()}/reject",
+            json={"decision_reason": "   "},
         )
 
         assert response.status_code == 422

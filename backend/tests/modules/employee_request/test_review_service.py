@@ -308,18 +308,18 @@ class TestRejectRequest:
         request = _make_submitted_request()
         mock_repo.get_by_id_with_lock.return_value = request
 
-        with pytest.raises(ValueError, match='Rejection reason'):
+        with pytest.raises(ValueError, match="Rejection reason"):
             await review_service.reject_request(
                 request_id=request.id,
                 admin_user=admin_user,
                 review_reason=None,
             )
 
-        with pytest.raises(ValueError, match='Rejection reason'):
+        with pytest.raises(ValueError, match="Rejection reason"):
             await review_service.reject_request(
                 request_id=request.id,
                 admin_user=admin_user,
-                review_reason='   ',
+                review_reason="   ",
             )
 
         mock_repo.get_by_id_with_lock.assert_not_called()
