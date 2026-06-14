@@ -13,6 +13,7 @@ load_dotenv()
 
 from fastapi import FastAPI  # noqa: E402
 
+from src.modules.assistant.api.employee_router import employee_assistant_router  # noqa: E402
 from src.modules.assistant.api.error_handler import (  # noqa: E402
     register_assistant_error_handlers,
 )
@@ -216,6 +217,7 @@ app.include_router(attendance_router)
 app.include_router(job_opening_router)
 app.include_router(runtime_router)
 app.include_router(assistant_router)
+app.include_router(employee_assistant_router)
 app.include_router(employee_request_router)
 app.include_router(admin_employee_request_router)
 app.include_router(employee_payslip_router)

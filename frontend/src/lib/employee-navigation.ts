@@ -1,4 +1,11 @@
-import { LayoutDashboard, User, FileText, Clock, ClipboardList } from "lucide-react";
+import {
+  LayoutDashboard,
+  User,
+  FileText,
+  Clock,
+  ClipboardList,
+  Bot,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface EmployeeNavItem {
@@ -13,4 +20,5 @@ export const employeeNavItems: EmployeeNavItem[] = [
   { href: "/employee/attendance", label: "Chấm công", icon: Clock },
   { href: "/employee/documents", label: "Tài liệu", icon: FileText },
   { href: "/employee/requests", label: "Yêu cầu", icon: ClipboardList },
+  { href: "/employee/assistant", label: "Trợ lý", icon: Bot },
 ];

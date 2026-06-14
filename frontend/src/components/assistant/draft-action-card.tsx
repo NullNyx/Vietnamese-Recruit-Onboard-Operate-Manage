@@ -12,21 +12,33 @@ interface DraftActionCardProps {
   draft: DraftAction;
   onConfirmed?: () => void;
   onDismissed?: () => void;
+  /** Optional custom confirm function. Defaults to HR confirm endpoint. */
+  confirmAction?: (draft: DraftAction) => Promise<unknown>;
 }
 
-export function DraftActionCard({ draft, onConfirmed, onDismissed }: DraftActionCardProps) {
+export function DraftActionCard({
+  draft,
+  onConfirmed,
+  onDismissed,
+  confirmAction,
+}: DraftActionCardProps) {
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
   const handleConfirm = async () => {
     setConfirming(true);
     try {
-      await confirmDraftAction(draft);
+      const fn = confirmAction || confirmDraftAction;
+      await fn(draft);
       setConfirmed(true);
       toast.success("Đã gửi thành công!");
       onConfirmed?.();
     } catch (err) {
-      toast.error(`Gửi thất bại: ${err instanceof Error ? err.message : "Lỗi không xác định"}`);
+      toast.error(
+        `Gửi thất bại: ${
+          err instanceof Error ? err.message : "Lỗi không xác định"
+        }`,
+      );
     } finally {
       setConfirming(false);
     }
@@ -59,11 +71,7 @@ export function DraftActionCard({ draft, onConfirmed, onDismissed }: DraftAction
         <p className="text-sm text-muted-foreground">{draft.preview}</p>
       </CardContent>
       <CardFooter className="gap-2">
-        <Button
-          size="sm"
-          onClick={handleConfirm}
-          disabled={confirming}
-        >
+        <Button size="sm" onClick={handleConfirm} disabled={confirming}>
           {confirming ? (
             <Loader2 className="mr-1 h-3 w-3 animate-spin" />
           ) : (
