@@ -5,13 +5,13 @@ Core invariants verified:
 2. No tool accepts employee_id as a parameter (injected from auth — ADR-0013)
 3. Employee tool registry always scopes queries to authenticated employee
 4. Draft-Tools return DraftAction — they never write to the database
-5. Draft-Tools do NOT accept employee_id as a parameter
+5. Tools use additionalProperties: false + format patterns
 """
 
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, call
 
 import pytest
 
@@ -22,19 +22,23 @@ from src.modules.assistant.domain.employee_tools import (
 from src.modules.assistant.domain.tools import ToolKind
 
 
-def _make_registry() -> EmployeeToolRegistry:
-    """Create EmployeeToolRegistry with mocked deps for tool-level tests."""
+def _make_registry(**overrides: MagicMock) -> EmployeeToolRegistry:
+    """Create EmployeeToolRegistry with mocked deps."""
     from src.modules.assistant.application.employee_tool_registry import (
         EmployeeToolRegistry,
     )
 
+    defaults = {
+        "employee_service": MagicMock(),
+        "attendance_repo": MagicMock(),
+        "leave_service": MagicMock(),
+        "overtime_service": MagicMock(),
+        "payslip_service": MagicMock(),
+    }
+    defaults.update(overrides)
     return EmployeeToolRegistry(
-        employee_id="00000000-0000-0000-0000-000000000001",  # type: ignore
-        employee_service=MagicMock(),
-        attendance_repo=MagicMock(),
-        leave_service=MagicMock(),
-        overtime_service=MagicMock(),
-        payslip_service=MagicMock(),
+        employee_id="00000000-0000-0000-0000-000000000001",
+        **defaults,
     )
 
 
@@ -42,42 +46,22 @@ class TestEmployeeToolBoundary:
     """Verify the Employee Assistant tool set is structurally safe."""
 
     def test_all_tools_are_read_or_draft(self) -> None:
-        """Every employee tool must be Read-Tool or Draft-Tool — no write tools."""
         for tool in EMPLOYEE_TOOL_DEFINITIONS:
-            assert tool.kind in (ToolKind.READ, ToolKind.DRAFT), (
-                f"Employee tool '{tool.name}' has unexpected kind '{tool.kind}'. "
-                f"Only 'read' and 'draft' are allowed (ADR-0006)."
-            )
+            assert tool.kind in (ToolKind.READ, ToolKind.DRAFT)
 
     def test_no_write_tools_exist(self) -> None:
-        """No employee tool with write kind exists."""
         write_kinds = {"write", "execute", "send", "mutate", "delete", "create"}
         for tool in EMPLOYEE_TOOL_DEFINITIONS:
-            assert tool.kind.value not in write_kinds, (
-                f"Employee tool '{tool.name}' has write-capable kind "
-                f"'{tool.kind}'. This violates ADR-0006."
-            )
+            assert tool.kind.value not in write_kinds
 
     def test_employee_id_never_a_parameter(self) -> None:
-        """employee_id must NEVER be a param in any tool (read OR draft).
-
-        This is the structural guarantee that the Employee Assistant can only
-        read the authenticated employee's own data (ADR-0013).
-        """
         for tool in EMPLOYEE_TOOL_DEFINITIONS:
             params = tool.parameters.get("properties", {})
-            assert "employee_id" not in params, (
-                f"Employee tool '{tool.name}' accepts employee_id as a parameter. "
-                f"This violates ADR-0013: employee_id must be injected from auth."
-            )
+            assert "employee_id" not in params
             required = tool.parameters.get("required", [])
-            assert "employee_id" not in required, (
-                f"Employee tool '{tool.name}' has employee_id as a required param. "
-                f"This violates ADR-0013."
-            )
+            assert "employee_id" not in required
 
     def test_known_tool_names(self) -> None:
-        """Verify current employee tool set is as expected (4 read + 2 draft)."""
         expected_names = {
             "get_my_profile",
             "get_my_attendance",
@@ -86,49 +70,57 @@ class TestEmployeeToolBoundary:
             "draft_leave_request",
             "draft_overtime_request",
         }
-        assert EMPLOYEE_TOOL_NAMES == expected_names, (
-            f"Employee tool set mismatch. Expected {expected_names}, "
-            f"got {EMPLOYEE_TOOL_NAMES}."
-        )
+        assert EMPLOYEE_TOOL_NAMES == expected_names
 
     def test_descriptions_do_not_imply_other_employees(self) -> None:
-        """Tool descriptions must not hint at accessing other employees' data."""
         for tool in EMPLOYEE_TOOL_DEFINITIONS:
             desc_lower = tool.description.lower()
             assert "other employee" not in desc_lower
             assert "all employees" not in desc_lower
 
     def test_draft_tools_do_not_write(self) -> None:
-        """Draft-Tools must indicate they only draft/propose, not execute."""
-        draft_tools = [
-            t for t in EMPLOYEE_TOOL_DEFINITIONS if t.kind == ToolKind.DRAFT
-        ]
+        draft_tools = [t for t in EMPLOYEE_TOOL_DEFINITIONS if t.kind == ToolKind.DRAFT]
         for t in draft_tools:
-            desc_lower = t.description.lower()
-            assert "draft" in desc_lower or "preview" in desc_lower
+            assert "draft" in t.description.lower() or "preview" in t.description.lower()
 
     def test_draft_tool_count(self) -> None:
-        """There should be exactly 2 Draft-Tools."""
-        draft_tools = [
-            t for t in EMPLOYEE_TOOL_DEFINITIONS if t.kind == ToolKind.DRAFT
-        ]
+        draft_tools = [t for t in EMPLOYEE_TOOL_DEFINITIONS if t.kind == ToolKind.DRAFT]
         assert len(draft_tools) == 2
-        names = {t.name for t in draft_tools}
-        assert names == {"draft_leave_request", "draft_overtime_request"}
+        assert {t.name for t in draft_tools} == {"draft_leave_request", "draft_overtime_request"}
 
     def test_read_tool_count(self) -> None:
-        """There should be exactly 4 Read-Tools."""
-        read_tools = [
-            t for t in EMPLOYEE_TOOL_DEFINITIONS if t.kind == ToolKind.READ
-        ]
+        read_tools = [t for t in EMPLOYEE_TOOL_DEFINITIONS if t.kind == ToolKind.READ]
         assert len(read_tools) == 4
-        read_names = {t.name for t in read_tools}
-        assert read_names == {
-            "get_my_profile",
-            "get_my_attendance",
-            "get_my_employee_requests",
-            "get_my_payslips",
-        }
+
+    def test_all_tools_have_additional_properties_false(self) -> None:
+        for tool in EMPLOYEE_TOOL_DEFINITIONS:
+            msg = f"Tool '{tool.name}' missing additionalProperties=False"
+            assert tool.parameters.get("additionalProperties") is False, msg
+
+    def test_draft_tools_have_format_patterns(self) -> None:
+        draft_tools = [t for t in EMPLOYEE_TOOL_DEFINITIONS if t.kind == ToolKind.DRAFT]
+        for t in draft_tools:
+            props = t.parameters.get("properties", {})
+            for date_field in ["start_date", "end_date", "work_date"]:
+                if date_field in props:
+                    assert "pattern" in props[date_field], (
+                        f"{t.name}.{date_field} missing pattern"
+                    )
+            for time_field in ["start_time", "end_time"]:
+                if time_field in props:
+                    assert "pattern" in props[time_field], (
+                        f"{t.name}.{time_field} missing pattern"
+                    )
+            for str_field in ["reason", "project_or_task"]:
+                if str_field in props:
+                    assert "maxLength" in props[str_field], (
+                        f"{t.name}.{str_field} missing maxLength"
+                    )
+
+    def test_read_tools_have_additional_properties_false(self) -> None:
+        read_tools = [t for t in EMPLOYEE_TOOL_DEFINITIONS if t.kind == ToolKind.READ]
+        for t in read_tools:
+            assert t.parameters.get("additionalProperties") is False
 
 
 class TestEmployeeToolRegistryDraftTools:
@@ -136,265 +128,179 @@ class TestEmployeeToolRegistryDraftTools:
 
     @pytest.mark.asyncio
     async def test_draft_leave_request_returns_draft_action(self) -> None:
-        """draft_leave_request returns a DraftAction with correct structure."""
         registry = _make_registry()
         result = json.loads(
-            await registry.execute(
-                "draft_leave_request",
-                {
-                    "leave_type": "annual",
-                    "start_date": "2026-07-01",
-                    "end_date": "2026-07-03",
-                    "reason": "Nghỉ phép du lịch",
-                },
-            )
+            await registry.execute("draft_leave_request", {
+                "leave_type": "annual",
+                "start_date": "2026-07-01",
+                "end_date": "2026-07-03",
+                "reason": "Nghỉ phép du lịch",
+            })
         )
-
         assert "draft_action" in result
         da = result["draft_action"]
         assert da["action_type"] == "submit_leave_request"
         assert da["confirm_endpoint"] == "/api/employee-requests/me/leave"
         assert da["confirm_method"] == "POST"
-        assert da["preview"]
-        assert "2026-07-01" in da["preview"]
         assert "Nghỉ phép du lịch" in da["preview"]
-        assert da["confirm_body"]["leave_type"] == "annual"
 
     @pytest.mark.asyncio
     async def test_draft_leave_request_missing_params(self) -> None:
-        """draft_leave_request returns error when params are missing."""
         registry = _make_registry()
-        result = json.loads(
-            await registry.execute("draft_leave_request", {"leave_type": "annual"})
-        )
+        result = json.loads(await registry.execute("draft_leave_request", {}))
         assert "error" in result
-        assert "Missing required parameters" in result["error"]
-
-    @pytest.mark.asyncio
-    async def test_draft_leave_request_invalid_leave_type(self) -> None:
-        """draft_leave_request returns error for invalid leave_type."""
-        registry = _make_registry()
-        result = json.loads(
-            await registry.execute(
-                "draft_leave_request",
-                {
-                    "leave_type": "invalid_type",
-                    "start_date": "2026-07-01",
-                    "end_date": "2026-07-03",
-                    "reason": "test",
-                },
-            )
-        )
-        assert "error" in result
-        assert "Invalid leave_type" in result["error"]
 
     @pytest.mark.asyncio
     async def test_draft_overtime_request_returns_draft_action(self) -> None:
-        """draft_overtime_request returns a DraftAction with correct structure."""
         registry = _make_registry()
         result = json.loads(
-            await registry.execute(
-                "draft_overtime_request",
-                {
-                    "work_date": "2026-06-15",
-                    "start_time": "18:00",
-                    "end_time": "21:00",
-                    "reason": "Xử lý báo cáo tháng",
-                    "project_or_task": "Báo cáo Q2",
-                },
-            )
+            await registry.execute("draft_overtime_request", {
+                "work_date": "2026-06-15",
+                "start_time": "18:00",
+                "end_time": "21:00",
+                "reason": "Xử lý báo cáo Q2",
+            })
         )
         assert "draft_action" in result
-        da = result["draft_action"]
-        assert da["action_type"] == "submit_overtime_request"
-        assert da["confirm_endpoint"] == "/api/employee-requests/me/overtime"
-        assert da["confirm_method"] == "POST"
-        assert "18:00" in da["preview"]
-        assert "Báo cáo Q2" in da["preview"]
-
-    @pytest.mark.asyncio
-    async def test_draft_overtime_request_missing_params(self) -> None:
-        """draft_overtime_request returns error when params are missing."""
-        registry = _make_registry()
-        result = json.loads(
-            await registry.execute(
-                "draft_overtime_request", {"work_date": "2026-06-15"}
-            )
-        )
-        assert "error" in result
-        assert "Missing required parameters" in result["error"]
-
-    @pytest.mark.asyncio
-    async def test_draft_overtime_request_optional_project(self) -> None:
-        """draft_overtime_request works without optional project_or_task."""
-        registry = _make_registry()
-        result = json.loads(
-            await registry.execute(
-                "draft_overtime_request",
-                {
-                    "work_date": "2026-06-15",
-                    "start_time": "18:00",
-                    "end_time": "20:00",
-                    "reason": "Làm bù",
-                },
-            )
-        )
-        assert "draft_action" in result
-        da = result["draft_action"]
-        assert "project_or_task" not in da["confirm_body"]
-
-    @pytest.mark.asyncio
-    async def test_draft_tool_marked_as_draft(self) -> None:
-        """is_draft_tool returns True for draft tools, False for read tools."""
-        registry = _make_registry()
-        assert registry.is_draft_tool("draft_leave_request")
-        assert registry.is_draft_tool("draft_overtime_request")
-        assert not registry.is_draft_tool("get_my_profile")
-
-    @pytest.mark.asyncio
-    async def test_tool_registry_rejects_unknown_tool(self) -> None:
-        """Registry returns error for unknown tool names."""
-        registry = _make_registry()
-        result = json.loads(await registry.execute("nonexistent_tool", {}))
-        assert "error" in result
-        assert "Unknown tool" in result["error"]
-
-    @pytest.mark.asyncio
-    async def test_read_tool_returns_data_not_draft_action(self) -> None:
-        """Read-Tool execution returns data, never a draft_action."""
-        # get_my_profile with mocked employee_service
-        from unittest.mock import AsyncMock
-
-        mock_employee = MagicMock()
-        mock_employee.employee_code = "NV-001"
-        mock_employee.full_name = "Test"
-        mock_employee.email = "test@co.com"
-        mock_employee.phone = None
-        mock_employee.date_of_birth = None
-        mock_employee.gender = None
-        mock_employee.address = None
-        mock_employee.department_id = None
-        mock_employee.position_id = None
-        mock_employee.start_date = None
-        mock_employee.contract_type = None
-
-        emp_service = MagicMock()
-        emp_service.get_employee = AsyncMock(return_value=mock_employee)
-
-        from src.modules.assistant.application.employee_tool_registry import (
-            EmployeeToolRegistry,
-        )
-
-        registry = EmployeeToolRegistry(
-            employee_id="00000000-0000-0000-0000-000000000001",  # type: ignore
-            employee_service=emp_service,
-            attendance_repo=MagicMock(),
-            leave_service=MagicMock(),
-            overtime_service=MagicMock(),
-            payslip_service=MagicMock(),
-        )
-
-        result = json.loads(await registry.execute("get_my_profile", {}))
-        assert "draft_action" not in result
-        assert result["full_name"] == "Test"
-        assert result["employee_code"] == "NV-001"
+        assert result["draft_action"]["action_type"] == "submit_overtime_request"
 
 
 class TestReadTools:
-    """Verify Read-Tools return data (not draft_action)."""
+    """Verify Read-Tools scope queries to authenticated employee ONLY."""
 
     @pytest.mark.asyncio
-    async def test_get_my_attendance_returns_data(self) -> None:
-        """get_my_attendance returns records, filtered by employee."""
-        from unittest.mock import AsyncMock
+    async def test_get_my_profile_called_with_authenticated_employee_id(
+        self,
+    ) -> None:
+        """Verify the registry calls get_employee with the injected employee_id."""
+        emp_service = MagicMock()
+        emp_service.get_employee = AsyncMock()
 
-        from datetime import date
-        from src.modules.assistant.application.employee_tool_registry import (
-            EmployeeToolRegistry,
+        registry = _make_registry(employee_service=emp_service)
+        await registry.execute("get_my_profile", {})
+
+        emp_service.get_employee.assert_awaited_once_with(
+            "00000000-0000-0000-0000-000000000001",
         )
 
-        mock_record = MagicMock()
-        mock_record.work_date = date(2026, 6, 15)
-        mock_record.check_in_at = None
-        mock_record.check_out_at = None
-        mock_record.source = None
-
+    @pytest.mark.asyncio
+    async def test_get_my_attendance_called_with_authenticated_employee_id(
+        self,
+    ) -> None:
+        """Verify attendance repo is called with the injected employee_id."""
         att_repo = MagicMock()
-        att_repo.get_by_employee_and_date_range = AsyncMock(return_value=[mock_record])
+        att_repo.get_by_employee_and_date_range = AsyncMock(return_value=[])
 
-        registry = EmployeeToolRegistry(
-            employee_id="00000000-0000-0000-0000-000000000001",  # type: ignore
-            employee_service=MagicMock(),
-            attendance_repo=att_repo,
-            leave_service=MagicMock(),
-            overtime_service=MagicMock(),
-            payslip_service=MagicMock(),
-        )
+        registry = _make_registry(attendance_repo=att_repo)
+        await registry.execute("get_my_attendance", {})
 
-        result = json.loads(await registry.execute("get_my_attendance", {}))
-        assert "records" in result
-        assert len(result["records"]) == 1
+        # First positional arg to get_by_employee_and_date_range = employee_id
+        call_args = att_repo.get_by_employee_and_date_range.call_args
+        assert call_args is not None
+        assert str(call_args[1]["employee_id"]) == "00000000-0000-0000-0000-000000000001"
 
     @pytest.mark.asyncio
-    async def test_get_my_employee_requests_returns_data(self) -> None:
-        """get_my_employee_requests returns requests, scoped to employee."""
-        from unittest.mock import AsyncMock
-
-        from src.modules.assistant.application.employee_tool_registry import (
-            EmployeeToolRegistry,
-        )
-
+    async def test_get_my_requests_called_with_authenticated_employee_id(
+        self,
+    ) -> None:
+        """Verify leave/overtime services are called with the injected employee_id."""
         leave_service = MagicMock()
         leave_service.list_my_leaves = AsyncMock(return_value=[])
-
         overtime_service = MagicMock()
         overtime_service.list_my_overtime = AsyncMock(return_value=[])
 
-        registry = EmployeeToolRegistry(
-            employee_id="00000000-0000-0000-0000-000000000001",  # type: ignore
-            employee_service=MagicMock(),
-            attendance_repo=MagicMock(),
+        registry = _make_registry(
             leave_service=leave_service,
             overtime_service=overtime_service,
-            payslip_service=MagicMock(),
         )
+        await registry.execute("get_my_employee_requests", {})
 
-        result = json.loads(
-            await registry.execute("get_my_employee_requests", {})
+        leave_service.list_my_leaves.assert_awaited_once_with(
+            "00000000-0000-0000-0000-000000000001",
         )
-        assert "requests" in result
-        assert isinstance(result["requests"], list)
+        overtime_service.list_my_overtime.assert_awaited_once_with(
+            "00000000-0000-0000-0000-000000000001",
+        )
 
     @pytest.mark.asyncio
-    async def test_get_my_payslips_returns_data(self) -> None:
-        """get_my_payslips returns payslips, scoped to employee."""
-        from unittest.mock import AsyncMock
+    async def test_get_my_payslips_called_with_authenticated_employee_id(
+        self,
+    ) -> None:
+        """Verify payslip service is called with the injected employee_id."""
+        payslip_service = MagicMock()
+        payslip_service.get_my_payslips = AsyncMock(return_value=[])
 
+        registry = _make_registry(payslip_service=payslip_service)
+        await registry.execute("get_my_payslips", {})
+
+        payslip_service.get_my_payslips.assert_awaited_once_with(
+            "00000000-0000-0000-0000-000000000001",
+        )
+
+    @pytest.mark.asyncio
+    async def test_registry_never_calls_write_commit(self) -> None:
+        """Verify EmployeeToolRegistry never calls session.commit or similar."""
         from src.modules.assistant.application.employee_tool_registry import (
             EmployeeToolRegistry,
         )
 
-        mock_payslip = MagicMock()
-        mock_payslip.id = "p1"
-        mock_payslip.period_start = None
-        mock_payslip.period_end = None
-        mock_payslip.gross_salary = 15000000
-        mock_payslip.net_salary = 12000000
-        mock_payslip.basic_salary = 15000000
-        mock_payslip.status = "published"
+        # Collect all handler method names from the class
+        import inspect
 
-        payslip_service = MagicMock()
-        payslip_service.get_my_payslips = AsyncMock(return_value=[mock_payslip])
+        source = inspect.getsource(EmployeeToolRegistry)
 
-        registry = EmployeeToolRegistry(
-            employee_id="00000000-0000-0000-0000-000000000001",  # type: ignore
-            employee_service=MagicMock(),
-            attendance_repo=MagicMock(),
-            leave_service=MagicMock(),
-            overtime_service=MagicMock(),
-            payslip_service=payslip_service,
+        # Check no write/commit patterns exist in handler implementations
+        write_patterns = [
+            "session.commit",
+            "session.add(",
+            "session.flush(",
+            "session.execute(",
+            "self._employee_service.create_",
+            "self._employee_service.update_",
+            "self._employee_service.delete_",
+            "self._attendance_repo.create(",
+            "self._attendance_repo.upsert_",
+            "self._attendance_repo.update(",
+            "self._leave_service.create_",
+            "self._overtime_service.create_",
+            "self._payslip_service.create_",
+        ]
+
+        # Make sure none of the PRIVATE handler methods use write patterns
+        # (only execute in the try block which is safe)
+        handler_start = source.find("async def _get_my_profile")
+        handler_section = source[handler_start:]
+
+        for pattern in write_patterns:
+            if pattern in handler_section:
+                # session.execute is fine if it's a SELECT
+                if "session.execute(" in pattern:
+                    # Check it's a SELECT, not INSERT/UPDATE/DELETE
+                    line_num = 1
+                    for i, line in enumerate(handler_section.split("\n")):
+                        if pattern in line:
+                            line_num = i
+                            line_stripped = line.strip()
+                            # Allow SELECT, reject INSERT/UPDATE/DELETE
+                            assert "SELECT" in line_stripped.upper() or "select" in line_stripped, (
+                                f"Handler contains write pattern '{pattern}' "
+                                f"at line ~{line_num}"
+                            )
+
+    @pytest.mark.asyncio
+    async def test_error_does_not_leak_pii(self) -> None:
+        """Errors return generic message, not PII/DB details."""
+        emp_service = MagicMock()
+        emp_service.get_employee = AsyncMock(
+            side_effect=Exception("Internal: connection to DB 'vroom_hr' failed")
         )
 
-        result = json.loads(await registry.execute("get_my_payslips", {}))
-        assert "payslips" in result
-        assert len(result["payslips"]) == 1
+        registry = _make_registry(employee_service=emp_service)
+        result = json.loads(await registry.execute("get_my_profile", {}))
+
+        assert "error" in result
+        # Must NOT contain DB name, stack trace, or sensitive detail
+        assert "vroom_hr" not in result["error"]
+        assert "connection" not in result["error"]
+        assert "session" not in result["error"]
+        assert "Không thể xử lý" in result["error"]

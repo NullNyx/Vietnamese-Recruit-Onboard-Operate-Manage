@@ -22,6 +22,13 @@ from __future__ import annotations
 
 from src.modules.assistant.domain.tools import ToolDefinition, ToolKind
 
+# Date regex: YYYY-MM-DD
+_DATE_PATTERN = r"^\d{4}-\d{2}-\d{2}$"
+# Time regex: HH:MM (24-hour)
+_TIME_PATTERN = r"^([01]\d|2[0-3]):[0-5]\d$"
+# Max length for reason field
+_REASON_MAX_LENGTH = 2000
+
 EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="get_my_profile",
@@ -34,6 +41,7 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
         ),
         parameters={
             "type": "object",
+            "additionalProperties": False,
             "properties": {},
         },
     ),
@@ -49,16 +57,17 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
         ),
         parameters={
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "month": {
                     "type": "integer",
-                    "description": "Month to filter (1-12). If omitted, returns recent records.",
+                    "description": "Month (1-12). If omitted, returns recent records.",
                     "minimum": 1,
                     "maximum": 12,
                 },
                 "year": {
                     "type": "integer",
-                    "description": "Year to filter (e.g. 2026). If omitted, uses current year.",
+                    "description": "Year (e.g. 2026). If omitted, uses current year.",
                     "minimum": 2020,
                     "maximum": 2099,
                 },
@@ -77,12 +86,13 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
         ),
         parameters={
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "request_type": {
                     "type": "string",
                     "description": (
-                        "Optional filter by request type. One of: leave, overtime. "
-                        "If omitted, returns all request types."
+                        "Optional filter by request type. "
+                        "One of: leave, overtime. If omitted, returns all."
                     ),
                     "enum": ["leave", "overtime"],
                 },
@@ -101,6 +111,7 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
         ),
         parameters={
             "type": "object",
+            "additionalProperties": False,
             "properties": {},
         },
     ),
@@ -111,10 +122,12 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
             "Draft a leave request for the current employee. Returns a Draft Action "
             "with a preview for the employee to review and confirm. "
             "The employee confirms in the UI; only then is the leave request submitted. "
-            "Use when the employee asks to take leave, apply for leave, or submit a leave request."
+            "Use when the employee asks to take leave, apply for leave, or submit "
+            "a leave request."
         ),
         parameters={
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "leave_type": {
                     "type": "string",
@@ -127,18 +140,18 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
                 },
                 "start_date": {
                     "type": "string",
-                    "description": ("First day of leave. Format: YYYY-MM-DD. E.g. 2026-06-15."),
+                    "description": "First day of leave. Format: YYYY-MM-DD.",
+                    "pattern": _DATE_PATTERN,
                 },
                 "end_date": {
                     "type": "string",
-                    "description": (
-                        "Last day of leave. Must be on or after start_date. "
-                        "Format: YYYY-MM-DD. E.g. 2026-06-17."
-                    ),
+                    "description": "Last day of leave. Must be >= start_date. Format: YYYY-MM-DD.",
+                    "pattern": _DATE_PATTERN,
                 },
                 "reason": {
                     "type": "string",
-                    "description": "Reason for the leave request.",
+                    "description": "Reason for the leave request (max 2000 chars).",
+                    "maxLength": _REASON_MAX_LENGTH,
                 },
             },
             "required": ["leave_type", "start_date", "end_date", "reason"],
@@ -151,35 +164,37 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
             "Draft an overtime request for the current employee. Returns a Draft Action "
             "with a preview for the employee to review and confirm. "
             "The employee confirms in the UI; only then is the overtime request submitted. "
-            "Use when the employee asks to register overtime, submit overtime, or log extra hours."
+            "Use when the employee asks to register overtime, submit overtime, "
+            "or log extra hours."
         ),
         parameters={
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "work_date": {
                     "type": "string",
-                    "description": (
-                        "Date overtime is worked. Format: YYYY-MM-DD. E.g. 2026-06-15."
-                    ),
+                    "description": "Date overtime is worked. Format: YYYY-MM-DD.",
+                    "pattern": _DATE_PATTERN,
                 },
                 "start_time": {
                     "type": "string",
-                    "description": ("Start time of overtime. Format: HH:MM (24-hour). E.g. 18:00."),
+                    "description": "Start time. Format: HH:MM (24-hour).",
+                    "pattern": _TIME_PATTERN,
                 },
                 "end_time": {
                     "type": "string",
-                    "description": (
-                        "End time of overtime. Must be after start_time. "
-                        "Format: HH:MM (24-hour). E.g. 20:30."
-                    ),
+                    "description": "End time. Must be after start_time. Format: HH:MM (24-hour).",
+                    "pattern": _TIME_PATTERN,
                 },
                 "reason": {
                     "type": "string",
-                    "description": "Reason for the overtime.",
+                    "description": "Reason for the overtime (max 2000 chars).",
+                    "maxLength": _REASON_MAX_LENGTH,
                 },
                 "project_or_task": {
                     "type": "string",
-                    "description": ("Optional name of the project or task for overtime."),
+                    "description": "Optional project or task name (max 255 chars).",
+                    "maxLength": 255,
                 },
             },
             "required": ["work_date", "start_time", "end_time", "reason"],

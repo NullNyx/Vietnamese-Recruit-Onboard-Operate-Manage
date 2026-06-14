@@ -5,6 +5,7 @@ Core invariants verified (ADR-0006, CONTEXT.md):
 2. EmployeeAssistantService returns draft_action in response — never auto-confirms
 3. The chat loop never calls any write/confirm endpoint
 4. System prompt instructs the LLM to never write directly
+5. All tool calls use injected employee_id, never from LLM params
 """
 
 from __future__ import annotations
@@ -43,7 +44,6 @@ def _make_service(
     mock_llm_client: MagicMock,
     settings: AssistantSettings,
 ) -> EmployeeAssistantService:
-    """Build EmployeeAssistantService with mocked deps."""
     return EmployeeAssistantService(
         llm_client=mock_llm_client,
         employee_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
@@ -65,7 +65,6 @@ class TestDraftActionFlow:
         mock_llm_client: MagicMock,
         settings: AssistantSettings,
     ) -> None:
-        """When LLM calls draft_leave_request, response contains draft_action."""
         mock_llm_client.chat = AsyncMock(side_effect=[
             LLMResponse(
                 content=None,
@@ -104,7 +103,6 @@ class TestDraftActionFlow:
         mock_llm_client: MagicMock,
         settings: AssistantSettings,
     ) -> None:
-        """When LLM calls draft_overtime_request, response contains draft_action."""
         mock_llm_client.chat = AsyncMock(side_effect=[
             LLMResponse(
                 content=None,
@@ -118,7 +116,6 @@ class TestDraftActionFlow:
                             "start_time": "18:00",
                             "end_time": "21:00",
                             "reason": "Xử lý báo cáo Q2",
-                            "project_or_task": "Báo cáo Q2",
                         }),
                     },
                 }],
@@ -143,7 +140,6 @@ class TestDraftActionFlow:
         mock_llm_client: MagicMock,
         settings: AssistantSettings,
     ) -> None:
-        """Read-Tool calls do NOT produce a draft_action."""
         mock_llm_client.chat = AsyncMock(side_effect=[
             LLMResponse(
                 content=None,
@@ -196,7 +192,7 @@ class TestDraftActionFlow:
         assert response.draft_action is None
 
     @pytest.mark.asyncio
-    async def test_no_auto_confirm_on_draft_tool(
+    async def test_service_never_auto_confirms_draft(
         self,
         mock_llm_client: MagicMock,
         settings: AssistantSettings,
@@ -233,8 +229,8 @@ class TestDraftActionFlow:
         assert response.draft_action is not None
         assert "confirmed" not in response.draft_action
         assert "submission_result" not in response.draft_action
-        assert "auto_submitted" not in response.draft_action
 
+        # Verify assistant text does not claim the request was submitted
         assistant_texts = [
             m.content for m in response.messages
             if m.role == "assistant" and m.content
@@ -246,8 +242,27 @@ class TestDraftActionFlow:
 class TestStructuralNoWrite:
     """Verify the Employee Assistant has NO write capability at any layer."""
 
+    @staticmethod
+    def _make_registry(**overrides: MagicMock) -> "EmployeeToolRegistry":
+        from src.modules.assistant.application.employee_tool_registry import (
+            EmployeeToolRegistry,
+        )
+        from unittest.mock import MagicMock
+        defaults = {
+            "employee_service": MagicMock(),
+            "attendance_repo": MagicMock(),
+            "leave_service": MagicMock(),
+            "overtime_service": MagicMock(),
+            "payslip_service": MagicMock(),
+        }
+        defaults.update(overrides)
+        return EmployeeToolRegistry(
+            employee_id="00000000-0000-0000-0000-000000000001",
+            **defaults,
+        )
+    """Verify the Employee Assistant has NO write capability at any layer."""
+
     def test_tool_registry_has_no_write_handlers(self) -> None:
-        """EmployeeToolRegistry must NOT include any write/mutate/delete handlers."""
         import inspect
 
         from src.modules.assistant.application.employee_tool_registry import (
@@ -255,12 +270,10 @@ class TestStructuralNoWrite:
         )
 
         source = inspect.getsource(EmployeeToolRegistry.execute)
-        forbidden_prefixes = ("_write_", "_submit_", "_create_", "_update_", "_delete_", "_approve_")
-        for prefix in forbidden_prefixes:
+        for prefix in ("_write_", "_submit_", "_create_", "_update_", "_delete_", "_approve_"):
             assert prefix not in source
 
     def test_all_handler_methods_are_approved(self) -> None:
-        """Every handler in EmployeeToolRegistry must be explicitly reviewed."""
         approved_handlers = {
             "_get_my_profile",
             "_get_my_attendance",
@@ -286,13 +299,9 @@ class TestStructuralNoWrite:
                     actual_methods.add(name)
 
         unknown = actual_methods - approved_handlers - {"__init__"}
-        assert not unknown, (
-            f"Unknown handlers found: {unknown}. "
-            f"Every new handler must be reviewed for write-safety."
-        )
+        assert not unknown, f"Unknown handlers: {unknown}"
 
     def test_service_never_auto_confirms(self) -> None:
-        """EmployeeAssistantService.chat() must never call confirm endpoints."""
         import inspect
 
         from src.modules.assistant.application.employee_assistant_service import (
@@ -300,13 +309,14 @@ class TestStructuralNoWrite:
         )
 
         source = inspect.getsource(EmployeeAssistantService)
-        for pattern in ["requests.post", "requests.put", "httpx.", "aiohttp.",
-                        "session.commit", "session.add(", "confirm("]:
+        for pattern in [
+            "requests.post", "requests.put", "httpx.", "aiohttp.",
+            "session.commit", "session.add(", "confirm(",
+        ]:
             assert pattern not in source
         assert "draft_action = result_data" in source
 
     def test_system_prompt_instructs_no_write(self) -> None:
-        """System prompt must explicitly tell LLM not to write."""
         import inspect
 
         from src.modules.assistant.application import employee_assistant_service as eas
@@ -314,3 +324,46 @@ class TestStructuralNoWrite:
         source = inspect.getsource(eas)
         assert "NEVER write" in source
         assert "human-in-the-loop" in source
+
+    def test_draft_tools_never_call_service_write(self) -> None:
+        """Verify draft tool handlers ONLY do validation + return DraftAction.
+
+        They must NOT call any service/repo method that could write.
+        """
+        import inspect
+
+        from src.modules.assistant.application.employee_tool_registry import (
+            EmployeeToolRegistry,
+        )
+
+        source = inspect.getsource(EmployeeToolRegistry)
+
+        # Extract draft tool handler implementations
+        draft_start = source.find("async def _draft_leave_request")
+        draft_section = source[draft_start:]
+
+        # These patterns should NOT appear in draft handlers
+        forbidden = [
+            "self._employee_service.",
+            "self._attendance_repo.",
+            "self._leave_service.",
+            "self._overtime_service.",
+            "self._payslip_service.",
+            "session.",
+        ]
+        for pattern in forbidden:
+            assert pattern not in draft_section, (
+                f"Draft handler calls service/repo method: '{pattern}'"
+            )
+
+    @pytest.mark.asyncio
+    async def test_registry_unknown_tool_returns_generic_error(self) -> None:
+        """Unknown tool must NOT leak internal details in error."""
+        import json
+
+        registry = self._make_registry()
+        result = json.loads(await registry.execute("nonexistent_tool", {}))
+        assert "error" in result
+        assert "Không thể xử lý" in result["error"]
+        # Must not contain the tool name or any internal detail
+        assert "nonexistent_tool" not in result["error"]

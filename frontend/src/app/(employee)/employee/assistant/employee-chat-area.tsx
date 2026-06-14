@@ -6,8 +6,8 @@ import { sendEmployeeChatMessage } from "@/lib/api/employee-assistant";
 
 const EMPLOYEE_SUGGESTIONS = [
   "Xem profile của tôi",
-  "Đăng ký nghỉ phép từ 15/07 đến 17/07",
-  "Đăng ký tăng ca ngày 20/06 từ 18h đến 21h",
+  "Soạn nháp nghỉ phép từ 15/07 đến 17/07",
+  "Soạn nháp tăng ca ngày 20/06 từ 18h đến 21h",
 ];
 
 export function EmployeeChatArea() {

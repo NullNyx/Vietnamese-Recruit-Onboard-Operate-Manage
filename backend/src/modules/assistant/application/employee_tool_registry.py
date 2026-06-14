@@ -31,18 +31,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Generic error returned to LLM on tool failure — no PII/DB detail leaked
+_TOOL_ERROR_MSG = "Không thể xử lý yêu cầu. Vui lòng thử lại sau."
+
 
 class EmployeeToolRegistry:
-    """Executes Employee Assistant tools — scoped to a single employee.
-
-    Args:
-        employee_id: The authenticated employee's UUID.
-        employee_service: For profile reads.
-        attendance_repo: For attendance record reads.
-        leave_service: For leave request reads.
-        overtime_service: For overtime request reads.
-        payslip_service: For payslip reads.
-    """
+    """Executes Employee Assistant tools — scoped to a single employee."""
 
     def __init__(
         self,
@@ -61,15 +55,7 @@ class EmployeeToolRegistry:
         self._payslip_service = payslip_service
 
     async def execute(self, tool_name: str, arguments: dict[str, Any]) -> str:
-        """Execute a tool by name, returning JSON-string result.
-
-        Args:
-            tool_name: The tool name from the LLM's tool_call.
-            arguments: Parsed arguments from the LLM.
-
-        Returns:
-            JSON string result for the LLM to consume.
-        """
+        """Execute a tool by name, returning JSON-string result."""
         handlers = {
             "get_my_profile": self._get_my_profile,
             "get_my_attendance": self._get_my_attendance,
@@ -81,18 +67,22 @@ class EmployeeToolRegistry:
 
         handler = handlers.get(tool_name)
         if handler is None:
-            return json.dumps({"error": f"Unknown tool: {tool_name}"})
+            return json.dumps({"error": _TOOL_ERROR_MSG})
 
         try:
             result = await handler(arguments)
             return json.dumps(result, ensure_ascii=False)
-        except Exception as exc:
+        except (ValueError, TypeError) as exc:
+            # Input validation errors — safe to return message, no PII
+            logger.warning("Tool input validation failed: %s", exc)
+            return json.dumps({"error": str(exc)})
+        except Exception:
+            # Unknown error — log full traceback, return generic message
             logger.exception("Employee tool execution failed: %s", tool_name)
-            return json.dumps({"error": f"Tool execution failed: {exc}"})
+            return json.dumps({"error": _TOOL_ERROR_MSG})
 
     @staticmethod
     def is_draft_tool(tool_name: str) -> bool:
-        """Check if a tool is a Draft-Tool (returns Draft Action, not data)."""
         for t in EMPLOYEE_TOOL_DEFINITIONS:
             if t.name == tool_name and t.kind == ToolKind.DRAFT:
                 return True
@@ -103,11 +93,6 @@ class EmployeeToolRegistry:
     # -----------------------------------------------------------------------
 
     async def _get_my_profile(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Return the authenticated employee's own profile.
-
-        employee_id is injected from the session — the LLM cannot
-        specify a different employee.
-        """
         from src.modules.employee.domain.entities import Employee
 
         employee: Employee = await self._employee_service.get_employee(
@@ -118,30 +103,34 @@ class EmployeeToolRegistry:
             "full_name": employee.full_name,
             "email": employee.email,
             "phone": employee.phone or "",
-            "date_of_birth": str(employee.date_of_birth) if employee.date_of_birth else "",
+            "date_of_birth": (str(employee.date_of_birth) if employee.date_of_birth else ""),
             "gender": employee.gender or "",
             "address": employee.address or "",
-            "department_id": str(employee.department_id) if employee.department_id else "",
-            "position_id": str(employee.position_id) if employee.position_id else "",
+            "department_id": (str(employee.department_id) if employee.department_id else ""),
+            "position_id": (str(employee.position_id) if employee.position_id else ""),
             "start_date": str(employee.start_date) if employee.start_date else "",
             "contract_type": employee.contract_type or "",
         }
 
     async def _get_my_attendance(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Return the authenticated employee's attendance records.
-
-        Optionally filtered by month/year. All records are scoped to
-        the employee_id from the session.
-        """
         import datetime
 
         month = args.get("month")
         year = args.get("year")
 
         now = datetime.date.today()
-        if month is None:
+        if month is not None:
+            month = int(month)
+            if not 1 <= month <= 12:
+                raise ValueError("Tháng phải từ 1 đến 12.")
+        else:
             month = now.month
-        if year is None:
+
+        if year is not None:
+            year = int(year)
+            if not 2020 <= year <= 2099:
+                raise ValueError("Năm phải từ 2020 đến 2099.")
+        else:
             year = now.year
 
         start_date = datetime.date(year, month, 1)
@@ -171,10 +160,6 @@ class EmployeeToolRegistry:
         }
 
     async def _get_my_employee_requests(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Return the authenticated employee's own requests.
-
-        Optionally filtered by request_type (leave or overtime).
-        """
         request_type = args.get("request_type")
 
         leaves = await self._leave_service.list_my_leaves(self._employee_id)
@@ -214,11 +199,9 @@ class EmployeeToolRegistry:
                 )
 
         items.sort(key=lambda x: x.get("submitted_at", ""), reverse=True)
-
         return {"requests": items}
 
     async def _get_my_payslips(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Return the authenticated employee's own published payslips."""
         payslips = await self._payslip_service.get_my_payslips(self._employee_id)
 
         return {
@@ -230,7 +213,7 @@ class EmployeeToolRegistry:
                     "gross_salary": float(p.gross_salary),
                     "net_salary": float(p.net_salary),
                     "basic_salary": float(p.basic_salary),
-                    "status": p.status.value if hasattr(p.status, "value") else str(p.status),
+                    "status": (p.status.value if hasattr(p.status, "value") else str(p.status)),
                 }
                 for p in payslips
             ],
@@ -241,23 +224,20 @@ class EmployeeToolRegistry:
     # -----------------------------------------------------------------------
 
     async def _draft_leave_request(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Draft-Tool: returns a Draft Action for a leave request."""
         leave_type = args.get("leave_type")
         start_date = args.get("start_date")
         end_date = args.get("end_date")
         reason = args.get("reason")
 
         if not leave_type or not start_date or not end_date or not reason:
-            return {
-                "error": "Missing required parameters: leave_type, start_date, end_date, reason."
-            }
+            return {"error": ("Thiếu thông tin: loại nghỉ, ngày bắt đầu, ngày kết thúc và lý do.")}
 
         allowed_types = {"annual", "sick", "unpaid", "other"}
         if leave_type not in allowed_types:
             return {
                 "error": (
-                    f"Invalid leave_type '{leave_type}'. "
-                    f"Must be one of: {', '.join(sorted(allowed_types))}."
+                    f"Loại nghỉ không hợp lệ: '{leave_type}'. "
+                    f"Các loại: {', '.join(sorted(allowed_types))}."
                 )
             }
 
@@ -291,7 +271,6 @@ class EmployeeToolRegistry:
         return {"draft_action": _draft_to_dict(draft)}
 
     async def _draft_overtime_request(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Draft-Tool: returns a Draft Action for an overtime request."""
         work_date = args.get("work_date")
         start_time = args.get("start_time")
         end_time = args.get("end_time")
@@ -300,7 +279,7 @@ class EmployeeToolRegistry:
 
         if not work_date or not start_time or not end_time or not reason:
             return {
-                "error": "Missing required parameters: work_date, start_time, end_time, reason."
+                "error": ("Thiếu thông tin: ngày làm việc, giờ bắt đầu, giờ kết thúc và lý do.")
             }
 
         preview = f"Đăng ký tăng ca ngày {work_date}, {start_time} - {end_time}. Lý do: {reason}"
@@ -337,7 +316,6 @@ class EmployeeToolRegistry:
     # -----------------------------------------------------------------------
 
     def get_openai_tools(self) -> list[dict]:
-        """Convert EMPLOYEE_TOOL_DEFINITIONS to OpenAI function-calling format."""
         return [
             {
                 "type": "function",
@@ -352,7 +330,6 @@ class EmployeeToolRegistry:
 
 
 def _draft_to_dict(draft: DraftAction) -> dict[str, Any]:
-    """Convert a DraftAction dataclass to a dict for JSON serialization."""
     return {
         "action_type": draft.action_type,
         "parameters": draft.parameters,
