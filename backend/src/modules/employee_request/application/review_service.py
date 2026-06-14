@@ -118,6 +118,9 @@ class EmployeeRequestReviewService:
             RequestNotFoundError: If the request does not exist.
             RequestNotReviewableError: If the request is not SUBMITTED.
         """
+        if not review_reason or not review_reason.strip():
+            raise ValueError("Rejection reason (decision_reason) is required")
+
         request = await self.repo.get_by_id_with_lock(request_id)
         if request is None:
             raise RequestNotFoundError(request_id)

@@ -13,7 +13,7 @@ os.environ["AUTH_GOOGLE_CLIENT_SECRET"] = "test-client-secret"
 os.environ["AUTH_JWT_SECRET_KEY"] = "test-secret-key-32-chars-min-for-hs256!"
 os.environ["AUTH_OAUTH_TOKEN_ENCRYPTION_KEY"] = "dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcw=="
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -21,11 +21,13 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.modules.employee_request.api.admin_router import (
-    AdminEmployeeRequestItem,
     admin_employee_request_router,
 )
 from src.modules.employee_request.api.error_handler import (
     register_employee_request_error_handlers,
+)
+from src.modules.employee_request.api.schemas import (
+    AdminEmployeeRequestItem,
 )
 from src.modules.employee_request.container import (
     get_employee_request_repository,
@@ -71,16 +73,21 @@ def _build_app(
 
         async def _override_current_user() -> User:
             return admin_user
+
         app.dependency_overrides[get_current_user] = _override_current_user
 
     if mock_repo is not None:
+
         async def _override_repo() -> AsyncMock:
             return mock_repo
+
         app.dependency_overrides[get_employee_request_repository] = _override_repo
 
     if mock_review_service is not None:
+
         async def _override_service() -> AsyncMock:
             return mock_review_service
+
         app.dependency_overrides[get_employee_request_review_service] = _override_service
 
     return app
@@ -129,10 +136,12 @@ class TestListReviewQueue:
         emp_id = uuid4()
         mock_request = MagicMock()
         mock_request.model_dump.return_value = _model_dump_kwargs(
-            req_id, emp_id, status="submitted",
+            req_id,
+            emp_id,
+            status="submitted",
         )
 
-        mock_repo.get_all_submitted = AsyncMock(
+        mock_repo.get_all_filtered = AsyncMock(
             return_value=[
                 SubmittedRequestWithEmployee(
                     request=mock_request,
@@ -259,7 +268,7 @@ class TestRejectRequest:
         client = TestClient(app)
         response = client.post(
             f"/api/admin/employee-requests/{request_id}/reject",
-            json={"review_reason": "Budget constraints"},
+            json={"decision_reason": "Budget constraints"},
         )
 
         assert response.status_code == 200
@@ -267,6 +276,11 @@ class TestRejectRequest:
         assert data["message"] == "Request rejected"
         assert data["request"]["status"] == "rejected"
         assert data["request"]["id"] == str(request_id)
+        mock_service.reject_request.assert_awaited_once_with(
+            request_id=request_id,
+            admin_user=admin,
+            review_reason="Budget constraints",
+        )
 
     def test_returns_403_when_not_admin(self) -> None:
         """Returns 403 when authenticated user is not admin."""
@@ -285,7 +299,137 @@ class TestRejectRequest:
         client = TestClient(app)
         response = client.post(
             f"/api/admin/employee-requests/{uuid4()}/reject",
-            json={},
+            json={"decision_reason": "Not needed"},
         )
 
         assert response.status_code == 403
+
+
+class TestListReviewQueueFilters:
+    """Tests for GET /api/admin/employee-requests with filters."""
+
+    def test_filters_by_request_type(self) -> None:
+        """Filter by leave type returns only leave requests."""
+        admin = _make_admin()
+        mock_repo = AsyncMock()
+        mock_repo.get_all_filtered = AsyncMock(return_value=[])
+
+        app = _build_app(admin_user=admin, mock_repo=mock_repo)
+        client = TestClient(app)
+        response = client.get("/api/admin/employee-requests?request_type=leave")
+
+        assert response.status_code == 200
+        mock_repo.get_all_filtered.assert_awaited_once()
+        call_kwargs = mock_repo.get_all_filtered.call_args.kwargs
+        assert call_kwargs["request_type"].value == "leave"
+
+    def test_filters_by_status(self) -> None:
+        """Filter by approved status returns only approved requests."""
+        admin = _make_admin()
+        mock_repo = AsyncMock()
+        mock_repo.get_all_filtered = AsyncMock(return_value=[])
+
+        app = _build_app(admin_user=admin, mock_repo=mock_repo)
+        client = TestClient(app)
+        response = client.get("/api/admin/employee-requests?status=approved")
+
+        assert response.status_code == 200
+        mock_repo.get_all_filtered.assert_awaited_once()
+        call_kwargs = mock_repo.get_all_filtered.call_args.kwargs
+        assert call_kwargs["status"].value == "approved"
+
+    def test_filters_by_employee_id(self) -> None:
+        """Filter by employee_id returns only that employee's requests."""
+        admin = _make_admin()
+        mock_repo = AsyncMock()
+        mock_repo.get_all_filtered = AsyncMock(return_value=[])
+
+        emp_id = uuid4()
+        app = _build_app(admin_user=admin, mock_repo=mock_repo)
+        client = TestClient(app)
+        response = client.get(f"/api/admin/employee-requests?employee_id={emp_id}")
+
+        assert response.status_code == 200
+        mock_repo.get_all_filtered.assert_awaited_once()
+        call_kwargs = mock_repo.get_all_filtered.call_args.kwargs
+        assert call_kwargs["employee_id"] == emp_id
+
+    def test_filters_by_date_range(self) -> None:
+        """Filter by date_from and date_to returns requests in range."""
+        admin = _make_admin()
+        mock_repo = AsyncMock()
+        mock_repo.get_all_filtered = AsyncMock(return_value=[])
+
+        app = _build_app(admin_user=admin, mock_repo=mock_repo)
+        client = TestClient(app)
+        response = client.get(
+            "/api/admin/employee-requests?date_from=2026-06-01&date_to=2026-06-30"
+        )
+
+        assert response.status_code == 200
+        mock_repo.get_all_filtered.assert_awaited_once()
+        call_kwargs = mock_repo.get_all_filtered.call_args.kwargs
+        assert call_kwargs["date_from"] == date(2026, 6, 1)
+        assert call_kwargs["date_to"] == date(2026, 6, 30)
+
+    def test_combined_filters(self) -> None:
+        """Multiple filters can be combined."""
+        admin = _make_admin()
+        mock_repo = AsyncMock()
+        mock_repo.get_all_filtered = AsyncMock(return_value=[])
+
+        emp_id = uuid4()
+        app = _build_app(admin_user=admin, mock_repo=mock_repo)
+        client = TestClient(app)
+        response = client.get(
+            f"/api/admin/employee-requests?request_type=overtime&status=submitted&employee_id={emp_id}"
+        )
+
+        assert response.status_code == 200
+        mock_repo.get_all_filtered.assert_awaited_once()
+        call_kwargs = mock_repo.get_all_filtered.call_args.kwargs
+        assert call_kwargs["request_type"].value == "overtime"
+        assert call_kwargs["status"].value == "submitted"
+        assert call_kwargs["employee_id"] == emp_id
+
+    def test_reject_requires_review_reason(self) -> None:
+        """Reject without review_reason returns 422."""
+        admin = _make_admin()
+        mock_service = AsyncMock()
+
+        app = _build_app(admin_user=admin, mock_review_service=mock_service)
+        client = TestClient(app)
+        response = client.post(
+            f"/api/admin/employee-requests/{uuid4()}/reject",
+            json={},
+        )
+
+        assert response.status_code == 422
+
+    def test_reject_with_empty_reason_returns_422(self) -> None:
+        """Reject with empty review_reason returns 422."""
+        admin = _make_admin()
+        mock_service = AsyncMock()
+
+        app = _build_app(admin_user=admin, mock_review_service=mock_service)
+        client = TestClient(app)
+        response = client.post(
+            f"/api/admin/employee-requests/{uuid4()}/reject",
+            json={"decision_reason": ""},
+        )
+
+        assert response.status_code == 422
+
+    def test_reject_with_whitespace_only_reason_returns_422(self) -> None:
+        """Reject with whitespace-only reason returns 422."""
+        admin = _make_admin()
+        mock_service = AsyncMock()
+
+        app = _build_app(admin_user=admin, mock_review_service=mock_service)
+        client = TestClient(app)
+        response = client.post(
+            f"/api/admin/employee-requests/{uuid4()}/reject",
+            json={"decision_reason": "   "},
+        )
+
+        assert response.status_code == 422

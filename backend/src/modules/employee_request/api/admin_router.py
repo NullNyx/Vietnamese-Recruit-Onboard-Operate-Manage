@@ -6,12 +6,18 @@ Provides review queue listing, approve, and reject operations.
 
 from __future__ import annotations
 
-from datetime import date, datetime, time
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
 
+from src.modules.employee_request.api.schemas import (
+    AdminEmployeeRequestItem,
+    AdminReviewQueueResponse,
+    RejectRequest,
+    ReviewQueueFilterParams,
+    ReviewRequest,
+    ReviewResponse,
+)
 from src.modules.employee_request.application.review_service import (
     EmployeeRequestReviewService,
 )
@@ -19,6 +25,7 @@ from src.modules.employee_request.container import (
     get_employee_request_repository,
     get_employee_request_review_service,
 )
+from src.modules.employee_request.domain.enums import RequestStatus
 from src.modules.employee_request.infrastructure.employee_request_repository import (
     EmployeeRequestRepository,
 )
@@ -28,60 +35,6 @@ admin_employee_request_router = APIRouter(
     prefix="/api/admin/employee-requests",
     tags=["admin", "employee-requests"],
 )
-
-
-# ---------------------------------------------------------------------------
-# Schemas
-# ---------------------------------------------------------------------------
-
-
-class AdminEmployeeRequestItem(BaseModel):
-    """List item for HR review queue."""
-
-    id: UUID
-    employee_id: UUID
-    employee_name: str = ""
-    request_type: str
-    status: str
-    submitted_at: datetime | None = None
-    updated_at: datetime | None = None
-    reason: str | None = None
-    # Overtime fields
-    work_date: date | None = None
-    start_time: time | None = None
-    end_time: time | None = None
-    duration_minutes: int | None = None
-    # Leave fields
-    leave_type: str | None = None
-    start_date: date | None = None
-    end_date: date | None = None
-    # Cancellation
-    cancellation_reason: str | None = None
-
-    model_config = {"from_attributes": True}
-
-
-class AdminReviewQueueResponse(BaseModel):
-    """Response schema for the HR review queue."""
-
-    requests: list[AdminEmployeeRequestItem]
-
-
-class ReviewRequest(BaseModel):
-    """Shared request schema for approve/reject."""
-
-    review_reason: str | None = Field(
-        default=None,
-        max_length=2000,
-        description="Reason for the review decision",
-    )
-
-
-class ReviewResponse(BaseModel):
-    """Response schema for approve/reject actions."""
-
-    message: str
-    request: AdminEmployeeRequestItem
 
 
 # ---------------------------------------------------------------------------
@@ -95,15 +48,25 @@ class ReviewResponse(BaseModel):
 )
 async def list_review_queue(
     admin_user: AdminUserDep,
+    filters: ReviewQueueFilterParams = Depends(),
     repo: EmployeeRequestRepository = Depends(get_employee_request_repository),
 ) -> AdminReviewQueueResponse:
-    """List all submitted employee requests for HR review.
+    """List employee requests for HR review with optional filters.
 
-    Returns requests newest first with employee name.
+    Supports filtering by request_type, status, date range, and employee.
+    Defaults to returning all submitted requests when no filters provided.
+    Results are newest first with employee name.
     """
-    submitted = await repo.get_all_submitted()
+    status_filter = filters.status if filters.status is not None else RequestStatus.SUBMITTED
+    results = await repo.get_all_filtered(
+        request_type=filters.request_type,
+        status=status_filter,
+        date_from=filters.date_from,
+        date_to=filters.date_to,
+        employee_id=filters.employee_id,
+    )
     items = []
-    for sw in submitted:
+    for sw in results:
         item = AdminEmployeeRequestItem(
             **sw.request.model_dump(),
             employee_name=sw.employee_name,
@@ -142,17 +105,17 @@ async def approve_request(
 )
 async def reject_request(
     request_id: UUID,
-    body: ReviewRequest,
+    body: RejectRequest,
     admin_user: AdminUserDep,
     review_service: EmployeeRequestReviewService = Depends(
         get_employee_request_review_service,
     ),
 ) -> ReviewResponse:
-    """Reject a submitted employee request."""
+    """Reject a submitted employee request (reason required)."""
     updated = await review_service.reject_request(
         request_id=request_id,
         admin_user=admin_user,
-        review_reason=body.review_reason,
+        review_reason=body.decision_reason,
     )
     return ReviewResponse(
         message="Request rejected",
