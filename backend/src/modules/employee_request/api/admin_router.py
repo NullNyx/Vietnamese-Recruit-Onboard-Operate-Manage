@@ -25,7 +25,6 @@ from src.modules.employee_request.container import (
     get_employee_request_repository,
     get_employee_request_review_service,
 )
-from src.modules.employee_request.domain.enums import RequestStatus, RequestType
 from src.modules.employee_request.infrastructure.employee_request_repository import (
     EmployeeRequestRepository,
 )
@@ -57,25 +56,12 @@ async def list_review_queue(
     Defaults to returning all submitted requests when no filters provided.
     Results are newest first with employee name.
     """
-    # Convert string filters to domain enums/types
-    req_type: RequestType | None = None
-    if filters.request_type:
-        req_type = RequestType(filters.request_type)
-
-    status: RequestStatus | None = None
-    if filters.status:
-        status = RequestStatus(filters.status)
-
-    emp_id: UUID | None = None
-    if filters.employee_id:
-        emp_id = UUID(filters.employee_id)
-
     results = await repo.get_all_filtered(
-        request_type=req_type,
-        status=status,
+        request_type=filters.request_type,
+        status=filters.status,
         date_from=filters.date_from,
         date_to=filters.date_to,
-        employee_id=emp_id,
+        employee_id=filters.employee_id,
     )
     items = []
     for sw in results:
@@ -127,7 +113,7 @@ async def reject_request(
     updated = await review_service.reject_request(
         request_id=request_id,
         admin_user=admin_user,
-        review_reason=body.review_reason,
+        review_reason=body.decision_reason,
     )
     return ReviewResponse(
         message="Request rejected",

@@ -238,7 +238,7 @@ export async function approveRequest(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ review_reason: reviewReason ?? null }),
+    body: JSON.stringify({ decision_reason: reviewReason ?? null }),
   });
   return handleResponse<ReviewResponse>(res);
 }
@@ -252,7 +252,7 @@ export async function rejectRequest(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ review_reason: reviewReason ?? null }),
+    body: JSON.stringify({ decision_reason: reviewReason ?? null }),
   });
   return handleResponse<ReviewResponse>(res);
 }

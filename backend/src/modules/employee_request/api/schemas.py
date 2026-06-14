@@ -5,15 +5,17 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.modules.employee_request.domain.enums import RequestStatus, RequestType
+
 
 class ReviewQueueFilterParams(BaseModel):
     """Query parameters for filtering the HR review queue."""
 
-    request_type: str | None = Field(
+    request_type: RequestType | None = Field(
         default=None,
         description="Filter by type: leave or overtime",
     )
-    status: str | None = Field(
+    status: RequestStatus | None = Field(
         default=None,
         description="Filter by status: submitted, approved, rejected, cancelled",
     )
@@ -25,7 +27,7 @@ class ReviewQueueFilterParams(BaseModel):
         default=None,
         description="Filter by submitted_at <= date_to",
     )
-    employee_id: str | None = Field(
+    employee_id: UUID | None = Field(
         default=None,
         description="Filter by employee UUID",
     )
@@ -282,7 +284,7 @@ class AdminEmployeeRequestItem(BaseModel):
         default=None,
         description="When the request was reviewed",
     )
-    reviewed_by_user_id: str | None = Field(
+    reviewed_by_user_id: UUID | None = Field(
         default=None,
         description="UUID of the admin who reviewed",
     )
@@ -309,7 +311,7 @@ class ReviewRequest(BaseModel):
 class RejectRequest(BaseModel):
     """Request schema for reject - reason is required."""
 
-    review_reason: str = Field(
+    decision_reason: str = Field(
         min_length=1,
         max_length=2000,
         description="Reason for rejection (required)",

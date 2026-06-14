@@ -297,6 +297,35 @@ class TestRejectRequest:
         mock_repo.update.assert_not_called()
         mock_audit_service.log_action.assert_not_called()
 
+    async def test_reject_without_reason_raises_error(
+        self,
+        review_service: EmployeeRequestReviewService,
+        mock_repo: AsyncMock,
+        mock_audit_service: AsyncMock,
+        admin_user: User,
+    ) -> None:
+        """Rejecting without a decision_reason raises ValueError."""
+        request = _make_submitted_request()
+        mock_repo.get_by_id_with_lock.return_value = request
+
+        with pytest.raises(ValueError, match='Rejection reason'):
+            await review_service.reject_request(
+                request_id=request.id,
+                admin_user=admin_user,
+                review_reason=None,
+            )
+
+        with pytest.raises(ValueError, match='Rejection reason'):
+            await review_service.reject_request(
+                request_id=request.id,
+                admin_user=admin_user,
+                review_reason='   ',
+            )
+
+        mock_repo.get_by_id_with_lock.assert_not_called()
+        mock_repo.update.assert_not_called()
+        mock_audit_service.log_action.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # Cross-type behaviour

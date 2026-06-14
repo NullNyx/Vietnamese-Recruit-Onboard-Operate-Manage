@@ -13,7 +13,7 @@ os.environ["AUTH_GOOGLE_CLIENT_SECRET"] = "test-client-secret"
 os.environ["AUTH_JWT_SECRET_KEY"] = "test-secret-key-32-chars-min-for-hs256!"
 os.environ["AUTH_OAUTH_TOKEN_ENCRYPTION_KEY"] = "dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcw=="
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -268,7 +268,7 @@ class TestRejectRequest:
         client = TestClient(app)
         response = client.post(
             f"/api/admin/employee-requests/{request_id}/reject",
-            json={"review_reason": "Budget constraints"},
+            json={"decision_reason": "Budget constraints"},
         )
 
         assert response.status_code == 200
@@ -294,7 +294,7 @@ class TestRejectRequest:
         client = TestClient(app)
         response = client.post(
             f"/api/admin/employee-requests/{uuid4()}/reject",
-            json={"review_reason": "Not needed"},
+            json={"decision_reason": "Not needed"},
         )
 
         assert response.status_code == 403
@@ -364,8 +364,8 @@ class TestListReviewQueueFilters:
         assert response.status_code == 200
         mock_repo.get_all_filtered.assert_awaited_once()
         call_kwargs = mock_repo.get_all_filtered.call_args.kwargs
-        assert call_kwargs["date_from"] is not None
-        assert call_kwargs["date_to"] is not None
+        assert call_kwargs["date_from"] == date(2026, 6, 1)
+        assert call_kwargs["date_to"] == date(2026, 6, 30)
 
     def test_combined_filters(self) -> None:
         """Multiple filters can be combined."""
@@ -410,7 +410,7 @@ class TestListReviewQueueFilters:
         client = TestClient(app)
         response = client.post(
             f"/api/admin/employee-requests/{uuid4()}/reject",
-            json={"review_reason": ""},
+            json={"decision_reason": ""},
         )
 
         assert response.status_code == 422

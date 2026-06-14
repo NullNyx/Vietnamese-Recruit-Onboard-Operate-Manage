@@ -7,7 +7,7 @@ async sessions with SQLModel.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, time, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
@@ -241,8 +241,9 @@ class EmployeeRequestRepository:
                 EmployeeRequest.submitted_at >= date_from,  # type: ignore[operator]
             )
         if date_to is not None:
+            exclusive_end = datetime.combine(date_to + timedelta(days=1), time.min)
             statement = statement.where(  # type: ignore[arg-type]
-                EmployeeRequest.submitted_at <= date_to,  # type: ignore[operator]
+                EmployeeRequest.submitted_at < exclusive_end,  # type: ignore[operator]
             )
         if employee_id is not None:
             statement = statement.where(  # type: ignore[arg-type]

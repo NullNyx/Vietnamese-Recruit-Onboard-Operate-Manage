@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -233,13 +234,14 @@ function ConfirmReviewDialog({
           <Label htmlFor="review-reason" className="text-[13px]">
             {reasonLabel}
           </Label>
-          <Input
+          <Textarea
             id="review-reason"
             value={reviewReason}
             onChange={(e) => onReviewReasonChange(e.target.value)}
             placeholder={reasonPlaceholder}
             className={reasonError ? "border-red-500" : ""}
             disabled={isPending}
+            rows={3}
           />
         </div>
         <AlertDialogFooter>
@@ -345,10 +347,11 @@ export default function AdminEmployeeRequestsPage() {
   function handleConfirm() {
     if (!reviewTarget) return;
     const { request, action } = reviewTarget;
+    const trimmedReason = reviewReason.trim();
     if (action === "approve") {
-      approveMutation.mutate({ request, reason: reviewReason });
+      approveMutation.mutate({ request, reason: trimmedReason });
     } else {
-      rejectMutation.mutate({ request, reason: reviewReason });
+      rejectMutation.mutate({ request, reason: trimmedReason });
     }
   }
 
