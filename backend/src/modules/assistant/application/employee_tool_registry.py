@@ -93,6 +93,8 @@ class EmployeeToolRegistry:
     # -----------------------------------------------------------------------
 
     async def _get_my_profile(self, args: dict[str, Any]) -> dict[str, Any]:
+        # Strip employee_id if LLM sneaks it in — always use auth session
+        args.pop("employee_id", None)
         from src.modules.employee.domain.entities import Employee
 
         employee: Employee = await self._employee_service.get_employee(
@@ -113,6 +115,8 @@ class EmployeeToolRegistry:
         }
 
     async def _get_my_attendance(self, args: dict[str, Any]) -> dict[str, Any]:
+        # Strip employee_id if LLM sneaks it in — always use auth session
+        args.pop("employee_id", None)
         import datetime
 
         month = args.get("month")
@@ -208,11 +212,14 @@ class EmployeeToolRegistry:
                 )
 
         items.sort(key=lambda x: x.get("submitted_at", ""), reverse=True)
-        return {"requests": items}
+        # Limit results to 50 to avoid bloating LLM context
+        return {"requests": items[:50]}
 
     async def _get_my_payslips(self, args: dict[str, Any]) -> dict[str, Any]:
         payslips = await self._payslip_service.get_my_payslips(self._employee_id)
 
+        # Limit results to 50 to avoid bloating LLM context
+        payslips = payslips[:50]
         return {
             "payslips": [
                 {
@@ -243,8 +250,15 @@ class EmployeeToolRegistry:
 
         allowed_types = {"annual", "sick", "unpaid", "other"}
 
-        # Cross-field validation: end_date must be >= start_date
-        if end_date < start_date:
+        # Cross-field validation: parse dates before comparing
+        import datetime as _dt
+
+        try:
+            parsed_start = _dt.date.fromisoformat(start_date)
+            parsed_end = _dt.date.fromisoformat(end_date)
+        except (ValueError, TypeError):
+            return {"error": ("Ngày không hợp lệ. Định dạng: YYYY-MM-DD.")}
+        if parsed_end < parsed_start:
             return {"error": ("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.")}
 
         if leave_type not in allowed_types:
@@ -296,8 +310,15 @@ class EmployeeToolRegistry:
                 "error": "Thiếu thông tin: ngày làm việc, giờ bắt đầu, giờ kết thúc và lý do.",
             }
 
-        # Cross-field validation: end_time must be > start_time
-        if end_time <= start_time:
+        # Cross-field validation: parse times before comparing
+        import datetime as _dt
+
+        try:
+            parsed_start = _dt.time.fromisoformat(start_time)
+            parsed_end = _dt.time.fromisoformat(end_time)
+        except (ValueError, TypeError):
+            return {"error": ("Giờ không hợp lệ. Định dạng: HH:MM.")}
+        if parsed_end <= parsed_start:
             return {
                 "error": "Giờ kết thúc phải sau giờ bắt đầu.",
             }

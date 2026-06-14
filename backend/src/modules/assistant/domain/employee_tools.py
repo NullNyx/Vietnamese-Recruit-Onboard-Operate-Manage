@@ -23,7 +23,7 @@ from __future__ import annotations
 from src.modules.assistant.domain.tools import ToolDefinition, ToolKind
 
 # Date regex: YYYY-MM-DD
-_DATE_PATTERN = r"^\d{4}-\d{2}-\d{2}$"
+_DATE_PATTERN = r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$"
 # Time regex: HH:MM (24-hour)
 _TIME_PATTERN = r"^([01]\d|2[0-3]):[0-5]\d$"
 # Max length for reason field

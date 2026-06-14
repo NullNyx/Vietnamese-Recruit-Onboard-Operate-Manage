@@ -103,14 +103,10 @@ class TestEmployeeToolBoundary:
             props = t.parameters.get("properties", {})
             for date_field in ["start_date", "end_date", "work_date"]:
                 if date_field in props:
-                    assert "pattern" in props[date_field], (
-                        f"{t.name}.{date_field} missing pattern"
-                    )
+                    assert "pattern" in props[date_field], f"{t.name}.{date_field} missing pattern"
             for time_field in ["start_time", "end_time"]:
                 if time_field in props:
-                    assert "pattern" in props[time_field], (
-                        f"{t.name}.{time_field} missing pattern"
-                    )
+                    assert "pattern" in props[time_field], f"{t.name}.{time_field} missing pattern"
             for str_field in ["reason", "project_or_task"]:
                 if str_field in props:
                     assert "maxLength" in props[str_field], (
@@ -130,12 +126,15 @@ class TestEmployeeToolRegistryDraftTools:
     async def test_draft_leave_request_returns_draft_action(self) -> None:
         registry = _make_registry()
         result = json.loads(
-            await registry.execute("draft_leave_request", {
-                "leave_type": "annual",
-                "start_date": "2026-07-01",
-                "end_date": "2026-07-03",
-                "reason": "Nghỉ phép du lịch",
-            })
+            await registry.execute(
+                "draft_leave_request",
+                {
+                    "leave_type": "annual",
+                    "start_date": "2026-07-01",
+                    "end_date": "2026-07-03",
+                    "reason": "Nghỉ phép du lịch",
+                },
+            )
         )
         assert "draft_action" in result
         da = result["draft_action"]
@@ -154,12 +153,15 @@ class TestEmployeeToolRegistryDraftTools:
     async def test_draft_overtime_request_returns_draft_action(self) -> None:
         registry = _make_registry()
         result = json.loads(
-            await registry.execute("draft_overtime_request", {
-                "work_date": "2026-06-15",
-                "start_time": "18:00",
-                "end_time": "21:00",
-                "reason": "Xử lý báo cáo Q2",
-            })
+            await registry.execute(
+                "draft_overtime_request",
+                {
+                    "work_date": "2026-06-15",
+                    "start_time": "18:00",
+                    "end_time": "21:00",
+                    "reason": "Xử lý báo cáo Q2",
+                },
+            )
         )
         assert "draft_action" in result
         assert result["draft_action"]["action_type"] == "submit_overtime_request"
@@ -255,18 +257,47 @@ class TestReadTools:
 
         # Forbidden patterns — each must NOT appear in handler code
         forbidden = [
-            "session.commit", "session.add(", "session.flush(",
-            ".create(", ".update(", ".delete(", ".soft_delete(", ".upsert(", ".save(",
+            "session.commit",
+            "session.add(",
+            "session.flush(",
+            ".create(",
+            ".update(",
+            ".delete(",
+            ".soft_delete(",
+            ".upsert(",
+            ".save(",
         ]
 
         for pattern in forbidden:
-            lines = [
-                l.strip() for l in handler_section.split("\n") if pattern in l
-            ]
+            lines = [l.strip() for l in handler_section.split("\n") if pattern in l]
             # Allow SELECT with execute
             lines = [l for l in lines if not ("select" in l.lower() and "execute" in l.lower())]
             if lines:
                 pytest.fail(f"Handler section contains forbidden pattern '{pattern}': {lines}")
+
+    @pytest.mark.asyncio
+    async def test_registry_ignores_employee_id_from_llm(self) -> None:
+        """Registry must ignore employee_id if LLM supplies it in args."""
+        from unittest.mock import AsyncMock
+
+        emp_service = MagicMock()
+        emp_service.get_employee = AsyncMock()
+
+        registry = _make_registry(employee_service=emp_service)
+
+        # LLM sends employee_id in args — registry must use auth session id
+        await registry.execute(
+            "get_my_profile",
+            {
+                "employee_id": "00000000-0000-0000-0000-999999999999",
+            },
+        )
+
+        # Must have been called with Registry's injected id, not the LLM-supplied one
+        call_employee_id = emp_service.get_employee.call_args[0][0]
+        assert str(call_employee_id) == "00000000-0000-0000-0000-000000000001", (
+            f"Registry used LLM-supplied employee_id {call_employee_id} instead of authenticated id"
+        )
 
     @pytest.mark.asyncio
     async def test_error_does_not_leak_pii(self) -> None:
