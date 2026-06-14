@@ -127,10 +127,7 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
                 },
                 "start_date": {
                     "type": "string",
-                    "description": (
-                        "First day of leave. Format: YYYY-MM-DD. "
-                        "E.g. 2026-06-15."
-                    ),
+                    "description": ("First day of leave. Format: YYYY-MM-DD. E.g. 2026-06-15."),
                 },
                 "end_date": {
                     "type": "string",
@@ -162,16 +159,12 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
                 "work_date": {
                     "type": "string",
                     "description": (
-                        "Date overtime is worked. Format: YYYY-MM-DD. "
-                        "E.g. 2026-06-15."
+                        "Date overtime is worked. Format: YYYY-MM-DD. E.g. 2026-06-15."
                     ),
                 },
                 "start_time": {
                     "type": "string",
-                    "description": (
-                        "Start time of overtime. Format: HH:MM (24-hour). "
-                        "E.g. 18:00."
-                    ),
+                    "description": ("Start time of overtime. Format: HH:MM (24-hour). E.g. 18:00."),
                 },
                 "end_time": {
                     "type": "string",
@@ -186,9 +179,7 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
                 },
                 "project_or_task": {
                     "type": "string",
-                    "description": (
-                        "Optional name of the project or task for overtime."
-                    ),
+                    "description": ("Optional name of the project or task for overtime."),
                 },
             },
             "required": ["work_date", "start_time", "end_time", "reason"],

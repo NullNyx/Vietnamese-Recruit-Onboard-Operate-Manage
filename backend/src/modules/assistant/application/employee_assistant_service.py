@@ -182,13 +182,9 @@ class EmployeeAssistantService:
                     }
                 )
 
-        has_text_response = any(
-            m.role == "assistant" and m.content for m in all_new_messages
-        )
+        has_text_response = any(m.role == "assistant" and m.content for m in all_new_messages)
         if not has_text_response:
-            all_new_messages.append(
-                ChatMessage(role="assistant", content=_TOOL_LOOP_FALLBACK)
-            )
+            all_new_messages.append(ChatMessage(role="assistant", content=_TOOL_LOOP_FALLBACK))
 
         return ChatResponse(
             messages=all_new_messages,
@@ -208,13 +204,10 @@ class EmployeeAssistantService:
         )
 
         system_content = (
-            _EMPLOYEE_SYSTEM_PROMPT
-            + f"\nYou have access to these tools:\n{tools_str}\n"
+            _EMPLOYEE_SYSTEM_PROMPT + f"\nYou have access to these tools:\n{tools_str}\n"
         )
 
-        result: list[dict[str, Any]] = [
-            {"role": "system", "content": system_content}
-        ]
+        result: list[dict[str, Any]] = [{"role": "system", "content": system_content}]
 
         start_idx = max(0, len(messages) - self._settings.max_history)
         while start_idx > 0 and messages[start_idx].role != "user":
@@ -223,15 +216,11 @@ class EmployeeAssistantService:
 
         for msg in history:
             if msg.role == "tool":
-                logger.warning(
-                    "Stripped unexpected tool message from client history"
-                )
+                logger.warning("Stripped unexpected tool message from client history")
                 continue
 
             if msg.role == "assistant" and msg.content is None:
-                logger.warning(
-                    "Stripped assistant history message without content"
-                )
+                logger.warning("Stripped assistant history message without content")
                 continue
 
             entry: dict[str, Any] = {"role": msg.role}

@@ -121,9 +121,7 @@ async def employee_chat(
     """
     last_msg = body.messages[-1]
     if last_msg.role != "user":
-        raise HTTPException(
-            status_code=422, detail="Last message must be from user"
-        )
+        raise HTTPException(status_code=422, detail="Last message must be from user")
 
     domain_messages = [
         ChatMessage(

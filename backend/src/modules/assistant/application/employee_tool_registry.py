@@ -256,9 +256,9 @@ class EmployeeToolRegistry:
         if leave_type not in allowed_types:
             return {
                 "error": (
-                f"Invalid leave_type '{leave_type}'. "
-                f"Must be one of: {', '.join(sorted(allowed_types))}."
-            )
+                    f"Invalid leave_type '{leave_type}'. "
+                    f"Must be one of: {', '.join(sorted(allowed_types))}."
+                )
             }
 
         leave_type_labels = {
