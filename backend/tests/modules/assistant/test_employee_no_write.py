@@ -269,9 +269,45 @@ class TestStructuralNoWrite:
             EmployeeToolRegistry,
         )
 
-        source = inspect.getsource(EmployeeToolRegistry.execute)
+        source = inspect.getsource(EmployeeToolRegistry)
+
+        # 1. Check no write-prefix methods exist in the entire class
         for prefix in ("_write_", "_submit_", "_create_", "_update_", "_delete_", "_approve_"):
-            assert prefix not in source
+            # Must not define any method starting with these prefixes
+            for line in source.split("\n"):
+                stripped = line.strip()
+                if stripped.startswith(f"async def {prefix}") or stripped.startswith(f"def {prefix}"):
+                    raise AssertionError(
+                        f"Found forbidden write handler: {stripped}"
+                    )
+
+        # 2. Check that handler implementations do not call session.write methods
+        # Extract only the handler section (private async methods)
+        handler_section = source[source.find("async def _get_my_profile"):]
+        forbidden_calls = [
+            "session.commit(",
+            "session.add(",
+            "session.flush(",
+            ".create(",
+            ".update(",
+            ".delete(",
+            ".soft_delete(",
+            ".upsert(",
+            ".save(",
+        ]
+        for pattern in forbidden_calls:
+            lines = [
+                line.strip()
+                for line in handler_section.split("\n")
+                if pattern in line
+            ]
+            for line in lines:
+                # Allow SELECT statements with .execute()
+                if "execute(" in line and "SELECT" in line.upper():
+                    continue
+                raise AssertionError(
+                    f"Found forbidden call '{pattern}' in handler: {line}"
+                )
 
     def test_all_handler_methods_are_approved(self) -> None:
         approved_handlers = {

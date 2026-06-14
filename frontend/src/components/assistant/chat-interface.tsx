@@ -16,22 +16,19 @@ import {
 } from "@/lib/api/assistant";
 
 export interface ChatInterfaceProps {
-  /** Optional custom send function. Defaults to HR Assistant API. */
   sendMessage?: (
     messages: ChatMessage[],
   ) => Promise<ChatResponse>;
-  /** Greeting title shown when no messages */
+  confirmAction?: (draft: DraftAction) => Promise<unknown>;
   title?: string;
-  /** Greeting description shown when no messages */
   description?: string;
-  /** Suggested prompts shown when no messages */
   suggestions?: string[];
-  /** Icon shown in greeting */
   icon?: React.ReactNode;
 }
 
 export function ChatInterface({
   sendMessage = sendChatMessage,
+  confirmAction,
   title = "Trợ lý AI Vroom HR",
   description = "Hỏi tôi về dữ liệu nhân sự của bạn.",
   suggestions,
@@ -44,7 +41,6 @@ export function ChatInterface({
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -65,16 +61,20 @@ export function ChatInterface({
     try {
       const response = await sendMessage(updatedMessages);
 
-      // Add new assistant messages to conversation
-      setMessages([...updatedMessages, ...response.messages]);
+      // Filter out tool-call only messages (content=null, role=assistant)
+      // that would render as empty bubbles or stuck loaders in the UI.
+      const displayMessages = response.messages.filter(
+        (m) => !(m.role === "assistant" && m.content === null && m.tool_calls),
+      );
 
-      // Show draft action if present
+      setMessages([...updatedMessages, ...displayMessages]);
+
       if (response.draft_action) {
         setDraftAction(response.draft_action);
       }
     } catch (err) {
       toast.error(
-        `Lỗi: ${err instanceof Error ? err.message : "Không thể kết nối trợ lý"}`
+        `Lỗi: ${err instanceof Error ? err.message : "Không thể kết nối trợ lý"}`,
       );
     } finally {
       setLoading(false);
@@ -100,7 +100,6 @@ export function ChatInterface({
 
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col">
-      {/* Chat messages area */}
       <ScrollArea className="flex-1 px-4">
         <div ref={scrollRef} className="space-y-4 py-4">
           {messages.length === 0 && (
@@ -141,25 +140,26 @@ export function ChatInterface({
                 <Loader2 className="h-4 w-4 text-primary animate-spin" />
               </div>
               <div className="flex items-center rounded-lg bg-muted px-4 py-2">
-                <span className="text-sm text-muted-foreground">Đang suy nghĩ...</span>
+                <span className="text-sm text-muted-foreground">
+                  Đang suy nghĩ...
+                </span>
               </div>
             </div>
           )}
         </div>
       </ScrollArea>
 
-      {/* Draft Action */}
       {draftAction && (
         <div className="border-t px-4 py-3">
           <DraftActionCard
             draft={draftAction}
+            confirmAction={confirmAction}
             onConfirmed={() => setDraftAction(null)}
             onDismissed={() => setDraftAction(null)}
           />
         </div>
       )}
 
-      {/* Input area */}
       <div className="border-t px-4 py-3">
         <div className="flex gap-2">
           <Textarea

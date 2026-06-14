@@ -47,6 +47,11 @@ async function fetchWithTimeout(
 export async function sendEmployeeChatMessage(
   messages: import("./assistant").ChatMessage[],
 ): Promise<import("./assistant").ChatResponse> {
+  // Client-side guard: last message must be from user
+  const lastMsg = messages[messages.length - 1];
+  if (lastMsg && lastMsg.role !== "user") {
+    throw new Error("Last message must be from user");
+  }
   // Filter out tool messages and assistant-only tool-call placeholders.
   // Backend accepts only user/assistant text history (ADR-0006).
   const sanitized: { role: "user" | "assistant"; content: string }[] =
@@ -70,4 +75,35 @@ export async function sendEmployeeChatMessage(
   }
 
   return res.json() as Promise<import("./assistant").ChatResponse>;
+}
+
+/**
+ * Confirm a Draft Action by calling the real endpoint directly.
+ * Strictly scoped to employee endpoints — rejects HR admin endpoints.
+ * This prevents employee assistant from accidentally calling HR APIs.
+ */
+export async function confirmEmployeeDraftAction(
+  draft: import("./assistant").DraftAction,
+): Promise<unknown> {
+  // Scoped guard: only allow /api/employee-requests/me/* endpoints
+  if (
+    !draft.confirm_endpoint.startsWith("/api/employee-requests/me/")
+  ) {
+    throw new Error(
+      "Invalid confirm endpoint: must start with /api/employee-requests/me/",
+    );
+  }
+
+  const res = await fetchWithTimeout(draft.confirm_endpoint, {
+    method: draft.confirm_method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(draft.confirm_body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "Unknown error");
+    throw new Error(`Confirm API ${res.status}: ${text}`);
+  }
+
+  return res.json();
 }

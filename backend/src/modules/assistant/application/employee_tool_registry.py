@@ -233,6 +233,11 @@ class EmployeeToolRegistry:
             return {"error": ("Thiếu thông tin: loại nghỉ, ngày bắt đầu, ngày kết thúc và lý do.")}
 
         allowed_types = {"annual", "sick", "unpaid", "other"}
+
+        # Cross-field validation: end_date must be >= start_date
+        if end_date < start_date:
+            return {"error": ("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.")}
+
         if leave_type not in allowed_types:
             return {
                 "error": (
@@ -279,7 +284,13 @@ class EmployeeToolRegistry:
 
         if not work_date or not start_time or not end_time or not reason:
             return {
-                "error": ("Thiếu thông tin: ngày làm việc, giờ bắt đầu, giờ kết thúc và lý do.")
+                "error": "Thiếu thông tin: ngày làm việc, giờ bắt đầu, giờ kết thúc và lý do.",
+            }
+
+        # Cross-field validation: end_time must be > start_time
+        if end_time <= start_time:
+            return {
+                "error": "Giờ kết thúc phải sau giờ bắt đầu.",
             }
 
         preview = f"Đăng ký tăng ca ngày {work_date}, {start_time} - {end_time}. Lý do: {reason}"
