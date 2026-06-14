@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2, MessageSquare } from "lucide-react";
+import { Send, Loader2, MessageSquare, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,9 +12,31 @@ import {
   sendChatMessage,
   type ChatMessage,
   type DraftAction,
+  type ChatResponse,
 } from "@/lib/api/assistant";
 
-export function ChatInterface() {
+export interface ChatInterfaceProps {
+  /** Optional custom send function. Defaults to HR Assistant API. */
+  sendMessage?: (
+    messages: ChatMessage[],
+  ) => Promise<ChatResponse>;
+  /** Greeting title shown when no messages */
+  title?: string;
+  /** Greeting description shown when no messages */
+  description?: string;
+  /** Suggested prompts shown when no messages */
+  suggestions?: string[];
+  /** Icon shown in greeting */
+  icon?: React.ReactNode;
+}
+
+export function ChatInterface({
+  sendMessage = sendChatMessage,
+  title = "Trợ lý AI Vroom HR",
+  description = "Hỏi tôi về dữ liệu nhân sự của bạn.",
+  suggestions,
+  icon,
+}: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,7 +63,7 @@ export function ChatInterface() {
     setLoading(true);
 
     try {
-      const response = await sendChatMessage(updatedMessages);
+      const response = await sendMessage(updatedMessages);
 
       // Add new assistant messages to conversation
       setMessages([...updatedMessages, ...response.messages]);
@@ -66,6 +88,16 @@ export function ChatInterface() {
     }
   };
 
+  const defaultSuggestions = suggestions || [
+    "Có bao nhiêu candidate đang reviewing?",
+    "Onboarding nào đang chạy?",
+    "Soạn email chúc mừng cho Nguyễn Văn A",
+  ];
+
+  const defaultIcon = icon || (
+    <MessageSquare className="h-8 w-8 text-primary" />
+  );
+
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col">
       {/* Chat messages area */}
@@ -74,18 +106,14 @@ export function ChatInterface() {
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4">
-                <MessageSquare className="h-8 w-8 text-primary" />
+                {defaultIcon}
               </div>
-              <h3 className="text-lg font-medium mb-2">Trợ lý AI Vroom HR</h3>
+              <h3 className="text-lg font-medium mb-2">{title}</h3>
               <p className="text-sm text-muted-foreground max-w-md">
-                Hỏi tôi về dữ liệu tuyển dụng, tiến độ onboarding, hoặc yêu cầu soạn email.
+                {description}
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-2">
-                {[
-                  "Có bao nhiêu candidate đang reviewing?",
-                  "Onboarding nào đang chạy?",
-                  "Soạn email chúc mừng cho Nguyễn Văn A",
-                ].map((suggestion) => (
+                {defaultSuggestions.map((suggestion) => (
                   <Button
                     key={suggestion}
                     variant="outline"

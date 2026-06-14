@@ -3,6 +3,7 @@ import {
   FileText,
   Clock,
   ClipboardList,
+  Bot,
 } from "lucide-react";
 import type { HeaderNavConfig } from "./header-nav-config";
 
@@ -23,6 +24,16 @@ export const essNavConfig: HeaderNavConfig = {
         "/employee/attendance",
         "/employee/documents",
         "/employee/requests",
+      ],
+    },
+    {
+      id: "tro-ly",
+      label: "Trợ lý",
+      links: [
+        { href: "/employee/assistant", label: "Trợ lý AI", icon: Bot },
+      ],
+      activeRoutes: [
+        "/employee/assistant",
       ],
     },
   ],
