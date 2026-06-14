@@ -20,10 +20,10 @@ from src.modules.assistant.api.employee_schemas import (
     DraftActionSchema,
     OutgoingMessageSchema,
 )
+from src.modules.assistant.application.assistant_service import ChatMessage
 from src.modules.assistant.application.employee_assistant_service import (
     EmployeeAssistantService,
 )
-from src.modules.assistant.application.assistant_service import ChatMessage
 from src.modules.assistant.container import (
     get_assistant_llm_client,
     get_assistant_settings,

@@ -184,30 +184,34 @@ class EmployeeToolRegistry:
 
         if request_type is None or request_type == "leave":
             for r in leaves:
-                items.append({
-                    "id": str(r.id),
-                    "type": "leave",
-                    "status": r.status.value,
-                    "leave_type": r.leave_type.value if r.leave_type else "",
-                    "start_date": str(r.start_date) if r.start_date else "",
-                    "end_date": str(r.end_date) if r.end_date else "",
-                    "reason": r.reason or "",
-                    "submitted_at": str(r.submitted_at) if r.submitted_at else "",
-                })
+                items.append(
+                    {
+                        "id": str(r.id),
+                        "type": "leave",
+                        "status": r.status.value,
+                        "leave_type": r.leave_type.value if r.leave_type else "",
+                        "start_date": str(r.start_date) if r.start_date else "",
+                        "end_date": str(r.end_date) if r.end_date else "",
+                        "reason": r.reason or "",
+                        "submitted_at": str(r.submitted_at) if r.submitted_at else "",
+                    }
+                )
 
         if request_type is None or request_type == "overtime":
             for r in overtime:
-                items.append({
-                    "id": str(r.id),
-                    "type": "overtime",
-                    "status": r.status.value,
-                    "work_date": str(r.work_date) if r.work_date else "",
-                    "start_time": str(r.start_time) if r.start_time else "",
-                    "end_time": str(r.end_time) if r.end_time else "",
-                    "reason": r.reason or "",
-                    "project_or_task": r.project_or_task or "",
-                    "submitted_at": str(r.submitted_at) if r.submitted_at else "",
-                })
+                items.append(
+                    {
+                        "id": str(r.id),
+                        "type": "overtime",
+                        "status": r.status.value,
+                        "work_date": str(r.work_date) if r.work_date else "",
+                        "start_time": str(r.start_time) if r.start_time else "",
+                        "end_time": str(r.end_time) if r.end_time else "",
+                        "reason": r.reason or "",
+                        "project_or_task": r.project_or_task or "",
+                        "submitted_at": str(r.submitted_at) if r.submitted_at else "",
+                    }
+                )
 
         items.sort(key=lambda x: x.get("submitted_at", ""), reverse=True)
 
@@ -244,11 +248,18 @@ class EmployeeToolRegistry:
         reason = args.get("reason")
 
         if not leave_type or not start_date or not end_date or not reason:
-            return {"error": "Missing required parameters: leave_type, start_date, end_date, reason."}
+            return {
+                "error": "Missing required parameters: leave_type, start_date, end_date, reason."
+            }
 
         allowed_types = {"annual", "sick", "unpaid", "other"}
         if leave_type not in allowed_types:
-            return {"error": f"Invalid leave_type '{leave_type}'. Must be one of: {', '.join(sorted(allowed_types))}."}
+            return {
+                "error": (
+                f"Invalid leave_type '{leave_type}'. "
+                f"Must be one of: {', '.join(sorted(allowed_types))}."
+            )
+            }
 
         leave_type_labels = {
             "annual": "Nghỉ phép năm",
@@ -261,11 +272,21 @@ class EmployeeToolRegistry:
 
         draft = DraftAction(
             action_type="submit_leave_request",
-            parameters={"leave_type": leave_type, "start_date": start_date, "end_date": end_date, "reason": reason},
+            parameters={
+                "leave_type": leave_type,
+                "start_date": start_date,
+                "end_date": end_date,
+                "reason": reason,
+            },
             preview=preview,
             confirm_endpoint="/api/employee-requests/me/leave",
             confirm_method="POST",
-            confirm_body={"leave_type": leave_type, "start_date": start_date, "end_date": end_date, "reason": reason},
+            confirm_body={
+                "leave_type": leave_type,
+                "start_date": start_date,
+                "end_date": end_date,
+                "reason": reason,
+            },
         )
         return {"draft_action": _draft_to_dict(draft)}
 
@@ -278,19 +299,32 @@ class EmployeeToolRegistry:
         project_or_task = args.get("project_or_task")
 
         if not work_date or not start_time or not end_time or not reason:
-            return {"error": "Missing required parameters: work_date, start_time, end_time, reason."}
+            return {
+                "error": "Missing required parameters: work_date, start_time, end_time, reason."
+            }
 
         preview = f"Đăng ký tăng ca ngày {work_date}, {start_time} - {end_time}. Lý do: {reason}"
         if project_or_task:
             preview += f" | Dự án: {project_or_task}"
 
-        body: dict[str, Any] = {"work_date": work_date, "start_time": start_time, "end_time": end_time, "reason": reason}
+        body: dict[str, Any] = {
+            "work_date": work_date,
+            "start_time": start_time,
+            "end_time": end_time,
+            "reason": reason,
+        }
         if project_or_task:
             body["project_or_task"] = project_or_task
 
         draft = DraftAction(
             action_type="submit_overtime_request",
-            parameters={"work_date": work_date, "start_time": start_time, "end_time": end_time, "reason": reason, "project_or_task": project_or_task},
+            parameters={
+                "work_date": work_date,
+                "start_time": start_time,
+                "end_time": end_time,
+                "reason": reason,
+                "project_or_task": project_or_task,
+            },
             preview=preview,
             confirm_endpoint="/api/employee-requests/me/overtime",
             confirm_method="POST",

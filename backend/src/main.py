@@ -13,11 +13,11 @@ load_dotenv()
 
 from fastapi import FastAPI  # noqa: E402
 
+from src.modules.assistant.api.employee_router import employee_assistant_router  # noqa: E402
 from src.modules.assistant.api.error_handler import (  # noqa: E402
     register_assistant_error_handlers,
 )
 from src.modules.assistant.api.router import router as assistant_router  # noqa: E402
-from src.modules.assistant.api.employee_router import employee_assistant_router  # noqa: E402
 from src.modules.attendance.api.error_handler import (  # noqa: E402
     register_attendance_error_handlers,
 )

@@ -15,10 +15,10 @@ import logging
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+from src.modules.assistant.application.assistant_service import ChatMessage, ChatResponse
 from src.modules.assistant.application.employee_tool_registry import (
     EmployeeToolRegistry,
 )
-from src.modules.assistant.application.assistant_service import ChatMessage, ChatResponse
 from src.modules.assistant.infrastructure.config import AssistantSettings
 from src.modules.assistant.infrastructure.llm_client import AssistantLLMClient
 
