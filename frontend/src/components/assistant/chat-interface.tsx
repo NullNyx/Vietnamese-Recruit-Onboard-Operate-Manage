@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { Send, Loader2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +23,7 @@ export interface ChatInterfaceProps {
   title?: string;
   description?: string;
   suggestions?: string[];
-  icon?: React.ReactNode;
+  icon?: ReactNode;
 }
 
 export function ChatInterface({

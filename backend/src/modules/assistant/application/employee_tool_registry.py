@@ -162,6 +162,15 @@ class EmployeeToolRegistry:
     async def _get_my_employee_requests(self, args: dict[str, Any]) -> dict[str, Any]:
         request_type = args.get("request_type")
 
+        valid_types = {"leave", "overtime"}
+        if request_type is not None and request_type not in valid_types:
+            return {
+                "error": (
+                    f"Loại yêu cầu không hợp lệ: '{request_type}'. "
+                    f"Các loại: {', '.join(sorted(valid_types))}."
+                )
+            }
+
         leaves = await self._leave_service.list_my_leaves(self._employee_id)
         overtime = await self._overtime_service.list_my_overtime(self._employee_id)
 
