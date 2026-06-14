@@ -239,53 +239,34 @@ class TestReadTools:
 
     @pytest.mark.asyncio
     async def test_registry_never_calls_write_commit(self) -> None:
-        """Verify EmployeeToolRegistry never calls session.commit or similar."""
+        """Verify EmployeeToolRegistry handler section has zero write calls."""
+        import inspect
+        import pytest
+
         from src.modules.assistant.application.employee_tool_registry import (
             EmployeeToolRegistry,
         )
 
-        # Collect all handler method names from the class
-        import inspect
-
         source = inspect.getsource(EmployeeToolRegistry)
 
-        # Check no write/commit patterns exist in handler implementations
-        write_patterns = [
-            "session.commit",
-            "session.add(",
-            "session.flush(",
-            "session.execute(",
-            "self._employee_service.create_",
-            "self._employee_service.update_",
-            "self._employee_service.delete_",
-            "self._attendance_repo.create(",
-            "self._attendance_repo.upsert_",
-            "self._attendance_repo.update(",
-            "self._leave_service.create_",
-            "self._overtime_service.create_",
-            "self._payslip_service.create_",
-        ]
-
-        # Make sure none of the PRIVATE handler methods use write patterns
-        # (only execute in the try block which is safe)
         handler_start = source.find("async def _get_my_profile")
+        assert handler_start != -1, "Handler section not found"
         handler_section = source[handler_start:]
 
-        for pattern in write_patterns:
-            if pattern in handler_section:
-                # session.execute is fine if it's a SELECT
-                if "session.execute(" in pattern:
-                    # Check it's a SELECT, not INSERT/UPDATE/DELETE
-                    line_num = 1
-                    for i, line in enumerate(handler_section.split("\n")):
-                        if pattern in line:
-                            line_num = i
-                            line_stripped = line.strip()
-                            # Allow SELECT, reject INSERT/UPDATE/DELETE
-                            assert "SELECT" in line_stripped.upper() or "select" in line_stripped, (
-                                f"Handler contains write pattern '{pattern}' "
-                                f"at line ~{line_num}"
-                            )
+        # Forbidden patterns — each must NOT appear in handler code
+        forbidden = [
+            "session.commit", "session.add(", "session.flush(",
+            ".create(", ".update(", ".delete(", ".soft_delete(", ".upsert(", ".save(",
+        ]
+
+        for pattern in forbidden:
+            lines = [
+                l.strip() for l in handler_section.split("\n") if pattern in l
+            ]
+            # Allow SELECT with execute
+            lines = [l for l in lines if not ("select" in l.lower() and "execute" in l.lower())]
+            if lines:
+                pytest.fail(f"Handler section contains forbidden pattern '{pattern}': {lines}")
 
     @pytest.mark.asyncio
     async def test_error_does_not_leak_pii(self) -> None:

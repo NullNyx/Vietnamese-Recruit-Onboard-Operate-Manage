@@ -96,6 +96,13 @@ class TestDraftActionFlow:
         assert response.draft_action is not None
         assert response.draft_action["action_type"] == "submit_leave_request"
         assert response.draft_action["confirm_endpoint"] == "/api/employee-requests/me/leave"
+        assert response.draft_action["confirm_method"] == "POST"
+        assert response.draft_action["confirm_body"]["leave_type"] == "annual"
+        assert response.draft_action["confirm_body"]["start_date"] == "2026-07-01"
+        assert response.draft_action["confirm_body"]["end_date"] == "2026-07-03"
+        assert response.draft_action["confirm_body"]["reason"] == "Nghỉ phép du lịch"
+        assert response.draft_action["parameters"]["leave_type"] == "annual"
+        assert response.draft_action["parameters"]["start_date"] == "2026-07-01"
 
     @pytest.mark.asyncio
     async def test_draft_overtime_request_returns_draft_action_in_response(
@@ -362,10 +369,7 @@ class TestStructuralNoWrite:
         assert "human-in-the-loop" in source
 
     def test_draft_tools_never_call_service_write(self) -> None:
-        """Verify draft tool handlers ONLY do validation + return DraftAction.
-
-        They must NOT call any service/repo method that could write.
-        """
+        """Verify each draft handler has ZERO service/repo calls."""
         import inspect
 
         from src.modules.assistant.application.employee_tool_registry import (
@@ -374,23 +378,37 @@ class TestStructuralNoWrite:
 
         source = inspect.getsource(EmployeeToolRegistry)
 
-        # Extract draft tool handler implementations
-        draft_start = source.find("async def _draft_leave_request")
-        draft_section = source[draft_start:]
-
-        # These patterns should NOT appear in draft handlers
-        forbidden = [
-            "self._employee_service.",
-            "self._attendance_repo.",
-            "self._leave_service.",
-            "self._overtime_service.",
-            "self._payslip_service.",
-            "session.",
-        ]
-        for pattern in forbidden:
-            assert pattern not in draft_section, (
-                f"Draft handler calls service/repo method: '{pattern}'"
+        # Test each draft handler separately with proper bounds
+        for handler_name in ["_draft_leave_request", "_draft_overtime_request"]:
+            marker = f"async def {handler_name}"
+            handler_start = source.find(marker)
+            assert handler_start != -1, (
+                f"Draft handler '{handler_name}' not found"
             )
+
+            # Find next method boundary
+            next_method = source.find("\n    async def ", handler_start + 1)
+            if next_method == -1:
+                next_method = source.find("\n    def ", handler_start + 1)
+            if next_method == -1:
+                next_method = len(source)
+
+            handler_section = source[handler_start:next_method]
+
+            # These patterns should NOT appear in draft handlers
+            forbidden = [
+                "self._employee_service.",
+                "self._attendance_repo.",
+                "self._leave_service.",
+                "self._overtime_service.",
+                "self._payslip_service.",
+                "session.",
+            ]
+            for pattern in forbidden:
+                assert pattern not in handler_section, (
+                    f"Handler '{handler_name}' calls service/repo: "
+                    f"'{pattern}'"
+                )
 
     @pytest.mark.asyncio
     async def test_registry_unknown_tool_returns_generic_error(self) -> None:
