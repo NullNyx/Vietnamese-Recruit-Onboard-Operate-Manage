@@ -499,3 +499,10 @@ class TestAssignmentAuditLogging:
         assert audit_calls[0][0][0].operation_type == "candidate_unassigned"
         assert audit_calls[0][0][0].previous_value == {"job_opening_id": str(jo_id)}
         assert audit_calls[0][0][0].new_value == {"job_opening_id": None}
+
+# ─── Headcount Sync Tests ──────────────────────────────────────────────
+
+class TestCandidateAcceptanceHeadcountSync:
+    """Tests for Job Opening headcount sync when candidate is accepted."""
+
+

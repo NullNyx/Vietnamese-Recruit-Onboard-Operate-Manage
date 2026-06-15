@@ -511,3 +511,24 @@ class JobOpeningRepository:
                 counts[jo_id] = {}
 
         return dict(counts)
+
+    async def count_accepted_by_job_opening(
+        self,
+        job_opening_id: UUID,
+    ) -> int:
+        """Count accepted candidates for a specific Job Opening.
+
+        Args:
+            job_opening_id: The Job Opening ID to count accepted candidates for.
+
+        Returns:
+            Number of candidates with accepted status assigned to this Job Opening.
+        """
+        stmt = (
+            select(func.count())
+            .select_from(Candidate)
+            .where(Candidate.job_opening_id == job_opening_id)  # type: ignore[union-attr]
+            .where(Candidate.status == CandidateStatus.ACCEPTED)  # type: ignore[union-attr]
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one() or 0

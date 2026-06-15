@@ -435,7 +435,7 @@ class JobOpeningStatusTransition(BaseModel):
 
 
 class JobOpeningResponse(BaseModel):
-    """Response schema for a Job Opening.
+    """Response schema for a Job Opening with headcount reporting.
 
     Attributes:
         id: Job Opening UUID.
@@ -449,6 +449,12 @@ class JobOpeningResponse(BaseModel):
         cancelled_at: Timestamp when cancelled (None if not cancelled).
         created_at: Creation timestamp.
         updated_at: Last update timestamp.
+        candidate_counts: Per-status candidate counts for this Job Opening.
+        position_name: Display name of the Position.
+        accepted_count: Number of accepted candidates.
+        filled: True if accepted_count >= target_headcount.
+        overfilled: True if accepted_count > target_headcount.
+        remaining_headcount: target_headcount - accepted_count (negative if overfilled).
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -466,6 +472,10 @@ class JobOpeningResponse(BaseModel):
     updated_at: datetime
     candidate_counts: dict[str, int] = Field(default_factory=dict)
     position_name: str = ""
+    accepted_count: int = 0
+    filled: bool = False
+    overfilled: bool = False
+    remaining_headcount: int = 0
 
 
 class JobOpeningListItemResponse(BaseModel):
@@ -478,6 +488,12 @@ class JobOpeningListItemResponse(BaseModel):
         target_headcount: Target number of hires.
         status: Current lifecycle status.
         created_at: Creation timestamp.
+        total_candidates: Total candidates assigned to this Job Opening.
+        accepted_count: Number of accepted candidates.
+        filled: True if accepted_count >= target_headcount.
+        overfilled: True if accepted_count > target_headcount.
+        remaining_headcount: target_headcount - accepted_count (negative if overfilled).
+        position_name: Display name of the Position.
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -490,6 +506,9 @@ class JobOpeningListItemResponse(BaseModel):
     created_at: datetime
     total_candidates: int = 0
     accepted_count: int = 0
+    filled: bool = False
+    overfilled: bool = False
+    remaining_headcount: int = 0
     position_name: str = ""
 
 

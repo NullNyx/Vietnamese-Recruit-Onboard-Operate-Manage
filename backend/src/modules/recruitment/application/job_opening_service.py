@@ -337,3 +337,57 @@ class JobOpeningService:
     ) -> dict[UUID, dict[str, int]]:
         """Return per-status Candidate counts for a batch of Job Openings."""
         return await self.job_opening_repo.count_candidates_by_status(job_opening_ids)
+
+    async def get_headcount_status(
+        self,
+        job_opening_id: UUID,
+    ) -> dict[str, int | bool]:
+        """Compute headcount status for a Job Opening.
+
+        Returns a dict with:
+        - accepted_count: number of accepted candidates
+        - target_headcount: the Job Opening's target
+        - remaining: target - accepted (can be negative for overfill)
+        - filled: True if accepted >= target
+        - overfilled: True if accepted > target
+
+        Args:
+            job_opening_id: UUID of the Job Opening.
+
+        Returns:
+            Dict with accepted_count, target_headcount, remaining, filled, overfilled.
+        """
+        job_opening = await self.job_opening_repo.get_by_id(job_opening_id)
+        if job_opening is None:
+            raise JobOpeningNotFoundError(f"Job Opening not found: {job_opening_id}")
+
+        accepted_count = await self.job_opening_repo.count_accepted_by_job_opening(job_opening_id)
+        target = job_opening.target_headcount
+        remaining = target - accepted_count
+
+        return {
+            "accepted_count": accepted_count,
+            "target_headcount": target,
+            "remaining": remaining,
+            "filled": accepted_count >= target,
+            "overfilled": accepted_count > target,
+        }
+
+    async def increment_accepted_count(self, job_opening_id: UUID) -> int:
+        """Increment accepted count when a candidate is accepted.
+
+        This is called from the CandidateService when a candidate assigned
+        to this Job Opening is accepted. Returns the new accepted count.
+
+        Note: This does NOT need to be a transactional increment since we're
+        computing from the Candidate table at query time, not maintaining a
+        denormalized counter on the Job Opening entity.
+
+        Args:
+            job_opening_id: UUID of the Job Opening.
+
+        Returns:
+            The new accepted count after the candidate acceptance.
+        """
+        # Just return the current count - it's computed from Candidate table
+        return await self.job_opening_repo.count_accepted_by_job_opening(job_opening_id)
