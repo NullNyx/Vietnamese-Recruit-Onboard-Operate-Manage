@@ -1,7 +1,7 @@
 """Domain entities for the Payslip module.
 
-Defines the Payslip SQLModel table for read-only payslip access.
-HR manually creates and publishes Payslips; Employees view only
+Defines the Payslip SQLModel table for HR manual payslip management.
+HR creates drafts, updates them, and publishes. Employees view only
 their own published Payslips (ADR-0012).
 """
 
@@ -9,11 +9,18 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from enum import Enum
 from uuid import UUID, uuid4
 
 from sqlalchemy import CheckConstraint, Column, DateTime, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
+
+
+class PayslipStatus(str, Enum):
+    """Status of a Payslip."""
+
+    DRAFT = "draft"
+    PUBLISHED = "published"
 
 
 class Payslip(SQLModel, table=True):
@@ -32,21 +39,37 @@ class Payslip(SQLModel, table=True):
         foreign_key="employees.id",
         index=True,
     )
-    pay_period_start: date = Field(nullable=False)
-    pay_period_end: date = Field(nullable=False)
+
+    # Pay period as year-month (e.g., 2026-06 for June 2026)
+    period_month: date = Field(nullable=False)
 
     # Payroll amounts — explicit values set by HR
-    gross_amount: Decimal = Field(
+    gross_salary: Decimal = Field(
         nullable=False,
         max_digits=12,
         decimal_places=2,
     )
-    total_deductions: Decimal = Field(
+    deductions: Decimal = Field(
         default=Decimal("0"),
         max_digits=12,
         decimal_places=2,
     )
-    net_amount: Decimal = Field(
+    insurance_employee: Decimal = Field(
+        default=Decimal("0"),
+        max_digits=12,
+        decimal_places=2,
+    )
+    taxable_income: Decimal = Field(
+        default=Decimal("0"),
+        max_digits=12,
+        decimal_places=2,
+    )
+    pit_amount: Decimal = Field(
+        default=Decimal("0"),
+        max_digits=12,
+        decimal_places=2,
+    )
+    net_salary: Decimal = Field(
         nullable=False,
         max_digits=12,
         decimal_places=2,
@@ -54,14 +77,11 @@ class Payslip(SQLModel, table=True):
 
     currency: str = Field(default="VND", max_length=3)
 
-    # Flexible breakdown for allowances, OT, tax, insurance, etc.
-    details: dict | None = Field(
-        default=None,
-        sa_column=Column(JSONB, nullable=True),
-    )
-
     # Publication state
-    published: bool = Field(default=False, nullable=False)
+    status: PayslipStatus = Field(
+        default=PayslipStatus.DRAFT,
+        nullable=False,
+    )
     published_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),
@@ -83,13 +103,12 @@ class Payslip(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint(
             "employee_id",
-            "pay_period_start",
-            "pay_period_end",
-            name="uq_payslips_employee_pay_period",
+            "period_month",
+            name="uq_payslips_employee_period_month",
         ),
         CheckConstraint(
-            "(published = false AND published_at IS NULL)"
-            " OR (published = true AND published_at IS NOT NULL)",
-            name="ck_payslips_published_at_consistent",
+            "(status = 'draft' AND published_at IS NULL)"
+            " OR (status = 'published' AND published_at IS NOT NULL)",
+            name="ck_payslips_status_published_at_consistent",
         ),
     )

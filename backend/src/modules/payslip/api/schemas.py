@@ -8,19 +8,24 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from src.modules.payslip.domain.entities import PayslipStatus
+
 
 class PayslipResponse(BaseModel):
     """Response schema for a single payslip."""
 
     id: UUID
     employee_id: UUID
-    pay_period_start: date
-    pay_period_end: date
-    gross_amount: Decimal
-    total_deductions: Decimal
-    net_amount: Decimal
+    period_month: date
+    gross_salary: Decimal
+    deductions: Decimal
+    insurance_employee: Decimal
+    taxable_income: Decimal
+    pit_amount: Decimal
+    net_salary: Decimal
     currency: str = "VND"
-    details: dict | None = None
+    status: PayslipStatus
+    published_at: datetime | None = None
     pdf_url: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -32,3 +37,46 @@ class PayslipListResponse(BaseModel):
     """Response schema for payslip list."""
 
     payslips: list[PayslipResponse] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Admin schemas
+# ---------------------------------------------------------------------------
+
+
+class CreatePayslipRequest(BaseModel):
+    """Request schema for creating a draft Payslip."""
+
+    employee_id: UUID
+    period_month: date
+    gross_salary: Decimal = Field(gt=0, decimal_places=2, max_digits=12)
+    deductions: Decimal = Field(default=Decimal("0"), ge=0, decimal_places=2, max_digits=12)
+    insurance_employee: Decimal = Field(default=Decimal("0"), ge=0, decimal_places=2, max_digits=12)
+    taxable_income: Decimal = Field(default=Decimal("0"), ge=0, decimal_places=2, max_digits=12)
+    pit_amount: Decimal = Field(default=Decimal("0"), ge=0, decimal_places=2, max_digits=12)
+    net_salary: Decimal = Field(gt=0, decimal_places=2, max_digits=12)
+    pdf_url: str | None = None
+
+
+class UpdatePayslipRequest(BaseModel):
+    """Request schema for updating a draft Payslip.
+
+    All fields are optional; only provided fields will be updated.
+    """
+
+    gross_salary: Decimal | None = Field(default=None, gt=0, decimal_places=2, max_digits=12)
+    deductions: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=12)
+    insurance_employee: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=12)
+    taxable_income: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=12)
+    pit_amount: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=12)
+    net_salary: Decimal | None = Field(default=None, gt=0, decimal_places=2, max_digits=12)
+    pdf_url: str | None = None
+
+
+class AdminPayslipListResponse(BaseModel):
+    """Response schema for admin payslip list with filters."""
+
+    payslips: list[PayslipResponse] = Field(default_factory=list)
+    total: int = 0
+    page: int = 1
+    page_size: int = 20

@@ -25,7 +25,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import uuid4
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from src.modules.employee.api.dependencies import get_current_employee
@@ -35,15 +35,8 @@ from src.modules.payslip.api.employee_router import employee_payslip_router
 from src.modules.payslip.api.error_handler import register_payslip_error_handlers
 from src.modules.payslip.application.payslip_service import PayslipService
 from src.modules.payslip.container import get_payslip_service
-from src.modules.payslip.domain.entities import Payslip
-from src.modules.payslip.domain.exceptions import (
-    PayslipNotFoundError,
-    PayslipNotPublishedError,
-)
-
-# ---------------------------------------------------------------------------
-# Fakes
-# ---------------------------------------------------------------------------
+from src.modules.payslip.domain.entities import Payslip, PayslipStatus
+from src.modules.payslip.domain.exceptions import PayslipNotFoundError
 
 _EMPLOYEE_ID = uuid4()
 _OTHER_EMPLOYEE_ID = uuid4()
@@ -57,6 +50,10 @@ class FakeEmployee:
         self.is_active = is_active
         self.user_id = "user-uuid"
         self.email = "employee@example.com"
+
+    # SQLModel compatibility: allow attribute access
+    def __getattr__(self, name: str):
+        return None
 
 
 class FakeUser:
@@ -74,30 +71,54 @@ class FakeUser:
         self.is_active = True
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _make_payslip(
     employee_id: str | None = None,
-    published: bool = True,
+    status: PayslipStatus = PayslipStatus.PUBLISHED,
 ) -> Payslip:
     """Create a sample Payslip for testing."""
     return Payslip(
         id=uuid4(),
         employee_id=employee_id or str(_EMPLOYEE_ID),
-        pay_period_start=date(2026, 5, 1),
-        pay_period_end=date(2026, 5, 31),
-        gross_amount=Decimal("15000000"),
-        total_deductions=Decimal("1575000"),
-        net_amount=Decimal("13425000"),
+        period_month=date(2026, 5, 1),
+        gross_salary=Decimal("15000000"),
+        deductions=Decimal("500000"),
+        insurance_employee=Decimal("1575000"),
+        taxable_income=Decimal("12925000"),
+        pit_amount=Decimal("1000000"),
+        net_salary=Decimal("11925000"),
         currency="VND",
-        details={"bhxh": 1200000, "bhyt": 225000, "bhtn": 150000},
-        published=published,
-        published_at=datetime.now(UTC) if published else None,
+        status=status,
+        published_at=datetime.now(UTC) if status == PayslipStatus.PUBLISHED else None,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
     )
+
+
+class FakePayslipService:
+    """Fake service returning in-memory payslips."""
+
+    def __init__(self) -> None:
+        self.payslips: list[Payslip] = []
+        self._index = 0
+
+    async def get_my_payslips(self, employee_id: str) -> list[Payslip]:
+        """Return published payslips for the given employee."""
+        return [
+            p
+            for p in self.payslips
+            if str(p.employee_id) == str(employee_id) and p.status == PayslipStatus.PUBLISHED
+        ]
+
+    async def get_my_payslip_by_id(self, payslip_id: str, employee_id: str) -> Payslip:
+        """Return a specific published payslip."""
+        for p in self.payslips:
+            if str(p.id) == str(payslip_id):
+                if str(p.employee_id) != str(employee_id):
+                    raise PayslipNotFoundError(str(payslip_id))
+                if p.status != PayslipStatus.PUBLISHED:
+                    raise PayslipNotFoundError(str(payslip_id))
+                return p
+        raise PayslipNotFoundError(str(payslip_id))
 
 
 def _build_app(
@@ -110,7 +131,6 @@ def _build_app(
     app.include_router(employee_payslip_router)
     register_payslip_error_handlers(app)
 
-    # Override get_current_user
     if user is None:
         user = FakeUser()
 
@@ -129,50 +149,24 @@ def _build_app(
 
     app.dependency_overrides[get_current_user] = _override_user
 
-    # Override get_current_employee — always, even for None (admin)
     async def _override_employee() -> FakeEmployee | None:
         if employee is None:
             return None
         if not employee.is_active:
-            from fastapi import HTTPException
             raise HTTPException(status_code=403, detail="Employee account is inactive")
-        employee.id = employee.id or str(_EMPLOYEE_ID)
         return employee
 
     app.dependency_overrides[get_current_employee] = _override_employee
 
-    # Override service
     if service is not None:
+
         async def _override_service() -> PayslipService:
-            return service
+            return service  # type: ignore[return-value]
 
         app.dependency_overrides[get_payslip_service] = _override_service
 
     return app
 
-
-class FakePayslipService:
-    """Stand-in for PayslipService with configurable behavior."""
-
-    def __init__(self):
-        self.payslips: list[Payslip] = []
-        self.fail_get_by_id: type[Exception] | None = None
-
-    async def get_my_payslips(self, employee_id: str) -> list[Payslip]:
-        return [p for p in self.payslips if p.employee_id == employee_id and p.published]
-
-    async def get_my_payslip_by_id(self, payslip_id: object, employee_id: object) -> Payslip:
-        if self.fail_get_by_id is not None:
-            raise self.fail_get_by_id
-        for p in self.payslips:
-            if str(p.id) == str(payslip_id) and str(p.employee_id) == str(employee_id) and p.published:
-                return p
-        raise PayslipNotFoundError(str(payslip_id))
-
-
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
 
 class TestListPayslips:
     """Tests for GET /api/payslips/me."""
@@ -181,8 +175,8 @@ class TestListPayslips:
         """Active employee sees own published payslips."""
         service = FakePayslipService()
         service.payslips = [
-            _make_payslip(employee_id=str(_EMPLOYEE_ID), published=True),
-            _make_payslip(employee_id=str(_EMPLOYEE_ID), published=True),
+            _make_payslip(employee_id=str(_EMPLOYEE_ID), status=PayslipStatus.PUBLISHED),
+            _make_payslip(employee_id=str(_EMPLOYEE_ID), status=PayslipStatus.PUBLISHED),
         ]
 
         app = _build_app(
@@ -233,8 +227,8 @@ class TestListPayslips:
         """Unpublished payslips are excluded from list."""
         service = FakePayslipService()
         service.payslips = [
-            _make_payslip(employee_id=str(_EMPLOYEE_ID), published=True),
-            _make_payslip(employee_id=str(_EMPLOYEE_ID), published=False),
+            _make_payslip(employee_id=str(_EMPLOYEE_ID), status=PayslipStatus.PUBLISHED),
+            _make_payslip(employee_id=str(_EMPLOYEE_ID), status=PayslipStatus.DRAFT),
         ]
 
         app = _build_app(
@@ -254,7 +248,7 @@ class TestGetPayslipById:
 
     def test_active_employee_can_view_own_published_payslip(self) -> None:
         """Active employee sees own published payslip by ID."""
-        payslip = _make_payslip(employee_id=str(_EMPLOYEE_ID), published=True)
+        payslip = _make_payslip(employee_id=str(_EMPLOYEE_ID), status=PayslipStatus.PUBLISHED)
         service = FakePayslipService()
         service.payslips = [payslip]
 
@@ -268,7 +262,7 @@ class TestGetPayslipById:
         assert resp.status_code == 200
         data = resp.json()
         assert data["id"] == str(payslip.id)
-        assert data["net_amount"] == "13425000"
+        assert data["net_salary"] == "11925000"
 
     def test_admin_without_employee_returns_403(self) -> None:
         """Admin without Employee record gets 403 on detail view."""
@@ -290,7 +284,7 @@ class TestGetPayslipById:
 
     def test_unpublished_payslip_returns_404(self) -> None:
         """Unpublished payslip returns 404."""
-        payslip = _make_payslip(employee_id=str(_EMPLOYEE_ID), published=False)
+        payslip = _make_payslip(employee_id=str(_EMPLOYEE_ID), status=PayslipStatus.DRAFT)
         service = FakePayslipService()
         service.payslips = [payslip]
 
@@ -305,7 +299,7 @@ class TestGetPayslipById:
 
     def test_other_employee_payslip_returns_404(self) -> None:
         """Someone else's payslip returns 404."""
-        payslip = _make_payslip(employee_id=str(_OTHER_EMPLOYEE_ID), published=True)
+        payslip = _make_payslip(employee_id=str(_OTHER_EMPLOYEE_ID), status=PayslipStatus.PUBLISHED)
         service = FakePayslipService()
         service.payslips = [payslip]
 
@@ -322,7 +316,7 @@ class TestGetPayslipById:
         """Non-existent payslip returns 404."""
         service = FakePayslipService()
         service.payslips = [
-            _make_payslip(employee_id=str(_EMPLOYEE_ID), published=True),
+            _make_payslip(employee_id=str(_EMPLOYEE_ID), status=PayslipStatus.PUBLISHED),
         ]
 
         app = _build_app(

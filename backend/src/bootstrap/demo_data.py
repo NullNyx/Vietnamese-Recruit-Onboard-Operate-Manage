@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, timedelta
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
@@ -255,7 +256,7 @@ async def seed_demo_payslips(session: AsyncSession) -> bool:
 
     from datetime import UTC, datetime
 
-    from src.modules.payslip.domain.entities import Payslip
+    from src.modules.payslip.domain.entities import Payslip, PayslipStatus
 
     # Only active employees -- Employee Self-Service data.
     statement = select(Employee).where(Employee.is_active.is_(True))  # type: ignore[arg-type]
@@ -266,66 +267,55 @@ async def seed_demo_payslips(session: AsyncSession) -> bool:
         logger.info("Payslip demo seed skipped: no active employees.")
         return False
 
-    # Idempotent: only skip payslips that already exist per (employee_id, period).
+    # Idempotent: only skip payslips that already exist per (employee_id, period_month).
     emp_ids = [emp.id for emp in active_employees]
     existing_stmt = select(
         Payslip.employee_id,
-        Payslip.pay_period_start,
-        Payslip.pay_period_end,
+        Payslip.period_month,
     ).where(Payslip.employee_id.in_(emp_ids))  # type: ignore[arg-type]
     existing_result = await session.execute(existing_stmt)
-    existing_periods = {
-        (row.employee_id, row.pay_period_start, row.pay_period_end) for row in existing_result
-    }
+    existing_periods = {(row.employee_id, row.period_month) for row in existing_result}
 
     # Build 2 demo payslips per employee for the last 2 completed months.
     today = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
     current_month_start = today.replace(day=1)
 
     # Compute last 2 completed months.
-    payslip_periods: list[tuple[date, date]] = []
+    period_months: list[date] = []
     for i in range(1, 3):
-        # Go back i months, then get start/end of that month.
         month = current_month_start.month - i
         year = current_month_start.year
         while month < 1:
             month += 12
             year -= 1
-        from calendar import monthrange
-
-        _, last_day = monthrange(year, month)
-        period_start = date(year, month, 1)
-        period_end = date(year, month, last_day)
-        payslip_periods.append((period_start, period_end))
+        period_month = date(year, month, 1)
+        period_months.append(period_month)
 
     payslips: list[Payslip] = []
     for emp in active_employees:
-        for period_start, period_end in payslip_periods:
-            # Skip if this (employee, period) already exists
-            if (emp.id, period_start, period_end) in existing_periods:
+        for period_month in period_months:
+            # Skip if this (employee, period_month) already exists
+            if (emp.id, period_month) in existing_periods:
                 continue
 
             # Simple demo amounts
             gross = 15_000_000
-            deductions = round(gross * 0.105)  # 10.5% insurance
-            net = gross - deductions
+            insurance = round(gross * 0.105)  # 10.5% insurance
+            taxable = gross - insurance
+            pit = round(taxable * 0.1)  # Simplified 10% tax
+            net = gross - insurance - pit
 
             payslip = Payslip(
                 employee_id=emp.id,
-                pay_period_start=period_start,
-                pay_period_end=period_end,
-                gross_amount=gross,
-                total_deductions=deductions,
-                net_amount=net,
+                period_month=period_month,
+                gross_salary=gross,
+                deductions=Decimal("0"),
+                insurance_employee=insurance,
+                taxable_income=taxable,
+                pit_amount=pit,
+                net_salary=net,
                 currency="VND",
-                details={
-                    "bhxh": round(gross * 0.08),
-                    "bhyt": round(gross * 0.015),
-                    "bhtn": round(gross * 0.01),
-                    "work_days": 26,
-                    "actual_work_days": 26,
-                },
-                published=True,
+                status=PayslipStatus.PUBLISHED,
                 published_at=datetime.now(UTC),
             )
             payslips.append(payslip)
@@ -338,4 +328,5 @@ async def seed_demo_payslips(session: AsyncSession) -> bool:
         len(payslips),
         len(active_employees),
     )
+
     return True

@@ -180,6 +180,10 @@ class AuditActionType(str, Enum):
     ATTENDANCE_CORRECTION = "attendance_correction"
     REQUEST_APPROVE = "request_approve"
     REQUEST_REJECT = "request_reject"
+    PAYSLIP_CREATE = "payslip_create"
+    PAYSLIP_UPDATE = "payslip_update"
+    PAYSLIP_PUBLISH = "payslip_publish"
+    PAYSLIP_DELETE = "payslip_delete"
 
 
 class AuditLog(SQLModel, table=True):
