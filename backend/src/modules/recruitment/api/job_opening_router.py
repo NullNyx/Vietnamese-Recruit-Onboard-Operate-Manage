@@ -204,7 +204,8 @@ async def list_job_openings(
             accepted_count=counts_by_jo.get(jo.id, {}).get("accepted", 0),
             filled=counts_by_jo.get(jo.id, {}).get("accepted", 0) >= jo.target_headcount,
             overfilled=counts_by_jo.get(jo.id, {}).get("accepted", 0) > jo.target_headcount,
-            remaining_headcount=jo.target_headcount - counts_by_jo.get(jo.id, {}).get("accepted", 0),
+            remaining_headcount=jo.target_headcount
+            - counts_by_jo.get(jo.id, {}).get("accepted", 0),
         )
         for jo in job_openings
     ]

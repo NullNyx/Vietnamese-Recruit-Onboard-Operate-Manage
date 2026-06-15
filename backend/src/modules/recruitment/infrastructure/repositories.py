@@ -527,8 +527,8 @@ class JobOpeningRepository:
         stmt = (
             select(func.count())
             .select_from(Candidate)
-            .where(Candidate.job_opening_id == job_opening_id)  # type: ignore[union-attr]
-            .where(Candidate.status == CandidateStatus.ACCEPTED)  # type: ignore[union-attr]
+            .where(Candidate.job_opening_id == job_opening_id)
+            .where(Candidate.status == CandidateStatus.ACCEPTED)
         )
         result = await self.session.execute(stmt)
         return result.scalar_one() or 0
