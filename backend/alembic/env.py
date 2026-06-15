@@ -39,6 +39,9 @@ from src.modules.onboarding.domain.entities import (  # noqa: E402, F401
 from src.modules.assistant.domain.entities import (  # noqa: E402, F401
     AssistantToolConfig,
 )
+from src.modules.payslip.domain.entities import (  # noqa: E402, F401
+    Payslip,
+)
 from src.modules.recruitment.domain.entities import (  # noqa: E402, F401
     Candidate,
     CVDocument,

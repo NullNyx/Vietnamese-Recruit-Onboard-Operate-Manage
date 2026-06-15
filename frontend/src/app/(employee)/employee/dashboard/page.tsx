@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  DollarSign,
   FileText,
   User,
   Clock,
@@ -69,6 +70,14 @@ export default function EmployeeDashboardPage() {
           iconColor="text-[#10b981]"
           title="Yêu cầu"
           description="Đơn nghỉ phép, tăng ca và theo dõi"
+        />
+        <QuickActionLink
+          href="/employee/payslips"
+          icon={DollarSign}
+          iconBg="bg-[#22c55e]/10"
+          iconColor="text-[#22c55e]"
+          title="Bảng lương"
+          description="Phiếu lương đã phát hành"
         />
       </div>
 

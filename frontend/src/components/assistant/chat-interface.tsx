@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { Send, Loader2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,9 +12,28 @@ import {
   sendChatMessage,
   type ChatMessage,
   type DraftAction,
+  type ChatResponse,
 } from "@/lib/api/assistant";
 
-export function ChatInterface() {
+export interface ChatInterfaceProps {
+  sendMessage?: (
+    messages: ChatMessage[],
+  ) => Promise<ChatResponse>;
+  confirmAction?: (draft: DraftAction) => Promise<unknown>;
+  title?: string;
+  description?: string;
+  suggestions?: string[];
+  icon?: ReactNode;
+}
+
+export function ChatInterface({
+  sendMessage = sendChatMessage,
+  confirmAction,
+  title = "Trợ lý AI Vroom HR",
+  description = "Hỏi tôi về dữ liệu nhân sự của bạn.",
+  suggestions,
+  icon,
+}: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,7 +41,6 @@ export function ChatInterface() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -41,18 +59,22 @@ export function ChatInterface() {
     setLoading(true);
 
     try {
-      const response = await sendChatMessage(updatedMessages);
+      const response = await sendMessage(updatedMessages);
 
-      // Add new assistant messages to conversation
-      setMessages([...updatedMessages, ...response.messages]);
+      // Filter out tool-call only messages (content=null, role=assistant)
+      // that would render as empty bubbles or stuck loaders in the UI.
+      const displayMessages = response.messages.filter(
+        (m) => !(m.role === "assistant" && m.content === null && m.tool_calls),
+      );
 
-      // Show draft action if present
+      setMessages([...updatedMessages, ...displayMessages]);
+
       if (response.draft_action) {
         setDraftAction(response.draft_action);
       }
     } catch (err) {
       toast.error(
-        `Lỗi: ${err instanceof Error ? err.message : "Không thể kết nối trợ lý"}`
+        `Lỗi: ${err instanceof Error ? err.message : "Không thể kết nối trợ lý"}`,
       );
     } finally {
       setLoading(false);
@@ -66,26 +88,31 @@ export function ChatInterface() {
     }
   };
 
+  const defaultSuggestions = suggestions || [
+    "Có bao nhiêu candidate đang reviewing?",
+    "Onboarding nào đang chạy?",
+    "Soạn email chúc mừng cho Nguyễn Văn A",
+  ];
+
+  const defaultIcon = icon || (
+    <MessageSquare className="h-8 w-8 text-primary" />
+  );
+
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col">
-      {/* Chat messages area */}
       <ScrollArea className="flex-1 px-4">
         <div ref={scrollRef} className="space-y-4 py-4">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4">
-                <MessageSquare className="h-8 w-8 text-primary" />
+                {defaultIcon}
               </div>
-              <h3 className="text-lg font-medium mb-2">Trợ lý AI Vroom HR</h3>
+              <h3 className="text-lg font-medium mb-2">{title}</h3>
               <p className="text-sm text-muted-foreground max-w-md">
-                Hỏi tôi về dữ liệu tuyển dụng, tiến độ onboarding, hoặc yêu cầu soạn email.
+                {description}
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-2">
-                {[
-                  "Có bao nhiêu candidate đang reviewing?",
-                  "Onboarding nào đang chạy?",
-                  "Soạn email chúc mừng cho Nguyễn Văn A",
-                ].map((suggestion) => (
+                {defaultSuggestions.map((suggestion) => (
                   <Button
                     key={suggestion}
                     variant="outline"
@@ -113,25 +140,26 @@ export function ChatInterface() {
                 <Loader2 className="h-4 w-4 text-primary animate-spin" />
               </div>
               <div className="flex items-center rounded-lg bg-muted px-4 py-2">
-                <span className="text-sm text-muted-foreground">Đang suy nghĩ...</span>
+                <span className="text-sm text-muted-foreground">
+                  Đang suy nghĩ...
+                </span>
               </div>
             </div>
           )}
         </div>
       </ScrollArea>
 
-      {/* Draft Action */}
       {draftAction && (
         <div className="border-t px-4 py-3">
           <DraftActionCard
             draft={draftAction}
+            confirmAction={confirmAction}
             onConfirmed={() => setDraftAction(null)}
             onDismissed={() => setDraftAction(null)}
           />
         </div>
       )}
 
-      {/* Input area */}
       <div className="border-t px-4 py-3">
         <div className="flex gap-2">
           <Textarea
