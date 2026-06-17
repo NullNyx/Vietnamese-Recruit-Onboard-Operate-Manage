@@ -370,9 +370,11 @@ async def cancel_job_opening(
     job_opening = await service.cancel_job_opening(job_opening_id)
     return JobOpeningResponse.model_validate(job_opening)
 
+
 # ---------------------------------------------------------------------------
 # Job Opening metrics
 # ---------------------------------------------------------------------------
+
 
 @job_opening_router.get("/metrics", response_model=JobOpeningMetricsResponse)
 async def get_job_opening_metrics(

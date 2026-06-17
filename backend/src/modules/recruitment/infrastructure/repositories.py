@@ -548,8 +548,7 @@ class JobOpeningRepository:
             select(
                 JobOpening.status,
                 func.count().label("cnt"),
-            )
-            .group_by(JobOpening.status)  # type: ignore[union-attr]
+            ).group_by(JobOpening.status)  # type: ignore[union-attr]
         )
         result = await self.session.execute(stmt)
         rows = result.all()

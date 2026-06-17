@@ -508,9 +508,11 @@ class JobOpeningListResponse(BaseModel):
     page: int
     page_size: int
 
+
 # ---------------------------------------------------------------------------
 # Job Opening metrics schemas
 # ---------------------------------------------------------------------------
+
 
 class JobOpeningMetricsResponse(BaseModel):
     """Summary metrics for Job Opening lifecycle states.
