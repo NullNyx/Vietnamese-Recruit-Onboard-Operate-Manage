@@ -511,3 +511,58 @@ class JobOpeningRepository:
                 counts[jo_id] = {}
 
         return dict(counts)
+
+    async def count_accepted_by_job_opening(
+        self,
+        job_opening_id: UUID,
+    ) -> int:
+        """Count accepted candidates for a specific Job Opening.
+
+        Args:
+            job_opening_id: The Job Opening ID to count accepted candidates for.
+
+        Returns:
+            Number of candidates with accepted status assigned to this Job Opening.
+        """
+        stmt = (
+            select(func.count())
+            .select_from(Candidate)
+            .where(Candidate.job_opening_id == job_opening_id)
+            .where(Candidate.status == CandidateStatus.ACCEPTED)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one() or 0
+
+    async def count_job_openings_by_status(
+        self,
+    ) -> dict[str, int]:
+        """Count Job Openings grouped by lifecycle status.
+
+        Returns a dict with keys: draft, open, closed, cancelled
+        mapping to the count of Job Openings in each status.
+
+        Returns:
+            Dict with status -> count mapping.
+        """
+        stmt = (
+            select(
+                JobOpening.status,
+                func.count().label("cnt"),
+            )
+            .group_by(JobOpening.status)  # type: ignore[union-attr]
+        )
+        result = await self.session.execute(stmt)
+        rows = result.all()
+
+        counts: dict[str, int] = {
+            "draft": 0,
+            "open": 0,
+            "closed": 0,
+            "cancelled": 0,
+        }
+        for row in rows:
+            status, cnt = row
+            if status in counts:
+                counts[status] = cnt
+
+        return counts
