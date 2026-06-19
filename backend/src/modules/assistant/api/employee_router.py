@@ -56,6 +56,7 @@ employee_assistant_router = APIRouter(
     tags=["ess-assistant"],
 )
 
+
 def _require_active_employee(
     employee: Employee | None = Depends(get_current_employee),
 ) -> Employee:
@@ -67,7 +68,9 @@ def _require_active_employee(
         )
     return employee
 
+
 ActiveEmployeeDep = Annotated[Employee, Depends(_require_active_employee)]
+
 
 async def get_employee_assistant_service(
     employee: ActiveEmployeeDep,
@@ -95,9 +98,11 @@ async def get_employee_assistant_service(
         settings=settings,
     )
 
+
 EmployeeAssistantServiceDep = Annotated[
     EmployeeAssistantService, Depends(get_employee_assistant_service)
 ]
+
 
 @employee_assistant_router.post(
     "/chat",
