@@ -229,6 +229,7 @@ async def get_process(
         completed_count=detail.completed_count,
         total_count=detail.total_count,
         missing_setup_fields=detail.missing_setup_fields,
+        completed_at=detail.completed_at,
         department_id=detail.department_id,
         position_id=detail.position_id,
         manager_id=detail.manager_id,
@@ -243,6 +244,8 @@ async def get_process(
                 name=task.name,
                 status=OnboardingTaskStatus(task.status),
                 order_index=task.order_index,
+                completed_at=task.completed_at,
+                completed_by_name=task.completed_by_name,
             )
             for task in detail.tasks
         ],
@@ -313,6 +316,10 @@ async def update_task(
         name=task.name,
         status=OnboardingTaskStatus(task.status),
         order_index=task.order_index,
+        completed_at=task.completed_at.isoformat() if task.completed_at else None,
+        completed_by_name=(
+            current_user.name if task.status == OnboardingTaskStatus.DONE.value else None
+        ),
     )
 
 
