@@ -4,6 +4,7 @@ import {
   Clock,
   ClipboardList,
   Bot,
+  DollarSign,
 } from "lucide-react";
 import type { HeaderNavConfig } from "./header-nav-config";
 
@@ -16,12 +17,14 @@ export const essNavConfig: HeaderNavConfig = {
       links: [
         { href: "/employee/profile", label: "Thông tin", icon: User },
         { href: "/employee/attendance", label: "Chấm công", icon: Clock },
+        { href: "/employee/payslips", label: "Bảng lương", icon: DollarSign },
         { href: "/employee/documents", label: "Tài liệu", icon: FileText },
         { href: "/employee/requests", label: "Yêu cầu", icon: ClipboardList },
       ],
       activeRoutes: [
         "/employee/profile",
         "/employee/attendance",
+        "/employee/payslips",
         "/employee/documents",
         "/employee/requests",
       ],

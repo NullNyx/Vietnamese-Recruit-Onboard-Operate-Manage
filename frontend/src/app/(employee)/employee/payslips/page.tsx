@@ -14,25 +14,20 @@ import type { Payslip } from "@/lib/api/payslips";
 
 function formatCurrency(amount: string): string {
   const num = parseFloat(amount);
+  if (!Number.isFinite(num)) return amount;
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
   }).format(num);
 }
 
-const parseDateOnly = (value: string) => {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day);
-};
-
-function formatPeriod(start: string, end: string): string {
-  try {
-    const s = parseDateOnly(start);
-    const e = parseDateOnly(end);
-    return `${s.toLocaleDateString("vi-VN", { day: "numeric", month: "long" })} - ${e.toLocaleDateString("vi-VN", { day: "numeric", month: "long", year: "numeric" })}`;
-  } catch {
-    return `${start} - ${end}`;
-  }
+function formatPeriodMonth(periodMonth: string): string {
+  const [year, month] = periodMonth.split("-").map(Number);
+  const date = new Date(year, month - 1);
+  return date.toLocaleDateString("vi-VN", {
+    month: "long",
+    year: "numeric",
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -67,15 +62,15 @@ function PayslipCard({ payslip }: { payslip: Payslip }) {
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1 min-w-0">
           <p className="text-[14px] font-medium text-[#f7f8f8]">
-            {formatPeriod(payslip.pay_period_start, payslip.pay_period_end)}
+            {formatPeriodMonth(payslip.period_month)}
           </p>
           <p className="text-[12px] text-[#8a8f98]">
-            Gross: {formatCurrency(payslip.gross_amount)}
+            Gross: {formatCurrency(payslip.gross_salary)}
           </p>
         </div>
         <div className="text-right">
           <p className="text-[16px] font-semibold text-[#f7f8f8]">
-            {formatCurrency(payslip.net_amount)}
+            {formatCurrency(payslip.net_salary)}
           </p>
           <p className="text-[11px] text-[#8a8f98]">Net</p>
         </div>
@@ -129,6 +124,7 @@ export default function EmployeePayslipsPage() {
       {/* Loading */}
       {loading && (
         <div className="space-y-3">
+          <PayslipSkeleton />
           <PayslipSkeleton />
           <PayslipSkeleton />
         </div>

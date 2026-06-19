@@ -24,13 +24,16 @@ async function handleResponse<T>(res: Response): Promise<T> {
 export interface Payslip {
   id: string;
   employee_id: string;
-  pay_period_start: string;
-  pay_period_end: string;
-  gross_amount: string;
-  total_deductions: string;
-  net_amount: string;
+  period_month: string;
+  gross_salary: string;
+  deductions: string;
+  insurance_employee: string;
+  taxable_income: string;
+  pit_amount: string;
+  net_salary: string;
   currency: string;
-  details: Record<string, unknown> | null;
+  status: string;
+  published_at: string | null;
   pdf_url: string | null;
   created_at: string;
   updated_at: string;

@@ -24,7 +24,8 @@ function formatCurrency(amount: string): string {
   }).format(num);
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return "-";
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return dateStr;
   return date.toLocaleDateString("vi-VN", {
@@ -34,19 +35,13 @@ function formatDate(dateStr: string): string {
   });
 }
 
-const parseDateOnly = (value: string) => {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day);
-};
-
-function formatPeriod(start: string, end: string): string {
-  try {
-    const s = parseDateOnly(start);
-    const e = parseDateOnly(end);
-    return `${s.toLocaleDateString("vi-VN", { day: "numeric", month: "long" })} - ${e.toLocaleDateString("vi-VN", { day: "numeric", month: "long", year: "numeric" })}`;
-  } catch {
-    return `${start} - ${end}`;
-  }
+function formatPeriodMonth(periodMonth: string): string {
+  const [year, month] = periodMonth.split("-").map(Number);
+  const date = new Date(year, month - 1);
+  return date.toLocaleDateString("vi-VN", {
+    month: "long",
+    year: "numeric",
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -141,6 +136,7 @@ export default function EmployeePayslipDetailPage() {
           <Divider />
           <Skeleton className="h-5 w-full" />
           <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-full" />
           <Skeleton className="h-5 w-3/4" />
           <Divider />
           <Skeleton className="h-5 w-32" />
@@ -180,60 +176,44 @@ export default function EmployeePayslipDetailPage() {
               Phiếu lương
             </h2>
             <p className="text-[13px] text-[#8a8f98]">
-              {formatPeriod(payslip.pay_period_start, payslip.pay_period_end)}
+              {formatPeriodMonth(payslip.period_month)}
             </p>
           </div>
 
           <Divider />
 
-          {/* Amounts */}
+          {/* Gross & Deductions */}
           <div className="py-2 space-y-0">
             <DetailRow
               label="Lương gross"
-              value={formatCurrency(payslip.gross_amount)}
+              value={formatCurrency(payslip.gross_salary)}
             />
             <DetailRow
-              label="Tổng khấu trừ"
-              value={formatCurrency(payslip.total_deductions)}
+              label="BHXH + BHYT + BHTN (người lao động)"
+              value={formatCurrency(payslip.insurance_employee)}
+            />
+            <DetailRow
+              label="Các khoản khấu trừ"
+              value={formatCurrency(payslip.deductions)}
+            />
+            <Divider />
+            <DetailRow
+              label="Thu nhập chịu thuế"
+              value={formatCurrency(payslip.taxable_income)}
+            />
+            <DetailRow
+              label="Thuế TNCN (PIT)"
+              value={formatCurrency(payslip.pit_amount)}
             />
             <Divider />
             <DetailRow
               label="Lương net (thực nhận)"
-              value={formatCurrency(payslip.net_amount)}
+              value={formatCurrency(payslip.net_salary)}
               highlight
             />
           </div>
 
           <Divider />
-
-          {/* Details breakdown (if available) */}
-          {payslip.details && Object.keys(payslip.details).length > 0 && (
-            <>
-              <div className="py-3">
-                <h3 className="text-[13px] font-medium text-[#8a8f98] mb-2">
-                  Chi tiết
-                </h3>
-                <div className="space-y-1">
-                  {Object.entries(payslip.details).map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="flex items-center justify-between text-[13px]"
-                    >
-                      <span className="text-[#8a8f98] capitalize">
-                        {key.replace(/_/g, " ")}
-                      </span>
-                      <span className="text-[#f7f8f8]">
-                        {typeof value === "number"
-                          ? formatCurrency(String(value))
-                          : String(value)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <Divider />
-            </>
-          )}
 
           {/* PDF link */}
           {payslip.pdf_url && (
@@ -251,7 +231,7 @@ export default function EmployeePayslipDetailPage() {
 
           {/* Footer - metadata */}
           <div className="pt-4 flex items-center justify-between text-[11px] text-[#585c63]">
-            <span>Ngày phát hành: {formatDate(payslip.created_at)}</span>
+            <span>Ngày phát hành: {formatDate(payslip.published_at)}</span>
           </div>
         </div>
       )}
