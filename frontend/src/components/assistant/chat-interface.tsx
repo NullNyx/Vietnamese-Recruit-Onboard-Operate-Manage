@@ -24,6 +24,11 @@ export interface ChatInterfaceProps {
   description?: string;
   suggestions?: string[];
   icon?: ReactNode;
+  /** Called when draft action should open request form with prefill */
+  onOpenRequestDialog?: (values: {
+    leave?: Record<string, string>;
+    overtime?: Record<string, string>;
+  }) => void;
 }
 
 export function ChatInterface({
@@ -33,11 +38,16 @@ export function ChatInterface({
   description = "Hỏi tôi về dữ liệu nhân sự của bạn.",
   suggestions,
   icon,
+  onOpenRequestDialog,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [draftAction, setDraftAction] = useState<DraftAction | null>(null);
+  const [prefillValues, setPrefillValues] = useState<{
+    leave?: Record<string, string>;
+    overtime?: Record<string, string>;
+  } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -46,6 +56,15 @@ export function ChatInterface({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Open request dialog when prefill values are set
+  useEffect(() => {
+    if (prefillValues && onOpenRequestDialog) {
+      onOpenRequestDialog(prefillValues);
+      setPrefillValues(null);
+      setDraftAction(null);
+    }
+  }, [prefillValues, onOpenRequestDialog]);
 
   const handleSend = async () => {
     const trimmed = input.trim();
@@ -85,6 +104,35 @@ export function ChatInterface({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const handleDraftConfirm = () => {
+    if (!draftAction || !onOpenRequestDialog) {
+      // Fallback: call confirmAction directly
+      return;
+    }
+
+    // Translate draft action to prefill values
+    if (draftAction.action_type === "submit_leave_request") {
+      setPrefillValues({
+        leave: {
+          leave_type: (draftAction.confirm_body.leave_type as string) || "",
+          start_date: (draftAction.confirm_body.start_date as string) || "",
+          end_date: (draftAction.confirm_body.end_date as string) || "",
+          reason: (draftAction.confirm_body.reason as string) || "",
+        },
+      });
+    } else if (draftAction.action_type === "submit_overtime_request") {
+      setPrefillValues({
+        overtime: {
+          work_date: (draftAction.confirm_body.work_date as string) || "",
+          start_time: (draftAction.confirm_body.start_time as string) || "",
+          end_time: (draftAction.confirm_body.end_time as string) || "",
+          reason: (draftAction.confirm_body.reason as string) || "",
+          project_or_task: (draftAction.confirm_body.project_or_task as string) || "",
+        },
+      });
     }
   };
 
@@ -154,7 +202,8 @@ export function ChatInterface({
           <DraftActionCard
             draft={draftAction}
             confirmAction={confirmAction}
-            onConfirmed={() => setDraftAction(null)}
+          confirmLabel={onOpenRequestDialog ? "Mở form" : "Xác nhận"}
+            onConfirmed={onOpenRequestDialog ? handleDraftConfirm : undefined}
             onDismissed={() => setDraftAction(null)}
           />
         </div>

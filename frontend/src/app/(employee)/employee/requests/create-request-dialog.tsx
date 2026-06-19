@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useImperativeHandle, forwardRef, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Clock, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -29,15 +29,41 @@ import {
 } from "@/lib/api/employee-requests";
 
 // ---------------------------------------------------------------------------
-// Leave form
+// Types
 // ---------------------------------------------------------------------------
 
-interface LeaveFormState {
+export interface LeaveFormState {
   leave_type: string;
   start_date: string;
   end_date: string;
   reason: string;
 }
+
+export interface OvertimeFormState {
+  work_date: string;
+  start_time: string;
+  end_time: string;
+  reason: string;
+  project_or_task: string;
+}
+
+export interface CreateRequestDialogProps {
+  /** Initial values to prefill the form (for AI Assistant draft handoff) */
+  defaultValues?: {
+    leave?: Partial<LeaveFormState>;
+    overtime?: Partial<OvertimeFormState>;
+    /** Force a specific tab on open */
+    initialTab?: "leave" | "overtime";
+  };
+  /** Callback when a request is successfully created */
+  onSuccess?: () => void;
+  /** Custom trigger button (defaults to standard button if not provided) */
+  trigger?: ReactNode;
+}
+
+// ---------------------------------------------------------------------------
+// Initial states
+// ---------------------------------------------------------------------------
 
 const INITIAL_LEAVE: LeaveFormState = {
   leave_type: "",
@@ -46,12 +72,24 @@ const INITIAL_LEAVE: LeaveFormState = {
   reason: "",
 };
 
+const INITIAL_OVERTIME: OvertimeFormState = {
+  work_date: "",
+  start_time: "",
+  end_time: "",
+  reason: "",
+  project_or_task: "",
+};
+
 const LEAVE_TYPE_OPTIONS = [
   { value: "annual", label: "Nghỉ phép năm" },
   { value: "sick", label: "Nghỉ bệnh" },
   { value: "unpaid", label: "Nghỉ không lương" },
   { value: "other", label: "Khác" },
 ];
+
+// ---------------------------------------------------------------------------
+// Leave form
+// ---------------------------------------------------------------------------
 
 function LeaveForm({
   form,
@@ -145,22 +183,6 @@ function LeaveForm({
 // Overtime form
 // ---------------------------------------------------------------------------
 
-interface OvertimeFormState {
-  work_date: string;
-  start_time: string;
-  end_time: string;
-  reason: string;
-  project_or_task: string;
-}
-
-const INITIAL_OVERTIME: OvertimeFormState = {
-  work_date: "",
-  start_time: "",
-  end_time: "",
-  reason: "",
-  project_or_task: "",
-};
-
 function OvertimeForm({
   form,
   onChange,
@@ -174,7 +196,7 @@ function OvertimeForm({
     <div className="space-y-4">
       <div className="space-y-2">
         <label className="text-[13px] font-medium text-[#f7f8f8]">
-          Ngày làm thêm <span className="text-red-500">*</span>
+          Ngày làm việc <span className="text-red-500">*</span>
         </label>
         <input
           type="date"
@@ -227,7 +249,7 @@ function OvertimeForm({
           value={form.reason}
           onChange={(e) => onChange({ reason: e.target.value })}
           placeholder="Nhập lý do tăng ca..."
-          rows={3}
+          rows={2}
           className={`flex w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none ${errors.reason ? "border-red-500/50" : "border-input"}`}
         />
         {errors.reason && (
@@ -236,14 +258,12 @@ function OvertimeForm({
       </div>
 
       <div className="space-y-2">
-        <label className="text-[13px] font-medium text-[#f7f8f8]">
-          Dự án / công việc
-        </label>
+        <label className="text-[13px] font-medium text-[#f7f8f8]">Dự án / Công việc</label>
         <input
           type="text"
           value={form.project_or_task}
           onChange={(e) => onChange({ project_or_task: e.target.value })}
-          placeholder="Tên dự án hoặc công việc (không bắt buộc)"
+          placeholder="Nhập tên dự án (nếu có)..."
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
@@ -252,184 +272,203 @@ function OvertimeForm({
 }
 
 // ---------------------------------------------------------------------------
-// Create dialog
+// Main Dialog component
 // ---------------------------------------------------------------------------
 
-interface CreateRequestDialogProps {
-  /** Re-fetch the list after a successful create. */
-  onSuccess?: () => void;
+export interface CreateRequestDialogRef {
+  open: () => void;
+  close: () => void;
 }
 
-export function CreateRequestDialog({ onSuccess }: CreateRequestDialogProps) {
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [requestType, setRequestType] = useState("leave");
+export const CreateRequestDialog = forwardRef<CreateRequestDialogRef, CreateRequestDialogProps>(
+  function CreateRequestDialog({ defaultValues, onSuccess, trigger }, ref) {
+    const [open, setOpen] = useState(false);
+    const [requestType, setRequestType] = useState<"leave" | "overtime">(
+      defaultValues?.initialTab || "leave",
+    );
+    const [leaveForm, setLeaveForm] = useState<LeaveFormState>(INITIAL_LEAVE);
+    const [overtimeForm, setOvertimeForm] = useState<OvertimeFormState>(INITIAL_OVERTIME);
+    const [leaveErrors, setLeaveErrors] = useState<Partial<Record<keyof LeaveFormState, string>>>({});
+    const [overtimeErrors, setOvertimeErrors] = useState<Partial<Record<keyof OvertimeFormState, string>>>({});
+    const queryClient = useQueryClient();
 
-  // -- Leave state --
-  const [leaveForm, setLeaveForm] = useState<LeaveFormState>(INITIAL_LEAVE);
-  const [leaveErrors, setLeaveErrors] = useState<
-    Partial<Record<keyof LeaveFormState, string>>
-  >({});
+    // Expose open/close methods
+    useImperativeHandle(ref, () => ({
+      open: () => setOpen(true),
+      close: () => setOpen(false),
+    }));
 
-  // -- Overtime state --
-  const [overtimeForm, setOvertimeForm] = useState<OvertimeFormState>(INITIAL_OVERTIME);
-  const [overtimeErrors, setOvertimeErrors] = useState<
-    Partial<Record<keyof OvertimeFormState, string>>
-  >({});
+    // Apply default values when dialog opens with prefill data
+    useEffect(() => {
+      if (open && defaultValues) {
+        if (defaultValues.initialTab) {
+          setRequestType(defaultValues.initialTab);
+        }
+        if (defaultValues.leave) {
+          setLeaveForm((prev) => ({ ...prev, ...defaultValues.leave }));
+        }
+        if (defaultValues.overtime) {
+          setOvertimeForm((prev) => ({ ...prev, ...defaultValues.overtime }));
+        }
+      }
+    }, [open, defaultValues]);
 
-  // Reset form when opening/closing
-  const resetForms = () => {
-    setLeaveForm(INITIAL_LEAVE);
-    setLeaveErrors({});
-    setOvertimeForm(INITIAL_OVERTIME);
-    setOvertimeErrors({});
-  };
+    const resetForms = () => {
+      setLeaveForm(INITIAL_LEAVE);
+      setOvertimeForm(INITIAL_OVERTIME);
+      setLeaveErrors({});
+      setOvertimeErrors({});
+    };
 
-  // -- Mutations --
-  const leaveMutation = useMutation({
-    mutationFn: createLeave,
-    onSuccess: () => {
-      toast.success("Đã gửi đơn nghỉ phép thành công");
-      queryClient.invalidateQueries({ queryKey: ["employee-requests"] });
-      onSuccess?.();
-      setOpen(false);
-      resetForms();
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || "Gửi đơn thất bại");
-    },
-  });
-
-  const overtimeMutation = useMutation({
-    mutationFn: createOvertime,
-    onSuccess: () => {
-      toast.success("Đã gửi đơn tăng ca thành công");
-      queryClient.invalidateQueries({ queryKey: ["employee-requests"] });
-      onSuccess?.();
-      setOpen(false);
-      resetForms();
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || "Gửi đơn thất bại");
-    },
-  });
-
-  // -- Validation helpers --
-  function validateLeave(): boolean {
-    const errors: Partial<Record<keyof LeaveFormState, string>> = {};
-    if (!leaveForm.leave_type) errors.leave_type = "Vui lòng chọn loại nghỉ phép";
-    if (!leaveForm.start_date) errors.start_date = "Vui lòng chọn ngày bắt đầu";
-    if (!leaveForm.end_date) errors.end_date = "Vui lòng chọn ngày kết thúc";
-    if (leaveForm.start_date && leaveForm.end_date && leaveForm.end_date < leaveForm.start_date)
-      errors.end_date = "Ngày kết thúc phải sau ngày bắt đầu";
-    if (!leaveForm.reason.trim()) errors.reason = "Vui lòng nhập lý do";
-    setLeaveErrors(errors);
-    return Object.keys(errors).length === 0;
-  }
-
-  function validateOvertime(): boolean {
-    const errors: Partial<Record<keyof OvertimeFormState, string>> = {};
-    if (!overtimeForm.work_date) errors.work_date = "Vui lòng chọn ngày";
-    if (!overtimeForm.start_time) errors.start_time = "Vui lòng chọn giờ bắt đầu";
-    if (!overtimeForm.end_time) errors.end_time = "Vui lòng chọn giờ kết thúc";
-    if (overtimeForm.start_time && overtimeForm.end_time && overtimeForm.end_time <= overtimeForm.start_time)
-      errors.end_time = "Giờ kết thúc phải sau giờ bắt đầu";
-    if (!overtimeForm.reason.trim()) errors.reason = "Vui lòng nhập lý do";
-    setOvertimeErrors(errors);
-    return Object.keys(errors).length === 0;
-  }
-
-  // -- Submit handlers --
-  async function handleSubmitLeave() {
-    if (!validateLeave()) return;
-    leaveMutation.mutate({
-      leave_type: leaveForm.leave_type as "annual" | "sick" | "unpaid" | "other",
-      start_date: leaveForm.start_date,
-      end_date: leaveForm.end_date,
-      reason: leaveForm.reason.trim(),
+    const leaveMutation = useMutation({
+      mutationFn: createLeave,
+      onSuccess: () => {
+        toast.success("Đã gửi đơn nghỉ phép thành công");
+        queryClient.invalidateQueries({ queryKey: ["employee-requests"] });
+        onSuccess?.();
+        setOpen(false);
+        resetForms();
+      },
+      onError: (err: Error) => {
+        toast.error(err.message || "Gửi đơn thất bại");
+      },
     });
-  }
 
-  async function handleSubmitOvertime() {
-    if (!validateOvertime()) return;
-    overtimeMutation.mutate({
-      work_date: overtimeForm.work_date,
-      start_time: overtimeForm.start_time,
-      end_time: overtimeForm.end_time,
-      reason: overtimeForm.reason.trim(),
-      project_or_task: overtimeForm.project_or_task.trim() || null,
+    const overtimeMutation = useMutation({
+      mutationFn: createOvertime,
+      onSuccess: () => {
+        toast.success("Đã gửi đơn tăng ca thành công");
+        queryClient.invalidateQueries({ queryKey: ["employee-requests"] });
+        onSuccess?.();
+        setOpen(false);
+        resetForms();
+      },
+      onError: (err: Error) => {
+        toast.error(err.message || "Gửi đơn thất bại");
+      },
     });
-  }
 
-  const isPending = leaveMutation.isPending || overtimeMutation.isPending;
+    // -- Validation helpers --
+    function validateLeave(): boolean {
+      const errors: Partial<Record<keyof LeaveFormState, string>> = {};
+      if (!leaveForm.leave_type) errors.leave_type = "Vui lòng chọn loại nghỉ phép";
+      if (!leaveForm.start_date) errors.start_date = "Vui lòng chọn ngày bắt đầu";
+      if (!leaveForm.end_date) errors.end_date = "Vui lòng chọn ngày kết thúc";
+      if (leaveForm.start_date && leaveForm.end_date && leaveForm.end_date < leaveForm.start_date)
+        errors.end_date = "Ngày kết thúc phải sau ngày bắt đầu";
+      if (!leaveForm.reason.trim()) errors.reason = "Vui lòng nhập lý do";
+      setLeaveErrors(errors);
+      return Object.keys(errors).length === 0;
+    }
 
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) resetForms();
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4" />
-          Tạo yêu cầu
-        </Button>
-      </DialogTrigger>
+    function validateOvertime(): boolean {
+      const errors: Partial<Record<keyof OvertimeFormState, string>> = {};
+      if (!overtimeForm.work_date) errors.work_date = "Vui lòng chọn ngày";
+      if (!overtimeForm.start_time) errors.start_time = "Vui lòng chọn giờ bắt đầu";
+      if (!overtimeForm.end_time) errors.end_time = "Vui lòng chọn giờ kết thúc";
+      if (overtimeForm.start_time && overtimeForm.end_time && overtimeForm.end_time <= overtimeForm.start_time)
+        errors.end_time = "Giờ kết thúc phải sau giờ bắt đầu";
+      if (!overtimeForm.reason.trim()) errors.reason = "Vui lòng nhập lý do";
+      setOvertimeErrors(errors);
+      return Object.keys(errors).length === 0;
+    }
 
-      <DialogContent className="sm:max-w-[520px]">
-        <DialogHeader>
-          <DialogTitle>Tạo yêu cầu mới</DialogTitle>
-          <DialogDescription>
-            Chọn loại yêu cầu và điền thông tin bên dưới.
-          </DialogDescription>
-        </DialogHeader>
+    // -- Submit handlers --
+    async function handleSubmitLeave() {
+      if (!validateLeave()) return;
+      leaveMutation.mutate({
+        leave_type: leaveForm.leave_type as "annual" | "sick" | "unpaid" | "other",
+        start_date: leaveForm.start_date,
+        end_date: leaveForm.end_date,
+        reason: leaveForm.reason.trim(),
+      });
+    }
 
-        <Tabs value={requestType} onValueChange={setRequestType}>
-          <TabsList className="w-full">
-            <TabsTrigger value="leave" className="flex-1">
-              <CalendarDays className="mr-1.5 h-4 w-4" />
-              Nghỉ phép
-            </TabsTrigger>
-            <TabsTrigger value="overtime" className="flex-1">
-              <Clock className="mr-1.5 h-4 w-4" />
-              Tăng ca
-            </TabsTrigger>
-          </TabsList>
+    async function handleSubmitOvertime() {
+      if (!validateOvertime()) return;
+      overtimeMutation.mutate({
+        work_date: overtimeForm.work_date,
+        start_time: overtimeForm.start_time,
+        end_time: overtimeForm.end_time,
+        reason: overtimeForm.reason.trim(),
+        project_or_task: overtimeForm.project_or_task.trim() || null,
+      });
+    }
 
-          <TabsContent value="leave" className="mt-4">
-            <LeaveForm
-              form={leaveForm}
-              onChange={(u) => setLeaveForm((p) => ({ ...p, ...u }))}
-              errors={leaveErrors}
-            />
-          </TabsContent>
+    const isPending = leaveMutation.isPending || overtimeMutation.isPending;
 
-          <TabsContent value="overtime" className="mt-4">
-            <OvertimeForm
-              form={overtimeForm}
-              onChange={(u) => setOvertimeForm((p) => ({ ...p, ...u }))}
-              errors={overtimeErrors}
-            />
-          </TabsContent>
-        </Tabs>
+    const TriggerComponent = trigger || (
+      <Button>
+        <Plus className="h-4 w-4" />
+        Tạo yêu cầu
+      </Button>
+    );
 
-        <div className="flex justify-end gap-3 pt-2">
-          <DialogClose asChild>
-            <Button variant="outline" disabled={isPending}>
-              Huỷ
+    return (
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) resetForms();
+        }}
+      >
+        <DialogTrigger asChild>
+          {TriggerComponent}
+        </DialogTrigger>
+
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Tạo yêu cầu mới</DialogTitle>
+            <DialogDescription>
+              Chọn loại yêu cầu và điền thông tin bên dưới.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs value={requestType} onValueChange={(v) => setRequestType(v as "leave" | "overtime")}>
+            <TabsList className="w-full">
+              <TabsTrigger value="leave" className="flex-1">
+                <CalendarDays className="mr-1.5 h-4 w-4" />
+                Nghỉ phép
+              </TabsTrigger>
+              <TabsTrigger value="overtime" className="flex-1">
+                <Clock className="mr-1.5 h-4 w-4" />
+                Tăng ca
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="leave" className="mt-4">
+              <LeaveForm
+                form={leaveForm}
+                onChange={(u) => setLeaveForm((p) => ({ ...p, ...u }))}
+                errors={leaveErrors}
+              />
+            </TabsContent>
+
+            <TabsContent value="overtime" className="mt-4">
+              <OvertimeForm
+                form={overtimeForm}
+                onChange={(u) => setOvertimeForm((p) => ({ ...p, ...u }))}
+                errors={overtimeErrors}
+              />
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <DialogClose asChild>
+              <Button variant="outline" disabled={isPending}>
+                Huỷ
+              </Button>
+            </DialogClose>
+            <Button
+              onClick={requestType === "leave" ? handleSubmitLeave : handleSubmitOvertime}
+              disabled={isPending}
+            >
+              {isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              {isPending ? "Đang gửi..." : "Gửi yêu cầu"}
             </Button>
-          </DialogClose>
-          <Button
-            onClick={requestType === "leave" ? handleSubmitLeave : handleSubmitOvertime}
-            disabled={isPending}
-          >
-            {isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-            {isPending ? "Đang gửi..." : "Gửi yêu cầu"}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  },
+);
