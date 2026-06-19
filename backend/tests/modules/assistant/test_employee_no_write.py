@@ -52,6 +52,7 @@ def _make_service(
         leave_service=MagicMock(),
         overtime_service=MagicMock(),
         payslip_service=MagicMock(),
+        document_service=MagicMock(),
         settings=settings,
     )
 
@@ -191,6 +192,7 @@ class TestDraftActionFlow:
             leave_service=MagicMock(),
             overtime_service=MagicMock(),
             payslip_service=MagicMock(),
+        document_service=MagicMock(),
             settings=settings,
         )
         response = await service.chat([
@@ -261,6 +263,7 @@ class TestStructuralNoWrite:
             "leave_service": MagicMock(),
             "overtime_service": MagicMock(),
             "payslip_service": MagicMock(),
+            "document_service": MagicMock(),
         }
         defaults.update(overrides)
         return EmployeeToolRegistry(
@@ -322,6 +325,11 @@ class TestStructuralNoWrite:
             "_get_my_attendance",
             "_get_my_employee_requests",
             "_get_my_payslips",
+            "_list_my_documents",
+            "_get_today_attendance",
+            "_list_my_attendance_records",
+            "_list_my_employee_requests",
+            "_list_my_payslips",
             "_draft_leave_request",
             "_draft_overtime_request",
         }

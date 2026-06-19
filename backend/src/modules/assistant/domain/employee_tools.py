@@ -11,9 +11,11 @@ write endpoint directly (human-in-the-loop, ADR-0006).
 
 Tool set:
 - Read-Tool:    get_my_profile
-- Read-Tool:    get_my_attendance
-- Read-Tool:    get_my_employee_requests
-- Read-Tool:    get_my_payslips
+- Read-Tool:    list_my_documents
+- Read-Tool:    get_today_attendance
+- Read-Tool:    list_my_attendance_records
+- Read-Tool:    list_my_employee_requests
+- Read-Tool:    list_my_payslips
 - Draft-Tool:   draft_leave_request
 - Draft-Tool:   draft_overtime_request
 """
@@ -46,14 +48,44 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
         },
     ),
     ToolDefinition(
-        name="get_my_attendance",
+        name="list_my_documents",
         kind=ToolKind.READ,
         description=(
-            "Get the current employee's attendance records. "
+            "List the current employee's own uploaded documents in the document vault. "
+            "Returns file name, document type, file size, and upload date for each document. "
+            "Use when the employee asks about their documents, uploaded files, or what "
+            "files are in their document vault."
+        ),
+        parameters={
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {},
+        },
+    ),
+    ToolDefinition(
+        name="get_today_attendance",
+        kind=ToolKind.READ,
+        description=(
+            "Get the current employee's attendance check-in and check-out for today. "
+            "Returns check-in time, check-out time, and status for today only. "
+            "Use when the employee asks about today's attendance, whether they checked in, "
+            "or want to see their check-in status for the current day."
+        ),
+        parameters={
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {},
+        },
+    ),
+    ToolDefinition(
+        name="list_my_attendance_records",
+        kind=ToolKind.READ,
+        description=(
+            "List the current employee's attendance records. "
             "Optionally filter by month and year. "
             "Returns check-in and check-out times for each work date. "
-            "Use when the employee asks about their attendance, check-in history, "
-            "or working days."
+            "Use when the employee asks about their attendance history, "
+            "check-in history, or working days."
         ),
         parameters={
             "type": "object",
@@ -75,10 +107,10 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
         },
     ),
     ToolDefinition(
-        name="get_my_employee_requests",
+        name="list_my_employee_requests",
         kind=ToolKind.READ,
         description=(
-            "Get the current employee's own requests (leave and overtime). "
+            "List the current employee's own requests (leave and overtime). "
             "Optionally filter by request type (leave or overtime). "
             "Returns status, dates, reason, and timestamps. "
             "Use when the employee asks about their leave or overtime requests, "
@@ -100,11 +132,11 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
         },
     ),
     ToolDefinition(
-        name="get_my_payslips",
+        name="list_my_payslips",
         kind=ToolKind.READ,
         description=(
-            "Get the current employee's own published payslips. "
-            "Returns period, gross salary, net salary, and basic salary "
+            "List the current employee's own published payslips. "
+            "Returns period, gross salary, net salary, and breakdown "
             "for each payslip. "
             "Use when the employee asks about their payslips, salary history, "
             "or payment records."
