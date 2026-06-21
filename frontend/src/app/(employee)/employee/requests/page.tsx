@@ -163,6 +163,14 @@ function RequestCard({
             </p>
           )}
 
+          {/* Review reason (for approved/rejected requests) */}
+          {request.review_reason && (request.status === "approved" || request.status === "rejected") && (
+            <p className="text-[12px] text-[#8a8f98] italic">
+              {request.status === "approved" ? "Lý do duyệt: " : "Lý do từ chối: "}
+              {request.review_reason}
+            </p>
+          )}
+
           {/* Detail row */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[#8a8f98]">
             {isOvertime ? (
