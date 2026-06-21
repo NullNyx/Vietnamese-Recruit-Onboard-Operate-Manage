@@ -223,9 +223,28 @@ export interface ReviewResponse {
   request: AdminEmployeeRequestItem;
 }
 
-/** Fetch all submitted requests for HR review queue (admin only). */
-export async function fetchSubmittedRequests(): Promise<AdminReviewQueueResponse> {
-  const res = await fetch(ADMIN_BASE, { credentials: "include" });
+export interface FetchSubmittedRequestsFilters {
+  request_type?: "leave" | "overtime" | null;
+  status?: "submitted" | "approved" | "rejected" | "cancelled" | null;
+  date_from?: string | null;
+  date_to?: string | null;
+  employee_id?: string | null;
+}
+
+/** Fetch submitted requests for HR review queue with filters (admin only). */
+export async function fetchSubmittedRequests(
+  filters?: FetchSubmittedRequestsFilters,
+): Promise<AdminReviewQueueResponse> {
+  const params = new URLSearchParams();
+  if (filters) {
+    if (filters.request_type) params.append("request_type", filters.request_type);
+    if (filters.status) params.append("status", filters.status);
+    if (filters.date_from) params.append("date_from", filters.date_from);
+    if (filters.date_to) params.append("date_to", filters.date_to);
+    if (filters.employee_id) params.append("employee_id", filters.employee_id);
+  }
+  const url = params.toString() ? `${ADMIN_BASE}?${params.toString()}` : ADMIN_BASE;
+  const res = await fetch(url, { credentials: "include" });
   return handleResponse<AdminReviewQueueResponse>(res);
 }
 

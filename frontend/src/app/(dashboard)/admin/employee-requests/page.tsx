@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Loader2,
   XCircle,
+  RotateCcw,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -15,6 +16,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -30,6 +40,7 @@ import {
   rejectRequest,
 } from "@/lib/api/employee-requests";
 import type { AdminEmployeeRequestItem } from "@/lib/api/employee-requests";
+import { listEmployees } from "@/lib/api/employees";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -38,6 +49,13 @@ import type { AdminEmployeeRequestItem } from "@/lib/api/employee-requests";
 const REQUEST_TYPE_LABELS: Record<string, string> = {
   leave: "Nghỉ phép",
   overtime: "Tăng ca",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  submitted: "Chờ duyệt",
+  approved: "Đã duyệt",
+  rejected: "Đã từ chối",
+  cancelled: "Đã huỷ",
 };
 
 function statusBadgeColor(status: string): string {
@@ -128,16 +146,17 @@ function ReviewCard({
             <span
               className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusBadgeColor(request.status)}`}
             >
-              Đã gửi
+              {STATUS_LABELS[request.status] ?? request.status}
             </span>
-            <span className="text-[12px] text-muted-foreground">
+            <span className="text-[12px] text-muted-foreground font-medium">
               {request.employee_name}
             </span>
           </div>
 
           {/* Reason preview */}
           {request.reason && (
-            <p className="text-[13px] text-foreground leading-relaxed line-clamp-2">
+            <p className="text-[13px] text-foreground leading-relaxed">
+              <span className="font-medium text-muted-foreground">Lý do gửi: </span>
               {request.reason}
             </p>
           )}
@@ -147,29 +166,66 @@ function ReviewCard({
             <span>{dateInfo}</span>
             <span>Gửi lúc: {formatDateTime(request.submitted_at)}</span>
           </div>
+
+          {/* Decision details */}
+          {(request.status === "approved" || request.status === "rejected") && (
+            <div className="mt-3 pt-3 border-t border-border/40 text-[12px] space-y-1 bg-muted/40 p-3 rounded-lg">
+              <div className="font-semibold text-foreground flex items-center gap-1.5">
+                {request.status === "approved" ? (
+                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-destructive" />
+                )}
+                {request.status === "approved" ? "Đã duyệt" : "Đã từ chối"}
+                {request.reviewed_at && (
+                  <span className="font-normal text-muted-foreground text-[11px]">
+                    • {formatDateTime(request.reviewed_at)}
+                  </span>
+                )}
+              </div>
+              {request.review_reason && (
+                <p className="text-[12px] text-muted-foreground italic pl-5.5">
+                  &ldquo;{request.review_reason}&rdquo;
+                </p>
+              )}
+            </div>
+          )}
+
+          {request.status === "cancelled" && (
+            <div className="mt-3 pt-3 border-t border-border/40 text-[12px] space-y-1 bg-muted/40 p-3 rounded-lg">
+              <div className="font-semibold text-foreground">Nhân viên đã huỷ yêu cầu</div>
+              {request.cancellation_reason && (
+                <p className="text-[12px] text-muted-foreground italic">
+                  Lý do huỷ: &ldquo;{request.cancellation_reason}&rdquo;
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Action buttons */}
-        <div className="flex flex-col gap-2 shrink-0">
-          <Button
-            size="sm"
-            variant="default"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white text-[12px] h-8 px-4"
-            onClick={() => onReview(request, "approve")}
-          >
-            <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
-            Duyệt
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-red-500/30 text-destructive hover:bg-red-500/10 text-[12px] h-8 px-4"
-            onClick={() => onReview(request, "reject")}
-          >
-            <XCircle className="h-3.5 w-3.5 mr-1.5" />
-            Từ chối
-          </Button>
-        </div>
+        {request.status === "submitted" && (
+          <div className="flex flex-col gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="default"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-[12px] h-8 px-4"
+              onClick={() => onReview(request, "approve")}
+            >
+              <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+              Duyệt
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-red-500/30 text-destructive hover:bg-red-500/10 text-[12px] h-8 px-4"
+              onClick={() => onReview(request, "reject")}
+            >
+              <XCircle className="h-3.5 w-3.5 mr-1.5" />
+              Từ chối
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -279,6 +335,20 @@ export default function AdminEmployeeRequestsPage() {
   const [reviewReason, setReviewReason] = useState("");
   const reviewDialogOpen = reviewTarget !== null;
 
+  // -- Filter states --
+  const [requestType, setRequestType] = useState<"all" | "leave" | "overtime">("all");
+  const [status, setStatus] = useState<"submitted" | "approved" | "rejected" | "cancelled">("submitted");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [employeeId, setEmployeeId] = useState<string>("all");
+
+  // -- Fetch employees for filtering --
+  const { data: employeesData } = useQuery({
+    queryKey: ["employees-for-filter"],
+    queryFn: () => listEmployees({ is_active: true, page_size: 100 }),
+  });
+  const employees = employeesData?.items ?? [];
+
   // -- Query --
   const {
     data,
@@ -286,8 +356,15 @@ export default function AdminEmployeeRequestsPage() {
     isError,
     error,
   } = useQuery({
-    queryKey: ["admin-employee-requests"],
-    queryFn: fetchSubmittedRequests,
+    queryKey: ["admin-employee-requests", requestType, status, dateFrom, dateTo, employeeId],
+    queryFn: () =>
+      fetchSubmittedRequests({
+        request_type: requestType === "all" ? null : requestType,
+        status: status,
+        date_from: dateFrom || null,
+        date_to: dateTo || null,
+        employee_id: employeeId === "all" ? null : employeeId,
+      }),
     refetchInterval: 30_000,
   });
 
@@ -354,6 +431,14 @@ export default function AdminEmployeeRequestsPage() {
     }
   }
 
+  function handleResetFilters() {
+    setRequestType("all");
+    setStatus("submitted");
+    setDateFrom("");
+    setDateTo("");
+    setEmployeeId("all");
+  }
+
   const isPending = approveMutation.isPending || rejectMutation.isPending;
   const requests = data?.requests ?? [];
 
@@ -363,13 +448,120 @@ export default function AdminEmployeeRequestsPage() {
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-[24px] font-semibold tracking-[-0.3px] text-foreground">
-            Yêu cầu chờ duyệt
+            Quản lý yêu cầu nhân viên
           </h1>
           <p className="text-[14px] text-muted-foreground">
-            Duyệt hoặc từ chối đơn nghỉ phép và tăng ca từ nhân viên
+            Duyệt, từ chối hoặc lọc đơn nghỉ phép và tăng ca từ nhân viên
           </p>
         </div>
       </div>
+
+      {/* Filter Toolbar */}
+      <Card className="border-border/50 bg-card/50">
+        <CardContent className="pt-6">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+            {/* Request Type */}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-foreground">Loại yêu cầu</Label>
+              <Select
+                value={requestType}
+                onValueChange={(val) => setRequestType(val as "all" | "leave" | "overtime")}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Tất cả" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="leave">Nghỉ phép</SelectItem>
+                  <SelectItem value="overtime">Tăng ca</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status */}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-foreground">Trạng thái</Label>
+              <Select
+                value={status}
+                onValueChange={(val) => setStatus(val as "submitted" | "approved" | "rejected" | "cancelled")}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Chờ duyệt" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="submitted">Chờ duyệt</SelectItem>
+                  <SelectItem value="approved">Đã duyệt</SelectItem>
+                  <SelectItem value="rejected">Đã từ chối</SelectItem>
+                  <SelectItem value="cancelled">Đã huỷ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Employee */}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-foreground">Nhân viên</Label>
+              <Select
+                value={employeeId}
+                onValueChange={setEmployeeId}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Tất cả" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  {employees.map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date From */}
+            <div className="space-y-2">
+              <Label htmlFor="date-from" className="text-[13px] font-medium text-foreground">Từ ngày</Label>
+              <Input
+                id="date-from"
+                type="date"
+                className="h-9"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </div>
+
+            {/* Date To */}
+            <div className="space-y-2">
+              <Label htmlFor="date-to" className="text-[13px] font-medium text-foreground">Đến ngày</Label>
+              <Input
+                id="date-to"
+                type="date"
+                className="h-9"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {(requestType !== "all" ||
+            status !== "submitted" ||
+            employeeId !== "all" ||
+            dateFrom ||
+            dateTo) && (
+            <div className="flex justify-end mt-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-[12px] h-8 text-muted-foreground hover:text-foreground"
+                onClick={handleResetFilters}
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                Xoá bộ lọc
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Loading */}
       {isLoading && (
@@ -401,7 +593,7 @@ export default function AdminEmployeeRequestsPage() {
             Không có yêu cầu nào
           </h3>
           <p className="mt-1 text-[12px] text-muted-foreground">
-            Tất cả yêu cầu đã được xử lý. Yêu cầu mới sẽ xuất hiện ở đây.
+            Không tìm thấy yêu cầu nào phù hợp với bộ lọc hiện tại.
           </p>
         </div>
       )}
