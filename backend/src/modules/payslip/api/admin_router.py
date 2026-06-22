@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 
 from src.modules.identity.api.admin_router import AdminUserDep
 from src.modules.payslip.api.schemas import (
