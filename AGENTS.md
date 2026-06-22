@@ -155,11 +155,36 @@ Default layout:
 /docs/decisions/       ADRs
 ```
 
-Allowed exception layout with explicit user approval:
+Allowed exception layouts (explicit user approval):
 
 ```
-/docs/<owner-or-team>/...   supplemental implementation-facing working docs
+/docs/<owner-or-team>/...      supplemental implementation-facing working docs
+/docs/project/                 product strategy, foundation, gap analysis, change plans
 ```
+
+### `docs/project/` conventions (when activated)
+
+Read `docs/project/foundation/overview.md` and `docs/project/changes/README.md`
+for full structure. Key rules:
+
+- **Numbered naming** — files use `NN-description.md` (01-, 02-, etc.) for
+  ordering. When inserting between existing files, renumber subsequent files.
+- **Language** — prose in Vietnamese for human contributors; canonical English
+  terms (from `CONTEXT.md`) kept verbatim.
+- **`foundation/`** — product statement, personas, user journeys, requirements,
+  architecture principles, AI boundary, UX tenets, security principles, data model,
+  open-source strategy. These define the intended product.
+- **`foundation/overview.md`** — index of all foundation files.
+- **`changes/`** — planned modifications tracked as numbered change docs
+  (e.g. `01-ux-redesign.md`). Each change doc maps foundation refs, current state,
+  desired state, and implementation steps.
+- **`changes/00-file-lifecycle.md`** — file state policy (Active / Superseded /
+  Obsolete / Removed). Before marking any file obsolete, check this doc.
+- **`05-gap-analysis.md`** — compares current codebase against foundation.
+  Priority list: UX redesign (1), onboarding consumer (2), product narrative
+  (3), backup/restore (4), contribution guide (5).
+- **File lifecycle** — don't delete stale files; mark them `SUPERSEDED` or
+  `OBSOLETE` per lifecycle doc. When renaming, update all cross-references.
 
 ## Git: branch, commit, push, PR
 
