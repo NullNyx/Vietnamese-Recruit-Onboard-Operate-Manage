@@ -155,9 +155,9 @@ class EmployeeToolRegistry:
         record = records[0]
         return {
             "date": str(record.work_date),
-            "check_in": record.check_in.strftime("%H:%M") if record.check_in else None,
-            "check_out": record.check_out.strftime("%H:%M") if record.check_out else None,
-            "status": record.status.value if hasattr(record, "status") else "present",
+            "check_in": record.check_in_at.strftime("%H:%M") if record.check_in_at else None,
+            "check_out": record.check_out_at.strftime("%H:%M") if record.check_out_at else None,
+            "status": "present" if record.check_in_at else "not_checked_in",
         }
 
     async def _list_my_attendance_records(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -170,6 +170,11 @@ class EmployeeToolRegistry:
             year = today.year
         if month is None:
             month = today.month
+
+        if not isinstance(month, int) or month < 1 or month > 12:
+            return {"error": "Tháng không hợp lệ. Vui lòng nhập từ 1 đến 12."}
+        if not isinstance(year, int) or year < 1900 or year > 2100:
+            return {"error": "Năm không hợp lệ."}
 
         # Calculate date range for the month
         from calendar import monthrange
@@ -188,9 +193,9 @@ class EmployeeToolRegistry:
             "records": [
                 {
                     "date": str(r.work_date),
-                    "check_in": r.check_in.strftime("%H:%M") if r.check_in else None,
-                    "check_out": r.check_out.strftime("%H:%M") if r.check_out else None,
-                    "status": r.status.value if hasattr(r, "status") else "present",
+                    "check_in": r.check_in_at.strftime("%H:%M") if r.check_in_at else None,
+                    "check_out": r.check_out_at.strftime("%H:%M") if r.check_out_at else None,
+                    "status": "present" if r.check_in_at else "not_checked_in",
                 }
                 for r in records
             ]
@@ -200,14 +205,23 @@ class EmployeeToolRegistry:
         args.pop("employee_id", None)
         request_type = args.get("request_type")
 
+        valid_types = {"leave", "overtime"}
+        if request_type is not None and request_type not in valid_types:
+            return {
+                "error": (
+                    f"Loại yêu cầu không hợp lệ: '{request_type}'. "
+                    f"Các loại: {', '.join(sorted(valid_types))}."
+                )
+            }
+
         leaves = []
         overtime = []
 
         if request_type is None or request_type == "leave":
-            leaves = await self._leave_service.list_my_leaves(str(self._employee_id))
+            leaves = await self._leave_service.list_my_leaves(self._employee_id)
 
         if request_type is None or request_type == "overtime":
-            overtime = await self._overtime_service.list_my_overtime(str(self._employee_id))
+            overtime = await self._overtime_service.list_my_overtime(self._employee_id)
 
         all_requests = []
 
@@ -253,13 +267,14 @@ class EmployeeToolRegistry:
             "payslips": [
                 {
                     "id": str(p.id),
-                    "period_month": str(p.period_month),
-                    "gross_salary": str(p.gross_salary),
-                    "deductions": str(p.deductions),
-                    "insurance_employee": str(p.insurance_employee),
-                    "taxable_income": str(p.taxable_income),
-                    "pit_amount": str(p.pit_amount),
-                    "net_salary": str(p.net_salary),
+                    "period_month": str(p.pay_period_start.month),
+                    "period_year": str(p.pay_period_start.year),
+                    "pay_period_start": p.pay_period_start.isoformat(),
+                    "pay_period_end": p.pay_period_end.isoformat(),
+                    "gross_salary": str(p.gross_amount),
+                    "total_deductions": str(p.total_deductions),
+                    "net_salary": str(p.net_amount),
+                    "details": p.details if isinstance(p.details, dict) else {},
                     "published_at": p.published_at.isoformat() if p.published_at else None,
                 }
                 for p in payslips

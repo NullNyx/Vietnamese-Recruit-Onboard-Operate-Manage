@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useImperativeHandle, forwardRef, type ReactNode } from "react";
+import { useEffect, useState, useImperativeHandle, forwardRef, useRef, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Clock, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -299,8 +299,11 @@ export const CreateRequestDialog = forwardRef<CreateRequestDialogRef, CreateRequ
     }));
 
     // Apply default values when dialog opens with prefill data
+    const appliedRef = useRef(false);
+
     useEffect(() => {
-      if (open && defaultValues) {
+      if (open && defaultValues && !appliedRef.current) {
+        appliedRef.current = true;
         if (defaultValues.initialTab) {
           setRequestType(defaultValues.initialTab);
         }

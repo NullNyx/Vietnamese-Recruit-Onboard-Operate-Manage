@@ -108,8 +108,13 @@ export function ChatInterface({
   };
 
   const handleDraftConfirm = () => {
-    if (!draftAction || !onOpenRequestDialog) {
-      // Fallback: call confirmAction directly
+    if (!draftAction) {
+      return;
+    }
+
+    // If onOpenRequestDialog exists, use prefill flow; otherwise fallback to confirmAction
+    if (!onOpenRequestDialog) {
+      confirmAction?.(draftAction);
       return;
     }
 
@@ -117,20 +122,20 @@ export function ChatInterface({
     if (draftAction.action_type === "submit_leave_request") {
       setPrefillValues({
         leave: {
-          leave_type: (draftAction.confirm_body.leave_type as string) || "",
-          start_date: (draftAction.confirm_body.start_date as string) || "",
-          end_date: (draftAction.confirm_body.end_date as string) || "",
-          reason: (draftAction.confirm_body.reason as string) || "",
+          leave_type: String(draftAction.confirm_body.leave_type ?? ""),
+          start_date: String(draftAction.confirm_body.start_date ?? ""),
+          end_date: String(draftAction.confirm_body.end_date ?? ""),
+          reason: String(draftAction.confirm_body.reason ?? ""),
         },
       });
     } else if (draftAction.action_type === "submit_overtime_request") {
       setPrefillValues({
         overtime: {
-          work_date: (draftAction.confirm_body.work_date as string) || "",
-          start_time: (draftAction.confirm_body.start_time as string) || "",
-          end_time: (draftAction.confirm_body.end_time as string) || "",
-          reason: (draftAction.confirm_body.reason as string) || "",
-          project_or_task: (draftAction.confirm_body.project_or_task as string) || "",
+          work_date: String(draftAction.confirm_body.work_date ?? ""),
+          start_time: String(draftAction.confirm_body.start_time ?? ""),
+          end_time: String(draftAction.confirm_body.end_time ?? ""),
+          reason: String(draftAction.confirm_body.reason ?? ""),
+          project_or_task: String(draftAction.confirm_body.project_or_task ?? ""),
         },
       });
     }
