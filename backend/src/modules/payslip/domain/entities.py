@@ -107,6 +107,14 @@ class Payslip(SQLModel, table=True):
             name="uq_payslips_employee_period_month",
         ),
         CheckConstraint(
+            "EXTRACT(DAY FROM period_month) = 1",
+            name="ck_payslips_period_month_first_day",
+        ),
+        CheckConstraint(
+            "currency = 'VND'",
+            name="ck_payslips_currency_vnd",
+        ),
+        CheckConstraint(
             "(status = 'draft' AND published_at IS NULL)"
             " OR (status = 'published' AND published_at IS NOT NULL)",
             name="ck_payslips_status_published_at_consistent",

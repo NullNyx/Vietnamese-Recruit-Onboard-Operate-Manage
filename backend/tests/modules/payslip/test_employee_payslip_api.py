@@ -51,10 +51,6 @@ class FakeEmployee:
         self.user_id = "user-uuid"
         self.email = "employee@example.com"
 
-    # SQLModel compatibility: allow attribute access
-    def __getattr__(self, name: str):
-        return None
-
 
 class FakeUser:
     """Minimal user stub for dependency override."""

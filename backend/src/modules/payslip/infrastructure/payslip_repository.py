@@ -6,7 +6,7 @@ sessions with SQLModel.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -216,10 +216,9 @@ class PayslipRepository:
             payslip.pit_amount = pit_amount
         if net_salary is not None:
             payslip.net_salary = net_salary
-        if pdf_url is not None:
-            payslip.pdf_url = pdf_url
+        payslip.pdf_url = pdf_url
 
-        payslip.updated_at = datetime.now()
+        payslip.updated_at = datetime.now(UTC)
         await self.session.flush()
         return payslip
 
@@ -239,8 +238,8 @@ class PayslipRepository:
             return None
 
         payslip.status = PayslipStatus.PUBLISHED
-        payslip.published_at = datetime.now()
-        payslip.updated_at = datetime.now()
+        payslip.published_at = datetime.now(UTC)
+        payslip.updated_at = datetime.now(UTC)
         await self.session.flush()
         return payslip
 

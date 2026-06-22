@@ -6,7 +6,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.modules.payslip.domain.entities import PayslipStatus
 
@@ -56,12 +56,22 @@ class CreatePayslipRequest(BaseModel):
     pit_amount: Decimal = Field(default=Decimal("0"), ge=0, decimal_places=2, max_digits=12)
     net_salary: Decimal = Field(gt=0, decimal_places=2, max_digits=12)
     pdf_url: str | None = None
+    currency: str = Field(default="VND", pattern=r"^VND$")
+
+    @field_validator("period_month")
+    @classmethod
+    def normalize_period_month(cls, v: date) -> date:
+        """Normalize period_month to first day of month."""
+        if v.day != 1:
+            return v.replace(day=1)
+        return v
 
 
 class UpdatePayslipRequest(BaseModel):
     """Request schema for updating a draft Payslip.
 
     All fields are optional; only provided fields will be updated.
+    Use a sentinel value (empty string) to clear pdf_url.
     """
 
     gross_salary: Decimal | None = Field(default=None, gt=0, decimal_places=2, max_digits=12)
@@ -70,7 +80,15 @@ class UpdatePayslipRequest(BaseModel):
     taxable_income: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=12)
     pit_amount: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=12)
     net_salary: Decimal | None = Field(default=None, gt=0, decimal_places=2, max_digits=12)
-    pdf_url: str | None = None
+    pdf_url: str | None = Field(default=None, max_length=500)
+
+    @field_validator("pdf_url", mode="before")
+    @classmethod
+    def normalize_pdf_url(cls, v):
+        """Convert empty string to None to allow clearing pdf_url."""
+        if v == "":
+            return None
+        return v
 
 
 class AdminPayslipListResponse(BaseModel):

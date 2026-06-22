@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.modules.identity.api.admin_router import AdminUserDep
 from src.modules.payslip.api.schemas import (
@@ -86,6 +86,10 @@ async def list_payslips(
                 detail="Invalid period_month. Use YYYY-MM format",
             )
 
+    # Clamp pagination parameters
+    page = max(1, page)
+    page_size = min(max(1, page_size), 100)
+
     payslips, total = await service.list_payslips(
         admin=admin_user,
         page=page,
@@ -117,11 +121,14 @@ async def create_payslip(
 
     Enforces uniqueness: at most one payslip per Employee per period.
     """
+    # Normalize period_month to first day of month
+    normalized_period = request.period_month.replace(day=1)
+
     try:
         payslip = await service.create_draft(
             admin=admin_user,
             employee_id=request.employee_id,
-            period_month=request.period_month,
+            period_month=normalized_period,
             gross_salary=request.gross_salary,
             deductions=request.deductions,
             insurance_employee=request.insurance_employee,
