@@ -275,6 +275,7 @@ async def update_task(
     body: TaskStatusUpdate,
     current_user: CurrentUserDep,
     onboarding_service: OnboardingServiceDep,
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> OnboardingTaskResponse:
     """Set an onboarding task's status (used to mark it ``done``).
 
@@ -311,15 +312,21 @@ async def update_task(
         status=body.status.value,
     )
 
+    completed_by_name = None
+    if task.status == OnboardingTaskStatus.DONE.value:
+        if task.completed_by_user_id == current_user.id:
+            completed_by_name = current_user.name
+        elif task.completed_by_user_id is not None:
+            user = await db_session.get(User, task.completed_by_user_id)
+            completed_by_name = user.name if user else None
+
     return OnboardingTaskResponse(
         id=task.id,
         name=task.name,
         status=OnboardingTaskStatus(task.status),
         order_index=task.order_index,
         completed_at=task.completed_at.isoformat() if task.completed_at else None,
-        completed_by_name=(
-            current_user.name if task.status == OnboardingTaskStatus.DONE.value else None
-        ),
+        completed_by_name=completed_by_name,
     )
 
 

@@ -225,7 +225,7 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
                     </span>
                     {task.status === 'done' && task.completed_at && (
                       <span className="text-[11px] text-muted-foreground">
-                        Completed by {task.completed_by_name || 'HR'} on {new Date(task.completed_at).toLocaleString('vi-VN')}
+                        Hoàn thành bởi {task.completed_by_name ?? 'Hệ thống'} lúc {new Date(task.completed_at).toLocaleString('vi-VN')}
                       </span>
                     )}
                   </div>
