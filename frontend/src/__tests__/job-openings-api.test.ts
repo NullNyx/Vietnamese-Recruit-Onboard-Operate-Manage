@@ -132,4 +132,63 @@ describe("Job Opening API Client", () => {
       expect.objectContaining({ credentials: "include" }),
     );
   });
+
+  describe("getJobOpeningMetrics", () => {
+    it("fetches summary metrics correctly", async () => {
+      const { getJobOpeningMetrics } = await import("@/lib/api/recruitment");
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            total_job_openings: 10,
+            draft_count: 3,
+            open_count: 4,
+            closed_count: 2,
+            cancelled_count: 1,
+          }),
+      });
+
+      const result = await getJobOpeningMetrics();
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/recruitment/job-openings/metrics"),
+        expect.objectContaining({ credentials: "include" }),
+      );
+      expect(result.total_job_openings).toBe(10);
+      expect(result.draft_count).toBe(3);
+      expect(result.open_count).toBe(4);
+      expect(result.closed_count).toBe(2);
+      expect(result.cancelled_count).toBe(1);
+    });
+
+    it("handles zero counts", async () => {
+      const { getJobOpeningMetrics } = await import("@/lib/api/recruitment");
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            total_job_openings: 0,
+            draft_count: 0,
+            open_count: 0,
+            closed_count: 0,
+            cancelled_count: 0,
+          }),
+      });
+
+      const result = await getJobOpeningMetrics();
+
+      expect(result.total_job_openings).toBe(0);
+    });
+
+    it("handles network error", async () => {
+      const { getJobOpeningMetrics } = await import("@/lib/api/recruitment");
+
+      mockFetch.mockRejectedValueOnce(new Error("Network failure"));
+      await expect(getJobOpeningMetrics()).rejects.toThrow();
+    });
+  });
 });

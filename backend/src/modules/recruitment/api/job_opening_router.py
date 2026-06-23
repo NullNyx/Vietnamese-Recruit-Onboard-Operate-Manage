@@ -242,6 +242,8 @@ async def get_job_opening_metrics(
     Returns:
         Summary metrics with counts per status.
     """
+    from src.modules.recruitment.api.schemas import JobOpeningMetricsResponse
+
     service = get_job_opening_service(session, current_user)
     metrics = await service.get_summary_metrics()
     return JobOpeningMetricsResponse(**metrics)

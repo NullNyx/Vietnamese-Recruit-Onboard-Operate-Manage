@@ -34,6 +34,9 @@ export interface EmployeeRequestListItem {
   reason: string | null;
   project_or_task: string | null;
   cancellation_reason: string | null;
+  /** Review fields */
+  review_reason: string | null;
+  reviewed_at: string | null;
 }
 
 export interface EmployeeRequestListResponse {
@@ -58,6 +61,8 @@ export interface LeaveResponse {
   submitted_at: string | null;
   updated_at: string | null;
   cancellation_reason: string | null;
+  review_reason: string | null;
+  reviewed_at: string | null;
 }
 
 export interface LeaveCreateResponse {
@@ -91,6 +96,8 @@ export interface OvertimeResponse {
   submitted_at: string | null;
   updated_at: string | null;
   cancellation_reason: string | null;
+  review_reason: string | null;
+  reviewed_at: string | null;
 }
 
 export interface OvertimeCreateResponse {
@@ -197,6 +204,10 @@ export interface AdminEmployeeRequestItem {
   end_date: string | null;
   /** Cancellation */
   cancellation_reason: string | null;
+  /** Review fields */
+  review_reason: string | null;
+  reviewed_at: string | null;
+  reviewed_by_user_id: string | null;
 }
 
 export interface AdminReviewQueueResponse {
@@ -241,7 +252,7 @@ export async function rejectRequest(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ review_reason: reviewReason ?? null }),
+    body: JSON.stringify({ decision_reason: reviewReason ?? null }),
   });
   return handleResponse<ReviewResponse>(res);
 }

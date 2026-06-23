@@ -14,6 +14,8 @@ export interface OnboardingTask {
   name: string;
   status: OnboardingTaskStatus;
   order_index: number;
+  completed_at?: string | null;
+  completed_by_name?: string | null;
 }
 
 export interface OnboardingProcess {
@@ -26,6 +28,7 @@ export interface OnboardingProcess {
   completed_count: number;
   total_count: number;
   missing_setup_fields: string[];
+  completed_at?: string | null;
   accepted_at?: string | null;
   job_opening?: string | null;
   department_id?: string | null;

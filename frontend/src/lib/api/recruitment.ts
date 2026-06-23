@@ -601,3 +601,23 @@ export async function getJobOpening(id: string): Promise<JobOpeningDetail> {
   const res = await fetchWithTimeout(`${BASE}/job-openings/${id}`);
   return handleResponse<JobOpeningDetail>(res);
 }
+
+// ---------------------------------------------------------------------------
+// Job Opening metrics types and functions
+// ---------------------------------------------------------------------------
+
+export interface JobOpeningMetrics {
+  total_job_openings: number;
+  draft_count: number;
+  open_count: number;
+  closed_count: number;
+  cancelled_count: number;
+}
+
+/**
+ * Get summary metrics for Job Opening lifecycle states.
+ */
+export async function getJobOpeningMetrics(): Promise<JobOpeningMetrics> {
+  const res = await fetchWithTimeout(`${BASE}/job-openings/metrics`);
+  return handleResponse<JobOpeningMetrics>(res);
+}
