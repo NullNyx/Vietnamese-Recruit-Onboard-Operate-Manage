@@ -536,9 +536,9 @@ class JobOpeningRepository:
     async def count_job_openings_by_status(
         self,
     ) -> dict[str, int]:
-        """Count Job Openings grouped by lifecycle status.
+        """Count Job Openings grouped by lifecycle status using JobOpeningStatus enum.
 
-        Returns a dict with keys: draft, open, closed, cancelled
+        Returns a dict with all four status keys (draft, open, closed, cancelled)
         mapping to the count of Job Openings in each status.
 
         Returns:

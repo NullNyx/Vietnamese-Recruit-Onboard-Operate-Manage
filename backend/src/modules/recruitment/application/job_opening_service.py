@@ -397,8 +397,9 @@ class JobOpeningService:
     ) -> dict[str, int]:
         """Return summary metrics for Job Opening lifecycle states.
 
-        Delegates to the repository for counts by status. The caller
-        (the metrics endpoint) can use these counts directly.
+        Delegates to the repository for counts by status, using the
+        JobOpeningStatus enum for consistency. Returns counts grouped
+        by draft, open, closed, and cancelled.
 
         Returns:
             Dict with total_job_openings, draft_count, open_count,

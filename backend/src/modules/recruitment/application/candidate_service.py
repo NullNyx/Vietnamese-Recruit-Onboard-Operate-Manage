@@ -924,7 +924,12 @@ class CandidateService:
             entity_id=candidate.id,
             user_id=self._user_id,
             previous_value={"status": previous_status},
-            new_value={"status": CandidateStatus.ACCEPTED},
+            new_value={
+                "status": CandidateStatus.ACCEPTED,
+                "job_opening_id": (
+                    str(candidate.job_opening_id) if candidate.job_opening_id else None
+                ),
+            },
             change_summary="Candidate accepted",
         )
 

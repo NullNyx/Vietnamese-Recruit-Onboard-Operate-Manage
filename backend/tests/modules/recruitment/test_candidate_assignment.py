@@ -501,8 +501,12 @@ class TestAssignmentAuditLogging:
         assert audit_calls[0][0][0].previous_value == {"job_opening_id": str(jo_id)}
         assert audit_calls[0][0][0].new_value == {"job_opening_id": None}
 
+# ─── Headcount Sync Tests ──────────────────────────────────────────────
+
 class TestCandidateAcceptanceHeadcountSync:
     """Tests for Job Opening headcount sync when candidate is accepted."""
+
+
 
     async def test_accept_candidate_with_job_opening_updates_timestamp(
         self,
@@ -550,6 +554,7 @@ class TestCandidateAcceptanceHeadcountSync:
         result = await candidate_service.accept_candidate(candidate.id)
 
         assert result.status == CandidateStatus.ACCEPTED
+        assert result.job_opening_id == job_opening_id
         # Job Opening should be touched when candidate has job_opening_id
         mock_job_opening_repo.get_by_id.assert_called_once()
         mock_job_opening_repo.update.assert_called_once()
@@ -570,7 +575,6 @@ class TestCandidateAcceptanceHeadcountSync:
         )
 
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
-        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_candidate_repo.update = AsyncMock(side_effect=lambda c: c)
         mock_session.commit = AsyncMock()
 
@@ -601,11 +605,7 @@ class TestCandidateAcceptanceHeadcountSync:
         user_id: uuid4,
     ):
         """Accepting a candidate for a filled Job Opening should NOT be blocked."""
-        from datetime import UTC, datetime
-        from unittest.mock import AsyncMock
-
         job_opening_id = uuid4()
-        # Already has 2 accepted candidates, target is 2
         candidate = _make_candidate(
             status=CandidateStatus.INTERVIEW_SCHEDULED,
             job_opening_id=job_opening_id,
@@ -619,12 +619,10 @@ class TestCandidateAcceptanceHeadcountSync:
             updated_at=datetime(2025, 1, 1, tzinfo=UTC),
         )
 
-        # Mock job_opening_repo to return count that indicates "filled"
         mock_job_opening_repo.get_by_id = AsyncMock(return_value=job_opening)
         mock_job_opening_repo.count_accepted_by_job_opening = AsyncMock(return_value=2)
         mock_job_opening_repo.update = AsyncMock(side_effect=lambda j: j)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
-        mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
         mock_candidate_repo.update = AsyncMock(side_effect=lambda c: c)
         mock_session.commit = AsyncMock()
 

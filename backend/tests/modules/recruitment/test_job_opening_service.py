@@ -630,6 +630,150 @@ class TestTimestampCleanup:
         # even though the transition is blocked by the state machine
         pass
 
+# ─── Headcount Tests ──────────────────────────────────────────────────
+
+class TestHeadcountStatus:
+    """Tests for Job Opening headcount tracking and filled/overfilled states."""
+
+    async def test_get_headcount_status_returns_counts(
+        self, mock_session: AsyncMock, mock_job_opening_repo: AsyncMock, user_id: uuid4
+    ):
+        """get_headcount_status should return accepted_count, filled, overfilled."""
+        job_opening = JobOpening(
+            id=uuid4(),
+            title="Developer",
+            position_id=uuid4(),
+            target_headcount=2,
+            status=JobOpeningStatus.OPEN,
+        )
+        mock_job_opening_repo.get_by_id = AsyncMock(return_value=job_opening)
+        mock_job_opening_repo.count_accepted_by_job_opening = AsyncMock(return_value=1)
+
+        service = JobOpeningService(
+            session=mock_session,
+            job_opening_repo=mock_job_opening_repo,
+            user_id=user_id,
+        )
+
+        result = await service.get_headcount_status(job_opening.id)
+
+        assert result["accepted_count"] == 1
+        assert result["target_headcount"] == 2
+        assert result["remaining"] == 1
+        assert result["filled"] is False
+        assert result["overfilled"] is False
+
+    async def test_filled_when_accepted_equals_target(
+        self, mock_session: AsyncMock, mock_job_opening_repo: AsyncMock, user_id: uuid4
+    ):
+        """filled should be True when accepted_count equals target_headcount."""
+        job_opening = JobOpening(
+            id=uuid4(),
+            title="Developer",
+            position_id=uuid4(),
+            target_headcount=2,
+            status=JobOpeningStatus.OPEN,
+        )
+        mock_job_opening_repo.get_by_id = AsyncMock(return_value=job_opening)
+        mock_job_opening_repo.count_accepted_by_job_opening = AsyncMock(return_value=2)
+
+        service = JobOpeningService(
+            session=mock_session,
+            job_opening_repo=mock_job_opening_repo,
+            user_id=user_id,
+        )
+
+        result = await service.get_headcount_status(job_opening.id)
+
+        assert result["accepted_count"] == 2
+        assert result["remaining"] == 0
+        assert result["filled"] is True
+        assert result["overfilled"] is False
+
+    async def test_overfilled_when_accepted_exceeds_target(
+        self, mock_session: AsyncMock, mock_job_opening_repo: AsyncMock, user_id: uuid4
+    ):
+        """overfilled should be True when accepted_count exceeds target_headcount."""
+        job_opening = JobOpening(
+            id=uuid4(),
+            title="Developer",
+            position_id=uuid4(),
+            target_headcount=2,
+            status=JobOpeningStatus.OPEN,
+        )
+        mock_job_opening_repo.get_by_id = AsyncMock(return_value=job_opening)
+        mock_job_opening_repo.count_accepted_by_job_opening = AsyncMock(return_value=3)
+
+        service = JobOpeningService(
+            session=mock_session,
+            job_opening_repo=mock_job_opening_repo,
+            user_id=user_id,
+        )
+
+        result = await service.get_headcount_status(job_opening.id)
+
+        assert result["accepted_count"] == 3
+        assert result["remaining"] == -1
+        assert result["filled"] is True
+        assert result["overfilled"] is True
+
+    async def test_remaining_headcount_can_be_negative(
+        self, mock_session: AsyncMock, mock_job_opening_repo: AsyncMock, user_id: uuid4
+    ):
+        """remaining should be negative when overfilled."""
+        job_opening = JobOpening(
+            id=uuid4(),
+            title="Developer",
+            position_id=uuid4(),
+            target_headcount=1,
+            status=JobOpeningStatus.OPEN,
+        )
+        mock_job_opening_repo.get_by_id = AsyncMock(return_value=job_opening)
+        mock_job_opening_repo.count_accepted_by_job_opening = AsyncMock(return_value=5)
+
+        service = JobOpeningService(
+            session=mock_session,
+            job_opening_repo=mock_job_opening_repo,
+            user_id=user_id,
+        )
+
+        result = await service.get_headcount_status(job_opening.id)
+
+        assert result["remaining"] == -4
+
+    async def test_nonexistent_job_opening_raises_error(
+        self, mock_session: AsyncMock, mock_job_opening_repo: AsyncMock, user_id: uuid4
+    ):
+        """get_headcount_status should raise error for nonexistent Job Opening."""
+        mock_job_opening_repo.get_by_id = AsyncMock(return_value=None)
+
+        service = JobOpeningService(
+            session=mock_session,
+            job_opening_repo=mock_job_opening_repo,
+            user_id=user_id,
+        )
+
+        with pytest.raises(JobOpeningNotFoundError):
+            await service.get_headcount_status(uuid4())
+
+    async def test_increment_accepted_count_returns_current_count(
+        self, mock_session: AsyncMock, mock_job_opening_repo: AsyncMock, user_id: uuid4
+    ):
+        """increment_accepted_count should return current accepted count."""
+        mock_job_opening_repo.count_accepted_by_job_opening = AsyncMock(return_value=2)
+
+        service = JobOpeningService(
+            session=mock_session,
+            job_opening_repo=mock_job_opening_repo,
+            user_id=user_id,
+        )
+
+        result = await service.increment_accepted_count(uuid4())
+
+        assert result == 2
+        mock_job_opening_repo.count_accepted_by_job_opening.assert_called_once()
+
+
 class TestHeadcountMethods:
     """Tests for headcount-related methods in JobOpeningService."""
 

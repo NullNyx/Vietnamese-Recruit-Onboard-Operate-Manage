@@ -203,6 +203,10 @@ async def list_job_openings(
             position_name=position_names.get(str(jo.position_id), ""),
             total_candidates=sum(counts_by_jo.get(jo.id, {}).values()),
             accepted_count=counts_by_jo.get(jo.id, {}).get("accepted", 0),
+            filled=counts_by_jo.get(jo.id, {}).get("accepted", 0) >= jo.target_headcount,
+            overfilled=counts_by_jo.get(jo.id, {}).get("accepted", 0) > jo.target_headcount,
+            remaining_headcount=jo.target_headcount
+            - counts_by_jo.get(jo.id, {}).get("accepted", 0),
         )
         for jo in job_openings
     ]
@@ -270,8 +274,13 @@ async def get_job_opening(
     job_opening = await service.get_job_opening(job_opening_id)
     counts_by_jo = await service.get_candidate_counts([job_opening.id])
     candidate_counts = counts_by_jo.get(job_opening.id, {})
+    accepted_count = candidate_counts.get("accepted", 0)
     resp = JobOpeningResponse.model_validate(job_opening)
     resp.candidate_counts = candidate_counts
+    resp.accepted_count = accepted_count
+    resp.filled = accepted_count >= job_opening.target_headcount
+    resp.overfilled = accepted_count > job_opening.target_headcount
+    resp.remaining_headcount = job_opening.target_headcount - accepted_count
     # Resolve position name
     pos_stmt = sqlmodel_select(Position).where(Position.id == job_opening.position_id)
     pos_result = await session.execute(pos_stmt)
