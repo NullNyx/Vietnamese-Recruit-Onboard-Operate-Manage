@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from src.modules.recruitment.domain.entities import Candidate, CVDocument, JobOpening
-from src.modules.recruitment.domain.enums import CandidateStatus, ProcessingStatus
+from src.modules.recruitment.domain.enums import CandidateStatus, JobOpeningStatus, ProcessingStatus
 
 
 class CandidateRepository:
@@ -554,10 +554,10 @@ class JobOpeningRepository:
         rows = result.all()
 
         counts: dict[str, int] = {
-            "draft": 0,
-            "open": 0,
-            "closed": 0,
-            "cancelled": 0,
+            JobOpeningStatus.DRAFT: 0,
+            JobOpeningStatus.OPEN: 0,
+            JobOpeningStatus.CLOSED: 0,
+            JobOpeningStatus.CANCELLED: 0,
         }
         for row in rows:
             status, cnt = row
