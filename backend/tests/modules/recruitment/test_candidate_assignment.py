@@ -7,6 +7,7 @@ validating rules: open-only assignment, terminal-status guards, audit logging.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
@@ -506,3 +507,135 @@ class TestCandidateAcceptanceHeadcountSync:
     """Tests for Job Opening headcount sync when candidate is accepted."""
 
 
+
+    async def test_accept_candidate_with_job_opening_updates_timestamp(
+        self,
+        mock_session: AsyncMock,
+        mock_candidate_repo: AsyncMock,
+        mock_job_opening_repo: AsyncMock,
+        mock_cv_doc_repo,
+        mock_minio_client,
+        user_id: uuid4,
+    ):
+        """Accepting a candidate assigned to Job Opening should update Job Opening timestamp."""
+        from datetime import UTC, datetime
+
+        job_opening_id = uuid4()
+        candidate = _make_candidate(
+            status=CandidateStatus.INTERVIEW_SCHEDULED,
+            job_opening_id=job_opening_id,
+        )
+        job_opening = SimpleNamespace(
+            id=job_opening_id,
+            title="Developer",
+            position_id=uuid4(),
+            target_headcount=2,
+            status="open",
+            updated_at=datetime(2025, 1, 1, tzinfo=UTC),
+        )
+
+        mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.update = AsyncMock(side_effect=lambda c: c)
+        mock_job_opening_repo.get_by_id = AsyncMock(return_value=job_opening)
+        mock_job_opening_repo.update = AsyncMock(side_effect=lambda j: j)
+        mock_session.commit = AsyncMock()
+
+        from src.modules.recruitment.application.candidate_service import CandidateService
+
+        candidate_service = CandidateService(
+            candidate_repo=mock_candidate_repo,
+            cv_document_repo=mock_cv_doc_repo,
+            minio_client=mock_minio_client,
+            session=mock_session,
+            user_id=user_id,
+            job_opening_repo=mock_job_opening_repo,
+        )
+
+        result = await candidate_service.accept_candidate(candidate.id)
+
+        assert result.status == CandidateStatus.ACCEPTED
+        mock_job_opening_repo.get_by_id.assert_called_once()
+        mock_job_opening_repo.update.assert_called_once()
+
+    async def test_accept_candidate_without_job_opening_skips_update(
+        self,
+        mock_session: AsyncMock,
+        mock_candidate_repo: AsyncMock,
+        mock_job_opening_repo: AsyncMock,
+        mock_cv_doc_repo,
+        mock_minio_client,
+        user_id: uuid4,
+    ):
+        """Accepting a candidate without Job Opening should not call Job Opening repo."""
+        candidate = _make_candidate(
+            status=CandidateStatus.INTERVIEW_SCHEDULED,
+            job_opening_id=None,
+        )
+
+        mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.update = AsyncMock(side_effect=lambda c: c)
+        mock_session.commit = AsyncMock()
+
+        from src.modules.recruitment.application.candidate_service import CandidateService
+
+        candidate_service = CandidateService(
+            candidate_repo=mock_candidate_repo,
+            cv_document_repo=mock_cv_doc_repo,
+            minio_client=mock_minio_client,
+            session=mock_session,
+            user_id=user_id,
+            job_opening_repo=mock_job_opening_repo,
+        )
+
+        result = await candidate_service.accept_candidate(candidate.id)
+
+        assert result.status == CandidateStatus.ACCEPTED
+        mock_job_opening_repo.get_by_id.assert_not_called()
+        mock_job_opening_repo.update.assert_not_called()
+
+    async def test_accept_candidate_not_blocked_when_filled(
+        self,
+        mock_session: AsyncMock,
+        mock_candidate_repo: AsyncMock,
+        mock_job_opening_repo: AsyncMock,
+        mock_cv_doc_repo,
+        mock_minio_client,
+        user_id: uuid4,
+    ):
+        """Accepting a candidate for a filled Job Opening should NOT be blocked."""
+        job_opening_id = uuid4()
+        candidate = _make_candidate(
+            status=CandidateStatus.INTERVIEW_SCHEDULED,
+            job_opening_id=job_opening_id,
+        )
+        job_opening = SimpleNamespace(
+            id=job_opening_id,
+            title="Developer",
+            position_id=uuid4(),
+            target_headcount=2,
+            status="open",
+            updated_at=datetime(2025, 1, 1, tzinfo=UTC),
+        )
+
+        mock_job_opening_repo.get_by_id = AsyncMock(return_value=job_opening)
+        mock_job_opening_repo.count_accepted_by_job_opening = AsyncMock(return_value=2)
+        mock_job_opening_repo.update = AsyncMock(side_effect=lambda j: j)
+        mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
+        mock_candidate_repo.update = AsyncMock(side_effect=lambda c: c)
+        mock_session.commit = AsyncMock()
+
+        from src.modules.recruitment.application.candidate_service import CandidateService
+
+        candidate_service = CandidateService(
+            candidate_repo=mock_candidate_repo,
+            cv_document_repo=mock_cv_doc_repo,
+            minio_client=mock_minio_client,
+            session=mock_session,
+            user_id=user_id,
+            job_opening_repo=mock_job_opening_repo,
+        )
+
+        # This should NOT raise - overfill is allowed
+        result = await candidate_service.accept_candidate(candidate.id)
+
+        assert result.status == CandidateStatus.ACCEPTED
