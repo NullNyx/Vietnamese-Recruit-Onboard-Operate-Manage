@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from src.modules.recruitment.domain.entities import Candidate, CVDocument, JobOpening
-from src.modules.recruitment.domain.enums import CandidateStatus, ProcessingStatus
+from src.modules.recruitment.domain.enums import CandidateStatus, JobOpeningStatus, ProcessingStatus
 
 
 class CandidateRepository:
@@ -532,3 +532,36 @@ class JobOpeningRepository:
         )
         result = await self.session.execute(stmt)
         return result.scalar_one() or 0
+
+    async def count_job_openings_by_status(
+        self,
+    ) -> dict[str, int]:
+        """Count Job Openings grouped by lifecycle status using JobOpeningStatus enum.
+
+        Returns a dict with all four status keys (draft, open, closed, cancelled)
+        mapping to the count of Job Openings in each status.
+
+        Returns:
+            Dict with status -> count mapping.
+        """
+        stmt = (
+            select(
+                JobOpening.status,
+                func.count().label("cnt"),
+            ).group_by(JobOpening.status)  # type: ignore[union-attr]
+        )
+        result = await self.session.execute(stmt)
+        rows = result.all()
+
+        counts: dict[str, int] = {
+            JobOpeningStatus.DRAFT: 0,
+            JobOpeningStatus.OPEN: 0,
+            JobOpeningStatus.CLOSED: 0,
+            JobOpeningStatus.CANCELLED: 0,
+        }
+        for row in rows:
+            status, cnt = row
+            if status in counts:
+                counts[status] = cnt
+
+        return counts

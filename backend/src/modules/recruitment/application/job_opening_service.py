@@ -391,3 +391,26 @@ class JobOpeningService:
         """
         # Just return the current count - it's computed from Candidate table
         return await self.job_opening_repo.count_accepted_by_job_opening(job_opening_id)
+
+    async def get_summary_metrics(
+        self,
+    ) -> dict[str, int]:
+        """Return summary metrics for Job Opening lifecycle states.
+
+        Delegates to the repository for counts by status, using the
+        JobOpeningStatus enum for consistency. Returns counts grouped
+        by draft, open, closed, and cancelled.
+
+        Returns:
+            Dict with total_job_openings, draft_count, open_count,
+            closed_count, cancelled_count.
+        """
+        status_counts = await self.job_opening_repo.count_job_openings_by_status()
+        total = sum(status_counts.values())
+        return {
+            "total_job_openings": total,
+            "draft_count": status_counts.get("draft", 0),
+            "open_count": status_counts.get("open", 0),
+            "closed_count": status_counts.get("closed", 0),
+            "cancelled_count": status_counts.get("cancelled", 0),
+        }
