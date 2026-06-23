@@ -554,6 +554,11 @@ class TestCandidateAcceptanceHeadcountSync:
         result = await candidate_service.accept_candidate(candidate.id)
 
         assert result.status == CandidateStatus.ACCEPTED
+<<<<<<< HEAD
+=======
+        assert result.job_opening_id == job_opening_id
+        # Job Opening should be touched when candidate has job_opening_id
+>>>>>>> eac743b (fix(recruitment): add job_opening_id assertion in headcount sync test per review)
         mock_job_opening_repo.get_by_id.assert_called_once()
         mock_job_opening_repo.update.assert_called_once()
 
