@@ -156,6 +156,8 @@ class ProcessTaskDetail:
     name: str
     status: str
     order_index: int
+    completed_at: str | None = None
+    completed_by_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -184,6 +186,7 @@ class ProcessDetail:
     completed_count: int
     total_count: int
     missing_setup_fields: list[str]
+    completed_at: str | None = None
     accepted_at: str | None = None
     job_opening: str | None = None
     department_id: UUID | None = None
@@ -797,7 +800,7 @@ class OnboardingService:
             previous_state = {k: getattr(employee, k) for k in data.keys()}
 
             # Serialize UUID and date for audit log
-            def _serialize(v):
+            def _serialize(v: Any) -> Any:
                 if isinstance(v, UUID):
                     return str(v)
                 from datetime import date
@@ -980,12 +983,27 @@ class OnboardingService:
             raise OnboardingProcessNotFoundError()
 
         tasks = await self.task_repo.list_by_process(process_id)
+
+        user_ids = {t.completed_by_user_id for t in tasks if t.completed_by_user_id}
+        users_map = {}
+        if user_ids:
+            from sqlmodel import select
+
+            statement = select(User).where(User.id.in_(user_ids))  # type: ignore[attr-defined]
+            result = await self.session.execute(statement)
+            for user in result.scalars().all():
+                users_map[user.id] = user.name
+
         task_details = [
             ProcessTaskDetail(
                 id=task.id,
                 name=task.name,
                 status=task.status,
                 order_index=task.order_index,
+                completed_at=task.completed_at.isoformat() if task.completed_at else None,
+                completed_by_name=(
+                    users_map.get(task.completed_by_user_id) if task.completed_by_user_id else None
+                ),
             )
             for task in tasks
         ]
@@ -1015,6 +1033,7 @@ class OnboardingService:
             completed_count=completed_count,
             total_count=len(tasks),
             missing_setup_fields=missing_setup_fields,
+            completed_at=process.completed_at.isoformat() if process.completed_at else None,
             department_id=employee.department_id if employee else None,
             position_id=employee.position_id if employee else None,
             manager_id=employee.manager_id if employee else None,

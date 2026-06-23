@@ -110,6 +110,8 @@ class OnboardingTaskResponse(BaseModel):
     name: str
     status: OnboardingTaskStatus
     order_index: int
+    completed_at: str | None = None
+    completed_by_name: str | None = None
 
 
 class OnboardingProcessListItem(BaseModel):
@@ -183,6 +185,7 @@ class OnboardingProcessDetailResponse(BaseModel):
     completed_count: int
     total_count: int
     missing_setup_fields: list[str] = Field(default_factory=list)
+    completed_at: str | None = None
     accepted_at: str | None = None
     job_opening: str | None = None
     department_id: UUID | None = None

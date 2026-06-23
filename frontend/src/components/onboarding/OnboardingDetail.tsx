@@ -168,9 +168,16 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
               Thiếu setup data
             </span>
           ) : process.status === 'complete' ? (
-            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              Đã kích hoạt
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                Đã kích hoạt
+              </span>
+              {process.completed_at && (
+                <span className="text-xs text-muted-foreground">
+                  Process completed on {new Date(process.completed_at).toLocaleString('vi-VN')}
+                </span>
+              )}
+            </div>
           ) : allDone ? (
             <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
               Sẵn sàng kích hoạt
@@ -207,14 +214,21 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
                   ) : (
                     <Circle className="size-5 text-muted-foreground/50 shrink-0" />
                   )}
-                  <span
-                    className={cn(
-                      'flex-1 text-sm',
-                      task.status === 'done' && 'line-through text-muted-foreground',
+                  <div className="flex-1 flex flex-col gap-0.5">
+                    <span
+                      className={cn(
+                        'text-sm',
+                        task.status === 'done' && 'line-through text-muted-foreground',
+                      )}
+                    >
+                      {task.name}
+                    </span>
+                    {task.status === 'done' && task.completed_at && (
+                      <span className="text-[11px] text-muted-foreground">
+                        Hoàn thành bởi {task.completed_by_name ?? 'Hệ thống'} lúc {new Date(task.completed_at).toLocaleString('vi-VN')}
+                      </span>
                     )}
-                  >
-                    {task.name}
-                  </span>
+                  </div>
                 </button>
               ))
             )}
