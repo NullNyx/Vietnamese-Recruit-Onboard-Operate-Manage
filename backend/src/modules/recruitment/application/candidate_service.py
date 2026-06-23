@@ -896,6 +896,14 @@ class CandidateService:
         candidate.status = CandidateStatus.ACCEPTED
         candidate.accepted_at = datetime.now(UTC)
         candidate = await self._candidate_repo.update(candidate)
+
+        # Touch the Job Opening updated_at timestamp when candidate is accepted
+        if candidate.job_opening_id is not None and self._job_opening_repo is not None:
+            job_opening = await self._job_opening_repo.get_by_id(candidate.job_opening_id)
+            if job_opening is not None:
+                job_opening.updated_at = datetime.now(UTC)
+                await self._job_opening_repo.update(job_opening)
+
         await self._session.commit()
 
         # Emit domain event for downstream modules (onboarding)
