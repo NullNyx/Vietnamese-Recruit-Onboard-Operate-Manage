@@ -507,3 +507,30 @@ class JobOpeningListResponse(BaseModel):
     total_count: int
     page: int
     page_size: int
+
+
+# ---------------------------------------------------------------------------
+# Job Opening metrics schemas
+# ---------------------------------------------------------------------------
+
+
+class JobOpeningMetricsResponse(BaseModel):
+    """Summary metrics for Job Opening lifecycle states.
+
+    Aggregates total Job Openings and counts by each lifecycle status
+    (draft, open, closed, cancelled) for HR visibility into recruitment
+    pipeline health.
+
+    Attributes:
+        total_job_openings: Total count of all Job Openings.
+        draft_count: Count of Job Openings in draft status.
+        open_count: Count of Job Openings in open status.
+        closed_count: Count of Job Openings in closed status.
+        cancelled_count: Count of Job Openings in cancelled status.
+    """
+
+    total_job_openings: int
+    draft_count: int
+    open_count: int
+    closed_count: int
+    cancelled_count: int

@@ -22,6 +22,7 @@ from src.modules.recruitment.api.schemas import (
     JobOpeningCreate,
     JobOpeningListItemResponse,
     JobOpeningListResponse,
+    JobOpeningMetricsResponse,
     JobOpeningResponse,
     JobOpeningUpdate,
 )
@@ -212,6 +213,36 @@ async def list_job_openings(
         page=page,
         page_size=page_size,
     )
+
+
+# ---------------------------------------------------------------------------
+# Job Opening metrics
+# ---------------------------------------------------------------------------
+
+
+@job_opening_router.get("/metrics", response_model=JobOpeningMetricsResponse)
+async def get_job_opening_metrics(
+    current_user: CurrentUserDep,
+    session: SessionDep,
+) -> JobOpeningMetricsResponse:
+    """Return summary metrics for Job Opening lifecycle states.
+
+    Provides aggregated counts of Job Openings by their lifecycle status
+    (draft, open, closed, cancelled) to give HR visibility into recruitment
+    pipeline health.
+
+    Args:
+        current_user: The authenticated user.
+        session: The async database session.
+
+    Returns:
+        Summary metrics with counts per status.
+    """
+    from src.modules.recruitment.api.schemas import JobOpeningMetricsResponse
+
+    service = get_job_opening_service(session, current_user)
+    metrics = await service.get_summary_metrics()
+    return JobOpeningMetricsResponse(**metrics)
 
 
 # ---------------------------------------------------------------------------

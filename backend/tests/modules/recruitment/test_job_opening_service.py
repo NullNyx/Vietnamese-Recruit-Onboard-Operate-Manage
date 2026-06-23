@@ -629,3 +629,41 @@ class TestTimestampCleanup:
         # This tests that the timestamp cleanup logic exists for cancelled->open
         # even though the transition is blocked by the state machine
         pass
+
+class TestHeadcountMethods:
+    """Tests for headcount-related methods in JobOpeningService."""
+
+    async def test_increment_accepted_count_calls_repository(
+        self, mock_session: AsyncMock, mock_job_opening_repo: AsyncMock, user_id: uuid4
+    ):
+        """increment_accepted_count should call count_accepted_by_job_opening."""
+        jo_id = uuid4()
+        mock_job_opening_repo.count_accepted_by_job_opening = AsyncMock(return_value=3)
+
+        service = JobOpeningService(
+            session=mock_session,
+            job_opening_repo=mock_job_opening_repo,
+            user_id=user_id,
+        )
+
+        result = await service.increment_accepted_count(jo_id)
+
+        assert result == 3
+        mock_job_opening_repo.count_accepted_by_job_opening.assert_called_once_with(jo_id)
+
+    async def test_get_headcount_status_raises_for_nonexistent(
+        self, mock_session: AsyncMock, mock_job_opening_repo: AsyncMock, user_id: uuid4
+    ):
+        """get_headcount_status should raise error for nonexistent Job Opening."""
+        mock_job_opening_repo.get_by_id = AsyncMock(return_value=None)
+
+        service = JobOpeningService(
+            session=mock_session,
+            job_opening_repo=mock_job_opening_repo,
+            user_id=user_id,
+        )
+
+        from src.modules.recruitment.domain.exceptions import JobOpeningNotFoundError
+
+        with pytest.raises(JobOpeningNotFoundError):
+            await service.get_headcount_status(uuid4())
