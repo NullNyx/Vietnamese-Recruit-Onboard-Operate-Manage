@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useImperativeHandle, forwardRef, useRef, type ReactNode } from "react";
+import { useEffect, useState, useImperativeHandle, forwardRef, useRef, type ReactElement } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Clock, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -58,7 +58,7 @@ export interface CreateRequestDialogProps {
   /** Callback when a request is successfully created */
   onSuccess?: () => void;
   /** Custom trigger button (defaults to standard button if not provided) */
-  trigger?: ReactNode;
+  trigger?: ReactElement;
 }
 
 // ---------------------------------------------------------------------------

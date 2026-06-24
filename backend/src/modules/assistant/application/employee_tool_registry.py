@@ -267,14 +267,16 @@ class EmployeeToolRegistry:
     async def _list_my_payslips(self, args: dict[str, Any]) -> dict[str, Any]:
         args.pop("employee_id", None)
         payslips = await self._payslip_service.get_my_payslips(self._employee_id)
+        payslips = payslips[:50]
         return {
             "payslips": [
                 {
                     "id": str(p.id),
-                    "period_month": str(p.period_month),
-                    "gross_salary": float(p.gross_salary),
-                    "deductions": float(p.deductions),
-                    "net_salary": float(p.net_salary),
+                    "pay_period_start": str(p.pay_period_start),
+                    "pay_period_end": str(p.pay_period_end),
+                    "gross_amount": float(p.gross_amount),
+                    "total_deductions": float(p.total_deductions),
+                    "net_amount": float(p.net_amount),
                     "published_at": p.published_at.isoformat() if p.published_at else None,
                 }
                 for p in payslips
