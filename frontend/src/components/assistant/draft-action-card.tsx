@@ -31,7 +31,13 @@ export function DraftActionCard({
   const handleConfirm = async () => {
     if (onConfirmed) {
       // Prefill/redirect mode — no direct API call
-      onConfirmed();
+      setConfirming(true);
+      try {
+        onConfirmed();
+        setConfirmed(true);
+      } finally {
+        setConfirming(false);
+      }
       return;
     }
     setConfirming(true);

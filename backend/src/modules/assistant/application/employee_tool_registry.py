@@ -168,12 +168,16 @@ class EmployeeToolRegistry:
         today = date.today()
         if year is None:
             year = today.year
+        else:
+            year = int(year)
         if month is None:
             month = today.month
+        else:
+            month = int(month)
 
-        if not isinstance(month, int) or month < 1 or month > 12:
+        if month < 1 or month > 12:
             return {"error": "Tháng không hợp lệ. Vui lòng nhập từ 1 đến 12."}
-        if not isinstance(year, int) or year < 1900 or year > 2100:
+        if year < 1900 or year > 2100:
             return {"error": "Năm không hợp lệ."}
 
         # Calculate date range for the month
@@ -267,14 +271,10 @@ class EmployeeToolRegistry:
             "payslips": [
                 {
                     "id": str(p.id),
-                    "period_month": str(p.pay_period_start.month),
-                    "period_year": str(p.pay_period_start.year),
-                    "pay_period_start": p.pay_period_start.isoformat(),
-                    "pay_period_end": p.pay_period_end.isoformat(),
-                    "gross_salary": str(p.gross_amount),
-                    "total_deductions": str(p.total_deductions),
-                    "net_salary": str(p.net_amount),
-                    "details": p.details if isinstance(p.details, dict) else {},
+                    "period_month": str(p.period_month),
+                    "gross_salary": float(p.gross_salary),
+                    "deductions": float(p.deductions),
+                    "net_salary": float(p.net_salary),
                     "published_at": p.published_at.isoformat() if p.published_at else None,
                 }
                 for p in payslips

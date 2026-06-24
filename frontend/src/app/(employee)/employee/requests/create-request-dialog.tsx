@@ -321,6 +321,7 @@ export const CreateRequestDialog = forwardRef<CreateRequestDialogRef, CreateRequ
       setOvertimeForm(INITIAL_OVERTIME);
       setLeaveErrors({});
       setOvertimeErrors({});
+      appliedRef.current = false;
     };
 
     const leaveMutation = useMutation({

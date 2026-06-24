@@ -27,14 +27,22 @@ def _make_registry(**overrides: MagicMock) -> EmployeeToolRegistry:
     from src.modules.assistant.application.employee_tool_registry import (
         EmployeeToolRegistry,
     )
+    from src.modules.employee.application.employee_service import EmployeeService
+    from src.modules.employee.application.document_service import DocumentService
+    from src.modules.attendance.infrastructure.attendance_record_repository import (
+        AttendanceRecordRepository,
+    )
+    from src.modules.employee_request.application.leave_service import LeaveService
+    from src.modules.employee_request.application.overtime_service import OvertimeService
+    from src.modules.payslip.application.payslip_service import PayslipService
 
     defaults = {
-        "employee_service": MagicMock(),
-        "document_service": MagicMock(),
-        "attendance_repo": MagicMock(),
-        "leave_service": MagicMock(),
-        "overtime_service": MagicMock(),
-        "payslip_service": MagicMock(),
+        "employee_service": MagicMock(spec=EmployeeService),
+        "document_service": MagicMock(spec=DocumentService),
+        "attendance_repo": MagicMock(spec=AttendanceRecordRepository),
+        "leave_service": MagicMock(spec=LeaveService),
+        "overtime_service": MagicMock(spec=OvertimeService),
+        "payslip_service": MagicMock(spec=PayslipService),
     }
     defaults.update(overrides)
     return EmployeeToolRegistry(

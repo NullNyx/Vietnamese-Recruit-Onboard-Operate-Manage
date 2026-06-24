@@ -57,14 +57,18 @@ export function ChatInterface({
     }
   }, [messages]);
 
+  // Store onOpenRequestDialog in ref to avoid re-running effect on reference change
+  const onOpenRequestDialogRef = useRef(onOpenRequestDialog);
+  onOpenRequestDialogRef.current = onOpenRequestDialog;
+
   // Open request dialog when prefill values are set
   useEffect(() => {
-    if (prefillValues && onOpenRequestDialog) {
-      onOpenRequestDialog(prefillValues);
+    if (prefillValues && onOpenRequestDialogRef.current) {
+      onOpenRequestDialogRef.current(prefillValues);
       setPrefillValues(null);
       setDraftAction(null);
     }
-  }, [prefillValues, onOpenRequestDialog]);
+  }, [prefillValues]);
 
   const handleSend = async () => {
     const trimmed = input.trim();
@@ -112,12 +116,6 @@ export function ChatInterface({
       return;
     }
 
-    // If onOpenRequestDialog exists, use prefill flow; otherwise fallback to confirmAction
-    if (!onOpenRequestDialog) {
-      confirmAction?.(draftAction);
-      return;
-    }
-
     // Translate draft action to prefill values
     if (draftAction.action_type === "submit_leave_request") {
       setPrefillValues({
@@ -138,6 +136,9 @@ export function ChatInterface({
           project_or_task: String(draftAction.confirm_body.project_or_task ?? ""),
         },
       });
+    } else {
+      toast.error("Loại yêu cầu không được hỗ trợ: " + draftAction.action_type);
+      return;
     }
   };
 
