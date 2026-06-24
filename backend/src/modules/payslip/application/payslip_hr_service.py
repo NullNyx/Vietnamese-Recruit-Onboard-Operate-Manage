@@ -76,24 +76,21 @@ class PayslipHRService:
             PayslipAlreadyExistsError: If a payslip already exists for
                 this Employee and period.
         """
-        exists = await self._payslip_repo.exists_for_employee_and_period(
-            employee_id=employee_id,
-            period_month=period_month,
-        )
-        if exists:
+        try:
+            payslip = await self._payslip_repo.create(
+                employee_id=employee_id,
+                period_month=period_month,
+                gross_salary=gross_salary,
+                deductions=deductions,
+                insurance_employee=insurance_employee,
+                taxable_income=taxable_income,
+                pit_amount=pit_amount,
+                net_salary=net_salary,
+                pdf_url=pdf_url,
+            )
+        except Exception:  # noqa: BLE001
+            # Re-raise as business exception if unique constraint violation
             raise PayslipAlreadyExistsError(str(employee_id), str(period_month))
-
-        payslip = await self._payslip_repo.create(
-            employee_id=employee_id,
-            period_month=period_month,
-            gross_salary=gross_salary,
-            deductions=deductions,
-            insurance_employee=insurance_employee,
-            taxable_income=taxable_income,
-            pit_amount=pit_amount,
-            net_salary=net_salary,
-            pdf_url=pdf_url,
-        )
 
         await self._audit_service.log_action(
             admin=admin,

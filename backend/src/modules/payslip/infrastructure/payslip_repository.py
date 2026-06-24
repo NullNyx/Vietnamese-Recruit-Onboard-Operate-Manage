@@ -216,7 +216,8 @@ class PayslipRepository:
             payslip.pit_amount = pit_amount
         if net_salary is not None:
             payslip.net_salary = net_salary
-        payslip.pdf_url = pdf_url
+        if pdf_url is not None:
+            payslip.pdf_url = pdf_url
 
         payslip.updated_at = datetime.now(UTC)
         await self.session.flush()

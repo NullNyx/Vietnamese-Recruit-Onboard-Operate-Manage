@@ -35,9 +35,16 @@ function formatDate(dateStr: string | null): string {
   });
 }
 
-function formatPeriodMonth(periodMonth: string): string {
-  const [year, month] = periodMonth.split("-").map(Number);
+function formatPeriodMonth(periodMonth: string | null | undefined): string {
+  if (!periodMonth) return "-";
+  const parts = periodMonth.split("-");
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
+    return periodMonth;
+  }
   const date = new Date(year, month - 1);
+  if (Number.isNaN(date.getTime())) return periodMonth;
   return date.toLocaleDateString("vi-VN", {
     month: "long",
     year: "numeric",

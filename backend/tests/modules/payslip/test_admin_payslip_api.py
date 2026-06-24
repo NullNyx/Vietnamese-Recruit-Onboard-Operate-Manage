@@ -219,13 +219,13 @@ class FakePayslipHRService:
 
 
 def _make_draft_payslip(
-    employee_id: UUID = uuid4(),
+    employee_id: UUID | None = None,
     period_month: date | None = None,
 ) -> Payslip:
     """Create a sample draft Payslip."""
     return Payslip(
         id=uuid4(),
-        employee_id=employee_id,
+        employee_id=employee_id or uuid4(),
         period_month=period_month or date(2026, 5, 1),
         gross_salary=Decimal("15000000"),
         deductions=Decimal("500000"),
