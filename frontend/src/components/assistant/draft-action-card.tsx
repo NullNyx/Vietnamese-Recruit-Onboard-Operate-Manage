@@ -10,7 +10,7 @@ import { confirmDraftAction } from "@/lib/api/assistant";
 
 interface DraftActionCardProps {
   draft: DraftAction;
-  onConfirmed?: () => void;
+  onConfirmed?: () => void | Promise<void>;
   onDismissed?: () => void;
   /** Optional custom confirm function. Defaults to HR confirm endpoint. */
   confirmAction?: (draft: DraftAction) => Promise<unknown>;
@@ -33,7 +33,7 @@ export function DraftActionCard({
       // Prefill/redirect mode — no direct API call
       setConfirming(true);
       try {
-        onConfirmed();
+        await onConfirmed();
         setConfirmed(true);
       } finally {
         setConfirming(false);

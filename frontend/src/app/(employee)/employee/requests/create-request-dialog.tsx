@@ -294,8 +294,14 @@ export const CreateRequestDialog = forwardRef<CreateRequestDialogRef, CreateRequ
 
     // Expose open/close methods
     useImperativeHandle(ref, () => ({
-      open: () => setOpen(true),
-      close: () => setOpen(false),
+      open: () => {
+        appliedRef.current = false;
+        setOpen(true);
+      },
+      close: () => {
+        setOpen(false);
+        resetForms();
+      },
     }));
 
     // Apply default values when dialog opens with prefill data

@@ -157,7 +157,8 @@ class TestEmployeeToolRegistryDraftTools:
 
     @pytest.mark.asyncio
     async def test_draft_leave_returns_draft_action(self) -> None:
-        registry = _make_registry()
+        leave_service = MagicMock()
+        registry = _make_registry(leave_service=leave_service)
         result_json = await registry.execute(
             "draft_leave_request",
             {
@@ -170,10 +171,12 @@ class TestEmployeeToolRegistryDraftTools:
         result = json.loads(result_json)
         assert "draft_action" in result
         assert result["draft_action"]["action_type"] == "submit_leave_request"
+        leave_service.create_leave.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_draft_overtime_returns_draft_action(self) -> None:
-        registry = _make_registry()
+        overtime_service = MagicMock()
+        registry = _make_registry(overtime_service=overtime_service)
         result_json = await registry.execute(
             "draft_overtime_request",
             {
@@ -186,10 +189,12 @@ class TestEmployeeToolRegistryDraftTools:
         result = json.loads(result_json)
         assert "draft_action" in result
         assert result["draft_action"]["action_type"] == "submit_overtime_request"
+        overtime_service.create_overtime.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_draft_leave_validates_dates(self) -> None:
-        registry = _make_registry()
+        leave_service = MagicMock()
+        registry = _make_registry(leave_service=leave_service)
         result_json = await registry.execute(
             "draft_leave_request",
             {
@@ -201,10 +206,12 @@ class TestEmployeeToolRegistryDraftTools:
         )
         result = json.loads(result_json)
         assert "error" in result
+        leave_service.create_leave.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_draft_overtime_validates_times(self) -> None:
-        registry = _make_registry()
+        overtime_service = MagicMock()
+        registry = _make_registry(overtime_service=overtime_service)
         result_json = await registry.execute(
             "draft_overtime_request",
             {
@@ -216,6 +223,7 @@ class TestEmployeeToolRegistryDraftTools:
         )
         result = json.loads(result_json)
         assert "error" in result
+        overtime_service.create_overtime.assert_not_called()
 
 
 class TestEmployeeToolRegistryReadTools:
@@ -435,3 +443,34 @@ class TestEmployeeToolRegistryReadTools:
         doc = result["documents"][0]
         assert doc["document_type"] == "cccd"
         assert doc["file_name"] == "cccd.pdf"
+
+    @pytest.mark.asyncio
+    async def test_list_my_payslips_returns_expected_shape(self) -> None:
+        """list_my_payslips should return payslips in expected shape matching Payslip model."""
+        from datetime import date, datetime
+        from uuid import uuid4
+
+        payslip_service = MagicMock()
+
+        class FakePayslip:
+            id = uuid4()
+            pay_period_start = date(2026, 6, 1)
+            pay_period_end = date(2026, 6, 30)
+            gross_amount = 25000000.00
+            total_deductions = 2500000.00
+            net_amount = 22500000.00
+            published_at = datetime.now()
+
+        payslip_service.get_my_payslips = AsyncMock(return_value=[FakePayslip()])
+
+        registry = _make_registry(payslip_service=payslip_service)
+        result = json.loads(await registry.execute("list_my_payslips", {}))
+
+        assert "payslips" in result
+        assert len(result["payslips"]) == 1
+        p = result["payslips"][0]
+        assert p["pay_period_start"] == "2026-06-01"
+        assert p["pay_period_end"] == "2026-06-30"
+        assert p["gross_amount"] == 25000000.00
+        assert p["total_deductions"] == 2500000.00
+        assert p["net_amount"] == 22500000.00

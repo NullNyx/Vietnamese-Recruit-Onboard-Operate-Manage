@@ -28,7 +28,7 @@ export interface ChatInterfaceProps {
   onOpenRequestDialog?: (values: {
     leave?: Record<string, string>;
     overtime?: Record<string, string>;
-  }) => void;
+  }) => void | Promise<void>;
 }
 
 export function ChatInterface({
@@ -64,9 +64,10 @@ export function ChatInterface({
   // Open request dialog when prefill values are set
   useEffect(() => {
     if (prefillValues && onOpenRequestDialogRef.current) {
-      onOpenRequestDialogRef.current(prefillValues);
-      setPrefillValues(null);
-      setDraftAction(null);
+      Promise.resolve(onOpenRequestDialogRef.current(prefillValues)).finally(() => {
+        setPrefillValues(null);
+        setDraftAction(null);
+      });
     }
   }, [prefillValues]);
 
