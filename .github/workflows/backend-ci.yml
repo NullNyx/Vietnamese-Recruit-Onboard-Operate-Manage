@@ -70,6 +70,10 @@ jobs:
         working-directory: backend
         run: uv sync --all-extras
 
+      - name: Run pytest
+        working-directory: backend
+        run: |
+          uv run pytest tests/ -v \
             --deselect tests/modules/identity/test_router.py::TestMeEndpoint \
             --deselect tests/modules/identity/test_config.py::TestAuthSettingsValidation::test_missing_required_field_raises \
             --deselect tests/modules/identity/test_super_admin_bootstrap.py::TestConfigSuperAdminEmail::test_super_admin_email_defaults_to_none \
