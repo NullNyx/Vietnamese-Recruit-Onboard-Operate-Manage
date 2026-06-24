@@ -148,15 +148,15 @@ class EmployeeToolRegistry:
         if not records:
             return {
                 "date": str(today),
-                "check_in": None,
-                "check_out": None,
+                "check_in_at": None,
+                "check_out_at": None,
                 "status": "not_checked_in",
             }
         record = records[0]
         return {
             "date": str(record.work_date),
-            "check_in": record.check_in_at.strftime("%H:%M") if record.check_in_at else None,
-            "check_out": record.check_out_at.strftime("%H:%M") if record.check_out_at else None,
+            "check_in_at": record.check_in_at.strftime("%H:%M") if record.check_in_at else None,
+            "check_out_at": record.check_out_at.strftime("%H:%M") if record.check_out_at else None,
             "status": "present" if record.check_in_at else "not_checked_in",
         }
 
@@ -197,8 +197,8 @@ class EmployeeToolRegistry:
             "records": [
                 {
                     "date": str(r.work_date),
-                    "check_in": r.check_in_at.strftime("%H:%M") if r.check_in_at else None,
-                    "check_out": r.check_out_at.strftime("%H:%M") if r.check_out_at else None,
+                    "check_in_at": r.check_in_at.strftime("%H:%M") if r.check_in_at else None,
+                    "check_out_at": r.check_out_at.strftime("%H:%M") if r.check_out_at else None,
                     "status": "present" if r.check_in_at else "not_checked_in",
                 }
                 for r in records
@@ -262,7 +262,7 @@ class EmployeeToolRegistry:
             reverse=True,
         )
 
-        return {"requests": all_requests}
+        return {"requests": all_requests[:50]}
 
     async def _list_my_payslips(self, args: dict[str, Any]) -> dict[str, Any]:
         args.pop("employee_id", None)

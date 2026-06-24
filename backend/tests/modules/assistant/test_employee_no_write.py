@@ -192,7 +192,7 @@ class TestDraftActionFlow:
             leave_service=MagicMock(),
             overtime_service=MagicMock(),
             payslip_service=MagicMock(),
-        document_service=MagicMock(),
+            document_service=MagicMock(),
             settings=settings,
         )
         response = await service.chat([

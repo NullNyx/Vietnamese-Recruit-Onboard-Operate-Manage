@@ -10,8 +10,8 @@ import {
 interface EmployeeChatAreaProps {
   /** Callback when user wants to open the request dialog with prefill */
   onOpenRequestDialog?: (values: {
-    leave?: Record<string, string>;
-    overtime?: Record<string, string>;
+    leave?: Partial<import("@/app/(employee)/employee/requests/create-request-dialog").LeaveFormState>;
+    overtime?: Partial<import("@/app/(employee)/employee/requests/create-request-dialog").OvertimeFormState>;
   }) => void;
 }
 
