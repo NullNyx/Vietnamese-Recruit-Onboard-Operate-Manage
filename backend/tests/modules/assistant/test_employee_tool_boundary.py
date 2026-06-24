@@ -454,11 +454,14 @@ class TestEmployeeToolRegistryReadTools:
 
         class FakePayslip:
             id = uuid4()
-            pay_period_start = date(2026, 6, 1)
-            pay_period_end = date(2026, 6, 30)
-            gross_amount = 25000000.00
-            total_deductions = 2500000.00
-            net_amount = 22500000.00
+            period_month = date(2026, 6, 1)
+            gross_salary = 25000000.00
+            deductions = 2500000.00
+            insurance_employee = 1000000.00
+            taxable_income = 24000000.00
+            pit_amount = 500000.00
+            net_salary = 22500000.00
+            currency = "VND"
             published_at = datetime.now()
 
         payslip_service.get_my_payslips = AsyncMock(return_value=[FakePayslip()])
@@ -469,8 +472,11 @@ class TestEmployeeToolRegistryReadTools:
         assert "payslips" in result
         assert len(result["payslips"]) == 1
         p = result["payslips"][0]
-        assert p["pay_period_start"] == "2026-06-01"
-        assert p["pay_period_end"] == "2026-06-30"
-        assert p["gross_amount"] == 25000000.00
-        assert p["total_deductions"] == 2500000.00
-        assert p["net_amount"] == 22500000.00
+        assert p["period_month"] == "2026-06-01"
+        assert p["gross_salary"] == 25000000.00
+        assert p["deductions"] == 2500000.00
+        assert p["insurance_employee"] == 1000000.00
+        assert p["taxable_income"] == 24000000.00
+        assert p["pit_amount"] == 500000.00
+        assert p["net_salary"] == 22500000.00
+        assert p["currency"] == "VND"

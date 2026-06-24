@@ -272,11 +272,14 @@ class EmployeeToolRegistry:
             "payslips": [
                 {
                     "id": str(p.id),
-                    "pay_period_start": str(p.pay_period_start),
-                    "pay_period_end": str(p.pay_period_end),
-                    "gross_amount": float(p.gross_amount),
-                    "total_deductions": float(p.total_deductions),
-                    "net_amount": float(p.net_amount),
+                    "period_month": str(p.period_month),
+                    "gross_salary": float(p.gross_salary),
+                    "deductions": float(p.deductions),
+                    "insurance_employee": float(p.insurance_employee),
+                    "taxable_income": float(p.taxable_income),
+                    "pit_amount": float(p.pit_amount),
+                    "net_salary": float(p.net_salary),
+                    "currency": p.currency,
                     "published_at": p.published_at.isoformat() if p.published_at else None,
                 }
                 for p in payslips
