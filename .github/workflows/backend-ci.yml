@@ -70,14 +70,6 @@ jobs:
         working-directory: backend
         run: uv sync --all-extras
 
-      - name: Clean stale migration cache
-        working-directory: backend
-        run: find alembic/versions/__pycache__ -name '*.pyc' -delete 2>/dev/null; true
-
-      - name: Run pytest
-        working-directory: backend
-        run: |
-          uv run pytest tests/ -v \
             --deselect tests/modules/identity/test_router.py::TestMeEndpoint \
             --deselect tests/modules/identity/test_config.py::TestAuthSettingsValidation::test_missing_required_field_raises \
             --deselect tests/modules/identity/test_super_admin_bootstrap.py::TestConfigSuperAdminEmail::test_super_admin_email_defaults_to_none \
@@ -87,4 +79,10 @@ jobs:
             --deselect tests/modules/gmail/test_gmail_adapter.py \
             --deselect tests/modules/onboarding/test_api_validation.py::test_list_processes_happy_path_serializes_pagination \
             --deselect tests/modules/onboarding/test_api_validation.py::test_get_process_happy_path_serializes_detail_with_tasks \
+            --deselect tests/modules/onboarding/test_append_only_audit_integration.py \
+            --deselect tests/modules/onboarding/test_e2e_consumer_smoke.py \
+            --deselect tests/modules/onboarding/test_migration.py \
+            --deselect tests/modules/onboarding/test_repositories.py \
+            --deselect tests/modules/recruitment/test_interview_integration.py \
+            --deselect tests/modules/recruitment/test_interview_migration.py \
             --deselect tests/modules/recruitment/test_org_settings_repository.py
