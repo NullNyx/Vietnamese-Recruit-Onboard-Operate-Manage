@@ -226,42 +226,53 @@ class PayslipRepository:
     async def publish(self, payslip_id: UUID) -> Payslip | None:
         """Publish a draft Payslip.
 
-        Sets status to PUBLISHED and records published_at timestamp.
+        Only published if the payslip exists and is in DRAFT status.
+        Atomic: returns the updated payslip; None if not found or not draft.
 
         Args:
             payslip_id: The UUID of the payslip to publish.
 
         Returns:
-            The published Payslip if found, None otherwise.
+            The published Payslip if found and draft, None otherwise.
         """
-        payslip = await self.get_by_id(payslip_id)
-        if payslip is None:
-            return None
+        from sqlalchemy import update as sa_update
 
-        payslip.status = PayslipStatus.PUBLISHED
-        payslip.published_at = datetime.now(UTC)
-        payslip.updated_at = datetime.now(UTC)
+        stmt = (
+            sa_update(Payslip)
+            .where(Payslip.id == payslip_id, Payslip.status == PayslipStatus.DRAFT)
+            .values(
+                status=PayslipStatus.PUBLISHED,
+                published_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
+            )
+            .returning(Payslip)
+        )
+        result = await self.session.execute(stmt)
         await self.session.flush()
-        return payslip
+        return result.scalar_one_or_none()
 
     async def delete(self, payslip_id: UUID) -> bool:
         """Delete a draft Payslip.
 
-        Only draft payslips can be deleted.
+        Only deletes if the payslip exists and is in DRAFT status.
+        Atomic: returns True only if a row was actually deleted.
 
         Args:
             payslip_id: The UUID of the payslip to delete.
 
         Returns:
-            True if deleted, False if not found.
+            True if deleted, False if not found or not draft.
         """
-        payslip = await self.get_by_id(payslip_id)
-        if payslip is None:
-            return False
+        from sqlalchemy import delete as sa_delete
 
-        await self.session.delete(payslip)
+        stmt = (
+            sa_delete(Payslip)
+            .where(Payslip.id == payslip_id, Payslip.status == PayslipStatus.DRAFT)
+            .returning(Payslip.id)
+        )
+        result = await self.session.execute(stmt)
         await self.session.flush()
-        return True
+        return result.scalar_one_or_none() is not None
 
     async def count_all(
         self,

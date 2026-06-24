@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 from datetime import date, timedelta
-from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
@@ -304,12 +303,13 @@ async def seed_demo_payslips(session: AsyncSession) -> bool:
             taxable = gross - insurance
             pit = round(taxable * 0.1)  # Simplified 10% tax
             net = gross - insurance - pit
+            total_deductions = insurance + pit
 
             payslip = Payslip(
                 employee_id=emp.id,
                 period_month=period_month,
                 gross_salary=gross,
-                deductions=Decimal("0"),
+                deductions=total_deductions,
                 insurance_employee=insurance,
                 taxable_income=taxable,
                 pit_amount=pit,

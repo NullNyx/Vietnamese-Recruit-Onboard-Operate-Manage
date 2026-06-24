@@ -13,6 +13,8 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
+
 from src.modules.identity.application.audit_service import AuditService
 from src.modules.identity.domain.entities import AuditActionType, User
 from src.modules.payslip.domain.entities import Payslip, PayslipStatus
@@ -88,8 +90,7 @@ class PayslipHRService:
                 net_salary=net_salary,
                 pdf_url=pdf_url,
             )
-        except Exception:  # noqa: BLE001
-            # Re-raise as business exception if unique constraint violation
+        except IntegrityError:
             raise PayslipAlreadyExistsError(str(employee_id), str(period_month))
 
         await self._audit_service.log_action(
