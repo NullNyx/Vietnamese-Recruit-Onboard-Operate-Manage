@@ -36,3 +36,39 @@ class PayslipNotPublishedError(PayslipError):
     def __init__(self, payslip_id: str) -> None:
         self.message = f"Payslip not yet published: {payslip_id}"
         super().__init__(self.message)
+
+
+class PayslipAlreadyExistsError(PayslipError):
+    """Payslip already exists for this employee and period."""
+
+    status_code = 409
+    error_code = "PAYSLIP_ALREADY_EXISTS"
+    message = "A payslip already exists for this employee and period"
+
+    def __init__(self, employee_id: str, period_month: str) -> None:
+        self.message = f"Payslip already exists for employee {employee_id} period {period_month}"
+        super().__init__(self.message)
+
+
+class PayslipAlreadyPublishedError(PayslipError):
+    """Payslip is already published and cannot be modified."""
+
+    status_code = 400
+    error_code = "PAYSLIP_ALREADY_PUBLISHED"
+    message = "Cannot modify a published payslip"
+
+    def __init__(self, payslip_id: str) -> None:
+        self.message = f"Payslip already published: {payslip_id}"
+        super().__init__(self.message)
+
+
+class PayslipNotDraftError(PayslipError):
+    """Payslip is not in draft status for the requested operation."""
+
+    status_code = 400
+    error_code = "PAYSLIP_NOT_DRAFT"
+    message = "Payslip must be in draft status"
+
+    def __init__(self, payslip_id: str) -> None:
+        self.message = f"Payslip is not draft: {payslip_id}"
+        super().__init__(self.message)

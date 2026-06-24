@@ -2,7 +2,7 @@
 
 Handles listing and reading published payslips for the authenticated
 Employee. No create, update, publish, or delete — those are HR-admin
-concerns (separate module scope). Enforces the read-only contract from
+concerns (PayslipHRService). Enforces the read-only contract from
 ADR-0012 and ADR-0016.
 """
 
@@ -43,7 +43,7 @@ class PayslipService:
     ) -> Payslip:
         """Get a specific published payslip owned by the authenticated employee.
 
-        Fail-closed: single query checks both ownership AND published status.
+        Fail-closed: single query checks both ownership AND status.
         This avoids leaking whether a payslip exists but isn't published.
 
         Args:
