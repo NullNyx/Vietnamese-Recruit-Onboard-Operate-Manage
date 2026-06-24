@@ -37,8 +37,9 @@ from src.modules.attendance.infrastructure.attendance_record_repository import (
     AttendanceRecordRepository,
 )
 from src.modules.employee.api.dependencies import get_current_employee
+from src.modules.employee.application.document_service import DocumentService
 from src.modules.employee.application.employee_service import EmployeeService
-from src.modules.employee.container import get_employee_service
+from src.modules.employee.container import get_document_service, get_employee_service
 from src.modules.employee.domain.entities import Employee
 from src.modules.employee_request.application.leave_service import LeaveService
 from src.modules.employee_request.application.overtime_service import OvertimeService
@@ -75,6 +76,7 @@ async def get_employee_assistant_service(
     employee: ActiveEmployeeDep,
     llm_client: AssistantLLMClient = Depends(get_assistant_llm_client),
     employee_service: EmployeeService = Depends(get_employee_service),
+    document_service: DocumentService = Depends(get_document_service),
     attendance_repo: AttendanceRecordRepository = Depends(
         get_attendance_record_repository,
     ),
@@ -88,6 +90,7 @@ async def get_employee_assistant_service(
         llm_client=llm_client,
         employee_id=employee.id,
         employee_service=employee_service,
+        document_service=document_service,
         attendance_repo=attendance_repo,
         leave_service=leave_service,
         overtime_service=overtime_service,

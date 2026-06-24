@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import date
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
     from src.modules.attendance.infrastructure.attendance_record_repository import (
         AttendanceRecordRepository,
     )
+    from src.modules.employee.application.document_service import DocumentService
     from src.modules.employee.application.employee_service import EmployeeService
     from src.modules.employee_request.application.leave_service import LeaveService
     from src.modules.employee_request.application.overtime_service import OvertimeService
@@ -42,6 +44,7 @@ class EmployeeToolRegistry:
         self,
         employee_id: UUID,
         employee_service: EmployeeService,
+        document_service: DocumentService,
         attendance_repo: AttendanceRecordRepository,
         leave_service: LeaveService,
         overtime_service: OvertimeService,
@@ -49,6 +52,7 @@ class EmployeeToolRegistry:
     ) -> None:
         self._employee_id = employee_id
         self._employee_service = employee_service
+        self._document_service = document_service
         self._attendance_repo = attendance_repo
         self._leave_service = leave_service
         self._overtime_service = overtime_service
@@ -58,9 +62,11 @@ class EmployeeToolRegistry:
         """Execute a tool by name, returning JSON-string result."""
         handlers = {
             "get_my_profile": self._get_my_profile,
-            "get_my_attendance": self._get_my_attendance,
-            "get_my_employee_requests": self._get_my_employee_requests,
-            "get_my_payslips": self._get_my_payslips,
+            "list_my_documents": self._list_my_documents,
+            "get_today_attendance": self._get_today_attendance,
+            "list_my_attendance_records": self._list_my_attendance_records,
+            "list_my_employee_requests": self._list_my_employee_requests,
+            "list_my_payslips": self._list_my_payslips,
             "draft_leave_request": self._draft_leave_request,
             "draft_overtime_request": self._draft_overtime_request,
         }
@@ -114,56 +120,93 @@ class EmployeeToolRegistry:
             "contract_type": employee.contract_type or "",
         }
 
-    async def _get_my_attendance(self, args: dict[str, Any]) -> dict[str, Any]:
-        # Strip employee_id if LLM sneaks it in — always use auth session
+    async def _list_my_documents(self, args: dict[str, Any]) -> dict[str, Any]:
         args.pop("employee_id", None)
-        import datetime
+        documents = await self._document_service.list_documents(self._employee_id)
+        return {
+            "documents": [
+                {
+                    "id": str(doc.id),
+                    "document_type": doc.document_type,
+                    "file_name": doc.file_name,
+                    "file_size": doc.file_size,
+                    "mime_type": doc.mime_type,
+                    "uploaded_at": doc.uploaded_at.isoformat() if doc.uploaded_at else "",
+                }
+                for doc in documents
+            ]
+        }
 
+    async def _get_today_attendance(self, args: dict[str, Any]) -> dict[str, Any]:
+        args.pop("employee_id", None)
+        today = date.today()
+        records = await self._attendance_repo.get_by_employee_and_date_range(
+            self._employee_id,
+            today,
+            today,
+        )
+        if not records:
+            return {
+                "date": str(today),
+                "check_in_at": None,
+                "check_out_at": None,
+                "status": "not_checked_in",
+            }
+        record = records[0]
+        return {
+            "date": str(record.work_date),
+            "check_in_at": record.check_in_at.strftime("%H:%M") if record.check_in_at else None,
+            "check_out_at": record.check_out_at.strftime("%H:%M") if record.check_out_at else None,
+            "status": "present" if record.check_in_at else "not_checked_in",
+        }
+
+    async def _list_my_attendance_records(self, args: dict[str, Any]) -> dict[str, Any]:
+        args.pop("employee_id", None)
         month = args.get("month")
         year = args.get("year")
 
-        now = datetime.date.today()
-        if month is not None:
-            month = int(month)
-            if not 1 <= month <= 12:
-                raise ValueError("Tháng phải từ 1 đến 12.")
+        today = date.today()
+        if year is None:
+            year = today.year
         else:
-            month = now.month
-
-        if year is not None:
             year = int(year)
-            if not 2020 <= year <= 2099:
-                raise ValueError("Năm phải từ 2020 đến 2099.")
+        if month is None:
+            month = today.month
         else:
-            year = now.year
+            month = int(month)
 
-        start_date = datetime.date(year, month, 1)
-        if month == 12:
-            end_date = datetime.date(year + 1, 1, 1)
-        else:
-            end_date = datetime.date(year, month + 1, 1)
+        if month < 1 or month > 12:
+            return {"error": "Tháng không hợp lệ. Vui lòng nhập từ 1 đến 12."}
+        if year < 1900 or year > 2100:
+            return {"error": "Năm không hợp lệ."}
+
+        # Calculate date range for the month
+        from calendar import monthrange
+
+        _, last_day = monthrange(year, month)
+        start_date = date(year, month, 1)
+        end_date = date(year, month, last_day)
 
         records = await self._attendance_repo.get_by_employee_and_date_range(
-            employee_id=self._employee_id,
-            start_date=start_date,
-            end_date=end_date,
+            self._employee_id,
+            start_date,
+            end_date,
         )
 
         return {
-            "month": month,
-            "year": year,
             "records": [
                 {
-                    "work_date": str(r.work_date),
-                    "check_in_at": str(r.check_in_at) if r.check_in_at else "",
-                    "check_out_at": str(r.check_out_at) if r.check_out_at else "",
-                    "source": r.source.value if r.source else "",
+                    "date": str(r.work_date),
+                    "check_in_at": r.check_in_at.strftime("%H:%M") if r.check_in_at else None,
+                    "check_out_at": r.check_out_at.strftime("%H:%M") if r.check_out_at else None,
+                    "status": "present" if r.check_in_at else "not_checked_in",
                 }
                 for r in records
-            ],
+            ]
         }
 
-    async def _get_my_employee_requests(self, args: dict[str, Any]) -> dict[str, Any]:
+    async def _list_my_employee_requests(self, args: dict[str, Any]) -> dict[str, Any]:
+        args.pop("employee_id", None)
         request_type = args.get("request_type")
 
         valid_types = {"leave", "overtime"}
@@ -175,68 +218,76 @@ class EmployeeToolRegistry:
                 )
             }
 
-        leaves = await self._leave_service.list_my_leaves(self._employee_id)
-        overtime = await self._overtime_service.list_my_overtime(self._employee_id)
-
-        items = []
+        leaves = []
+        overtime = []
 
         if request_type is None or request_type == "leave":
-            for r in leaves:
-                items.append(
-                    {
-                        "id": str(r.id),
-                        "type": "leave",
-                        "status": r.status.value,
-                        "leave_type": r.leave_type.value if r.leave_type else "",
-                        "start_date": str(r.start_date) if r.start_date else "",
-                        "end_date": str(r.end_date) if r.end_date else "",
-                        "reason": r.reason or "",
-                        "submitted_at": str(r.submitted_at) if r.submitted_at else "",
-                    }
-                )
+            leaves = await self._leave_service.list_my_leaves(self._employee_id)
 
         if request_type is None or request_type == "overtime":
-            for r in overtime:
-                items.append(
-                    {
-                        "id": str(r.id),
-                        "type": "overtime",
-                        "status": r.status.value,
-                        "work_date": str(r.work_date) if r.work_date else "",
-                        "start_time": str(r.start_time) if r.start_time else "",
-                        "end_time": str(r.end_time) if r.end_time else "",
-                        "reason": r.reason or "",
-                        "project_or_task": r.project_or_task or "",
-                        "submitted_at": str(r.submitted_at) if r.submitted_at else "",
-                    }
-                )
+            overtime = await self._overtime_service.list_my_overtime(self._employee_id)
 
-        items.sort(key=lambda x: x.get("submitted_at", ""), reverse=True)
-        # Limit results to 50 to avoid bloating LLM context
-        return {"requests": items[:50]}
+        all_requests = []
 
-    async def _get_my_payslips(self, args: dict[str, Any]) -> dict[str, Any]:
+        for leave in leaves:
+            all_requests.append(
+                {
+                    "id": str(leave.id),
+                    "type": "leave",
+                    "status": leave.status.value if hasattr(leave, "status") else "pending",
+                    "start_date": str(leave.start_date) if leave.start_date else "",
+                    "end_date": str(leave.end_date) if leave.end_date else "",
+                    "reason": leave.reason or "",
+                    "created_at": leave.created_at.isoformat() if leave.created_at else "",
+                }
+            )
+
+        for ot in overtime:
+            all_requests.append(
+                {
+                    "id": str(ot.id),
+                    "type": "overtime",
+                    "status": ot.status.value if hasattr(ot, "status") else "pending",
+                    "work_date": str(ot.work_date) if ot.work_date else "",
+                    "start_time": ot.start_time.strftime("%H:%M") if ot.start_time else "",
+                    "end_time": ot.end_time.strftime("%H:%M") if ot.end_time else "",
+                    "reason": ot.reason or "",
+                    "created_at": ot.created_at.isoformat() if ot.created_at else "",
+                }
+            )
+
+        # Sort by created_at descending
+        all_requests.sort(
+            key=lambda x: x.get("created_at", ""),
+            reverse=True,
+        )
+
+        return {"requests": all_requests[:50]}
+
+    async def _list_my_payslips(self, args: dict[str, Any]) -> dict[str, Any]:
+        args.pop("employee_id", None)
         payslips = await self._payslip_service.get_my_payslips(self._employee_id)
-
-        # Limit results to 50 to avoid bloating LLM context
         payslips = payslips[:50]
         return {
             "payslips": [
                 {
                     "id": str(p.id),
-                    "period_start": str(p.period_start),
-                    "period_end": str(p.period_end),
+                    "period_month": str(p.period_month),
                     "gross_salary": float(p.gross_salary),
+                    "deductions": float(p.deductions),
+                    "insurance_employee": float(p.insurance_employee),
+                    "taxable_income": float(p.taxable_income),
+                    "pit_amount": float(p.pit_amount),
                     "net_salary": float(p.net_salary),
-                    "basic_salary": float(p.basic_salary),
-                    "status": (p.status.value if hasattr(p.status, "value") else str(p.status)),
+                    "currency": p.currency,
+                    "published_at": p.published_at.isoformat() if p.published_at else None,
                 }
                 for p in payslips
-            ],
+            ]
         }
 
     # -----------------------------------------------------------------------
-    # Draft-Tools — return DraftAction, NEVER write to DB
+    # Draft-Tools
     # -----------------------------------------------------------------------
 
     async def _draft_leave_request(self, args: dict[str, Any]) -> dict[str, Any]:

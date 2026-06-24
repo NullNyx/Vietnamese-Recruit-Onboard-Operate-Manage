@@ -5,8 +5,8 @@ pit_amount, net_salary, period_month, status) and removes old fields
 (pay_period_start, pay_period_end, gross_amount, total_deductions, net_amount,
 published, details). Idempotent for fresh install vs upgrade from 040.
 
-Revision ID: 041
-Revises: 040
+Revision ID: 042
+Revises: 041
 Create Date: 2026-06-15
 """
 
@@ -17,8 +17,8 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.engine.reflection import Inspector
 
-revision: str = "041"
-down_revision: str | None = "040"
+revision: str = "042"
+down_revision: str | None = "041"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -1,4 +1,4 @@
-import { EmployeeChatArea } from "./employee-chat-area";
+import { EmployeeAssistantClient } from "./employee-assistant-client";
 
 export const metadata = {
   title: "Trợ lý AI | Vroom HR",
@@ -14,7 +14,7 @@ export default function AssistantPage() {
           Hỏi về thông tin cá nhân, chấm công, yêu cầu nghỉ phép / tăng ca
         </p>
       </div>
-      <EmployeeChatArea />
+      <EmployeeAssistantClient />
     </div>
   );
 }

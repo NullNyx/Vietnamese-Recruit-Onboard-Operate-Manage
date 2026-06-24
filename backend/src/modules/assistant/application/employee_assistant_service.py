@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from src.modules.attendance.infrastructure.attendance_record_repository import (
         AttendanceRecordRepository,
     )
+    from src.modules.employee.application.document_service import DocumentService
     from src.modules.employee.application.employee_service import EmployeeService
     from src.modules.employee_request.application.leave_service import LeaveService
     from src.modules.employee_request.application.overtime_service import OvertimeService
@@ -68,6 +69,7 @@ class EmployeeAssistantService:
         llm_client: The assistant's own LLM client (shared singleton).
         employee_id: The authenticated employee's UUID.
         employee_service: For profile reads.
+        document_service: For document vault reads.
         attendance_repo: For attendance record reads.
         leave_service: For leave request reads.
         overtime_service: For overtime request reads.
@@ -80,6 +82,7 @@ class EmployeeAssistantService:
         llm_client: AssistantLLMClient,
         employee_id: UUID,
         employee_service: EmployeeService,
+        document_service: DocumentService,
         attendance_repo: AttendanceRecordRepository,
         leave_service: LeaveService,
         overtime_service: OvertimeService,
@@ -89,6 +92,7 @@ class EmployeeAssistantService:
         self._llm_client = llm_client
         self._employee_id = employee_id
         self._employee_service = employee_service
+        self._document_service = document_service
         self._attendance_repo = attendance_repo
         self._leave_service = leave_service
         self._overtime_service = overtime_service
@@ -110,6 +114,7 @@ class EmployeeAssistantService:
         tool_registry = EmployeeToolRegistry(
             employee_id=self._employee_id,
             employee_service=self._employee_service,
+            document_service=self._document_service,
             attendance_repo=self._attendance_repo,
             leave_service=self._leave_service,
             overtime_service=self._overtime_service,
