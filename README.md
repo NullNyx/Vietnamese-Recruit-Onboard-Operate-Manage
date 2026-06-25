@@ -8,29 +8,32 @@ Vroom HR tập trung vào backbone flow: **email tuyển dụng → AI classify 
 
 Mỗi bước có audit, mỗi action có boundary rõ.
 
-## Quick Start
+## Try First, Install Later
+
+**Demo mode available** — thử Vroom HR không cần cài đặt:
+
+1. Truy cập [Vroom HR Landing](https://vroom-hr.example.com/landing)
+2. Click **"Dùng thử ngay"** — vào thẳng dashboard với demo session
+3. Trải nghiệm recruitment → onboarding → employee flow
+4. Thấy ok → click **"Cài đặt cho công ty"** để self-host
+
+Demo yêu cầu backend với `AUTH_DEMO_ENABLED=true`.
+
+## Self-Host Quick Start
 
 ```bash
 # Clone
-git clone https://github.com/your-org/Vietnamese-Recruit-Onboard-Operate-Manage.git
+git clone https://github.com/NullNyx/Vietnamese-Recruit-Onboard-Operate-Manage.git
 cd Vietnamese-Recruit-Onboard-Operate-Manage
 
-# Start infrastructure
-docker compose up -d postgres redis
+# Start all services
+docker compose up -d
 
-# Backend
-cd backend
-cp .env.example .env
-uv sync && uv run alembic upgrade head
-uvicorn src.main:app --reload --port 8000
+# Configure (edit backend/.env with your Google OAuth credentials)
+# Default: demo mode enabled for testing
 
-# Frontend
-cd ../frontend
-cp .env.example .env
-pnpm install && pnpm dev
+# Visit http://localhost:3000/landing
 ```
-
-Visit `http://localhost:3000` — landing page hiện ra, click "Đăng nhập" để vào demo.
 
 ## Documentation
 
@@ -58,11 +61,11 @@ Visit `http://localhost:3000` — landing page hiện ra, click "Đăng nhập" 
 
 ## License
 
-AGPL v3 — see [LICENSE]../LICENSE) for full text.
+AGPL v3 — see [LICENSE](./LICENSE) for full text.
 
 ## Links
 
-- Landing page: `http://localhost:3000`
-- Demo login: `http://localhost:3000/login`
-- Product docs: [docs/project/foundation/](./docs/project/foundation/)
-- GitHub: https://github.com/your-org/vroom-hr
+- Landing: `http://localhost:3000/landing`
+- Demo: `http://localhost:3000/landing` → "Dùng thử ngay"
+- Docs: [docs/project/foundation/](./docs/project/foundation/)
+- GitHub: https://github.com/NullNyx/Vietnamese-Recruit-Onboard-Operate-Manage

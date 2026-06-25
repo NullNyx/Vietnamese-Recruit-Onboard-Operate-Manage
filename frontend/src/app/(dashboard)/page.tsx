@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -13,6 +13,7 @@ import {
   Mail,
   UserCheck,
   Clock,
+  X,
 } from "lucide-react";
 
 import { useRouter } from "next/navigation";
@@ -130,6 +131,19 @@ export default function DashboardPage() {
       router.replace("/employee/dashboard");
     }
   }, [user, loading, router]);
+  // Install banner - dismissible, show only once
+  const [showInstallBanner, setShowInstallBanner] = useState(true);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem("install_banner_dismissed");
+    if (dismissed) setShowInstallBanner(false);
+  }, []);
+
+  const handleDismissBanner = () => {
+    localStorage.setItem("install_banner_dismissed", "true");
+    setShowInstallBanner(false);
+  };
+
   const [greeting, setGreeting] = React.useState("");
   const [dateStr, setDateStr] = React.useState("");
 
@@ -178,8 +192,8 @@ export default function DashboardPage() {
 
         {user?.role === "admin" && <RuntimeHealthPanel />}
 
-        {/* Install CTA — show for all users */}
-        <div className="rounded-xl border border-border/30 bg-card p-4">
+        {showInstallBanner && (/* Install CTA */
+        <div className="rounded-xl border border-border/30 bg-card p-4 relative">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold">Cài đặt Vroom HR cho công ty</p>
@@ -197,7 +211,15 @@ export default function DashboardPage() {
               Cài đặt cho công ty
             </a>
           </div>
+            <button
+              onClick={handleDismissBanner}
+              className="absolute top-2 right-2 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
         </div>
+        )}
 
         {/* ─── Quick Actions ───────────────────────────────────────────────── */}
         <div>

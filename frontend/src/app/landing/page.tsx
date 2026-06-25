@@ -234,6 +234,60 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Docs & Resources */}
+      <section id="docs" className="py-20 px-4 bg-secondary/30">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-4">
+              Tài liệu &amp; Hướng dẫn
+            </h2>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                title: "Self-Host Guide",
+                href: "#install",
+                desc: "Docker Compose deploy, cấu hình OAuth, môi trường.",
+              },
+              {
+                title: "API Reference",
+                href: "/docs",
+                desc: "FastAPI endpoints, authentication, webhooks.",
+              },
+              {
+                title: "Architecture",
+                href: "/docs",
+                desc: "Module layout, DI, event-driven design.",
+              },
+              {
+                title: "Contributing",
+                href: "/docs",
+                desc: "Hướng dẫn code, test, commit, PR cho contributors.",
+              },
+              {
+                title: "Foundations",
+                href: "/docs",
+                desc: "Product statement, user personas, UX tenets.",
+              },
+              {
+                title: "Domain Terms",
+                href: "/CONTEXT.md",
+                desc: "Canonical glossary: Organization, Candidate, Backbone Flow...",
+              },
+            ].map((doc) => (
+              <a key={doc.title} href={doc.href} target="_blank" rel="noopener noreferrer">
+                <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold mb-2">{doc.title}</h3>
+                    <p className="text-sm text-muted-foreground">{doc.desc}</p>
+                  </CardContent>
+                </Card>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Self-Host Install Guide */}
       <section id="install" className="py-20 px-4">
         <div className="max-w-3xl mx-auto text-center">
