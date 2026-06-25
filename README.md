@@ -1,31 +1,17 @@
 # Vroom HR
 
-Vietnamese Recruit-Onboard-Operate-Manage — HRM platform for Vietnamese businesses.
+Open-source HR platform cho doanh nghiệp Việt Nam — self-hosted, một deployment phục vụ một công ty.
 
-## Project status & features
+## Recruit → Onboard → Manage
 
-This repo keeps no static progress doc on purpose — status would rot. To see where
-things stand, ask your AI agent: "tiến độ dự án tới đâu rồi?", "dự án có những tính
-năng gì?", or "tìm hiểu luồng tuyển dụng giúp tôi". It reports live from the wired
-routers in `backend/src/main.py`, the specs under `.kiro/specs/`, the ADRs in
-`docs/decisions/`, and open GitHub Issues.
+Vroom HR tập trung vào backbone flow: **email tuyển dụng → AI classify → CV parse → Candidate → HR review → Interview → Accept → Onboarding → Employee**.
 
-Start with [`CONTEXT.md`](./CONTEXT.md) for the domain language (Organization,
-Candidate, Onboarding, Backbone Flow...). For contribution conventions (skills
-workflow, git/branch/commit/PR), see [`AGENTS.md`](./AGENTS.md).
-
-## Tech Stack
-
-- **Backend**: FastAPI + SQLModel + PostgreSQL 15 + Redis 7
-- **Frontend**: Next.js 14 + TypeScript + Tailwind + shadcn/ui
-- **Auth**: Google OAuth2 + JWT (cookies)
-- **Storage**: MinIO
-- **AI**: OpenAI-compatible APIs (CV parsing)
+Mỗi bước có audit, mỗi action có boundary rõ.
 
 ## Quick Start
 
 ```bash
-# Clone and setup
+# Clone
 git clone https://github.com/your-org/Vietnamese-Recruit-Onboard-Operate-Manage.git
 cd Vietnamese-Recruit-Onboard-Operate-Manage
 
@@ -35,85 +21,48 @@ docker compose up -d postgres redis
 # Backend
 cd backend
 cp .env.example .env
-# Edit .env with your settings
-uv sync
-uv run alembic upgrade head
+uv sync && uv run alembic upgrade head
 uvicorn src.main:app --reload --port 8000
 
 # Frontend
 cd ../frontend
 cp .env.example .env
-pnpm install
-pnpm dev
+pnpm install && pnpm dev
 ```
 
-## Environment Variables
+Visit `http://localhost:3000` — landing page hiện ra, click "Đăng nhập" để vào demo.
 
-### Backend (.env)
+## Documentation
 
-```env
-# Database & Redis
-AUTH_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/vroom_hr
-AUTH_REDIS_URL=redis://localhost:6379/0
+| Tài liệu | Mô tả |
+| -------- | ----- |
+| [CONTEXT.md](./CONTEXT.md) | Domain terms, canonical language |
+| [docs/landing/content.md](./docs/landing/content.md) | Landing page content source |
+| [docs/project/foundation/](./docs/project/foundation/) | Product strategy, personas, UX tenets |
+| [docs/decisions/](./docs/decisions/) | ADRs — architectural decisions |
 
-# Google OAuth
-AUTH_GOOGLE_CLIENT_ID=your-client-id
-AUTH_GOOGLE_CLIENT_SECRET=your-client-secret
-AUTH_GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/callback
+## Tech Stack
 
-# JWT
-AUTH_JWT_SECRET_KEY=your-secret-key
-AUTH_JWT_ALGORITHM=HS256
-AUTH_ACCESS_TOKEN_EXPIRE_MINUTES=15
-AUTH_REFRESH_TOKEN_EXPIRE_DAYS=7
+- **Backend**: FastAPI + SQLModel + PostgreSQL + Redis
+- **Frontend**: Next.js 14 + TypeScript + Tailwind + shadcn/ui
+- **Auth**: Google OAuth2 + JWT (httpOnly cookies)
+- **AI**: OpenAI-compatible APIs
 
-# OAuth token encryption (base64 32-byte key)
-AUTH_OAUTH_TOKEN_ENCRYPTION_KEY=your-encryption-key
+## Features
 
-# Frontend URL
-AUTH_FRONTEND_URL=http://localhost:3000
-
-# Recruitment LLM (optional)
-RECRUITMENT_LLM_BASE_URL=https://gemma4.aibuddy.vn/v1
-RECRUITMENT_LLM_MODEL=bg-digitalservices/Gemma-4-26B-A4B-it-NVFP4
-```
-
-### Frontend (.env.local)
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_NEXTAUTH_URL=http://localhost:3000
-```
-
-## Modules
-
-| Module        | Description                                      |
-| ------------- | ------------------------------------------------ |
-| `identity`    | Auth, OAuth, JWT, roles, whitelist, audit        |
-| `employee`    | Employee CRUD, departments, positions, documents |
-| `recruitment` | Candidate pipeline, CV processing (AI)           |
-| `gmail`       | Gmail connection, sending, sync metadata         |
-
-Archived specs exist for `attendance`, `payroll`, and `self_service`, but those
-modules are not active in the current backend after migration
-`027_drop_attendance_payroll_tables.py`.
-
-## Development
-
-```bash
-# Backend linting
-cd backend
-ruff check src/ && ruff format src/
-mypy src/
-pytest tests/
-
-# Frontend linting
-cd frontend
-pnpm lint
-pnpm build
-pnpm test
-```
+- **Recruitment**: AI email classification, CV parsing, candidate pipeline, interview scheduling
+- **Onboarding**: Checklist-driven process, task tracking, completion triggers Employee creation
+- **Employee Management**: CRUD, departments, positions, documents
+- **AI Assistant**: Read tools + Draft tools, HR confirms before any write
+- **Audit**: Every admin action logged
 
 ## License
 
-MIT
+MIT — see [LICENSE](./LICENSE) for full text.
+
+## Links
+
+- Landing page: `http://localhost:3000`
+- Demo login: `http://localhost:3000/login`
+- Product docs: [docs/project/foundation/](./docs/project/foundation/)
+- GitHub: https://github.com/your-org/vroom-hr

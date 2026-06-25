@@ -31,7 +31,7 @@ export function middleware(request: NextRequest) {
   }
 
   // All other matched routes — require authentication
-  if (!accessToken) {
+  if (!accessToken && path !== "/login" && path !== "/") {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
