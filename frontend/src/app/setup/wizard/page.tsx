@@ -9,7 +9,7 @@ import WhitelistStep from "./components/WhitelistStep";
 import OAuthStep from "./components/OAuthStep";
 import TestFinishStep from "./components/TestFinishStep";
 
-export const WIZARD_STEPS = [
+const WIZARD_STEPS = [
   { id: "org", title: "Organization" },
   { id: "domains", title: "Domains" },
   { id: "whitelist", title: "Whitelist" },

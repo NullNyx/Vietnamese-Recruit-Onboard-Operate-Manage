@@ -2,7 +2,14 @@ import '@testing-library/jest-dom';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
-import WizardPage, { WIZARD_STEPS } from '../page';
+import WizardPage from '../page';
+const WIZARD_STEPS = [
+  { id: "org", title: "Organization" },
+  { id: "domains", title: "Domains" },
+  { id: "whitelist", title: "Whitelist" },
+  { id: "oauth", title: "Google OAuth" },
+  { id: "finish", title: "Test & Finish" },
+];
 import { useRouter } from 'next/navigation';
 
 vi.mock('next/navigation', () => ({
