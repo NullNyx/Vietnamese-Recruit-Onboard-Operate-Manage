@@ -67,6 +67,8 @@ class AuthSettings(BaseSettings):
 
     # Dev bootstrap
     auto_seed_sample_data: bool = Field(default=False)
+    demo_enabled: bool = Field(default=False)
+    demo_email: str | None = None
 
     # Frontend
     frontend_url: str = "http://localhost:3000"

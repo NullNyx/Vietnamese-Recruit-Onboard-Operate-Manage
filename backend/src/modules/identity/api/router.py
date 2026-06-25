@@ -6,6 +6,7 @@ token refresh, logout, and user profile retrieval.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -353,3 +354,98 @@ async def _get_user_grant_status(user: User, oauth_service: OAuthService) -> Gra
         gmail_grant_valid=status.gmail_grant_valid,
         calendar_grant_valid=status.calendar_grant_valid,
     )
+
+
+# ---------------------------------------------------------------------------
+# Demo endpoint for testing without OAuth
+# ---------------------------------------------------------------------------
+
+
+@router.post("/demo")
+async def demo_login(
+    request: Request,
+    token_service: TokenServiceDep,
+    settings: SettingsDep,
+    session: Session = Depends(get_session),
+) -> RedirectResponse:
+    """Demo login endpoint for testing without OAuth credentials.
+
+    This endpoint is only available when AUTH_DEMO_ENABLED=true and
+    auto_seed_sample_data=true. It creates a session for the configured
+    super admin user without requiring Google OAuth.
+
+    Args:
+        request: The incoming FastAPI request object.
+        token_service: The TokenService for token creation.
+        settings: Application auth settings.
+        session: Database session for user lookup.
+
+    Returns:
+        A 302 redirect to the frontend dashboard with session cookies set.
+
+    Raises:
+        HTTPException: If demo mode is not enabled.
+    """
+    # Demo mode must be explicitly enabled
+    if not settings.demo_enabled:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Demo mode not available")
+
+    # Get demo user (super admin)
+    demo_email = settings.super_admin_email or settings.demo_email
+    if not demo_email:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Demo user not configured")
+
+    statement = select(User).where(User.email == demo_email)
+    result = await session.execute(statement)
+    user = result.scalars().first()
+
+    if not user:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Demo user not found")
+
+    # Create tokens
+    access_token = token_service.create_access_token(user.id, user.email)
+    refresh_token, refresh_token_hash = token_service.create_refresh_token(user.id)
+
+    # Store refresh token
+
+    from src.modules.identity.domain.entities import RefreshToken
+
+    expires_at = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
+
+    refresh_token_record = RefreshToken(
+        user_id=user.id,
+        token_hash=refresh_token_hash,
+        expires_at=expires_at,
+    )
+    session.add(refresh_token_record)
+    await session.commit()
+
+    # Set cookies and redirect
+    frontend_url = settings.frontend_url or "http://localhost:3000"
+    response = RedirectResponse(url=f"{frontend_url}/dashboard", status_code=302)
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        max_age=_ACCESS_TOKEN_MAX_AGE,
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite="lax",
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        max_age=_REFRESH_TOKEN_MAX_AGE,
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite="lax",
+    )
+
+    return response

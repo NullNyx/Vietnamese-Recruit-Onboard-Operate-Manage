@@ -1,8 +1,28 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
 
 export default function LandingPage() {
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  const handleDemo = async () => {
+    setDemoLoading(true);
+    try {
+      const res = await fetch("/api/auth/demo", { method: "POST" });
+      if (res.redirected) {
+        window.location.href = res.url;
+      } else {
+        // Demo not available, fallback to login
+        window.location.href = "/login";
+      }
+    } catch {
+      window.location.href = "/login";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -23,19 +43,21 @@ export default function LandingPage() {
             <Link href="#open-source" className="hover:text-foreground transition-colors">
               Open Source
             </Link>
-            <Link href="/docs" className="hover:text-foreground transition-colors">
-              Tài liệu
+            <Link href="#install" className="hover:text-foreground transition-colors">
+              Cài đặt
             </Link>
           </nav>
           <div className="flex items-center gap-3">
-            <Link href="/docs">
+            <Link href="/login">
               <Button variant="ghost" size="sm">
-                Tài liệu
+                Đăng nhập
               </Button>
             </Link>
-            <Link href="/login">
-              <Button size="sm">Đăng nhập</Button>
-            </Link>
+            <button onClick={handleDemo} disabled={demoLoading}>
+              <Button size="sm" disabled={demoLoading}>
+                {demoLoading ? "Đang tải..." : "Dùng thử"}
+              </Button>
+            </button>
           </div>
         </div>
       </header>
@@ -57,14 +79,14 @@ export default function LandingPage() {
             có kiểm soát, có audit, và tự host trên hạ tầng của bạn.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link href="#open-source">
-              <Button size="lg" className="px-8">
-                Cài đặt
+            <button onClick={handleDemo} disabled={demoLoading}>
+              <Button size="lg" className="px-8" disabled={demoLoading}>
+                {demoLoading ? "Đang tải..." : "Dùng thử ngay"}
               </Button>
-            </Link>
-            <Link href="#open-source">
+            </button>
+            <Link href="#install">
               <Button variant="outline" size="lg" className="px-8">
-                Tự host
+                Cài đặt cho công ty
               </Button>
             </Link>
           </div>
@@ -212,50 +234,46 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Open Source */}
-      <section id="open-source" className="py-20 px-4">
+      {/* Self-Host Install Guide */}
+      <section id="install" className="py-20 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-6">
-            Open Source, Self-Hosted
+          <h2 className="font-heading text-2xl sm:text-3xl font-semibold mb-2">
+            Cài đặt cho công ty
           </h2>
           <p className="text-muted-foreground mb-8">
-            Vroom HR mở mã nguồn để bạn có thể tự kiểm tra, tự deploy, và tự vận hành. 
-            Không phụ thuộc vendor, không bị lock-in.
+            Tự host Vroom HR trên hạ tầng của bạn. Không phụ thuộc vendor, không bị lock-in.
           </p>
           
           <Card className="max-w-lg mx-auto mb-8">
             <CardContent className="p-6 text-left">
-              <h3 className="font-semibold mb-4">Bắt đầu nhanh</h3>
+              <h3 className="font-semibold mb-4">Hướng dẫn nhanh</h3>
               <pre className="bg-secondary p-4 rounded-md text-sm overflow-x-auto">
 {`git clone https://github.com/NullNyx/Vietnamese-Recruit-Onboard-Operate-Manage.git
 cd Vietnamese-Recruit-Onboard-Operate-Manage
-# Start infrastructure + app
-docker compose up -d
-# Configure backend
 cp backend/.env.example backend/.env
-# Edit backend/.env with your Google OAuth credentials
-# Login at http://localhost:3000`}
+docker compose up -d`}
               </pre>
               <p className="text-xs text-muted-foreground mt-3">
-                Yêu cầu: Docker, Docker Compose
+                Yêu cầu: Docker, Docker Compose. 
+                Sửa file <code className="text-xs">backend/.env</code> với Google OAuth credentials của bạn.
               </p>
             </CardContent>
           </Card>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link href="https://github.com/NullNyx/Vietnamese-Recruit-Onboard-Operate-Manage" target="_blank">
+            <a href="https://github.com/NullNyx/Vietnamese-Recruit-Onboard-Operate-Manage" target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="lg">
                 <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
                 </svg>
                 GitHub
               </Button>
-            </Link>
-            <Link href="/docs">
-              <Button variant="outline" size="lg">
-                Tài liệu chi tiết
+            </a>
+            <button onClick={handleDemo} disabled={demoLoading}>
+              <Button variant="outline" size="lg" disabled={demoLoading}>
+                {demoLoading ? "Đang tải..." : "Dùng thử trực tiếp"}
               </Button>
-            </Link>
+            </button>
           </div>
         </div>
       </section>
@@ -267,19 +285,19 @@ cp backend/.env.example backend/.env
             Sẵn sàng deploy?
           </h2>
           <p className="opacity-90 mb-8">
-            Clone repo, chạy Docker Compose, cấu hình OAuth credentials — deploy trong vài phút.
+            Clone repo, cấu hình OAuth, chạy Docker Compose — deploy trong vài phút.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="https://github.com/NullNyx/Vietnamese-Recruit-Onboard-Operate-Manage.git" target="_blank">
-              <Button size="lg" variant="secondary">
+            <button onClick={handleDemo} disabled={demoLoading}>
+              <Button size="lg" variant="secondary" disabled={demoLoading}>
+                {demoLoading ? "Đang tải..." : "Dùng thử ngay"}
+              </Button>
+            </button>
+            <a href="https://github.com/NullNyx/Vietnamese-Recruit-Onboard-Operate-Manage" target="_blank" rel="noopener noreferrer">
+              <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
                 Clone trên GitHub
               </Button>
             </a>
-            <Link href="#open-source">
-              <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
-                Hướng dẫn deploy
-              </Button>
-            </Link>
           </div>
         </div>
       </section>
@@ -299,14 +317,14 @@ cp backend/.env.example backend/.env
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="#backbone" className="hover:text-foreground">Quy trình</Link></li>
                 <li><Link href="#features" className="hover:text-foreground">Tính năng</Link></li>
-                <li><Link href="#open-source" className="hover:text-foreground">Tự host</Link></li>
+                <li><Link href="#install" className="hover:text-foreground">Cài đặt</Link></li>
                 <li><Link href="/docs" className="hover:text-foreground">Tài liệu</Link></li>
               </ul>
             </div>
             <div>
               <div className="font-semibold mb-4">Developers</div>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="https://github.com/NullNyx/Vietnamese-Recruit-Onboard-Operate-Manage" target="_blank" className="hover:text-foreground">GitHub</a></li>
+                <li><a href="https://github.com/NullNyx/Vietnamese-Recruit-Onboard-Operate-Manage" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a></li>
                 <li><Link href="/docs" className="hover:text-foreground">API Docs</Link></li>
                 <li><Link href="/docs" className="hover:text-foreground">Contributing</Link></li>
               </ul>
