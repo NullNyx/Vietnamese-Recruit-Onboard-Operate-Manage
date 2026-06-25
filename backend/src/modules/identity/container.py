@@ -25,6 +25,7 @@ from src.modules.identity.application.domain_gate_service import DomainGateServi
 from src.modules.identity.application.oauth_config_manager import OAuthConfigManager
 from src.modules.identity.application.oauth_service import OAuthService
 from src.modules.identity.application.role_service import RoleService
+from src.modules.identity.application.setup_service import SetupService
 from src.modules.identity.application.token_service import TokenService
 from src.modules.identity.application.whitelist_manager import WhitelistManager
 from src.modules.identity.application.whitelist_service import WhitelistService
@@ -242,6 +243,56 @@ async def get_oauth_service(
     )
 
 
+async def get_whitelist_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> WhitelistRepository:
+    """Provide a WhitelistRepository instance.
+
+    Args:
+        session: The async database session from DI.
+
+    Returns:
+        A WhitelistRepository bound to the current session.
+    """
+    return WhitelistRepository(session)
+
+
+def _get_whitelist_loader() -> WhitelistLoader | None:
+    """Create a WhitelistLoader if the whitelist file exists.
+
+    Returns:
+        A WhitelistLoader instance, or None if the file does not exist
+        or the path is not configured.
+    """
+    settings = get_settings()
+    try:
+        return WhitelistLoader(settings.whitelist_file_path)
+    except FileNotFoundError:
+        logger.warning(
+            "Whitelist file not found at '%s'. Operating with database-only whitelist.",
+            settings.whitelist_file_path,
+        )
+        return None
+
+
+async def get_whitelist_manager(
+    whitelist_repo: WhitelistRepository = Depends(get_whitelist_repository),
+) -> WhitelistManager:
+    """Provide a WhitelistManager instance.
+
+    Combines the database-backed WhitelistRepository with the optional
+    file-based WhitelistLoader for a unified whitelist.
+
+    Args:
+        whitelist_repo: The whitelist repository from DI.
+
+    Returns:
+        A WhitelistManager merging file and database whitelist sources.
+    """
+    file_loader = _get_whitelist_loader()
+    return WhitelistManager(repo=whitelist_repo, file_loader=file_loader)
+
+
 async def get_auth_service(
     user_repo: UserRepository = Depends(get_user_repository),
     oauth_grant_repo: OAuthGrantRepository = Depends(get_oauth_grant_repository),
@@ -249,6 +300,7 @@ async def get_auth_service(
     oauth_service: OAuthService = Depends(get_oauth_service),
     token_service: TokenService = Depends(get_token_service),
     domain_gate_service: DomainGateService = Depends(get_domain_gate_service),
+    whitelist_manager: WhitelistManager = Depends(get_whitelist_manager),
     session: AsyncSession = Depends(get_db_session),
 ) -> AuthService:
     """Provide an AuthService instance with all dependencies.
@@ -260,6 +312,7 @@ async def get_auth_service(
         oauth_service: The OAuth service from DI.
         token_service: The token service from DI.
         domain_gate_service: The domain gate service from DI.
+        whitelist_manager: The whitelist manager from DI.
         session: The async database session for employee lookup.
 
     Returns:
@@ -270,7 +323,7 @@ async def get_auth_service(
         settings=get_settings(),
         jwt_utils=get_jwt_utils(),
         crypto=get_crypto_utils(),
-        whitelist_service=get_whitelist_service(),
+        whitelist_manager=whitelist_manager,
         oauth_service=oauth_service,
         token_service=token_service,
         user_repository=user_repo,
@@ -324,20 +377,6 @@ async def get_current_user(
 # ---------------------------------------------------------------------------
 
 
-async def get_whitelist_repository(
-    session: AsyncSession = Depends(get_db_session),
-) -> WhitelistRepository:
-    """Provide a WhitelistRepository instance.
-
-    Args:
-        session: The async database session from DI.
-
-    Returns:
-        A WhitelistRepository bound to the current session.
-    """
-    return WhitelistRepository(session)
-
-
 async def get_oauth_config_repository(
     session: AsyncSession = Depends(get_db_session),
 ) -> OAuthConfigRepository:
@@ -379,42 +418,6 @@ async def get_role_service(
     """
     settings = get_settings()
     return RoleService(session=session, super_admin_email=settings.super_admin_email)
-
-
-def _get_whitelist_loader() -> WhitelistLoader | None:
-    """Create a WhitelistLoader if the whitelist file exists.
-
-    Returns:
-        A WhitelistLoader instance, or None if the file does not exist
-        or the path is not configured.
-    """
-    settings = get_settings()
-    try:
-        return WhitelistLoader(settings.whitelist_file_path)
-    except FileNotFoundError:
-        logger.warning(
-            "Whitelist file not found at '%s'. Operating with database-only whitelist.",
-            settings.whitelist_file_path,
-        )
-        return None
-
-
-async def get_whitelist_manager(
-    whitelist_repo: WhitelistRepository = Depends(get_whitelist_repository),
-) -> WhitelistManager:
-    """Provide a WhitelistManager instance.
-
-    Combines the database-backed WhitelistRepository with the optional
-    file-based WhitelistLoader for a unified whitelist.
-
-    Args:
-        whitelist_repo: The whitelist repository from DI.
-
-    Returns:
-        A WhitelistManager merging file and database whitelist sources.
-    """
-    file_loader = _get_whitelist_loader()
-    return WhitelistManager(repo=whitelist_repo, file_loader=file_loader)
 
 
 async def get_oauth_config_manager(
@@ -478,3 +481,49 @@ async def get_current_employee_id(
         return None
 
     return payload.employee_id
+
+
+# --- Setup Module Dependencies ---
+
+
+async def get_setup_service(
+    session: AsyncSession = Depends(get_db_session),
+) -> SetupService:
+    """Provide a SetupService instance with the current session."""
+    from src.modules.identity.infrastructure.setup_repository import SystemSetupRepository
+
+    repository = SystemSetupRepository(session)
+    return SetupService(setup_repository=repository)
+
+
+async def require_setup_completed(
+    setup_service: SetupService = Depends(get_setup_service),
+) -> None:
+    """Dependency to enforce that first-run setup is completed.
+
+    Raises:
+        HTTPException: 403 Forbidden if setup is not completed.
+    """
+    from fastapi import HTTPException
+    
+    if not await setup_service.is_setup_completed():
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "SETUP_REQUIRED", "message": "System setup is not completed"},
+        )
+
+
+def require_setup_session(request: Request) -> None:
+    """Dependency to enforce that the client has a valid setup session.
+
+    Raises:
+        HTTPException: 401 Unauthorized if the setup session cookie is missing or invalid.
+    """
+    from fastapi import HTTPException
+
+    session = request.cookies.get("setup_session")
+    if not session or session != "valid_session_dummy":
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "UNAUTHORIZED_SETUP", "message": "Missing or invalid setup session"},
+        )

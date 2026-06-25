@@ -43,10 +43,11 @@ export const config = {
     /*
      * Match all routes except:
      * - /login (auth page)
+     * - /setup (setup wizard)
      * - /_next/ (Next.js internals)
      * - /api/ (API routes, proxied to backend)
      * - Static files (favicon, images, etc.)
      */
-    "/((?!login|_next/|api/|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!login|setup|_next/|api/|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

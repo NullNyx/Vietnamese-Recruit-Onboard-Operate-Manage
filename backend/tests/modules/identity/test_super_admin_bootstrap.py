@@ -106,7 +106,7 @@ class TestAuthServiceSuperAdminProvisioning:
         mock_crypto.encrypt.side_effect = lambda x: f"enc:{x}"
 
         mock_whitelist = MagicMock()
-        mock_whitelist.is_allowed.return_value = True
+        mock_whitelist.is_allowed_async = AsyncMock(return_value=True)
 
         mock_oauth_service = MagicMock()
         mock_oauth_service.exchange_code = AsyncMock(
@@ -137,7 +137,7 @@ class TestAuthServiceSuperAdminProvisioning:
             settings=mock_settings,
             jwt_utils=mock_jwt_utils,
             crypto=mock_crypto,
-            whitelist_service=mock_whitelist,
+            whitelist_manager=mock_whitelist,
             oauth_service=mock_oauth_service,
             token_service=mock_token_service,
             user_repository=mock_user_repo,
@@ -183,7 +183,7 @@ class TestAuthServiceSuperAdminProvisioning:
         mock_crypto.encrypt.side_effect = lambda x: f"enc:{x}"
 
         mock_whitelist = MagicMock()
-        mock_whitelist.is_allowed.return_value = True
+        mock_whitelist.is_allowed_async = AsyncMock(return_value=True)
 
         mock_oauth_service = MagicMock()
         mock_oauth_service.exchange_code = AsyncMock(
@@ -214,7 +214,7 @@ class TestAuthServiceSuperAdminProvisioning:
             settings=mock_settings,
             jwt_utils=mock_jwt_utils,
             crypto=mock_crypto,
-            whitelist_service=mock_whitelist,
+            whitelist_manager=mock_whitelist,
             oauth_service=mock_oauth_service,
             token_service=mock_token_service,
             user_repository=mock_user_repo,
@@ -260,7 +260,7 @@ class TestAuthServiceSuperAdminProvisioning:
         mock_crypto.encrypt.side_effect = lambda x: f"enc:{x}"
 
         mock_whitelist = MagicMock()
-        mock_whitelist.is_allowed.return_value = True
+        mock_whitelist.is_allowed_async = AsyncMock(return_value=True)
 
         mock_oauth_service = MagicMock()
         mock_oauth_service.exchange_code = AsyncMock(
@@ -291,7 +291,7 @@ class TestAuthServiceSuperAdminProvisioning:
             settings=mock_settings,
             jwt_utils=mock_jwt_utils,
             crypto=mock_crypto,
-            whitelist_service=mock_whitelist,
+            whitelist_manager=mock_whitelist,
             oauth_service=mock_oauth_service,
             token_service=mock_token_service,
             user_repository=mock_user_repo,

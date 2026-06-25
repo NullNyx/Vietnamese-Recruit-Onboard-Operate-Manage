@@ -38,7 +38,7 @@ if TYPE_CHECKING:
         RefreshTokenRepository,
         TokenService,
     )
-    from src.modules.identity.application.whitelist_service import WhitelistService
+    from src.modules.identity.application.whitelist_manager import WhitelistManager
     from src.modules.identity.infrastructure.oauth_grant_repository import (
         OAuthGrantRepository,
     )
@@ -118,7 +118,7 @@ class AuthService:
         settings: Application auth configuration.
         jwt_utils: JWT encode/decode utilities.
         crypto: AES-256-GCM encryption utilities.
-        whitelist_service: Email whitelist access control.
+        whitelist_manager: Email whitelist access control (DB + File).
         oauth_service: Google OAuth2 token operations.
         token_service: JWT session token management.
         user_repository: User entity persistence.
@@ -131,7 +131,7 @@ class AuthService:
         settings: AuthSettings,
         jwt_utils: JWTUtils,
         crypto: CryptoUtils,
-        whitelist_service: WhitelistService,
+        whitelist_manager: WhitelistManager,
         oauth_service: OAuthService,
         token_service: TokenService,
         user_repository: UserRepository,
@@ -147,7 +147,7 @@ class AuthService:
                 client credentials and token settings.
             jwt_utils: Utility for JWT and state token operations.
             crypto: Encryption utilities for securing stored tokens.
-            whitelist_service: Service for email whitelist checks.
+            whitelist_manager: Manager for email whitelist checks (DB + File).
             oauth_service: Service for Google OAuth2 token exchange.
             token_service: Service for JWT access/refresh token management.
             user_repository: Repository for user CRUD operations.
@@ -161,7 +161,7 @@ class AuthService:
         self._settings = settings
         self._jwt_utils = jwt_utils
         self._crypto = crypto
-        self._whitelist_service = whitelist_service
+        self._whitelist_manager = whitelist_manager
         self._oauth_service = oauth_service
         self._token_service = token_service
         self._user_repository = user_repository
@@ -256,7 +256,7 @@ class AuthService:
                 )
 
         # 6. Check whitelist.
-        if not self._whitelist_service.is_allowed(user_info.email):
+        if not await self._whitelist_manager.is_allowed_async(user_info.email):
             raise AccessDeniedError()
 
         # 5. Upsert user. Assign admin role if email matches super admin.

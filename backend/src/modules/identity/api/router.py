@@ -17,6 +17,8 @@ from src.modules.employee.domain.entities import Employee
 from src.modules.identity.api.schemas import GrantStatusResponse, UserResponse
 from src.modules.identity.application.auth_service import AuthService
 from src.modules.identity.application.oauth_service import OAuthService
+from src.modules.identity.application.setup_service import SetupService
+
 from src.modules.identity.application.token_service import TokenService
 from src.modules.identity.container import (
     get_auth_service,
@@ -25,7 +27,9 @@ from src.modules.identity.container import (
     get_rate_limiter,
     get_settings,
     get_token_service,
+    get_setup_service,
 )
+
 from src.modules.identity.domain.entities import User
 from src.modules.identity.domain.exceptions import (
     DomainAccessDeniedError,
@@ -53,6 +57,7 @@ OAuthServiceDep = Annotated[OAuthService, Depends(get_oauth_service)]
 RateLimiterDep = Annotated[RateLimiter, Depends(get_rate_limiter)]
 SettingsDep = Annotated[AuthSettings, Depends(get_settings)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+SetupServiceDep = Annotated[SetupService, Depends(get_setup_service)]
 
 
 # ---------------------------------------------------------------------------
@@ -66,7 +71,9 @@ async def login(
     auth_service: AuthServiceDep,
     rate_limiter: RateLimiterDep,
     settings: SettingsDep,
+    setup_service: SetupServiceDep,
 ) -> RedirectResponse:
+
     """Initiate the Google OAuth2 login flow.
 
     Generates a PKCE code verifier and challenge, creates a signed CSRF
@@ -92,7 +99,12 @@ async def login(
     if not allowed:
         raise RateLimitExceededError()
 
+    is_completed = await setup_service.is_setup_completed()
+    if not is_completed and "setup_session" not in request.cookies:
+        return RedirectResponse(url=f"{settings.frontend_url}/setup", status_code=302)
+
     login_redirect = await auth_service.initiate_login()
+
 
     response = RedirectResponse(url=login_redirect.redirect_url, status_code=302)
 
@@ -117,7 +129,9 @@ async def callback(
     auth_service: AuthServiceDep,
     rate_limiter: RateLimiterDep,
     settings: SettingsDep,
+    setup_service: SetupServiceDep,
 ) -> RedirectResponse:
+
     """Handle the Google OAuth2 callback after user consent.
 
     Validates the CSRF state token, exchanges the authorization code for
@@ -147,8 +161,13 @@ async def callback(
     if not allowed:
         raise RateLimitExceededError()
 
+    is_completed = await setup_service.is_setup_completed()
+    if not is_completed and "setup_session" not in request.cookies:
+        return RedirectResponse(url=f"{settings.frontend_url}/setup", status_code=302)
+
     # Retrieve the PKCE code_verifier from the cookie set during login.
     code_verifier = request.cookies.get("code_verifier", "")
+
 
     try:
         auth_result = await auth_service.handle_callback(

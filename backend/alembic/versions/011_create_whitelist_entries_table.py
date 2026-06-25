@@ -24,7 +24,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("value", sa.String(length=255), nullable=False),
         sa.Column("entry_type", sa.String(length=20), nullable=False),
-        sa.Column("added_by_user_id", sa.Uuid(), nullable=False),
+        sa.Column("added_by_user_id", sa.Uuid(), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

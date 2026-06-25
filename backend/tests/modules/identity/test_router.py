@@ -101,6 +101,14 @@ def mock_settings():
 
 
 @pytest.fixture
+def mock_setup_service():
+    """Create a mock SetupService."""
+    service = AsyncMock()
+    service.is_setup_completed = AsyncMock(return_value=True)
+    return service
+
+
+@pytest.fixture
 def mock_current_user():
     """Create a mock authenticated User."""
     user = MagicMock()
@@ -115,18 +123,31 @@ def mock_current_user():
 
 
 @pytest.fixture
+def mock_session():
+    """Create a mock database session."""
+    session = MagicMock()
+    employee = MagicMock()
+    employee.id = uuid4()
+    session.exec.return_value.first.return_value = employee
+    return session
+
+
+@pytest.fixture
 def app(
     mock_auth_service,
     mock_token_service,
     mock_oauth_service,
     mock_rate_limiter,
     mock_settings,
+    mock_setup_service,
     mock_current_user,
+    mock_session,
 ):
     """Create a FastAPI app with overridden dependencies for testing."""
     from fastapi import Request
     from fastapi.responses import JSONResponse
 
+    from src.database import get_session
     from src.modules.identity.domain.exceptions import AuthError
 
     app = FastAPI()
@@ -147,6 +168,10 @@ def app(
     app.dependency_overrides[get_rate_limiter] = lambda: mock_rate_limiter
     app.dependency_overrides[get_settings] = lambda: mock_settings
     app.dependency_overrides[get_current_user] = lambda: mock_current_user
+    app.dependency_overrides[get_session] = lambda: mock_session
+    
+    from src.modules.identity.container import get_setup_service
+    app.dependency_overrides[get_setup_service] = lambda: mock_setup_service
 
     return app
 

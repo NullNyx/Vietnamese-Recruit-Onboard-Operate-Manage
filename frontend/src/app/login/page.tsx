@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2, AlertCircle } from "lucide-react";
 
 // ─── Google Icon ────────────────────────────────────────────────────────────
@@ -32,19 +32,47 @@ function GoogleIcon() {
 function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [checkingSetup, setCheckingSetup] = useState(true);
   const searchParams = useSearchParams();
+  const router = useRouter();
   const error = searchParams.get("error");
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    const checkSetupStatus = async () => {
+      try {
+        const res = await fetch("/api/setup/status");
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.is_setup_completed) {
+            router.push("/setup");
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check setup status", err);
+      } finally {
+        setCheckingSetup(false);
+        setMounted(true);
+      }
+    };
+    checkSetupStatus();
+  }, [router]);
 
   const handleLogin = () => {
     setLoading(true);
     window.location.href = "/api/auth/login";
   };
 
+  if (checkingSetup) {
+    return (
+      <div className="flex w-full items-center justify-center p-6 sm:p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
+
     <div
       className={`flex w-full items-center justify-center p-6 sm:p-8 transition-all duration-700 ${
         mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"

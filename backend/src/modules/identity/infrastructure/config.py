@@ -41,19 +41,19 @@ class AuthSettings(BaseSettings):
     # Redis
     redis_url: str = "redis://localhost:6379/0"
 
-    # Google OAuth2
-    google_client_id: str
-    google_client_secret: str
+    # Google OAuth2 (Now managed via database)
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
     google_redirect_uri: str = "http://localhost:8000/api/auth/callback"
 
     # JWT
-    jwt_secret_key: str
+    jwt_secret_key: str = "dev-secret-key-change-in-production"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = Field(default=15, gt=0)
     refresh_token_expire_days: int = Field(default=7, gt=0)
 
     # Encryption
-    oauth_token_encryption_key: str  # 32-byte key, base64-encoded
+    oauth_token_encryption_key: str = "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="  # 32-byte key, base64-encoded
 
     # Whitelist
     whitelist_file_path: str = "config/whitelist.txt"

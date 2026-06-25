@@ -88,13 +88,20 @@ class UserRepository:
             await self.session.flush()
             return existing_user
 
-        # Create new user with specified role (or default USER).
+        # First-login auto-promotion: if no role specified, make them ADMIN if no admins exist
+        if role is None:
+            admin_count_stmt = select(func.count()).select_from(User).where(User.role == UserRole.ADMIN)
+            admin_count_result = await self.session.execute(admin_count_stmt)
+            admin_count = admin_count_result.scalar_one()
+            role = UserRole.ADMIN if admin_count == 0 else UserRole.USER
+
+        # Create new user
         new_user = User(
             email=google_user_info.email,
             name=google_user_info.name,
             avatar_url=google_user_info.picture,
             google_sub=google_user_info.sub,
-            role=role if role is not None else UserRole.USER,
+            role=role,
         )
         self.session.add(new_user)
         await self.session.flush()

@@ -42,6 +42,7 @@ from src.modules.identity.api.error_handler import (  # noqa: E402
     register_auth_error_handlers,
 )
 from src.modules.identity.api.router import router as auth_router  # noqa: E402
+from src.modules.identity.api.setup_router import setup_router  # noqa: E402
 from src.modules.onboarding.api.error_handler import (  # noqa: E402
     register_onboarding_error_handlers,
 )
@@ -184,10 +185,38 @@ async def _seed_assistant_tool_configs() -> None:
             logger.info("Assistant tool configs already present -- skipping seed.")
 
 
+async def _bootstrap_setup() -> None:
+    """Bootstrap the first-run setup token if the system is uninitialized.
+    
+    Generates and logs the SETUP_TOKEN to the console for the administrator.
+    """
+    from src.modules.identity.container import _get_async_session_maker
+    from src.modules.identity.application.setup_service import SetupService
+    from src.modules.identity.infrastructure.setup_repository import SystemSetupRepository
+
+    session_maker = _get_async_session_maker()
+    async with session_maker() as session:
+        repo = SystemSetupRepository(session)
+        service = SetupService(repo)
+        
+        if not await service.is_setup_completed():
+            token = await service.initialize_setup_token()
+            await session.commit()
+            print("\n" + "="*60)
+            print("VROOM HR - FIRST-RUN SETUP REQUIRED")
+            print("="*60)
+            print("The system is not yet initialized.")
+            print(f"Please go to /setup and enter the following token:")
+            print(f"\n      {token}\n")
+            print("="*60 + "\n")
+            logger.info("Setup token generated and printed to console.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler for startup and shutdown events."""
     # Startup
+    await _bootstrap_setup()
     await _bootstrap_super_admin()
     await _seed_demo_data()
     await _seed_demo_attendance()
@@ -204,23 +233,32 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+from fastapi import Depends
+from src.modules.identity.container import require_setup_completed
+
 # Register module routers.
+app.include_router(setup_router)
+
+# Auth router must be available during setup to test Google Login
 app.include_router(auth_router)
-app.include_router(admin_router)
-app.include_router(employee_router)
-app.include_router(gmail_router)
-app.include_router(candidate_router)
-app.include_router(cv_review_router)
-app.include_router(metrics_router)
-app.include_router(onboarding_router)
-app.include_router(attendance_router)
-app.include_router(job_opening_router)
-app.include_router(runtime_router)
-app.include_router(assistant_router)
-app.include_router(employee_assistant_router)
-app.include_router(employee_request_router)
-app.include_router(admin_employee_request_router)
-app.include_router(employee_payslip_router)
+
+# All standard module routers require setup to be completed
+setup_dep = [Depends(require_setup_completed)]
+app.include_router(admin_router, dependencies=setup_dep)
+app.include_router(employee_router, dependencies=setup_dep)
+app.include_router(gmail_router, dependencies=setup_dep)
+app.include_router(candidate_router, dependencies=setup_dep)
+app.include_router(cv_review_router, dependencies=setup_dep)
+app.include_router(metrics_router, dependencies=setup_dep)
+app.include_router(onboarding_router, dependencies=setup_dep)
+app.include_router(attendance_router, dependencies=setup_dep)
+app.include_router(job_opening_router, dependencies=setup_dep)
+app.include_router(runtime_router, dependencies=setup_dep)
+app.include_router(assistant_router, dependencies=setup_dep)
+app.include_router(employee_assistant_router, dependencies=setup_dep)
+app.include_router(employee_request_router, dependencies=setup_dep)
+app.include_router(admin_employee_request_router, dependencies=setup_dep)
+app.include_router(employee_payslip_router, dependencies=setup_dep)
 
 # Register exception handlers.
 register_auth_error_handlers(app)

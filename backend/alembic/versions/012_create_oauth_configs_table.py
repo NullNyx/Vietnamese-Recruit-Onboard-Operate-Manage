@@ -49,7 +49,7 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.Column("updated_by_user_id", sa.Uuid(), nullable=False),
+        sa.Column("updated_by_user_id", sa.Uuid(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["updated_by_user_id"], ["users.id"]),
         sa.UniqueConstraint("provider", "is_active", name="uq_oauth_config_provider_active"),

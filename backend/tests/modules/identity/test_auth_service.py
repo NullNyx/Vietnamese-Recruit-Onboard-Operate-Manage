@@ -59,11 +59,11 @@ def mock_crypto():
 
 
 @pytest.fixture
-def mock_whitelist_service():
-    """Create a mock WhitelistService."""
-    service = MagicMock()
-    service.is_allowed.return_value = True
-    return service
+def mock_whitelist_manager():
+    """Create a mock WhitelistManager."""
+    manager = MagicMock()
+    manager.is_allowed_async = AsyncMock(return_value=True)
+    return manager
 
 
 @pytest.fixture
@@ -140,7 +140,7 @@ def auth_service(
     mock_settings,
     mock_jwt_utils,
     mock_crypto,
-    mock_whitelist_service,
+    mock_whitelist_manager,
     mock_oauth_service,
     mock_token_service,
     mock_user_repository,
@@ -152,7 +152,7 @@ def auth_service(
         settings=mock_settings,
         jwt_utils=mock_jwt_utils,
         crypto=mock_crypto,
-        whitelist_service=mock_whitelist_service,
+        whitelist_manager=mock_whitelist_manager,
         oauth_service=mock_oauth_service,
         token_service=mock_token_service,
         user_repository=mock_user_repository,
@@ -299,9 +299,9 @@ class TestHandleCallback:
         with pytest.raises(InvalidStateError):
             await auth_service.handle_callback("auth-code", "bad-state", "test-verifier")
 
-    async def test_whitelist_check_denies_access(self, auth_service, mock_whitelist_service):
+    async def test_whitelist_check_denies_access(self, auth_service, mock_whitelist_manager):
         """Non-whitelisted email should raise AccessDeniedError."""
-        mock_whitelist_service.is_allowed.return_value = False
+        mock_whitelist_manager.is_allowed_async.return_value = False
 
         with patch("src.modules.identity.application.auth_service.jose_jwt") as mock_jose:
             mock_jose.get_unverified_claims.return_value = {
@@ -425,7 +425,7 @@ class TestDomainGate:
             ),
             jwt_utils=MagicMock(verify_state_token=MagicMock()),
             crypto=MagicMock(encrypt=lambda x: f"encrypted:{x}", decrypt=lambda x: x),
-            whitelist_service=MagicMock(is_allowed=MagicMock(return_value=True)),
+            whitelist_manager=MagicMock(is_allowed_async=AsyncMock(return_value=True)),
             oauth_service=MagicMock(
                 exchange_code=AsyncMock(
                     return_value=GoogleTokens(

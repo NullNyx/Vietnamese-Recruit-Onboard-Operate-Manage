@@ -72,7 +72,7 @@ class WhitelistEntry(SQLModel, table=True):
     entry_type: WhitelistEntryType = Field(
         sa_column=Column(String(20), nullable=False),
     )
-    added_by_user_id: UUID = Field(foreign_key="users.id", nullable=False)
+    added_by_user_id: UUID | None = Field(default=None, foreign_key="users.id", nullable=True)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -161,7 +161,7 @@ class OAuthConfig(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    updated_by_user_id: UUID = Field(foreign_key="users.id", nullable=False)
+    updated_by_user_id: UUID | None = Field(default=None, foreign_key="users.id", nullable=True)
 
 
 class AuditActionType(str, Enum):
@@ -200,6 +200,29 @@ class AuditLog(SQLModel, table=True):
     )
     details: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False))
     created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+
+class SystemSetup(SQLModel, table=True):
+    """Tracks the first-run setup initialization state.
+
+    This table is a singleton. It records whether the system has been
+    initialized by the administrator and stores the one-time setup token
+    used to authenticate the bootstrap process.
+    """
+
+    __tablename__ = "system_setup"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    is_setup_completed: bool = Field(default=False, nullable=False)
+    setup_token: str | None = Field(default=None, max_length=64, nullable=True)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )

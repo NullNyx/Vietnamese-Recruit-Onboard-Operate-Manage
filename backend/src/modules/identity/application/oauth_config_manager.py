@@ -165,7 +165,7 @@ class OAuthConfigManager:
         client_id: str,
         client_secret: str,
         redirect_uri: str,
-        admin: User,
+        admin: User | None,
     ) -> OAuthConfigResponse:
         """Update OAuth credentials after validation.
 
@@ -210,7 +210,7 @@ class OAuthConfigManager:
             existing.client_id = client_id
             existing.client_secret_enc = encrypted_secret
             existing.redirect_uri = redirect_uri
-            existing.updated_by_user_id = admin.id
+            existing.updated_by_user_id = admin.id if admin else None
             existing.updated_at = datetime.now(UTC)
             saved = await self._repository.upsert(existing)
         else:
@@ -223,7 +223,7 @@ class OAuthConfigManager:
                 is_active=True,
                 created_at=datetime.now(UTC),
                 updated_at=datetime.now(UTC),
-                updated_by_user_id=admin.id,
+                updated_by_user_id=admin.id if admin else None,
             )
             saved = await self._repository.upsert(new_config)
 
@@ -232,7 +232,7 @@ class OAuthConfigManager:
             client_secret_masked=self.mask_secret(client_secret),
             redirect_uri=saved.redirect_uri,
             updated_at=saved.updated_at,
-            updated_by_email=admin.email,
+            updated_by_email=admin.email if admin else "system",
             source="database",
         )
 

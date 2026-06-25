@@ -159,7 +159,7 @@ class WhitelistManager:
         await self._ensure_cache()
         return self.is_allowed(email)
 
-    async def add_entry(self, value: str, admin: User) -> WhitelistEntry:
+    async def add_entry(self, value: str, admin: User | None) -> WhitelistEntry:
         """Add a new whitelist entry with auto-detection of entry type.
 
         Validates the input format, detects whether it's an exact email or
@@ -218,7 +218,7 @@ class WhitelistManager:
         entry = WhitelistEntry(
             value=stripped.lower(),
             entry_type=entry_type,
-            added_by_user_id=admin.id,
+            added_by_user_id=admin.id if admin else None,
         )
         persisted = await self._repo.add(entry)
 
