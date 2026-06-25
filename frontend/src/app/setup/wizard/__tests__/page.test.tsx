@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import WizardPage, { WIZARD_STEPS } from '../page';
 import { useRouter } from 'next/navigation';
 
@@ -12,7 +12,7 @@ vi.mock('next/navigation', () => ({
 describe('WizardPage Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useRouter as any).mockReturnValue({ push: vi.fn() });
+    (useRouter as Mock).mockReturnValue({ push: vi.fn() });
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({}),
@@ -55,7 +55,7 @@ describe('WizardPage Integration', () => {
       expect(screen.getByText('Google OAuth Configuration')).toBeInTheDocument();
     });
     const inputs = screen.getAllByRole('textbox');
-    const secretInput = screen.getByPlaceholderText(/GOCSPX/); // getByRole for password input doesn't work as well, but placeholder is fine
+    const secretInput = screen.getByPlaceholderText(/Client Secret/); // getByRole for password input doesn't work as well, but placeholder is fine
     await user.type(inputs[0], 'client-id');
     await user.type(secretInput, 'client-secret');
     await user.click(screen.getByRole('button', { name: 'Continue to Test' }));

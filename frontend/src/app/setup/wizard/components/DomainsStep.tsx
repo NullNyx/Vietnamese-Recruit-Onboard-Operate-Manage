@@ -44,7 +44,8 @@ export default function DomainsStep({ onNext, onBack }: { onNext: () => void, on
       }
 
       onNext();
-    } catch (err: any) {
+    } catch (error) {
+      const err = error as Error;
       setError(err.message);
     }
   }

@@ -1,33 +1,33 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Loader2, AlertCircle } from "lucide-react";
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 
 const formSchema = z.object({
-  google_client_id: z.string().min(1, "Client ID is required"),
-  google_client_secret: z.string().min(1, "Client Secret is required"),
+  google_client_id: z.string().min(1, 'Client ID is required'),
+  google_client_secret: z.string().min(1, 'Client Secret is required'),
 });
 
-export default function OAuthStep({ onNext, onBack }: { onNext: () => void, onBack: () => void }) {
+export default function OAuthStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const [error, setError] = useState<string | null>(null);
-  
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      google_client_id: "",
-      google_client_secret: "",
+      google_client_id: '',
+      google_client_secret: '',
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setError(null);
     try {
-      const response = await fetch("/api/setup/oauth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/setup/oauth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client_id: values.google_client_id.trim(),
           client_secret: values.google_client_secret.trim(),
@@ -37,11 +37,12 @@ export default function OAuthStep({ onNext, onBack }: { onNext: () => void, onBa
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.detail?.message || "Failed to save OAuth configuration");
+        throw new Error(data.detail?.message || 'Failed to save OAuth configuration');
       }
 
       onNext();
-    } catch (err: any) {
+    } catch (error) {
+      const err = error as Error;
       setError(err.message);
     }
   }
@@ -58,30 +59,34 @@ export default function OAuthStep({ onNext, onBack }: { onNext: () => void, onBa
       <div className="space-y-4 flex-1">
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Google Client ID</label>
-          <input 
+          <input
             type="text"
-            {...form.register("google_client_id")}
+            {...form.register('google_client_id')}
             placeholder="Enter your Google Client ID"
             className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground transition-colors focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
           />
           {form.formState.errors.google_client_id && (
-            <p className="text-xs text-destructive">{form.formState.errors.google_client_id.message}</p>
+            <p className="text-xs text-destructive">
+              {form.formState.errors.google_client_id.message}
+            </p>
           )}
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Google Client Secret</label>
-          <input 
+          <input
             type="password"
-            {...form.register("google_client_secret")}
+            {...form.register('google_client_secret')}
             placeholder="Enter your Google Client Secret"
             className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground transition-colors focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
           />
           {form.formState.errors.google_client_secret && (
-            <p className="text-xs text-destructive">{form.formState.errors.google_client_secret.message}</p>
+            <p className="text-xs text-destructive">
+              {form.formState.errors.google_client_secret.message}
+            </p>
           )}
           <p className="text-xs text-muted-foreground mt-2">
-            These credentials are required to enable "Sign in with Google" for your organization.
+            These credentials are required to enable &quot;Sign in with Google&quot; for your organization.
           </p>
         </div>
       </div>

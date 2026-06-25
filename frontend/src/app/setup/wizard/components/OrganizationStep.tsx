@@ -35,7 +35,8 @@ export default function OrganizationStep({ onNext, onBack }: { onNext: () => voi
       }
 
       onNext();
-    } catch (err: any) {
+    } catch (error) {
+      const err = error as Error;
       setError(err.message);
     }
   }

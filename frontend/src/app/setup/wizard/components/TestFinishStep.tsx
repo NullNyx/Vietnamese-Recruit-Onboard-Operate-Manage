@@ -45,7 +45,7 @@ export default function TestFinishStep({ onBack }: { onBack: () => void }) {
             if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           }
         }
-      } catch (err) {
+      } catch {
         // Just keep polling
       }
     }, 2000);
@@ -72,7 +72,8 @@ export default function TestFinishStep({ onBack }: { onBack: () => void }) {
 
       // Setup is finished! Redirect to dashboard or home
       router.push("/");
-    } catch (err: any) {
+    } catch (error) {
+      const err = error as Error;
       setError(err.message);
       setLocking(false);
     }

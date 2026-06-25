@@ -33,7 +33,8 @@ export default function SetupPage() {
 
       // Success, move to the wizard
       router.push("/setup/wizard");
-    } catch (err: any) {
+    } catch (error) {
+      const err = error as Error;
       setError(err.message || "Failed to verify token");
     } finally {
       setLoading(false);

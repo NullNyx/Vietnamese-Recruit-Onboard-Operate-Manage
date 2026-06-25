@@ -44,7 +44,8 @@ export default function WhitelistStep({ onNext, onBack }: { onNext: () => void, 
       }
 
       onNext();
-    } catch (err: any) {
+    } catch (error) {
+      const err = error as Error;
       setError(err.message);
     }
   }

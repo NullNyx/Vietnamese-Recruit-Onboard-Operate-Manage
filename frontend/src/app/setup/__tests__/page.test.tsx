@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import SetupPage from '../page';
 import { useRouter } from 'next/navigation';
 
@@ -14,7 +14,7 @@ describe('SetupPage', () => {
   
   beforeEach(() => {
     vi.clearAllMocks();
-    (useRouter as any).mockReturnValue({ push: pushMock });
+    (useRouter as Mock).mockReturnValue({ push: pushMock });
     global.fetch = vi.fn();
   });
 
@@ -42,7 +42,7 @@ describe('SetupPage', () => {
   });
 
   it('shows an error message on API failure', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    (global.fetch as Mock).mockResolvedValueOnce({
       ok: false,
       json: async () => ({ detail: { message: 'Invalid token' } }),
     });
@@ -60,7 +60,7 @@ describe('SetupPage', () => {
   });
 
   it('redirects to wizard on API success', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    (global.fetch as Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({}),
     });
