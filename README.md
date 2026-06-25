@@ -58,7 +58,7 @@ Visit `http://localhost:3000` — landing page hiện ra, click "Đăng nhập" 
 
 ## License
 
-MIT — see [LICENSE](./LICENSE) for full text.
+AGPL v3 — see [LICENSE]../LICENSE) for full text.
 
 ## Links
 
