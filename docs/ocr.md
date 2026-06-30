@@ -36,16 +36,16 @@ ocr config set language English
 
 Hữu ích khi bạn tích hợp OCR vào hệ thống CI/CD (GitHub Actions, GitLab CI...):
 
-*   `OCR_LLM_URL`
-*   `OCR_LLM_TOKEN`
-*   `OCR_LLM_MODEL`
-*   `OCR_USE_ANTHROPIC`
+- `OCR_LLM_URL`
+- `OCR_LLM_TOKEN`
+- `OCR_LLM_MODEL`
+- `OCR_USE_ANTHROPIC`
 
-### Vị trí lưu File cấu hình:
+### Vị trí lưu File cấu hình
 
 Cấu hình của bạn sẽ được lưu tại:
 
-*   **Global**: `config.json`
+- **Global**: `config.json`
 
 ---
 
@@ -130,15 +130,17 @@ Tạo một file JSON có cấu trúc như sau:
 }
 ```
 
-### Cách áp dụng Rule:
+### Cách áp dụng Rule
 
-1.  **Chỉ định trực tiếp qua CLI**:
-    ```bash
-    ocr review --rule /path/to/my-rule.json
-    ```
-2.  **Cấu hình dự án (Project level)**: Lưu file quy tắc tại `.opencodereview/rule.json` ngay trong thư mục gốc của Git dự án. Khi bạn gõ `ocr review`, file này tự động được áp dụng và bạn có thể push nó lên Git để cả nhóm dùng chung.
+1. **Chỉ định trực tiếp qua CLI**:
 
-### Kiểm tra Rule nào sẽ áp dụng cho File:
+   ```bash
+   ocr review --rule /path/to/my-rule.json
+   ```
+
+2. **Cấu hình dự án (Project level)**: Lưu file quy tắc tại `.opencodereview/rule.json` ngay trong thư mục gốc của Git dự án. Khi bạn gõ `ocr review`, file này tự động được áp dụng và bạn có thể push nó lên Git để cả nhóm dùng chung.
+
+### Kiểm tra Rule nào sẽ áp dụng cho File
 
 Bạn có thể kiểm tra xem một file bất kỳ trong dự án sẽ bị áp dụng luật nào bằng lệnh:
 
@@ -158,7 +160,7 @@ Một tính năng rất mạnh mẽ của OCR là khả năng hiển thị các 
 ocr viewer
 ```
 
-*   Mặc định WebUI sẽ mở tại địa chỉ: `http://localhost:5483`
-*   Bạn có thể thay đổi cổng nếu muốn: `ocr viewer --addr :3000`
+- Mặc định WebUI sẽ mở tại địa chỉ: `http://localhost:5483`
+- Bạn có thể thay đổi cổng nếu muốn: `ocr viewer --addr :3000`
 
 Tại đây, bạn sẽ thấy toàn bộ lịch sử các phiên review trước đó, các file đã review kèm theo dòng code được bôi đỏ/xanh lá kèm nhận xét chi tiết của AI cực kỳ trực quan.
