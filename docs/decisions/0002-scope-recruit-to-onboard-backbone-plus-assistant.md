@@ -35,10 +35,11 @@ all (it has nothing to do with attendance/leave/overtime rules).
 Make the **recruit-to-onboard** flow the single backbone of the project:
 
 Email → AI classify → CV parse → Candidate list → HR review →
-schedule interview → accept → congratulations email → onboarding → Employee.
+schedule interview → accept → congratulations email → onboarding complete.
 
 - Complete and connect what already exists; build only the missing onboarding
-  link (consume the "accepted" event → onboard candidate → create Employee).
+  link (consume the "accepted" event → onboard candidate → create onboarding
+  case).
 - Build the AI Assistant (read + draft, human-in-the-loop) on top of this flow.
 - Freeze/shelve the Policy Engine and the entire `policy-engine-integration`
   spec — they are not part of this backbone.
@@ -68,6 +69,6 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Define the onboarding boundary: when does a Candidate become an Employee, and
+- Define the onboarding boundary: when does a Candidate become onboarding-complete, and
   what steps does onboarding consist of?
 - Decide what to do with the frozen Policy Engine code (keep dormant vs remove).

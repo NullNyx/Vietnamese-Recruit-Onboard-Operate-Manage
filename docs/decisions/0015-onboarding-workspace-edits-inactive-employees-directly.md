@@ -4,7 +4,7 @@ Date: 2026-06-09
 
 ## Status
 
-Accepted
+Superseded by ADR-0015 (HR-only onboarding)
 
 ## Context
 

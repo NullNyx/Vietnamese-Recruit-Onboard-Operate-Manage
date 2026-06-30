@@ -31,7 +31,7 @@ company.
 - `tenant_id` in the Policy Engine is treated as a frozen implementation detail
   (a constant), not a live multi-tenancy concept. It may be removed later, but
   removal is not required for correctness.
-- The system targets two roles: HR (admin) and Employee.
+- The system targets one operational role: HR (admin).
 
 ## Alternatives Considered
 
@@ -46,7 +46,7 @@ company.
 
 Positive:
 
-- The system collapses to the simple two-role vision (HR + Employee).
+- The system collapses to the simple HR-only vision.
 - No `tenant_id` data migration is needed; the column is frozen, not reworked.
 - Easier to explain and demo: no "why isolate tenants when there is one company?"
   confusion.
