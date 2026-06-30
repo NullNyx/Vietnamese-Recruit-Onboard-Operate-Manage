@@ -1,40 +1,42 @@
 # Domain Docs
 
-How the engineering skills should consume this repo's domain documentation when exploring the codebase.
+How engineering skills should consume repo domain docs when exploring codebase.
 
-## Before exploring, read these
+## Source order
 
-- **`CONTEXT.md`** at the repo root — the domain glossary (canonical term definitions).
-- **`docs/decisions/`** — read the ADRs that touch the area you're about to work in. This repo keeps ADRs under `docs/decisions/` (not `docs/adr/`); existing records are numbered `0001`–`0007` with a `README.md` index.
+1. `CONTEXT.md` — canonical glossary.
+2. `docs/design-docs/` — working docs reviewed by `grill-with-docs`, `to-prd`, `to-issues`, and follow-up skills. Treat HR-only scope here as source over stale employee wording elsewhere.
+3. `docs/decisions/` — ADRs for locked choices and real tradeoffs.
 
-If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The producer skill (`/grill-with-docs`) creates them lazily when terms or decisions actually get resolved.
+If any file missing, proceed silently. Do not invent docs or ask user to create them upfront.
 
 ## File structure
 
-This is a single-context repo:
+Single-context repo:
 
 ```
 /
 ├── CONTEXT.md
 ├── docs/
+│   ├── design-docs/
 │   └── decisions/
-│       ├── README.md
-│       ├── 0001-self-hosted-single-company-deployment.md
-│       ├── 0002-scope-recruit-to-onboard-backbone-plus-assistant.md
-│       └── ...
 └── backend/ , frontend/
 ```
 
-There is no `CONTEXT-MAP.md` and no per-context `CONTEXT.md` files — read the single root `CONTEXT.md`.
+There is no `CONTEXT-MAP.md` and no per-context `CONTEXT.md` files. Read root `CONTEXT.md` only.
 
-## Use the glossary's vocabulary
+## Use glossary vocabulary
 
-When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in `CONTEXT.md`. Don't drift to synonyms the glossary explicitly avoids (e.g. use **Organization** not Company/Tenant, **HR** not Manager/Administrator, **Employee** not User).
+When output names domain concept, use term as defined in `CONTEXT.md`. Avoid glossary-banned synonyms.
 
-If the concept you need isn't in the glossary yet, that's a signal — either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/grill-with-docs`).
+If needed concept missing from glossary, treat as gap for `/grill-with-docs`, not a synonym search.
 
 ## Flag ADR conflicts
 
-If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
+If output contradicts ADR, surface it explicitly rather than silently overriding:
 
 > _Contradicts ADR-0005 (remove policy engine) — but worth reopening because…_
+
+## Working-doc rule
+
+`docs/design-docs/` is draft space only. Turn settled rules into `CONTEXT.md` or `docs/decisions/` when product choice is locked. Do not duplicate full specs in `docs/agents/`.

@@ -4,7 +4,7 @@ Date: 2026-06-08
 
 ## Status
 
-Accepted
+Superseded by HR-only assistant scope in newer design docs
 
 ## Context
 

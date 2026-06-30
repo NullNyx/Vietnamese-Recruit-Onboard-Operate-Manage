@@ -4,7 +4,7 @@ Date: 2026-06-09
 
 ## Status
 
-Accepted
+Superseded by HR-only scope in newer design docs
 
 ## Context
 

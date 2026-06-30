@@ -2,9 +2,9 @@
 
 ## Overview
 
-HR admins can list Attendance Records across all Employees with filters, and
-correct individual records with required reason and audit logging. This extends
-the Attendance module beyond Employee Self-Service into the HR admin domain.
+HR admins can list Attendance Records across all records with filters, and
+correct individual records with required reason and audit logging. This keeps
+the Attendance module in HR admin domain.
 
 **Routes:** `/attendance` (list) · `/attendance/:id/correct` (correction modal)
 
@@ -16,7 +16,7 @@ the Attendance module beyond Employee Self-Service into the HR admin domain.
 |---|---|
 | ADR-0010 | HR can correct records with a required correction reason; every correction writes an audit log. |
 | Domain invariant | Every admin action must write an audit log (AttendanceRecord correction is an admin action). |
-| ADR-0009 | HR accesses via admin role; Employee cannot call correction endpoint. |
+| ADR-0009 | HR accesses via admin role; non-admin cannot call correction endpoint. |
 
 ---
 
@@ -30,10 +30,10 @@ the Attendance module beyond Employee Self-Service into the HR admin domain.
 | `PUT` | `/api/attendance/settings/network` | Replace allowlist | HR/Admin |
 | `POST` | `/api/attendance/settings/network/add` | Add CIDRs | HR/Admin |
 | `DELETE` | `/api/attendance/settings/network` | Remove CIDR | HR/Admin |
-| `GET` | `/api/attendance/me/today` | Get own today record | Employee |
-| `POST` | `/api/attendance/me/check-in` | Check in | Employee |
-| `POST` | `/api/attendance/me/check-out` | Check out | Employee |
-| `GET` | `/api/attendance/me/history` | Get own month history | Employee |
+| `GET` | `/api/attendance/me/today` | Get own today record | Staff |
+| `POST` | `/api/attendance/me/check-in` | Check in | Staff |
+| `POST` | `/api/attendance/me/check-out` | Check out | Staff |
+| `GET` | `/api/attendance/me/history` | Get own month history | Staff |
 
 ### New Endpoints Needed
 
@@ -164,7 +164,7 @@ Already exists in `admin-nav-config.ts`:
 
 **Filters row:**
 - Date range picker (start_date, end_date) — default: current month
-- Employee dropdown (all employees, or specific)
+- Staff dropdown (all staff, or specific)
 - Status dropdown: Tất cả / Đã check-in / Hoàn thành
 - "Tìm kiếm" button
 
@@ -192,7 +192,7 @@ Triggered by clicking "Sửa" on any row.
 
 **Modal content:**
 - Title: "Sửa bản ghi chấm công"
-- Employee info (read-only): name, code, work_date
+- Staff info (read-only): name, code, work_date
 - **Current values** (read-only): check_in_at, check_out_at
 - **New values** (editable inputs):
   - Check-in time (datetime picker)
@@ -209,7 +209,7 @@ Triggered by clicking "Sửa" on any row.
 - On success: close modal, refresh table, show `toast.success("Đã cập nhật bản ghi")`
 - On error: show `toast.error(detail)`
 
-**Employee visibility:** Employee sees corrected record and `correction_reason` in their history, but NOT `corrected_by_user_id` or `corrected_at` (internal audit only).
+**Staff visibility:** Staff sees corrected record and `correction_reason` in history, but NOT `corrected_by_user_id` or `corrected_at` (internal audit only).
 
 ---
 
@@ -218,16 +218,16 @@ Triggered by clicking "Sửa" on any row.
 | Actor | Can list all records? | Can correct? | Can see audit metadata? |
 |---|---|---|---|
 | HR/Admin | ✅ | ✅ | ✅ |
-| Employee | ❌ (own only via `/me/history`) | ❌ | ❌ (sees reason only) |
+| Staff | ❌ (own only via `/me/history`) | ❌ | ❌ (sees reason only) |
 
-Correction endpoint MUST require HR/Admin role. Employee calls → 403.
+Correction endpoint MUST require HR/Admin role. non-admin calls → 403.
 
 ---
 
 ## Not In Scope
 
 - Bulk correction (one record at a time)
-- Employee self-correction requests
+- Staff self-correction requests
 - Approval workflow for corrections
 - Payroll integration with corrected records
 - Attendance report/export

@@ -10,9 +10,9 @@ Accepted
 
 The HR AI Assistant (ADR-0003, ADR-0004) is human-in-the-loop: it may read data
 and draft actions, but must never write to the database on its own. The existing
-recruitment/employee services expose both safe reads (list/get candidates,
-employees, review queue) and sensitive writes (accept/reject candidate, schedule
-interview, send email, promote). The question is how to expose writes to the LLM
+recruitment/onboarding services expose both safe reads (list/get candidates,
+review queue) and sensitive writes (accept/reject candidate, schedule
+interview, send email). The question is how to expose writes to the LLM
 without ever letting the LLM actually perform one.
 
 ## Decision
