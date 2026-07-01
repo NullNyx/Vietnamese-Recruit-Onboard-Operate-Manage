@@ -61,9 +61,11 @@ class SetupService:
         if existing_admin is not None:
             raise SetupAlreadyCompleteError("First administrator already exists")
 
-        existing = (await self._session.execute(
-            select(User).where(User.email == email.lower()).limit(1)
-        )).scalars().first()
+        existing = (
+            (await self._session.execute(select(User).where(User.email == email.lower()).limit(1)))
+            .scalars()
+            .first()
+        )
         if existing is not None:
             return existing
 
@@ -79,9 +81,7 @@ class SetupService:
         await self._session.flush()
         return user
 
-    async def configure_organization(
-        self, name: str, tax_code: str, timezone: str
-    ) -> None:
+    async def configure_organization(self, name: str, tax_code: str, timezone: str) -> None:
         """Save company info to SetupState + sync timezone to OrganizationSettings."""
         state = await self._get_state()
         if state is not None and state.completed_at is not None:

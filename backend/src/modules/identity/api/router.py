@@ -359,6 +359,7 @@ async def _get_user_grant_status(user: User, oauth_service: OAuthService) -> Gra
 # Password login (replaces Google OAuth for new deployments)
 # ---------------------------------------------------------------------------
 
+
 @router.post("/login")
 async def password_login(
     body: LoginRequest,
@@ -397,12 +398,14 @@ async def password_login(
     access_token = token_service.create_access_token(user.id, user.email)
     raw_refresh, _ = token_service.create_refresh_token(user.id)
 
-    response = JSONResponse(content={
-        "id": str(user.id),
-        "email": user.email,
-        "name": user.name,
-        "role": user.role.value,
-    })
+    response = JSONResponse(
+        content={
+            "id": str(user.id),
+            "email": user.email,
+            "name": user.name,
+            "role": user.role.value,
+        }
+    )
 
     response.set_cookie(
         key="access_token",
