@@ -18,8 +18,18 @@ from src.modules.employee.application.employee_service import EmployeeService
 from src.modules.employee.application.import_service import ImportService
 from src.modules.employee.application.position_service import PositionService
 from src.modules.employee.infrastructure.config import EmployeeSettings
+from src.modules.employee.infrastructure.contract_amendment_repository import (
+    ContractAmendmentRepository,
+)
+from src.modules.employee.infrastructure.contract_repository import ContractRepository
+from src.modules.employee.infrastructure.contract_template_repository import (
+    ContractTemplateRepository,
+)
 from src.modules.employee.infrastructure.department_repository import DepartmentRepository
 from src.modules.employee.infrastructure.document_repository import DocumentRepository
+from src.modules.employee.infrastructure.employment_event_repository import (
+    EmploymentEventRepository,
+)
 from src.modules.employee.infrastructure.employee_repository import EmployeeRepository
 from src.modules.employee.infrastructure.minio_client import MinIOClient
 from src.modules.employee.infrastructure.position_repository import PositionRepository
@@ -110,6 +120,30 @@ async def get_document_repository(
         A DocumentRepository bound to the current session.
     """
     return DocumentRepository(session)
+
+async def get_employment_event_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> EmploymentEventRepository:
+    """Provide an EmploymentEventRepository instance."""
+    return EmploymentEventRepository(session)
+
+async def get_contract_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> ContractRepository:
+    """Provide a ContractRepository instance."""
+    return ContractRepository(session)
+
+async def get_contract_template_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> ContractTemplateRepository:
+    """Provide a ContractTemplateRepository instance."""
+    return ContractTemplateRepository(session)
+
+async def get_contract_amendment_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> ContractAmendmentRepository:
+    """Provide a ContractAmendmentRepository instance."""
+    return ContractAmendmentRepository(session)
 
 
 # ---------------------------------------------------------------------------
