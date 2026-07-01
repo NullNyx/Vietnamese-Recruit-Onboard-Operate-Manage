@@ -61,7 +61,7 @@ class Employee(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     employee_code: str = Field(max_length=20, unique=True, nullable=False)
     full_name: str = Field(max_length=255, nullable=False)
-    email: str = Field(max_length=255, unique=True, nullable=False, index=True)
+    email: str | None = Field(default=None, max_length=255, unique=True, index=True)
     phone: str | None = Field(default=None, max_length=20)
     date_of_birth: date | None = Field(default=None)
     gender: str | None = Field(default=None, max_length=10)
@@ -71,8 +71,10 @@ class Employee(SQLModel, table=True):
     manager_id: UUID | None = Field(default=None, foreign_key="employees.id")
     start_date: date | None = Field(default=None)
     id_number: str | None = Field(default=None, max_length=20)
-    tax_code: str | None = Field(default=None, max_length=20)
+    personal_tax_code: str | None = Field(default=None, max_length=20, alias="tax_code")
     contract_type: str | None = Field(default=None, max_length=20)
+    employment_status: str = Field(default="active", max_length=20, nullable=False)
+    termination_date: date | None = Field(default=None)
     candidate_id: UUID | None = Field(default=None)
     is_active: bool = Field(default=True, nullable=False)
     created_at: datetime = Field(
@@ -83,6 +85,14 @@ class Employee(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+
+    @property
+    def tax_code(self) -> str | None:
+        return self.personal_tax_code
+
+    @tax_code.setter
+    def tax_code(self, value: str | None) -> None:
+        self.personal_tax_code = value
 
 
 class EmployeeDocument(SQLModel, table=True):
@@ -98,12 +108,18 @@ class EmployeeDocument(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     employee_id: UUID = Field(foreign_key="employees.id", nullable=False, index=True)
     document_type: str = Field(max_length=50, nullable=False)
+    status: str = Field(default="uploaded", max_length=20, nullable=False)
     file_name: str = Field(max_length=255, nullable=False)
     storage_path: str = Field(nullable=False)
     file_size: int = Field(nullable=False)
     mime_type: str = Field(max_length=100, nullable=False)
     description: str | None = Field(default=None)
+    uploaded_by_hr_id: UUID = Field(foreign_key="users.id", nullable=False)
+    verified_by_hr_id: UUID | None = Field(default=None, foreign_key="users.id")
+    verified_at: datetime | None = Field(default=None)
+    expired_at: date | None = Field(default=None)
     uploaded_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+
