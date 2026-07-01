@@ -238,6 +238,62 @@ class OrganizationSettingsRepository:
             normalized.append(n)
         return normalized
 
+
+    # ------------------------------------------------------------------
+    # Organization name
+    # ------------------------------------------------------------------
+
+    async def get_organization_name(self) -> str | None:
+        """Return the Organization's name."""
+        settings_row = await self._get_row()
+        return settings_row.organization_name if settings_row else None
+
+    async def set_organization_name(self, name: str) -> str:
+        """Set the Organization's name."""
+        settings_row = await self._get_row()
+        if settings_row is None:
+            from src.modules.recruitment.domain.entities import OrganizationSettings
+            settings_row = OrganizationSettings(timezone=self.default_timezone, organization_name=name)
+        else:
+            settings_row.organization_name = name
+        self.session.add(settings_row)
+        await self.session.flush()
+        return settings_row.organization_name
+
+    # ------------------------------------------------------------------
+    # Setup state management
+    # ------------------------------------------------------------------
+
+    async def get_setup_status(self) -> dict:
+        """Return the current setup state."""
+        settings_row = await self._get_row()
+        if settings_row is None:
+            return {"setup_completed_at": None, "setup_locked_at": None, "is_locked": False}
+        return {
+            "setup_completed_at": settings_row.setup_completed_at,
+            "setup_locked_at": settings_row.setup_locked_at,
+            "is_locked": settings_row.setup_locked_at is not None,
+        }
+
+    async def complete_setup(self) -> dict:
+        """Mark setup as completed and locked."""
+        from datetime import UTC
+        now = datetime.now(UTC)
+        settings_row = await self._get_row()
+        if settings_row is None:
+            settings_row = OrganizationSettings(timezone=self.default_timezone, setup_completed_at=now, setup_locked_at=now)
+        else:
+            settings_row.setup_completed_at = now
+            settings_row.setup_locked_at = now
+        self.session.add(settings_row)
+        await self.session.flush()
+        return {"setup_completed_at": settings_row.setup_completed_at, "setup_locked_at": settings_row.setup_locked_at}
+
+    async def is_setup_locked(self) -> bool:
+        """Check if setup is locked."""
+        settings_row = await self._get_row()
+        return settings_row.setup_locked_at is not None if settings_row else False
+
     @staticmethod
     def _validate_timezone(timezone: str) -> None:
         """Validate a timezone string against the IANA timezone database.

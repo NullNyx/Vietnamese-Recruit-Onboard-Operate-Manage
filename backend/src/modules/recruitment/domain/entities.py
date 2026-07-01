@@ -149,6 +149,7 @@ class OrganizationSettings(SQLModel, table=True):
     __tablename__ = "organization_settings"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    organization_name: str | None = Field(default=None, max_length=255)
     timezone: str = Field(default="Asia/Ho_Chi_Minh", max_length=64, nullable=False)
     allowed_domains: list[str] = Field(
         sa_column=Column(ARRAY(String), nullable=False, server_default="{}"),

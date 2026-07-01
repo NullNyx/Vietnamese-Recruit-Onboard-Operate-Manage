@@ -151,3 +151,4 @@ _Avoid_: Write-tool, Action-tool
 The structured proposal returned by a Draft-Tool. HR reviews; on confirm, the
 frontend calls the real write endpoint directly (never the LLM).
 _Avoid_: Auto-action, Command
+

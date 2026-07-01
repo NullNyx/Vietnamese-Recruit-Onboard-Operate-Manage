@@ -1,38 +1,43 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
-  const { pathname, origin } = request.nextUrl;
+export function middleware(request: NextRequest) {
   const accessToken = request.cookies.get("access_token");
+  const path = request.nextUrl.pathname;
 
-  // Static assets and public routes — always allow
+  // Admin dashboard routes — require authentication
   if (
-    pathname.startsWith("/_next/") ||
-    pathname.startsWith("/api/") ||
-    pathname === "/favicon.ico" ||
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/setup") ||
-    /\.(svg|png|jpg|jpeg|gif|webp|ico|css|js)$/.test(pathname)
+    path.startsWith("/admin") ||
+    path.startsWith("/attendance") ||
+    path.startsWith("/employees") ||
+    path.startsWith("/gmail") ||
+    path.startsWith("/leave") ||
+    path.startsWith("/recruitment") ||
+    path.startsWith("/settings")
   ) {
+    if (!accessToken) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
     return NextResponse.next();
   }
 
-  // Setup status check — redirect if incomplete or already done
-  try {
-    const res = await fetch(`${origin}/api/setup/status`);
-    if (res.ok) {
-      const { setup_complete } = await res.json();
-      if (!setup_complete) {
-        return NextResponse.redirect(new URL("/setup", origin));
-      }
+  // Employee self-service routes — require authentication
+  // Backend API will return 403 if token lacks employee_id claim
+  if (path.startsWith("/employee")) {
+    if (!accessToken) {
+      return NextResponse.redirect(new URL("/login", request.url));
     }
-  } catch {
-    // Backend unreachable → fall through to auth check
+    return NextResponse.next();
   }
 
-  // Authenticated routes require token
+  // Setup wizard route — no authentication required
+  if (path.startsWith("/setup")) {
+    return NextResponse.next();
+  }
+
+  // All other matched routes — require authentication
   if (!accessToken) {
-    return NextResponse.redirect(new URL("/login", origin));
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   return NextResponse.next();
@@ -40,6 +45,13 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/|api/|login|setup|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    /*
+     * Match all routes except:
+     * - /login (auth page)
+     * - /_next/ (Next.js internals)
+     * - /api/ (API routes, proxied to backend)
+     * - Static files (favicon, images, etc.)
+     */
+    "/((?!login|_next/|api/|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
