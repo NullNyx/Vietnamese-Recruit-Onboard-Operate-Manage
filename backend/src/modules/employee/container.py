@@ -262,21 +262,14 @@ async def get_import_service(
 async def get_document_service(
     document_repo: DocumentRepository = Depends(get_document_repository),
     employee_repo: EmployeeRepository = Depends(get_employee_repository),
+    event_service: EmploymentEventService = Depends(get_employment_event_service),
 ) -> DocumentService:
-    """Provide a DocumentService instance with all dependencies.
-
-    Args:
-        document_repo: The document repository from DI.
-        employee_repo: The employee repository from DI.
-
-    Returns:
-        A fully configured DocumentService with MinIO client and settings.
-    """
     return DocumentService(
         document_repository=document_repo,
         employee_repository=employee_repo,
         minio_client=get_minio_client(),
         settings=get_employee_settings(),
+        event_service=event_service,
     )
 
 async def get_contract_amendment_service(

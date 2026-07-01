@@ -166,7 +166,7 @@ class EmployeeService:
         employee = Employee(
             employee_code=employee_code,
             full_name=data["full_name"],
-            email=data["email"],
+            email=data.get("email"),
             phone=data.get("phone"),
             date_of_birth=data.get("date_of_birth"),
             gender=data.get("gender"),
@@ -215,7 +215,7 @@ class EmployeeService:
 
         # Validate email uniqueness if email is being changed
         new_email = data.get("email")
-        if new_email is not None and new_email.lower() != employee.email.lower():
+        if new_email is not None and employee.email is not None and new_email.lower() != employee.email.lower():
             existing = await self._employee_repo.get_by_email(new_email)
             if existing is not None:
                 raise DuplicateEmailError()
@@ -348,7 +348,7 @@ class EmployeeService:
         # Create new employee from candidate data
         create_data = {
             "full_name": data["full_name"],
-            "email": data["email"],
+            "email": data.get("email"),
             "phone": data.get("phone"),
             "department_id": data.get("department_id"),
             "position_id": data.get("position_id"),

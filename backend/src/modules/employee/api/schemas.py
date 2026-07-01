@@ -113,7 +113,7 @@ class EmployeeCreate(BaseModel):
 
     Attributes:
         full_name: Employee's full name (required).
-        email: Employee's email address (required, must be unique).
+        email: Employee's email address (optional, must be unique if present).
         phone: Phone number (optional).
         date_of_birth: Date of birth (optional).
         gender: Gender (optional).
@@ -127,7 +127,7 @@ class EmployeeCreate(BaseModel):
     """
 
     full_name: str
-    email: EmailStr
+    email: EmailStr | None = None
     phone: str | None = None
     date_of_birth: date | None = None
     gender: str | None = None
@@ -137,6 +137,8 @@ class EmployeeCreate(BaseModel):
     start_date: date | None = None
     id_number: str | None = None
     tax_code: str | None = None
+    employment_status: str | None = None
+    termination_date: date | None = None
     contract_type: str | None = None
 
 
@@ -179,6 +181,8 @@ class EmployeeUpdate(BaseModel):
         start_date: Updated start date.
         id_number: Updated national ID number.
         tax_code: Updated tax code.
+        employment_status: Updated status.
+        termination_date: Updated termination date.
         contract_type: Updated contract type.
     """
 
@@ -193,6 +197,8 @@ class EmployeeUpdate(BaseModel):
     start_date: date | None = None
     id_number: str | None = None
     tax_code: str | None = None
+    employment_status: str | None = None
+    termination_date: date | None = None
     contract_type: str | None = None
 
 
@@ -203,7 +209,7 @@ class EmployeeResponse(BaseModel):
         id: Unique employee identifier.
         employee_code: Auto-generated code in NV-XXX format.
         full_name: Employee's full name.
-        email: Employee's email address.
+        email: Employee's email address, if set.
         phone: Phone number, if provided.
         date_of_birth: Date of birth, if provided.
         gender: Gender, if provided.
@@ -225,7 +231,7 @@ class EmployeeResponse(BaseModel):
     id: UUID
     employee_code: str
     full_name: str
-    email: str
+    email: str | None = None
     phone: str | None = None
     date_of_birth: date | None = None
     gender: str | None = None
@@ -235,7 +241,11 @@ class EmployeeResponse(BaseModel):
     start_date: date | None = None
     id_number: str | None = None
     tax_code: str | None = None
+    employment_status: str = "active"
+    termination_date: date | None = None
     contract_type: str | None = None
+    employment_status: str = "active"
+    termination_date: date | None = None
     candidate_id: UUID | None = None
     is_active: bool
     created_at: datetime
@@ -318,5 +328,141 @@ class DocumentResponse(BaseModel):
     file_name: str
     file_size: int
     mime_type: str
+    status: str = "uploaded"
+    uploaded_by_hr_id: UUID | None = None
+    verified_by_hr_id: UUID | None = None
+    verified_at: datetime | None = None
+    expired_at: date | None = None
     description: str | None = None
     uploaded_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Contract schemas
+# ---------------------------------------------------------------------------
+
+class ContractCreate(BaseModel):
+    contract_type: str
+    contract_number: str | None = None
+    template_id: UUID | None = None
+    content: str | None = None
+    started_on: date | None = None
+    ended_on: date | None = None
+
+class ContractUpdate(BaseModel):
+    contract_number: str | None = None
+    content: str | None = None
+    started_on: date | None = None
+    ended_on: date | None = None
+    file_path: str | None = None
+    signed_document_path: str | None = None
+
+class ContractSignRequest(BaseModel):
+    signed_document_path: str | None = None
+    signed_on: date | None = None
+
+class ContractRenewRequest(BaseModel):
+    new_started_on: date | None = None
+    new_ended_on: date | None = None
+    new_content: str | None = None
+
+class ContractResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    employee_id: UUID
+    contract_number: str | None = None
+    template_id: UUID | None = None
+    contract_type: str
+    status: str
+    signed_on: date | None = None
+    started_on: date | None = None
+    ended_on: date | None = None
+    file_path: str | None = None
+    signed_document_path: str | None = None
+    content: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    created_by: UUID
+    updated_by: UUID | None = None
+
+# ---------------------------------------------------------------------------
+# Contract template schemas
+# ---------------------------------------------------------------------------
+
+class ContractTemplateCreate(BaseModel):
+    name: str
+    content: str
+    file_path: str | None = None
+
+class ContractTemplateUpdate(BaseModel):
+    name: str | None = None
+    content: str | None = None
+    file_path: str | None = None
+
+class ContractTemplateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    version: int
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    created_by: UUID
+
+# ---------------------------------------------------------------------------
+# Contract amendment schemas
+# ---------------------------------------------------------------------------
+
+class ContractAmendmentCreate(BaseModel):
+    name: str
+    content: str
+    file_path: str | None = None
+
+class ContractAmendmentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    contract_id: UUID
+    name: str
+    status: str
+    signed_on: date | None = None
+    file_path: str | None = None
+    signed_document_path: str | None = None
+    created_at: datetime
+    created_by: UUID
+
+# ---------------------------------------------------------------------------
+# Employment event schemas
+# ---------------------------------------------------------------------------
+
+class EmploymentEventResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    employee_id: UUID
+    event_type: str
+    actor_hr_id: UUID
+    note: str | None = None
+    created_at: datetime
+
+# ---------------------------------------------------------------------------
+# Status change schema
+# ---------------------------------------------------------------------------
+
+class StatusChangeRequest(BaseModel):
+    status: str
+    termination_date: date | None = None
+    note: str | None = None
+
+
+EmployeeStatusChangeRequest = StatusChangeRequest
+
+# ---------------------------------------------------------------------------
+# Document verification schemas
+# ---------------------------------------------------------------------------
+
+class DocumentRejectRequest(BaseModel):
+    note: str | None = None
+EmployeeStatusChangeRequest = StatusChangeRequest

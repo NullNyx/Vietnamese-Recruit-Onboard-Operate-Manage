@@ -15,29 +15,56 @@ from fastapi.responses import Response
 
 from src.modules.employee.api.dependencies import CurrentUserEmployee
 from src.modules.employee.api.schemas import (
+    ContractAmendmentCreate,
+    ContractAmendmentResponse,
+    ContractCreate,
+    ContractRenewRequest,
+    ContractResponse,
+    ContractSignRequest,
+    ContractTemplateCreate,
+    ContractTemplateResponse,
+    ContractTemplateUpdate,
+    ContractUpdate,
     DepartmentCreate,
     DepartmentResponse,
     DepartmentUpdate,
+    DocumentRejectRequest,
     DocumentResponse,
     EmployeeCreate,
     EmployeeListResponse,
     EmployeeResponse,
+    EmployeeStatusChangeRequest,
     EmployeeUpdate,
+    EmploymentEventResponse,
     ImportResult,
     PositionCreate,
     PositionResponse,
     PositionUpdate,
     PromoteCandidateRequest,
 )
+from src.modules.employee.application.contract_amendment_service import (
+    ContractAmendmentService,
+)
+from src.modules.employee.application.contract_service import ContractService
+from src.modules.employee.application.contract_template_service import (
+    ContractTemplateService,
+)
 from src.modules.employee.application.department_service import DepartmentService
 from src.modules.employee.application.document_service import DocumentService
 from src.modules.employee.application.employee_service import EmployeeService
+from src.modules.employee.application.employment_event_service import (
+    EmploymentEventService,
+)
 from src.modules.employee.application.import_service import ImportService
 from src.modules.employee.application.position_service import PositionService
 from src.modules.employee.container import (
+    get_contract_amendment_service,
+    get_contract_service,
+    get_contract_template_service,
     get_department_service,
     get_document_service,
     get_employee_service,
+    get_employment_event_service,
     get_import_service,
     get_position_service,
 )
@@ -56,6 +83,10 @@ DepartmentServiceDep = Annotated[DepartmentService, Depends(get_department_servi
 PositionServiceDep = Annotated[PositionService, Depends(get_position_service)]
 ImportServiceDep = Annotated[ImportService, Depends(get_import_service)]
 DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]
+ContractServiceDep = Annotated[ContractService, Depends(get_contract_service)]
+ContractTemplateServiceDep = Annotated[ContractTemplateService, Depends(get_contract_template_service)]
+ContractAmendmentServiceDep = Annotated[ContractAmendmentService, Depends(get_contract_amendment_service)]
+EmploymentEventServiceDep = Annotated[EmploymentEventService, Depends(get_employment_event_service)]
 
 # ---------------------------------------------------------------------------
 # Routers
@@ -67,6 +98,8 @@ employee_router = APIRouter(prefix="/api/employees", tags=["employees"])
 department_router = APIRouter(prefix="/api/departments", tags=["departments"])
 position_router = APIRouter(prefix="/api/positions", tags=["positions"])
 document_router = APIRouter(prefix="/api/documents", tags=["documents"])
+contract_router = APIRouter(prefix="/api/contracts", tags=["contracts"])
+contract_template_router = APIRouter(prefix="/api/contract-templates", tags=["contract-templates"])
 
 # ---------------------------------------------------------------------------
 # Employee endpoints
@@ -175,7 +208,11 @@ async def update_employee(
                 status_code=403,
                 detail="Access denied: cannot update another employee",
             )
-    employee = await employee_service.update_employee(employee_id, data)
+    employee = await employee_service.update_employee(
+        employee_id,
+        data,
+        actor_hr_id=current_user.id,
+    )
     return EmployeeResponse.model_validate(employee)
 
 
@@ -430,6 +467,144 @@ async def delete_position(
 
 
 # ---------------------------------------------------------------------------
+# Contract endpoints
+# ---------------------------------------------------------------------------
+
+@employee_router.get("/{employee_id}/contracts", response_model=list[ContractResponse])
+async def list_employee_contracts(
+    employee_id: UUID,
+    current_user: AdminUserDep,
+    contract_service: ContractServiceDep,
+) -> list[ContractResponse]:
+    contracts = await contract_service.list_by_employee(employee_id)
+    return [ContractResponse.model_validate(contract) for contract in contracts]
+
+@employee_router.post("/{employee_id}/contracts", response_model=ContractResponse, status_code=201)
+async def create_employee_contract(
+    employee_id: UUID,
+    body: ContractCreate,
+    current_user: AdminUserDep,
+    contract_service: ContractServiceDep,
+) -> ContractResponse:
+    data = body.model_dump(exclude_unset=True)
+    data["employee_id"] = employee_id
+    contract = await contract_service.create_contract(data, created_by=current_user.id, actor_id=current_user.id)
+    return ContractResponse.model_validate(contract)
+
+@contract_router.get("/{contract_id}", response_model=ContractResponse)
+async def get_contract(
+    contract_id: UUID,
+    current_user: AdminUserDep,
+    contract_service: ContractServiceDep,
+) -> ContractResponse:
+    contract = await contract_service.get_by_id(contract_id)
+    return ContractResponse.model_validate(contract)
+
+@contract_router.put("/{contract_id}", response_model=ContractResponse)
+async def update_contract(
+    contract_id: UUID,
+    body: ContractUpdate,
+    current_user: AdminUserDep,
+    contract_service: ContractServiceDep,
+) -> ContractResponse:
+    contract = await contract_service.update_draft(contract_id, body.model_dump(exclude_unset=True))
+    return ContractResponse.model_validate(contract)
+
+@contract_router.post("/{contract_id}/send-for-signing", response_model=ContractResponse)
+async def send_contract_for_signing(
+    contract_id: UUID,
+    current_user: AdminUserDep,
+    contract_service: ContractServiceDep,
+) -> ContractResponse:
+    contract = await contract_service.mark_sending(contract_id, current_user.id)
+    return ContractResponse.model_validate(contract)
+
+@contract_router.post("/{contract_id}/sign", response_model=ContractResponse)
+async def sign_contract(
+    contract_id: UUID,
+    body: ContractSignRequest,
+    current_user: AdminUserDep,
+    contract_service: ContractServiceDep,
+) -> ContractResponse:
+    contract = await contract_service.sign(
+        contract_id,
+        current_user.id,
+        signed_doc_path=body.signed_document_path,
+        signed_on=body.signed_on,
+    )
+    return ContractResponse.model_validate(contract)
+
+@contract_router.post("/{contract_id}/renew", response_model=ContractResponse)
+async def renew_contract(
+    contract_id: UUID,
+    body: ContractRenewRequest,
+    current_user: AdminUserDep,
+    contract_service: ContractServiceDep,
+) -> ContractResponse:
+    contract = await contract_service.renew(
+        contract_id,
+        current_user.id,
+        new_started_on=body.new_started_on,
+        new_ended_on=body.new_ended_on,
+        new_content=body.new_content,
+    )
+    return ContractResponse.model_validate(contract)
+
+@contract_router.post("/{contract_id}/terminate", response_model=ContractResponse)
+async def terminate_contract(
+    contract_id: UUID,
+    current_user: AdminUserDep,
+    contract_service: ContractServiceDep,
+) -> ContractResponse:
+    contract = await contract_service.terminate(contract_id, current_user.id)
+    return ContractResponse.model_validate(contract)
+
+@contract_router.post("/{contract_id}/cancel", response_model=ContractResponse)
+async def cancel_contract(
+    contract_id: UUID,
+    current_user: AdminUserDep,
+    contract_service: ContractServiceDep,
+) -> ContractResponse:
+    contract = await contract_service.cancel(contract_id, current_user.id)
+    return ContractResponse.model_validate(contract)
+
+@contract_template_router.get("", response_model=list[ContractTemplateResponse])
+async def list_contract_templates(
+    current_user: AdminUserDep,
+    template_service: ContractTemplateServiceDep,
+) -> list[ContractTemplateResponse]:
+    templates = await template_service.list_active()
+    return [ContractTemplateResponse.model_validate(template) for template in templates]
+
+@contract_template_router.post("", response_model=ContractTemplateResponse, status_code=201)
+async def create_contract_template(
+    body: ContractTemplateCreate,
+    current_user: AdminUserDep,
+    template_service: ContractTemplateServiceDep,
+) -> ContractTemplateResponse:
+    template = await template_service.create(body.model_dump(exclude_unset=True), created_by=current_user.id)
+    return ContractTemplateResponse.model_validate(template)
+
+@contract_template_router.put("/{template_id}", response_model=ContractTemplateResponse)
+async def update_contract_template(
+    template_id: UUID,
+    body: ContractTemplateUpdate,
+    current_user: AdminUserDep,
+    template_service: ContractTemplateServiceDep,
+) -> ContractTemplateResponse:
+    template = await template_service.update(template_id, body.model_dump(exclude_unset=True))
+    return ContractTemplateResponse.model_validate(template)
+
+@contract_template_router.post("/{template_id}/archive", response_model=ContractTemplateResponse)
+async def archive_contract_template(
+    template_id: UUID,
+    current_user: AdminUserDep,
+    template_service: ContractTemplateServiceDep,
+) -> ContractTemplateResponse:
+    template = await template_service.archive(template_id)
+    return ContractTemplateResponse.model_validate(template)
+
+# ---------------------------------------------------------------------------
 # Include sub-routers into the main router
 # ---------------------------------------------------------------------------
 
@@ -437,3 +612,5 @@ router.include_router(employee_router)
 router.include_router(department_router)
 router.include_router(position_router)
 router.include_router(document_router)
+router.include_router(contract_router)
+router.include_router(contract_template_router)
