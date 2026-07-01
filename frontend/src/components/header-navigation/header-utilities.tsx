@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Bell, LogOut, Settings } from "lucide-react";
+import { Search, Bell, LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -102,13 +102,6 @@ export function HeaderUtilities({
               </p>
             </div>
           </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <a href="/employee/profile" className="cursor-pointer">
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Cài đặt hồ sơ</span>
-            </a>
-          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="cursor-pointer text-destructive focus:text-destructive"

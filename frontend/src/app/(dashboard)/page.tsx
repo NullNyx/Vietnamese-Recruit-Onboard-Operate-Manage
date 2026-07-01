@@ -126,9 +126,6 @@ export default function DashboardPage() {
 
   // Redirect employees to their self-service dashboard
   React.useEffect(() => {
-    if (!loading && user && user.role === "user" && user.employee_id) {
-      router.replace("/employee/dashboard");
-    }
   }, [user, loading, router]);
   const [greeting, setGreeting] = React.useState("");
   const [dateStr, setDateStr] = React.useState("");

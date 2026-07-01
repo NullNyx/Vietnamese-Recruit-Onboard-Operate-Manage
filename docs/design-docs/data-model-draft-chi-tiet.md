@@ -558,13 +558,13 @@ Một số thứ chỉ nên là derived, không lưu cứng nếu không cần:
 - dashboard summary cards
 - case risk label nếu chỉ dùng để hiển thị
 
-## 7. Open questions for review
+## 7. Quyết định thiết kế đã chốt (Locked Design Decisions)
 
-1. `TaskTemplateItem` có cần support assignee role mặc định hay chỉ label?
-2. `ContractDraft` có cần version history riêng hay `revision` là đủ?
-3. `OnboardingCase` có cần `case_code` theo format nào hay chỉ unique string tự do?
-4. `DocumentTemplateItem` có cần `required` + `optional_reason` không?
-5. `Reminder.status` có cần thêm `failed` nếu delivery lỗi không?
+1. **`TaskTemplateItem`**: Chỉ sử dụng `owner_label` (nhãn hiển thị). Không hỗ trợ `assignee_role` hay cơ chế phân quyền mặc định trong MVP để giữ kiến trúc đơn giản.
+2. **`ContractDraft`**: Chỉ sử dụng trường `revision` để đánh số lần chỉnh sửa của bản nháp. Chưa lưu lịch sử thay đổi (version history) đầy đủ; các thay đổi quan trọng sẽ được ghi nhận tại `AuditLog`.
+3. **`OnboardingCase`**: Trường `case_code` yêu cầu là duy nhất (unique), không áp đặt định dạng (format) cố định trong MVP.
+4. **`DocumentTemplateItem`**: Giữ nguyên cơ chế `required` dạng boolean đơn giản, không bổ sung `optional_reason` khi chưa có yêu cầu nghiệp vụ rõ ràng.
+5. **`Reminder.status`**: Giữ trạng thái đơn giản (pending / sent / cancelled), chưa cần trạng thái `failed`.
 
 ## 8. Next step
 

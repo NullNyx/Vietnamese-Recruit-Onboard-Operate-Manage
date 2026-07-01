@@ -311,11 +311,11 @@ Global Search / Onboarding Dashboard
 - HR can jump from Notification Center directly into a relevant Case Detail.
 - Global Search can reach cases and notifications.
 
-## 5. Open questions
+## 5. Quyết định thiết kế đã chốt (Locked Design Decisions)
 
-1. Có cần permission-gated screens (HR Admin vs HR Member) ở MVP hay chỉ một role `HR`?
-2. Template Management có cần version history UI, hay chỉ overwrite + audit là đủ MVP?
-3. Notification Center cần realtime polling hay refresh theo action?
+1. **Phần quyền màn hình**: MVP chỉ sử dụng một vai trò duy nhất là `HR`/`Admin`, chưa phân tách màn hình phức tạp cho `HR Admin` vs `HR Member` để tránh tăng độ phức tạp RBAC.
+2. **Template Management**: MVP chỉ hỗ trợ ghi đè (overwrite) cấu hình và ghi log audit thay đổi, chưa xây dựng giao diện hiển thị lịch sử phiên bản (version history UI).
+3. **Notification Center**: Tải lại dữ liệu (refresh) dựa trên hành động của người dùng hoặc polling cơ bản, chưa áp dụng cơ chế realtime phức tạp.
 
 ## 6. Next step
 

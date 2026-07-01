@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useActiveNavItem } from "@/hooks/use-active-nav-item";
 import { adminNavConfig } from "@/lib/admin-nav-config";
-import { essNavConfig } from "@/lib/ess-nav-config";
 import type { HeaderNavConfig } from "@/lib/header-nav-config";
 import { CommandBar } from "@/components/command-bar";
 
@@ -31,8 +30,7 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
   const isValidRole = user?.role === "admin" || user?.role === "user";
 
   // Select config based on user role
-  const config: HeaderNavConfig =
-    user?.role === "admin" ? adminNavConfig : essNavConfig;
+  const config: HeaderNavConfig = adminNavConfig;
 
   // Active state from hook
   const { activeGroupId, activeSubLinkHref } = useActiveNavItem(

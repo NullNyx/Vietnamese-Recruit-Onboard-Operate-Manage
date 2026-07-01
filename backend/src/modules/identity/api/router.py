@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlmodel import Session, select
 
 from src.database import get_session
 from src.modules.employee.domain.entities import Employee
-from src.modules.identity.api.schemas import GrantStatusResponse, UserResponse
+from src.modules.identity.api.schemas import GrantStatusResponse, LoginRequest, UserResponse
 from src.modules.identity.application.auth_service import AuthService
 from src.modules.identity.application.oauth_service import OAuthService
 from src.modules.identity.application.token_service import TokenService
@@ -353,3 +353,75 @@ async def _get_user_grant_status(user: User, oauth_service: OAuthService) -> Gra
         gmail_grant_valid=status.gmail_grant_valid,
         calendar_grant_valid=status.calendar_grant_valid,
     )
+
+
+# ---------------------------------------------------------------------------
+# Password login (replaces Google OAuth for new deployments)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/login")
+async def password_login(
+    body: LoginRequest,
+    token_service: TokenServiceDep,
+    session: Session = Depends(get_session),
+) -> JSONResponse:
+    """Authenticate with email + password.
+
+    Validates credentials against stored password hash and issues
+    access/refresh token cookies on success.
+
+    Args:
+        body: The LoginRequest containing email and password.
+        token_service: The TokenService for token creation.
+        settings: AuthSettings for cookie configuration.
+
+    Returns:
+        A JSON response with user data and session cookies set.
+
+    Raises:
+        HTTPException: 401 if credentials are invalid.
+    """
+    from src.modules.identity.application.password_service import PasswordService
+    from src.modules.identity.infrastructure.user_repository import UserRepository
+
+    repo = UserRepository(session)
+    user = await repo.get_by_email(body.email)
+
+    if user is None or user.password_hash is None:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if not PasswordService.verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    # Create session tokens
+    access_token = token_service.create_access_token(user.id, user.email)
+    raw_refresh, _ = token_service.create_refresh_token(user.id)
+
+    response = JSONResponse(
+        content={
+            "id": str(user.id),
+            "email": user.email,
+            "name": user.name,
+            "role": user.role.value,
+        }
+    )
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        max_age=_ACCESS_TOKEN_MAX_AGE,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=raw_refresh,
+        max_age=_REFRESH_TOKEN_MAX_AGE,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+    )
+
+    return response

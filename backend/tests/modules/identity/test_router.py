@@ -14,6 +14,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.database import get_session
 from src.modules.identity.api.router import (
     get_auth_service,
     get_current_user,
@@ -25,6 +26,7 @@ from src.modules.identity.api.router import (
 )
 from src.modules.identity.api.schemas import GrantStatus, LoginRedirect
 from src.modules.identity.application.auth_service import AuthResult
+from src.modules.identity.domain.entities import UserRole
 from src.modules.identity.domain.exceptions import (
     AccessDeniedError,
     InvalidStateError,
@@ -60,6 +62,8 @@ def mock_auth_service():
 def mock_token_service():
     """Create a mock TokenService."""
     service = AsyncMock()
+    service.create_access_token = MagicMock(return_value="new-access-token")
+    service.create_refresh_token = MagicMock(return_value=("raw-refresh-token", "stored-refresh-token"))
     service.refresh_access_token = AsyncMock(return_value="refreshed-access-token")
     return service
 
@@ -115,6 +119,17 @@ def mock_current_user():
 
 
 @pytest.fixture
+def mock_db_session():
+    """Create a generic session mock for auth router tests."""
+    session = MagicMock()
+    employee_result = MagicMock()
+    employee_result.first.return_value = None
+    session.exec = MagicMock(return_value=employee_result)
+    session.execute = AsyncMock()
+    return session
+
+
+@pytest.fixture
 def app(
     mock_auth_service,
     mock_token_service,
@@ -122,6 +137,7 @@ def app(
     mock_rate_limiter,
     mock_settings,
     mock_current_user,
+    mock_db_session,
 ):
     """Create a FastAPI app with overridden dependencies for testing."""
     from fastapi import Request
@@ -147,6 +163,7 @@ def app(
     app.dependency_overrides[get_rate_limiter] = lambda: mock_rate_limiter
     app.dependency_overrides[get_settings] = lambda: mock_settings
     app.dependency_overrides[get_current_user] = lambda: mock_current_user
+    app.dependency_overrides[get_session] = lambda: mock_db_session
 
     return app
 
@@ -195,6 +212,54 @@ class TestLoginEndpoint:
         client.get("/api/auth/login")
 
         mock_rate_limiter.check_rate_limit.assert_called_once()
+
+
+class TestPasswordLoginEndpoint:
+    """Tests for POST /api/auth/login."""
+
+    def test_returns_200_and_sets_session_cookies(self, app, mock_token_service):
+        user = MagicMock()
+        user.id = uuid4()
+        user.email = "hr@example.com"
+        user.name = "HR User"
+        user.role = "admin"
+        user.password_hash = "salt$600000$" + "a" * 64
+
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = user
+        mock_session = MagicMock()
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        app.dependency_overrides[get_session] = lambda: mock_session
+        client = TestClient(app, follow_redirects=False)
+
+        response = client.post(
+            "/api/auth/login",
+            json={"email": "hr@example.com", "password": "correct password"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["email"] == "hr@example.com"
+        assert "access_token" in response.cookies
+        assert "refresh_token" in response.cookies
+        mock_token_service.create_access_token.assert_called_once()
+        mock_token_service.create_refresh_token.assert_called_once()
+
+    def test_rejects_bad_credentials(self, app):
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = None
+        mock_session = MagicMock()
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        app.dependency_overrides[get_session] = lambda: mock_session
+        client = TestClient(app, follow_redirects=False)
+
+        response = client.post(
+            "/api/auth/login",
+            json={"email": "missing@example.com", "password": "nope"},
+        )
+
+        assert response.status_code == 401
 
 
 class TestCallbackEndpoint:
@@ -349,6 +414,88 @@ class TestMeEndpoint:
 
         data = response.json()
         assert data["avatar_url"] == mock_current_user.avatar_url
+
+
+
+class TestPasswordLoginEndpoint:
+    """Tests for POST /api/auth/login."""
+
+    @pytest.fixture
+    def mock_password_user(self):
+        """Create a mock user with a known password hash."""
+        from src.modules.identity.application.password_service import PasswordService
+        from src.modules.identity.domain.entities import User
+
+        user = MagicMock(spec=User)
+        user.id = uuid4()
+        user.email = "admin@vroom.local"
+        user.name = "Admin"
+        user.role = UserRole.HR_ADMIN
+        user.password_hash = PasswordService.hash_password("password123")
+        return user
+
+    @pytest.fixture
+    def mock_session_with_user(self, mock_password_user):
+        """Create a mock session that returns a user from execute()."""
+        session = MagicMock()
+        # execute returns scalars().first() pattern
+        result = MagicMock()
+        scalars = MagicMock()
+        scalars.first.return_value = mock_password_user
+        result.scalars.return_value = scalars
+        session.execute = AsyncMock(return_value=result)
+        # exec returns None (used by employee lookup in /me)
+        session.exec.return_value.first.return_value = None
+        return session
+
+    def test_returns_200_with_cookies(self, app, mock_session_with_user, mock_token_service):
+        """Should return 200 with session cookies on valid credentials."""
+        from src.database import get_session
+        app.dependency_overrides[get_session] = lambda: mock_session_with_user
+        mock_token_service.create_access_token = MagicMock(return_value="access-token-123")
+        mock_token_service.create_refresh_token = MagicMock(return_value=("refresh-token-456", "hash"))
+
+        client = TestClient(app, follow_redirects=False)
+        response = client.post("/api/auth/login", json={
+            "email": "admin@vroom.local",
+            "password": "password123",
+        })
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["email"] == "admin@vroom.local"
+
+    def test_returns_401_on_wrong_password(self, app, mock_session_with_user):
+        """Should return 401 on wrong password."""
+        from src.database import get_session
+        app.dependency_overrides[get_session] = lambda: mock_session_with_user
+
+        client = TestClient(app, follow_redirects=False)
+        response = client.post("/api/auth/login", json={
+            "email": "admin@vroom.local",
+            "password": "wrongpassword",
+        })
+
+        assert response.status_code == 401
+
+    def test_returns_401_on_unknown_user(self, app):
+        """Should return 401 when user not found."""
+        from src.database import get_session
+        session = MagicMock()
+        result = MagicMock()
+        scalars = MagicMock()
+        scalars.first.return_value = None
+        result.scalars.return_value = scalars
+        session.execute = AsyncMock(return_value=result)
+        app.dependency_overrides[get_session] = lambda: session
+
+        client = TestClient(app, follow_redirects=False)
+        response = client.post("/api/auth/login", json={
+            "email": "unknown@vroom.local",
+            "password": "anything",
+        })
+
+        assert response.status_code == 401
 
 
 class TestGrantStatusEndpoint:

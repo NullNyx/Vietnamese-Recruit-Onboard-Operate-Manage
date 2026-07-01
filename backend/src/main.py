@@ -13,7 +13,6 @@ load_dotenv()
 
 from fastapi import FastAPI  # noqa: E402
 
-from src.modules.assistant.api.employee_router import employee_assistant_router  # noqa: E402
 from src.modules.assistant.api.error_handler import (  # noqa: E402
     register_assistant_error_handlers,
 )
@@ -26,13 +25,6 @@ from src.modules.employee.api.error_handler import (  # noqa: E402
     register_employee_error_handlers,
 )
 from src.modules.employee.api.router import router as employee_router  # noqa: E402
-from src.modules.employee_request.api.admin_router import (
-    admin_employee_request_router,  # noqa: E402
-)
-from src.modules.employee_request.api.error_handler import (  # noqa: E402
-    register_employee_request_error_handlers,
-)
-from src.modules.employee_request.api.router import employee_request_router  # noqa: E402
 from src.modules.gmail.api.error_handler import (  # noqa: E402
     register_gmail_error_handlers,
 )
@@ -47,7 +39,6 @@ from src.modules.onboarding.api.error_handler import (  # noqa: E402
 )
 from src.modules.onboarding.api.router import onboarding_router  # noqa: E402
 from src.modules.payslip.api.admin_router import admin_payslip_router  # noqa: E402
-from src.modules.payslip.api.employee_router import employee_payslip_router
 from src.modules.payslip.api.error_handler import register_payslip_error_handlers  # noqa: E402
 from src.modules.recruitment.api.candidate_router import candidate_router  # noqa: E402
 from src.modules.recruitment.api.cv_review_router import cv_review_router  # noqa: E402
@@ -57,6 +48,7 @@ from src.modules.recruitment.api.error_handler import (  # noqa: E402
 from src.modules.recruitment.api.job_opening_router import job_opening_router  # noqa: E402
 from src.modules.recruitment.api.metrics_router import metrics_router  # noqa: E402
 from src.modules.recruitment.api.runtime_router import runtime_router
+from src.modules.setup.api.router import router as setup_router
 
 logger = logging.getLogger(__name__)
 
@@ -218,11 +210,8 @@ app.include_router(attendance_router)
 app.include_router(job_opening_router)
 app.include_router(runtime_router)
 app.include_router(assistant_router)
-app.include_router(employee_assistant_router)
-app.include_router(employee_request_router)
-app.include_router(admin_employee_request_router)
-app.include_router(employee_payslip_router)
 app.include_router(admin_payslip_router)
+app.include_router(setup_router)
 
 # Register exception handlers.
 register_auth_error_handlers(app)
@@ -233,7 +222,6 @@ register_onboarding_error_handlers(app)
 register_attendance_error_handlers(app)
 register_assistant_error_handlers(app)
 register_payslip_error_handlers(app)
-register_employee_request_error_handlers(app)
 
 
 @app.get("/health")
