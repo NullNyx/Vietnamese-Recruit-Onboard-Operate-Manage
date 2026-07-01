@@ -9,7 +9,7 @@ async function fetchSetupStatus() {
   return res.json();
 }
 
-async function submitOrganization(data: { organization_name: string; timezone: string }) {
+async function submitOrganization(data: { name: string; tax_code: string; timezone: string }) {
   const res = await fetch("/api/setup/organization", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
   });
@@ -17,17 +17,9 @@ async function submitOrganization(data: { organization_name: string; timezone: s
   return res.json();
 }
 
-async function submitAccessControl(data: { allowed_domains: string[] }) {
-  const res = await fetch("/api/setup/access-control", {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error("Failed to save access control");
-  return res.json();
-}
-
 async function completeSetup() {
   const res = await fetch("/api/setup/complete", {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirmed: true }),
+    method: "POST", headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw new Error("Failed to complete setup");
   return res.json();
@@ -60,16 +52,15 @@ export default function SetupPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("");
+  const [orgTaxCode, setOrgTaxCode] = useState("");
   const [timezone, setTimezone] = useState("Asia/Ho_Chi_Minh");
-  const [domains, setDomains] = useState("");
 
   useEffect(() => {
     async function check() {
       try {
         const status = await fetchSetupStatus();
-        if (status.is_locked) { router.replace("/login"); return; }
-        const idx = STEPS.indexOf(status.current_step);
-        setStep(idx >= 0 ? idx : 0);
+        if (status.setup_complete) { router.replace("/login"); return; }
+        setStep(status.org_configured ? 3 : 1);
       } catch { setError("Failed to load setup status"); }
       finally { setLoading(false); }
     }
@@ -78,17 +69,8 @@ export default function SetupPage() {
 
   const handleOrgSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true);
-    try { await submitOrganization({ organization_name: orgName, timezone }); setStep(2); }
+    try { await submitOrganization({ name: orgName, tax_code: orgTaxCode, timezone }); setStep(3); }
     catch { setError("Failed to save organization"); }
-    finally { setLoading(false); }
-  };
-
-  const handleAccessSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true);
-    try {
-      const domainList = domains.split("\n").map(d => d.trim()).filter(Boolean);
-      await submitAccessControl({ allowed_domains: domainList }); setStep(3);
-    } catch { setError("Failed to save access control"); }
     finally { setLoading(false); }
   };
 
@@ -125,6 +107,11 @@ export default function SetupPage() {
                   className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500" placeholder="Your Company Name" />
               </div>
               <div>
+                <label className="block text-sm font-medium mb-1">Tax Code</label>
+                <input type="text" value={orgTaxCode} onChange={e => setOrgTaxCode(e.target.value)}
+                  className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500" placeholder="MST (optional)" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium mb-1">Timezone</label>
                 <select value={timezone} onChange={e => setTimezone(e.target.value)}
                   className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500">
@@ -134,50 +121,21 @@ export default function SetupPage() {
                 </select>
               </div>
             </div>
-            <div className="flex gap-4 mt-8">
-              <button type="button" onClick={() => setStep(0)} className="flex-1 py-3 border rounded-lg hover:bg-gray-50">Back</button>
-              <button type="submit" disabled={loading} className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Continue</button>
-            </div>
-          </form>
-        )}
-
-        {step === 2 && (
-          <form onSubmit={handleAccessSubmit} className="bg-white rounded-lg shadow-sm border p-8">
-            <h2 className="text-xl font-bold mb-6">Access Control</h2>
-            <div>
-              <label className="block text-sm font-medium mb-1">Allowed Email Domains</label>
-              <textarea value={domains} onChange={e => setDomains(e.target.value)} rows={4}
-                className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
-                placeholder="example.com&#10;company.io" />
-              <p className="mt-2 text-sm text-gray-500">Users with emails from these domains can sign in. One per line.</p>
-            </div>
-            <div className="flex gap-4 mt-8">
-              <button type="button" onClick={() => setStep(1)} className="flex-1 py-3 border rounded-lg hover:bg-gray-50">Back</button>
-              <button type="submit" disabled={loading} className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Continue</button>
-            </div>
+            <button type="submit" disabled={loading} className="w-full mt-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              Continue
+            </button>
           </form>
         )}
 
         {step === 3 && (
           <div className="bg-white rounded-lg shadow-sm border p-8">
             <h2 className="text-xl font-bold mb-6">Review & Complete</h2>
-            <div className="space-y-3 mb-8">
-              <div className="flex items-center gap-3 text-green-600">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                <span>Organization basics configured</span>
-              </div>
-              <div className="flex items-center gap-3 text-green-600">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                <span>Access control configured</span>
-              </div>
-            </div>
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
               <p className="text-sm text-yellow-800"><strong>Important:</strong> Once completed, the wizard locks permanently.</p>
             </div>
-            <div className="flex gap-4">
-              <button type="button" onClick={() => setStep(2)} className="flex-1 py-3 border rounded-lg hover:bg-gray-50">Back</button>
-              <button onClick={handleComplete} disabled={loading} className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">Complete Setup</button>
-            </div>
+            <button onClick={handleComplete} disabled={loading} className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+              Complete Setup
+            </button>
           </div>
         )}
 

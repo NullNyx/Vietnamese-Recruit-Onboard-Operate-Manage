@@ -30,7 +30,6 @@ from src.modules.gmail.api.error_handler import (  # noqa: E402
 )
 from src.modules.gmail.api.router import router as gmail_router  # noqa: E402
 from src.modules.identity.api.admin_router import admin_router
-from src.modules.identity.api.setup_router import router as setup_router  # noqa: E402
 from src.modules.identity.api.error_handler import (  # noqa: E402
     register_auth_error_handlers,
 )
@@ -201,7 +200,6 @@ app = FastAPI(
 # Register module routers.
 app.include_router(auth_router)
 app.include_router(admin_router)
-app.include_router(setup_router)
 app.include_router(employee_router)
 app.include_router(gmail_router)
 app.include_router(candidate_router)
