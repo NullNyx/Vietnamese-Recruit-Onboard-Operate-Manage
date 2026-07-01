@@ -253,8 +253,7 @@ class OrganizationSettingsRepository:
         settings_row = await self._get_row()
         if settings_row is None:
             from src.modules.recruitment.domain.entities import OrganizationSettings
-            settings_row = OrganizationSettings(
-                timezone=self.default_timezone, organization_name=name
+            settings_row = OrganizationSettings(timezone=self.default_timezone, organization_name=name)
         else:
             settings_row.organization_name = name
         self.session.add(settings_row)
@@ -282,19 +281,13 @@ class OrganizationSettingsRepository:
         now = datetime.now(UTC)
         settings_row = await self._get_row()
         if settings_row is None:
-            settings_row = OrganizationSettings(
-                timezone=self.default_timezone,
-                setup_completed_at=now,
-                setup_locked_at=now,
+            settings_row = OrganizationSettings(timezone=self.default_timezone, setup_completed_at=now, setup_locked_at=now)
         else:
             settings_row.setup_completed_at = now
             settings_row.setup_locked_at = now
         self.session.add(settings_row)
         await self.session.flush()
-        return {
-            "setup_completed_at": settings_row.setup_completed_at,
-            "setup_locked_at": settings_row.setup_locked_at,
-        }
+        return {"setup_completed_at": settings_row.setup_completed_at, "setup_locked_at": settings_row.setup_locked_at}
 
     async def is_setup_locked(self) -> bool:
         """Check if setup is locked."""
