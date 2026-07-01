@@ -214,6 +214,19 @@ function LoginContent() {
   );
 }
 
+// ─── Setup check ────────────────────────────────────────────────────────────
+
+async function checkSetupRequired(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/setup/status");
+    if (!res.ok) return false;
+    const status = await res.json();
+    return !status.is_locked;
+  } catch {
+    return false;
+  }
+}
+
 // ─── Main Login Page ────────────────────────────────────────────────────────
 export default function LoginPage() {
   return (
@@ -225,8 +238,35 @@ export default function LoginPage() {
           </div>
         }
       >
-        <LoginContent />
+        <LoginContentWithCheck />
       </Suspense>
     </div>
   );
+}
+
+function LoginContentWithCheck() {
+  const router = useRouter();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    async function check() {
+      const needsSetup = await checkSetupRequired();
+      if (needsSetup) {
+        router.replace("/setup");
+        return;
+      }
+      setChecking(false);
+    }
+    check();
+  }, [router]);
+
+  if (checking) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return <LoginContent />;
 }
