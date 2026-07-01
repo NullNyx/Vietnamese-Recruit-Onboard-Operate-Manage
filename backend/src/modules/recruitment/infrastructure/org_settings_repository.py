@@ -280,7 +280,6 @@ class OrganizationSettingsRepository:
 
     async def complete_setup(self) -> dict:
         """Mark setup as completed and locked."""
-        from datetime import datetime, UTC
         now = datetime.now(UTC)
         settings_row = await self._get_row()
         if settings_row is None:
