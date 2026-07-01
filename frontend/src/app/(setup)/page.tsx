@@ -1,4 +1,5 @@
 "use client";
+// Setup wizard page for first-run initialization
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";

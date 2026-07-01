@@ -1,4 +1,4 @@
-"""FastAPI router for setup wizard endpoints.
+"""FastAPI router for setup wizard endpoints (first-run initialization).
 
 Defines the /api/setup/* endpoints for the one-time setup wizard that runs
 before normal system operation. These endpoints are only accessible before
@@ -8,14 +8,12 @@ setup is completed and locked.
 from __future__ import annotations
 
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database import get_session
-
+from src.modules.identity.container import get_db_session
 
 from src.modules.recruitment.infrastructure.org_settings_repository import (
     OrganizationSettingsRepository,
@@ -26,7 +24,6 @@ router = APIRouter(prefix="/api/setup", tags=["setup"])
 
 # --- Schemas ---
 
-
 class SetupStatusResponse(BaseModel):
     """Response for setup status check."""
 
@@ -35,20 +32,17 @@ class SetupStatusResponse(BaseModel):
     setup_completed_at: str | None = Field(description="ISO timestamp when setup completed")
     current_step: str = Field(description="Current wizard step if not locked")
 
-
 class OrganizationBasicsRequest(BaseModel):
     """Request body for organization basics step."""
 
     organization_name: str = Field(min_length=1, max_length=255)
     timezone: str = Field(min_length=1, max_length=64)
 
-
 class AccessControlRequest(BaseModel):
     """Request body for access control step."""
 
     allowed_domains: list[str] = Field(default_factory=list, max_length=50)
     whitelist_emails: list[str] = Field(default_factory=list, max_length=100)
-
 
 class IdentityProviderRequest(BaseModel):
     """Request body for identity provider step."""
@@ -57,12 +51,10 @@ class IdentityProviderRequest(BaseModel):
     oauth_client_id: str | None = Field(default=None, max_length=255)
     oauth_redirect_uri: str | None = Field(default=None, max_length=500)
 
-
 class SetupCompleteRequest(BaseModel):
     """Request body for completing setup."""
 
     confirmed: bool = Field(description="Must be true to confirm completion")
-
 
 class SetupCompleteResponse(BaseModel):
     """Response for setup completion."""
@@ -71,9 +63,7 @@ class SetupCompleteResponse(BaseModel):
     message: str
     setup_completed_at: str | None
 
-
 # --- Dependencies ---
-
 
 async def get_setup_repository(
     session: AsyncSession = Depends(get_db_session),
@@ -88,7 +78,6 @@ async def get_setup_repository(
     """
     settings = get_recruitment_settings()
     return OrganizationSettingsRepository(session=session, settings=settings)
-
 
 async def require_setup_not_locked(
     repo: OrganizationSettingsRepository = Depends(get_setup_repository),
@@ -115,9 +104,7 @@ async def require_setup_not_locked(
         )
     return repo
 
-
 # --- Endpoints ---
-
 
 @router.get("/status", response_model=SetupStatusResponse)
 async def get_setup_status(
@@ -129,10 +116,10 @@ async def get_setup_status(
     and the current step if not locked.
     """
     is_locked = await repo.is_setup_locked()
-    
+
     # Check if any settings exist
     status = await repo.get_setup_status()
-    
+
     # Determine current step based on what has been configured
     current_step = "welcome"
     if not is_locked:
@@ -147,14 +134,13 @@ async def get_setup_status(
                     current_step = "access-control"
             else:
                 current_step = "organization"
-    
+
     return SetupStatusResponse(
         is_initialized=status["setup_completed_at"] is not None,
         is_locked=is_locked,
         setup_completed_at=status["setup_completed_at"].isoformat() if status["setup_completed_at"] else None,
         current_step=current_step,
     )
-
 
 @router.post("/organization", status_code=200)
 async def submit_organization_basics(
@@ -168,9 +154,8 @@ async def submit_organization_basics(
     """
     await repo.set_organization_name(body.organization_name)
     await repo.set_timezone(body.timezone)
-    
-    return {"success": True, "message": "Organization basics saved"}
 
+    return {"success": True, "message": "Organization basics saved"}
 
 @router.post("/access-control", status_code=200)
 async def submit_access_control(
@@ -185,12 +170,11 @@ async def submit_access_control(
     # Set allowed domains
     if body.allowed_domains:
         await repo.set_allowed_domains(body.allowed_domains)
-    
+
     # Note: Whitelist entries are managed via the admin UI after setup is complete.
     # For now, we just focus on allowed_domains which are the primary gate.
-    
-    return {"success": True, "message": "Access control saved"}
 
+    return {"success": True, "message": "Access control saved"}
 
 @router.post("/identity-provider", status_code=200)
 async def submit_identity_provider(
@@ -204,7 +188,6 @@ async def submit_identity_provider(
     """
     # For now, this is a placeholder - OAuth config is managed via admin endpoints
     return {"success": True, "message": "Identity provider saved"}
-
 
 @router.post("/complete", response_model=SetupCompleteResponse)
 async def complete_setup(
@@ -222,11 +205,11 @@ async def complete_setup(
             status_code=400,
             detail={"code": "CONFIRMATION_REQUIRED", "message": "Must confirm completion"},
         )
-    
+
     # For first-run setup, there's no authenticated user yet.
     # We complete setup with a null admin_user_id.
     result = await repo.complete_setup(admin_user_id=None)
-    
+
     return SetupCompleteResponse(
         success=True,
         message="Setup completed and locked",
