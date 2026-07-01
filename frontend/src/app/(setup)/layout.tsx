@@ -1,5 +1,6 @@
 import React from "react";
 
+// Setup wizard layout
 export default function SetupLayout({
   children,
 }: {
