@@ -24,6 +24,8 @@ if TYPE_CHECKING:
     from src.modules.employee.application.employment_event_service import (
         EmploymentEventService,
     )
+    from src.modules.identity.application.audit_service import AuditService
+    from src.modules.identity.domain.entities import User
     from src.modules.employee.infrastructure.department_repository import (
         DepartmentRepository,
     )
@@ -53,6 +55,7 @@ class EmployeeService:
         department_repository: DepartmentRepository,
         position_repository: PositionRepository,
         event_service: EmploymentEventService | None = None,
+        audit_service: AuditService | None = None,
     ) -> None:
         """Initialize EmployeeService with required repositories.
 
@@ -66,6 +69,7 @@ class EmployeeService:
         self._department_repo = department_repository
         self._position_repo = position_repository
         self._event_service = event_service
+        self._audit_service = audit_service
 
     async def list_employees(
         self,
@@ -275,12 +279,16 @@ class EmployeeService:
         """Change an employee's employment status with event recording."""
         employee = await self.get_employee(employee_id)
 
-        # Basic transition validation
-        allowed = ("active", "resigned", "terminated", "suspended")
-        if new_status not in allowed:
+        allowed = {
+            "active": {"suspended", "resigned", "terminated"},
+            "suspended": {"active", "resigned", "terminated"},
+            "resigned": set(),
+            "terminated": set(),
+        }
+        if new_status not in allowed.get(employee.employment_status, set()):
             raise InvalidStatusTransitionError()
 
-        before = {"employment_status": employee.employment_status}
+        before = employee.model_dump(mode="json")
         updated = await self._employee_repo.update_status(
             employee_id, new_status, termination_date
         )
@@ -293,7 +301,7 @@ class EmployeeService:
                 event_type="status_change",
                 actor_hr_id=actor_hr_id,
                 before=before,
-                after={"employment_status": new_status},
+                after=updated.model_dump(mode="json"),
                 note=note,
             )
         return updated

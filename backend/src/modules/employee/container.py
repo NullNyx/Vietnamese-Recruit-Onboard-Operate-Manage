@@ -21,22 +21,11 @@ from src.modules.employee.application.contract_template_service import (
     ContractTemplateService,
 )
 from src.modules.employee.application.document_service import DocumentService
-from src.modules.employee.application.employee_service import EmployeeService
 from src.modules.employee.application.employment_event_service import (
     EmploymentEventService,
 )
 from src.modules.employee.application.import_service import ImportService
 from src.modules.employee.application.position_service import PositionService
-from src.modules.employee.application.contract_service import ContractService
-from src.modules.employee.application.contract_template_service import (
-    ContractTemplateService,
-)
-from src.modules.employee.application.contract_amendment_service import (
-    ContractAmendmentService,
-)
-from src.modules.employee.application.employment_event_service import (
-    EmploymentEventService,
-)
 from src.modules.employee.infrastructure.config import EmployeeSettings
 from src.modules.employee.infrastructure.contract_amendment_repository import (
     ContractAmendmentRepository,
@@ -289,26 +278,6 @@ async def get_document_service(
         minio_client=get_minio_client(),
         settings=get_employee_settings(),
     )
-
-
-async def get_employment_event_service(
-    event_repo: EmploymentEventRepository = Depends(get_employment_event_repository),
-) -> EmploymentEventService:
-    return EmploymentEventService(event_repo)
-
-
-async def get_contract_service(
-    contract_repo: ContractRepository = Depends(get_contract_repository),
-    event_service: EmploymentEventService = Depends(get_employment_event_service),
-) -> ContractService:
-    return ContractService(contract_repo=contract_repo, event_service=event_service)
-
-
-async def get_contract_template_service(
-    template_repo: ContractTemplateRepository = Depends(get_contract_template_repository),
-) -> ContractTemplateService:
-    return ContractTemplateService(template_repo)
-
 
 async def get_contract_amendment_service(
     amendment_repo: ContractAmendmentRepository = Depends(get_contract_amendment_repository),
