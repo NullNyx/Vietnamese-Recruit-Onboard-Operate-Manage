@@ -190,6 +190,14 @@ class AuditActionType(str, Enum):
     PAYSLIP_UPDATE = "payslip_update"
     PAYSLIP_PUBLISH = "payslip_publish"
     PAYSLIP_DELETE = "payslip_delete"
+    EMPLOYEE_STATUS_CHANGE = "employee_status_change"
+    EMPLOYEE_PROFILE_UPDATE = "employee_profile_update"
+    DOCUMENT_STATUS_CHANGE = "document_status_change"
+    CONTRACT_CREATE = "contract_create"
+    CONTRACT_UPDATE = "contract_update"
+    CONTRACT_STATUS_CHANGE = "contract_status_change"
+    CONTRACT_TEMPLATE_UPDATE = "contract_template_update"
+    CONTRACT_AMENDMENT_UPDATE = "contract_amendment_update"
 
 
 class AuditLog(SQLModel, table=True):

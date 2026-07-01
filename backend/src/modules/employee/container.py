@@ -13,10 +13,30 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.employee.application.department_service import DepartmentService
+from src.modules.employee.application.contract_amendment_service import (
+    ContractAmendmentService,
+)
+from src.modules.employee.application.contract_service import ContractService
+from src.modules.employee.application.contract_template_service import (
+    ContractTemplateService,
+)
 from src.modules.employee.application.document_service import DocumentService
 from src.modules.employee.application.employee_service import EmployeeService
+from src.modules.employee.application.employment_event_service import (
+    EmploymentEventService,
+)
 from src.modules.employee.application.import_service import ImportService
 from src.modules.employee.application.position_service import PositionService
+from src.modules.employee.application.contract_service import ContractService
+from src.modules.employee.application.contract_template_service import (
+    ContractTemplateService,
+)
+from src.modules.employee.application.contract_amendment_service import (
+    ContractAmendmentService,
+)
+from src.modules.employee.application.employment_event_service import (
+    EmploymentEventService,
+)
 from src.modules.employee.infrastructure.config import EmployeeSettings
 from src.modules.employee.infrastructure.contract_amendment_repository import (
     ContractAmendmentRepository,
@@ -145,6 +165,31 @@ async def get_contract_amendment_repository(
     """Provide a ContractAmendmentRepository instance."""
     return ContractAmendmentRepository(session)
 
+async def get_employment_event_service(
+    event_repo: EmploymentEventRepository = Depends(get_employment_event_repository),
+) -> EmploymentEventService:
+    """Provide an EmploymentEventService instance."""
+    return EmploymentEventService(event_repo)
+
+async def get_contract_service(
+    contract_repo: ContractRepository = Depends(get_contract_repository),
+    event_service: EmploymentEventService = Depends(get_employment_event_service),
+) -> ContractService:
+    """Provide a ContractService instance."""
+    return ContractService(contract_repo=contract_repo, event_service=event_service)
+
+async def get_contract_template_service(
+    template_repo: ContractTemplateRepository = Depends(get_contract_template_repository),
+) -> ContractTemplateService:
+    """Provide a ContractTemplateService instance."""
+    return ContractTemplateService(template_repo=template_repo)
+
+async def get_contract_amendment_service(
+    amendment_repo: ContractAmendmentRepository = Depends(get_contract_amendment_repository),
+) -> ContractAmendmentService:
+    """Provide a ContractAmendmentService instance."""
+    return ContractAmendmentService(amendment_repo=amendment_repo)
+
 
 # ---------------------------------------------------------------------------
 # Service dependency functions
@@ -155,6 +200,7 @@ async def get_employee_service(
     employee_repo: EmployeeRepository = Depends(get_employee_repository),
     department_repo: DepartmentRepository = Depends(get_department_repository),
     position_repo: PositionRepository = Depends(get_position_repository),
+    event_service: EmploymentEventService = Depends(get_employment_event_service),
 ) -> EmployeeService:
     """Provide an EmployeeService instance with all dependencies.
 
@@ -170,6 +216,7 @@ async def get_employee_service(
         employee_repository=employee_repo,
         department_repository=department_repo,
         position_repository=position_repo,
+        event_service=event_service,
     )
 
 
@@ -242,3 +289,28 @@ async def get_document_service(
         minio_client=get_minio_client(),
         settings=get_employee_settings(),
     )
+
+
+async def get_employment_event_service(
+    event_repo: EmploymentEventRepository = Depends(get_employment_event_repository),
+) -> EmploymentEventService:
+    return EmploymentEventService(event_repo)
+
+
+async def get_contract_service(
+    contract_repo: ContractRepository = Depends(get_contract_repository),
+    event_service: EmploymentEventService = Depends(get_employment_event_service),
+) -> ContractService:
+    return ContractService(contract_repo=contract_repo, event_service=event_service)
+
+
+async def get_contract_template_service(
+    template_repo: ContractTemplateRepository = Depends(get_contract_template_repository),
+) -> ContractTemplateService:
+    return ContractTemplateService(template_repo)
+
+
+async def get_contract_amendment_service(
+    amendment_repo: ContractAmendmentRepository = Depends(get_contract_amendment_repository),
+) -> ContractAmendmentService:
+    return ContractAmendmentService(amendment_repo)
