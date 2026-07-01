@@ -30,6 +30,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Setup wizard route — no authentication required
+  if (path.startsWith("/setup")) {
+    return NextResponse.next();
+  }
+
   // All other matched routes — require authentication
   if (!accessToken) {
     return NextResponse.redirect(new URL("/login", request.url));

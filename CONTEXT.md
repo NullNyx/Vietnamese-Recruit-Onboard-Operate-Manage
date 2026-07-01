@@ -161,3 +161,17 @@ The structured proposal returned by a Draft-Tool. HR reviews it and, on confirm,
 the frontend calls the existing real write endpoint directly (not via the LLM).
 This is the mechanism that keeps the Assistant human-in-the-loop.
 _Avoid_: Auto-action, Command
+
+## Setup
+
+**Setup**:
+The one-time initialization wizard that runs before the system is usable. It guides the first admin through Organization configuration, access control, and identity provider setup. After completion the wizard locks permanently and normal login is enabled.
+_Avoid_: Installation, Configuration wizard, First-run setup
+
+**Setup Step**:
+A single step in the Setup wizard (Welcome → Organization Basics → Access Control → Identity Provider → Review). Each step collects a subset of configuration; the final Review step shows a summary before locking.
+_Avoid_: Stage, Phase, Page
+
+**Setup Lock**:
+The state after Setup completes. A `setup_completed_at` timestamp is written to `OrganizationSettings` and the `/setup` route is disabled. System enters normal operation mode.
+_Avoid_: Setup complete, First-run done

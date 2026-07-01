@@ -9,6 +9,7 @@ Requirements: 11.1, 11.2
 """
 
 import re
+from uuid import UUID
 from zoneinfo import available_timezones
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -379,3 +380,9 @@ class OrganizationSettingsRepository:
             seen.add(nn)
             normalized.append(nn)
         return normalized
+
+
+# ------------------------------------------------------------------
+# Setup state management
+# ------------------------------------------------------------------
+

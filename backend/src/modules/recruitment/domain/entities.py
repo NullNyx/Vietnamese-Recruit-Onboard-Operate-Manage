@@ -149,6 +149,7 @@ class OrganizationSettings(SQLModel, table=True):
     __tablename__ = "organization_settings"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    organization_name: str | None = Field(default=None, max_length=255)
     timezone: str = Field(default="Asia/Ho_Chi_Minh", max_length=64, nullable=False)
     allowed_domains: list[str] = Field(
         sa_column=Column(ARRAY(String), nullable=False, server_default="{}"),
@@ -164,7 +165,14 @@ class OrganizationSettings(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-
+    setup_completed_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    setup_locked_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
 
 class JobOpening(SQLModel, table=True):
     """Represents a Job Opening in recruitment planning.
