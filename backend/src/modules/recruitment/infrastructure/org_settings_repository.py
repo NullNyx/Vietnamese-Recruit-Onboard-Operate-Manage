@@ -239,7 +239,6 @@ class OrganizationSettingsRepository:
             normalized.append(n)
         return normalized
 
-
     # ------------------------------------------------------------------
     # Organization name
     # ------------------------------------------------------------------
@@ -254,6 +253,7 @@ class OrganizationSettingsRepository:
         settings_row = await self._get_row()
         if settings_row is None:
             from src.modules.recruitment.domain.entities import OrganizationSettings
+
             settings_row = OrganizationSettings(
                 timezone=self.default_timezone,
                 organization_name=name,
