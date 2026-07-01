@@ -3,7 +3,6 @@ import {
   Bot,
   Briefcase,
   Building2,
-  KeyRound,
   LayoutDashboard,
   ListChecks,
   Mail,
@@ -40,8 +39,6 @@ export const adminNavSection: AdminNavSection = {
   title: 'Quản trị',
   icon: Shield,
   items: [
-    { href: '/admin/whitelist', label: 'Whitelist', icon: ListChecks },
-    { href: '/admin/oauth', label: 'OAuth', icon: KeyRound },
     { href: '/admin/users', label: 'Người dùng', icon: UserCog },
     { href: '/admin/audit-logs', label: 'Nhật ký', icon: ScrollText },
     { href: '/admin/assistant', label: 'AI Assistant', icon: Bot },

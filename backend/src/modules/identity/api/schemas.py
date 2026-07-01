@@ -296,3 +296,10 @@ class OAuthConfigResponse(BaseModel):
     redirect_uri: str
     updated_at: datetime | None
     source: str
+
+
+class LoginRequest(BaseModel):
+    """Password login request body."""
+
+    email: str = Field(max_length=255)
+    password: str = Field(min_length=1)

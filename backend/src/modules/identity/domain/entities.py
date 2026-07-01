@@ -17,6 +17,11 @@ from sqlmodel import Field, SQLModel
 class UserRole(str, Enum):
     """Enumeration of user roles for access control."""
 
+    SUPER_ADMIN = "super_admin"
+    HR_ADMIN = "admin"
+    HR_STAFF = "user"
+    READ_ONLY = "read_only"
+    # Backward-compatible aliases
     ADMIN = "admin"
     USER = "user"
 
@@ -36,6 +41,7 @@ class User(SQLModel, table=True):
     name: str = Field(max_length=255, nullable=False)
     avatar_url: str | None = Field(default=None)
     google_sub: str = Field(max_length=255, unique=True, nullable=False, index=True)
+    password_hash: str | None = Field(default=None, max_length=255, nullable=True)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -47,7 +53,7 @@ class User(SQLModel, table=True):
     is_active: bool = Field(default=True, nullable=False)
     role: UserRole = Field(
         default=UserRole.USER,
-        sa_column=Column(String(10), nullable=False, default="user", index=True),
+        sa_column=Column(String(20), nullable=False, default="user", index=True),
     )
 
 

@@ -223,12 +223,12 @@ Mọi draft action và confirm action đều ghi audit.
 - MVP: hỗ trợ tiếng Việt trước
 - Phase 2: option tone/language
 
-## 12. Open questions cho review
+## 12. Quyết định thiết kế đã chốt (Locked Design Decisions)
 
-1. Extraction job chạy synchronous trên upload flow hay async background?
-2. Draft-Tool cần return preview theo format nào (markdown / json / both)?
-3. Suggest tools có cần confidence label riêng cho từng proposed item không?
-4. Summary scheduled có cần deliver ra ngoài (email) hay chỉ internal UI?
+1. **Document Extraction**: Xử lý dưới dạng **async background job**. Việc tải lên (upload) không bị block bởi quá trình trích xuất thông tin của AI. Trạng thái trích xuất hiển thị trên UI: `pending` → `processing` → `completed` / `failed`.
+2. **AI Draft Preview**: AI trả về dữ liệu **structured JSON** làm nguồn dữ liệu chính (source of truth). UI chịu trách nhiệm render thành Markdown hoặc HTML để người dùng xem trước.
+3. **AI Summary**: Chỉ hiển thị trên **Dashboard nội bộ**, chưa hỗ trợ gửi email báo cáo trong phạm vi MVP.
+4. **Suggest Tools**: Chưa áp dụng cơ chế đánh nhãn confidence phức tạp cho từng đề xuất đơn lẻ; giữ nguyên cách phân loại mức độ tin cậy chung của kết quả đầu ra.
 
 ## 13. Next step
 

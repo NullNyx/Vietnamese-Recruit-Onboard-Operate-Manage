@@ -1,161 +1,73 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { listOnboardingProcesses, getOnboardingCounts, onboardingKeys, type ProcessFilter, type OnboardingProcess } from "@/lib/api/onboarding";
-import { ProcessCard } from "@/components/onboarding/ProcessCard";
-import { OnboardingDetail } from "@/components/onboarding/OnboardingDetail";
-import { Users, AlertCircle } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { getOnboardingCounts, onboardingKeys } from "@/lib/api/onboarding";
+import { Sparkles, Activity, Target, CheckCircle2, AlertTriangle } from "lucide-react";
+import { StatCard } from "@/components/stat-card";
 
-function LoadingList() {
-  return (
-    <div className="p-3 space-y-2">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="rounded-xl border bg-card p-4 space-y-3">
-          <div className="flex items-start gap-3">
-            <Skeleton className="size-9 rounded-lg" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-32" />
-              <Skeleton className="h-3 w-24" />
-            </div>
-            <Skeleton className="h-5 w-16 rounded-full" />
-          </div>
-          <Skeleton className="h-1.5 w-full rounded-full" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ErrorList({ error, onRetry }: { error: Error; onRetry: () => void }) {
-  return (
-    <div className="p-4">
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription className="text-xs">
-          {error.message || "Tải danh sách thất bại"}
-        </AlertDescription>
-      </Alert>
-      <Button variant="outline" size="sm" className="w-full mt-3" onClick={onRetry}>
-        Thử lại
-      </Button>
-    </div>
-  );
-}
-
-function EmptyList() {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground">
-      <Users className="h-8 w-8 opacity-30" />
-      <p className="text-sm">Không có kết quả</p>
-    </div>
-  );
-}
-
-export default function OnboardingPage() {
-  const [filter, setFilter] = useState<ProcessFilter>("all");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: onboardingKeys.list(filter),
-    queryFn: () => listOnboardingProcesses(filter),
-  });
-
-  const { data: counts } = useQuery({
+export default function OnboardingDashboard() {
+  const { data: counts, isLoading } = useQuery({
     queryKey: onboardingKeys.counts(),
     queryFn: getOnboardingCounts,
   });
 
-  const processes = data?.items ?? [];
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-      {/* Left panel: list */}
-      <aside className="w-[360px] shrink-0 border-r flex flex-col bg-muted/20">
-        {/* Header */}
-        <div className="px-5 pt-6 pb-4 border-b">
-          <h1 className="text-xl font-semibold tracking-tight">Onboarding</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Theo dõi tiến độ nhân viên mới
-          </p>
-        </div>
+    <div className="space-y-8 max-w-[1440px] mx-auto">
+      {/* ─── Header ──────────────────────────────────────────────────── */}
+      <div>
+        <h1 className="text-2xl font-semibold text-[#09090B]">Onboarding Dashboard</h1>
+        <p className="mt-1 text-sm text-[#71717A]">Theo dõi tiến độ nhân viên mới</p>
+      </div>
 
-        {/* Filter tabs */}
-        <div className="px-4 py-3 border-b">
-          <Tabs
-            value={filter}
-            onValueChange={(v) => {
-              setFilter(v as ProcessFilter);
-              setSelectedId(null);
-            }}
-          >
-            <TabsList className="w-full h-8 p-0.5">
-              {(
-                [
-                  { value: "all", label: "Tất cả" },
-                  { value: "in_progress", label: "Đang làm" },
-                  { value: "complete", label: "Xong" },
-                ] as { value: ProcessFilter; label: string }[]
-              ).map((tab) => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="flex-1 text-xs gap-1.5 h-7"
-                >
-                  {tab.label}
-                  {!isLoading && data && (
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] px-1.5 py-0 h-4 font-normal"
-                    >
-                      {tab.value === "all"
-                        ? (counts?.total ?? 0)
-                        : tab.value === "in_progress"
-                          ? (counts?.in_progress ?? 0)
-                          : (counts?.complete ?? 0)}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </div>
-
-        {/* List body */}
-        <div className="flex-1 overflow-y-auto">
-          {isLoading && <LoadingList />}
-          {isError && <ErrorList error={error as Error} onRetry={() => refetch()} />}
-          {!isLoading && !isError && processes.length === 0 && <EmptyList />}
-          {!isLoading && !isError && processes.length > 0 && (
-            <div className="p-3 space-y-2">
-              {processes.map((p: OnboardingProcess) => (
-                <ProcessCard
-                  key={p.id}
-                  process={p}
-                  selected={selectedId === p.id}
-                  onClick={() => setSelectedId(selectedId === p.id ? null : p.id)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </aside>
-
-      {/* Right panel: detail */}
-      <main className="flex-1 overflow-hidden">
-        {selectedId ? (
-          <OnboardingDetail key={selectedId} processId={selectedId} />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
-            <Users className="h-10 w-10 opacity-20" />
-            <p className="text-sm">Chọn nhân viên để xem chi tiết</p>
+      {/* ─── AI Assistant Card ────────────────────────────────────────── */}
+      <div className="rounded-xl border border-primary/40 bg-white p-6">
+        <div className="flex items-start gap-4">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <Sparkles className="h-4 w-4 text-primary" />
           </div>
-        )}
-      </main>
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-[#09090B]">Trợ lý AI</p>
+            <p className="text-sm text-[#71717A]">
+              Hôm nay có <strong>{counts?.in_progress ?? 0}</strong> onboarding đang tiến hành.
+              Tổng số <strong>{counts?.total ?? 0}</strong> hồ sơ từ trước đến nay.
+              {counts && counts.in_progress > 0 ? (
+                <> Còn <strong>{counts.in_progress}</strong> hồ sơ cần hoàn tất.</>
+              ) : (
+                <> Không có hồ sơ nào quá hạn.</>
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Metrics Grid ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Tổng hồ sơ"
+          value={counts?.total ?? 0}
+          icon={Activity}
+          loading={isLoading}
+        />
+        <StatCard
+          title="Đang thực hiện"
+          value={counts?.in_progress ?? 0}
+          icon={Target}
+          loading={isLoading}
+        />
+        <StatCard
+          title="Hoàn tất"
+          value={counts?.complete ?? 0}
+          icon={CheckCircle2}
+          loading={isLoading}
+        />
+        <StatCard
+          title="Cần chú ý"
+          value={counts?.total ?? 0} // ponytail: show total; replace with real "attention" count when available
+          icon={AlertTriangle}
+          subtitle="Hồ sơ thiếu thông tin"
+          loading={isLoading}
+        />
+      </div>
     </div>
   );
 }

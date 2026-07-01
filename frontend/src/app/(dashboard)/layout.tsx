@@ -1,9 +1,9 @@
 "use client";
 
-import { HeaderNavigation } from "@/components/header-navigation";
+import { AppSidebar } from "@/components/app-sidebar";
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { NavigationProgress } from "@/components/navigation-progress";
 import { PageTransition } from "@/components/page-transition";
+import { TourOverlay } from "@/components/tour-overlay";
 
 export default function DashboardLayout({
   children,
@@ -11,22 +11,15 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation progress bar */}
-      <NavigationProgress />
-
-      {/* Header navigation — replaces sidebar */}
-      <HeaderNavigation />
-
-      {/* Main content area — starts below fixed header (h-14 = 3.5rem) */}
-      <main className="w-full pt-14">
-        <div className="group/content p-5 lg:p-8 has-[.gmail-fullbleed]:p-0 has-[.gmail-fullbleed]:overflow-hidden has-[.gmail-fullbleed]:h-[calc(100vh-3.5rem)]">
-          <div className="group-has-[.gmail-fullbleed]/content:hidden">
-            <Breadcrumbs />
-          </div>
+    <div className="flex min-h-screen bg-[#FAF9F6]">
+      <AppSidebar />
+      <main className="flex-1 overflow-auto p-6 lg:p-8">
+        <Breadcrumbs />
+        <div className="mt-6">
           <PageTransition>{children}</PageTransition>
         </div>
       </main>
+      <TourOverlay />
     </div>
   );
 }

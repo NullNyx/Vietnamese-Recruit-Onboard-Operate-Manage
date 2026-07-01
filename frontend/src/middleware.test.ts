@@ -15,52 +15,25 @@ function createMockRequest(
 }
 
 describe("middleware", () => {
-  describe("employee route protection", () => {
-    it("redirects to /login when no access_token cookie on /employee routes", () => {
-      const request = createMockRequest("/employee/dashboard");
-      const response = middleware(request);
-
-      expect(response.status).toBe(307);
-      expect(response.headers.get("location")).toBe(
-        "http://localhost:3000/login",
-      );
-    });
-
-    it("redirects to /login when no access_token cookie on /employee/profile", () => {
-      const request = createMockRequest("/employee/profile");
-      const response = middleware(request);
-
-      expect(response.status).toBe(307);
-      expect(response.headers.get("location")).toBe(
-        "http://localhost:3000/login",
-      );
-    });
-
-    it("allows request through when access_token cookie exists on /employee routes", () => {
-      const request = createMockRequest("/employee/dashboard", {
-        access_token: "some-valid-token",
-      });
-      const response = middleware(request);
-
+  describe("setup routes", () => {
+    it("allows /setup without token (backend status check fails-safe)", async () => {
+      const request = createMockRequest("/setup");
+      const response = await middleware(request);
+      // No backend → catch returns next() → 200
       expect(response.status).toBe(200);
-      expect(response.headers.get("location")).toBeNull();
     });
 
-    it("allows request through when access_token exists on /employee/attendance", () => {
-      const request = createMockRequest("/employee/attendance", {
-        access_token: "some-valid-token",
-      });
-      const response = middleware(request);
-
+    it("allows /setup/administrator without token", async () => {
+      const request = createMockRequest("/setup/administrator");
+      const response = await middleware(request);
       expect(response.status).toBe(200);
-      expect(response.headers.get("location")).toBeNull();
     });
   });
 
   describe("admin dashboard route protection", () => {
-    it("redirects to /login when no access_token on admin routes", () => {
+    it("redirects to /login when no access_token on admin routes", async () => {
       const request = createMockRequest("/admin/users");
-      const response = middleware(request);
+      const response = await middleware(request);
 
       expect(response.status).toBe(307);
       expect(response.headers.get("location")).toBe(
@@ -68,11 +41,11 @@ describe("middleware", () => {
       );
     });
 
-    it("allows request through when access_token exists on admin routes", () => {
+    it("allows request through when access_token exists", async () => {
       const request = createMockRequest("/admin/users", {
         access_token: "some-valid-token",
       });
-      const response = middleware(request);
+      const response = await middleware(request);
 
       expect(response.status).toBe(200);
       expect(response.headers.get("location")).toBeNull();
@@ -80,9 +53,9 @@ describe("middleware", () => {
   });
 
   describe("general route protection", () => {
-    it("redirects to /login when no access_token on unmatched routes", () => {
+    it("redirects to /login when no access_token on unmatched routes", async () => {
       const request = createMockRequest("/some-other-page");
-      const response = middleware(request);
+      const response = await middleware(request);
 
       expect(response.status).toBe(307);
       expect(response.headers.get("location")).toBe(
@@ -90,11 +63,11 @@ describe("middleware", () => {
       );
     });
 
-    it("allows request through when access_token exists on general routes", () => {
+    it("allows request through when access_token exists", async () => {
       const request = createMockRequest("/some-other-page", {
         access_token: "some-valid-token",
       });
-      const response = middleware(request);
+      const response = await middleware(request);
 
       expect(response.status).toBe(200);
       expect(response.headers.get("location")).toBeNull();

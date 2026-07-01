@@ -244,20 +244,13 @@ If data exposure or misuse is suspected:
 - document incident in internal ops notes
 - notify company admin
 
-## 12. Open questions
+## 12. Quyết định thiết kế đã chốt (Locked Design Decisions)
 
-Đã trả lời:
-
-- Retention: company policy, system default cho demo
-- Redact ID number: có, che một phần mặc định
-- Audit export: có, HR Admin
-- AI draft storage: MVP store khi HR confirm hoặc save draft, preview tạm không lưu
-
-Còn mở:
-
-1. CSRF token nên dùng custom token hay built-in framework (FastAPI CSRF middleware / double-submit cookie)?
-2. AI provider config cần UI hay chỉ env var?
-3. Backup schedule nên daily hay được HR Admin trigger on-demand?
+* **CSRF Protection**: Sử dụng cơ chế bảo mật tích hợp sẵn của framework (ví dụ: FastAPI built-in CSRF middleware), không tự xây dựng cơ chế Double-Submit cookie nếu framework đã hỗ trợ đầy đủ.
+* **AI Provider Configuration**: Hỗ trợ đồng thời 2 phương thức:
+  1. Khai báo qua **Environment Variables** (phù hợp cho deploy, DevOps).
+  2. Thay đổi qua **Settings UI** sau khi khởi tạo hệ thống (dành cho người dùng cuối, thông tin nhạy cảm lưu trong cơ sở dữ liệu sẽ được mã hóa). Không bắt buộc người dùng chỉnh sửa trực tiếp file `.env`.
+* **Cơ chế sao lưu (Backup)**: Cấu hình tự động định kỳ hoặc cho phép HR Admin trigger on-demand thông qua cài đặt hệ thống.
 
 ## 13. Next step
 
