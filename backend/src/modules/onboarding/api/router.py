@@ -69,6 +69,8 @@ from src.modules.onboarding.api.schemas import (
     OnboardingProcessListItem,
     OnboardingProcessListResponse,
     OnboardingTaskResponse,
+    OnboardingTimelineItemResponse,
+    OnboardingTimelineResponse,
     TaskStatusUpdate,
 )
 from src.modules.onboarding.application.onboarding_service import OnboardingService
@@ -415,6 +417,41 @@ async def confirm_completion(
             )
             for task in detail.tasks
         ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Get onboarding timeline
+# ---------------------------------------------------------------------------
+
+
+@onboarding_router.get(
+    "/processes/{process_id}/timeline", response_model=OnboardingTimelineResponse
+)
+async def get_timeline(
+    process_id: UUID,
+    _admin: AdminUserDep,
+    onboarding_service: OnboardingServiceDep,
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> OnboardingTimelineResponse:
+    """Get timeline events for one onboarding process.
+
+    The timeline is a derived read model of milestones and reminder-style
+    events from the process, checklist, contract draft, and audit trail.
+    Admin only.
+    """
+    detail = await onboarding_service.get_process(process_id)
+    candidate_repo = CandidateRepository(db_session)
+    candidate = await candidate_repo.get_by_id(detail.candidate_id)
+    events = await onboarding_service.get_timeline(
+        process_id,
+        accepted_at=candidate.accepted_at.isoformat()
+        if candidate and candidate.accepted_at
+        else None,
+        start_date=detail.start_date.isoformat() if detail.start_date else None,
+    )
+    return OnboardingTimelineResponse(
+        events=[OnboardingTimelineItemResponse(**event.__dict__) for event in events]
     )
 
 
