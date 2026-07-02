@@ -54,7 +54,6 @@ function DraftEditor({
   onExport,
   isSaving,
   isGenerating,
-  status,
 }: {
   content: string;
   contractType: string;
@@ -66,7 +65,6 @@ function DraftEditor({
   onExport: () => void;
   isSaving: boolean;
   isGenerating: boolean;
-  status: string;
 }) {
   return (
     <div className="space-y-4">
@@ -334,7 +332,6 @@ export function ContractPanel({
             onExport={handleExport}
             isSaving={saveMutation.isPending}
             isGenerating={generateMutation.isPending}
-            status={draft.status}
           />
         </div>
 
