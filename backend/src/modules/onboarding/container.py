@@ -66,6 +66,7 @@ from src.modules.onboarding.application.validators import (
 from src.modules.onboarding.domain.entities import OnboardingAuditLog
 from src.modules.onboarding.domain.exceptions import InvalidEventPayloadError
 from src.modules.onboarding.infrastructure.audit_repository import OnboardingAuditRepository
+from src.modules.onboarding.infrastructure.document_repository import OnboardingDocumentRepository
 from src.modules.onboarding.infrastructure.process_repository import OnboardingProcessRepository
 from src.modules.onboarding.infrastructure.task_repository import OnboardingTaskRepository
 
@@ -104,6 +105,7 @@ def _build_service(session: AsyncSession) -> OnboardingService:
         process_repo=OnboardingProcessRepository(session),
         task_repo=OnboardingTaskRepository(session),
         audit_repo=OnboardingAuditRepository(session),
+        document_repo=OnboardingDocumentRepository(session),
         employee_repo=EmployeeRepository(session),
         session=session,
     )

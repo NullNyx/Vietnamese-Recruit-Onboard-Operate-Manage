@@ -110,3 +110,35 @@ class OnboardingAuditLog(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
     )
+
+
+class OnboardingDocument(SQLModel, table=True):
+    """A document item in an onboarding process checklist.
+
+    Each onboarding process has a predefined set of document items (CCCD,
+    degree, etc.) generated from DOCUMENT_TEMPLATE at process creation.
+    Documents are uploaded by HR, then verified or rejected.
+    """
+
+    __tablename__ = "onboarding_documents"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    process_id: UUID = Field(foreign_key="onboarding_processes.id", nullable=False, index=True)
+    document_type: str = Field(max_length=40, nullable=False)
+    display_name: str = Field(max_length=100, nullable=False)
+    is_required: bool = Field(default=True, nullable=False)
+    status: str = Field(default="pending", max_length=20, nullable=False)
+    file_name: str | None = Field(default=None, max_length=255)
+    file_size: int | None = Field(default=None)
+    mime_type: str | None = Field(default=None, max_length=100)
+    storage_path: str | None = Field(default=None)
+    reject_reason: str | None = Field(default=None, max_length=500)
+    uploaded_by_hr_id: UUID | None = Field(default=None, foreign_key="users.id")
+    uploaded_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    verified_by_hr_id: UUID | None = Field(default=None, foreign_key="users.id")
+    verified_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    ai_extraction: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )

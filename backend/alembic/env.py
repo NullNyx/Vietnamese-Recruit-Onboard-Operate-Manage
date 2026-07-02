@@ -45,6 +45,7 @@ from src.modules.identity.domain.entities import (  # noqa: E402, F401
 )
 from src.modules.onboarding.domain.entities import (  # noqa: E402, F401
     OnboardingAuditLog,
+    OnboardingDocument,
     OnboardingProcess,
     OnboardingTask,
 )

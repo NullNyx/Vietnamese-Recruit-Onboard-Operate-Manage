@@ -56,3 +56,19 @@ CHECKLIST_TEMPLATE: Final[list[tuple[int, OnboardingTaskKey, str]]] = [
     (2, OnboardingTaskKey.ASSIGN_DEPARTMENT_POSITION_MANAGER, "Assign Department Position Manager"),
     (3, OnboardingTaskKey.SET_START_DATE, "Set Start Date"),
 ]
+
+# ─── Document Types ───────────────────────────────────────────────────────
+# The canonical onboarding document checklist: an ordered list of
+# (document_type, display_name, is_required) tuples. Each process is created
+# with exactly these document items, in this order.
+
+DOCUMENT_TEMPLATE: Final[list[tuple[str, str, bool]]] = [
+    ("cccd", "Căn cước công dân", True),
+    ("degree", "Bằng cấp / Chứng chỉ", True),
+    ("health_cert", "Giấy khám sức khỏe", True),
+    ("resume", "Sơ yếu lý lịch", True),
+    ("photo", "Ảnh thẻ", False),
+    ("insurance", "Sổ bảo hiểm xã hội", True),
+    ("diploma", "Bằng tốt nghiệp", True),
+    ("other", "Giấy tờ khác", False),
+]
