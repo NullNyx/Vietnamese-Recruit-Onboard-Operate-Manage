@@ -30,9 +30,9 @@ head``) and asserts every observable stage of the backbone flow:
    way the consumer builds the service (``container._build_service`` on a fresh
    session per call, each owning its own committed transaction).
 
-4. **Activation.** After the last task is completed the process is ``complete``,
-   the Employee is ``is_active = true`` (R5.1, R5.5), and the audit trail holds
-   four ``task_completed`` entries and exactly one ``employee_activated`` entry
+4. **Activation.** After the last task is completed the process is ``ready_for_completion``,
+   the Employee stays inactive until HR confirms (R5.1, R5.5), and the audit trail holds
+   four ``task_completed`` entries and exactly one ``ready_for_completion`` entry
    (R4.1, R8.1).
 
 Because each service call commits its own transaction, every assertion stage
@@ -76,6 +76,8 @@ from src.modules.onboarding.domain.enums import (
 _OP_PROCESS_CREATED = "process_created"
 _OP_TASK_COMPLETED = "task_completed"
 _OP_EMPLOYEE_ACTIVATED = "employee_activated"
+_OP_READY_FOR_COMPLETION = "ready_for_completion"
+_OP_CONFIRMED_COMPLETE = "confirmed_complete"
 
 # backend/ — the directory that holds alembic.ini and the alembic/ package.
 # test file: backend/tests/modules/onboarding/test_e2e_consumer_smoke.py
@@ -277,7 +279,7 @@ async def test_candidate_accepted_drives_full_chain_to_active_employee(
       the checklist template, with a ``process_created`` audit entry (R1.1,
       R2.1, R3.1, R8.3);
     * completing all four tasks via ``complete_task`` flips the process to
-      ``complete`` and the Employee to ``is_active = true`` (R4.1, R5.1, R5.5);
+      ``complete`` (employee remains inactive until HR confirm) (R4.1, R5.1, R5.5);
     * the audit trail holds four ``task_completed`` entries and exactly one
       ``employee_activated`` entry (R8.1).
 
@@ -386,10 +388,10 @@ async def test_candidate_accepted_drives_full_chain_to_active_employee(
     assert all(t.status == OnboardingTaskStatus.DONE.value for t in final_tasks)
 
     final_process = (await _load_processes_by_candidate(session_maker, candidate_id))[0]
-    assert final_process.status == OnboardingStatus.COMPLETE.value, "process completes (R5.5)"
+    assert final_process.status == OnboardingStatus.READY_FOR_COMPLETION.value, "process ready for completion (KAN-50)"
 
     final_employee = (await _load_employee_by_candidate(session_maker, candidate_id))[0]
-    assert final_employee.is_active is True, "Employee activated on completion (R5.1)"
+    assert final_employee.is_active is False, "Employee still inactive after readiness (KAN-50)"
 
     # Audit trail: one creation, four completions, exactly one activation (R8.1).
     final_audit = await _load_audit_by_candidate(session_maker, candidate_id)
@@ -401,12 +403,12 @@ async def test_candidate_accepted_drives_full_chain_to_active_employee(
     completed_task_ids = {e.entity_id for e in completion_entries}
     assert completed_task_ids == {t.id for t in final_tasks}
 
-    activation_entries = [e for e in final_audit if e.operation_type == _OP_EMPLOYEE_ACTIVATED]
-    assert len(activation_entries) == 1, "exactly one employee_activated audit entry (R8.1)"
-    activation = activation_entries[0]
-    assert activation.entity_id == employee.id
-    assert activation.user_id == admin.id
-    assert activation.entity_type == "employee"
+    readiness_entries = [e for e in final_audit if e.operation_type == _OP_READY_FOR_COMPLETION]
+    assert len(readiness_entries) == 1, "exactly one ready_for_completion audit entry (KAN-50)"
+    readiness = readiness_entries[0]
+    assert readiness.entity_id == employee.id
+    assert readiness.user_id == admin.id
+    assert readiness.entity_type == "process"
 
     # The creation entry must still be present and singular alongside the rest.
     assert sum(1 for e in final_audit if e.operation_type == _OP_PROCESS_CREATED) == 1

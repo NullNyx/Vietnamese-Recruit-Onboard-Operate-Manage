@@ -5,7 +5,7 @@ completion exactly
 
 This test drives ``OnboardingService.complete_task`` over arbitrary sequences
 of valid task-completion actions against a process that holds 0..5 pending
-tasks, and asserts the exact activation invariant:
+tasks, and asserts the readiness invariant (no auto-activation):
 
   * IF the process has at least one task AND every task is ``done``, THEN the
     process status is ``complete`` and the linked employee ``is_active`` is
@@ -13,7 +13,7 @@ tasks, and asserts the exact activation invariant:
   * OTHERWISE the process stays ``in_progress`` and the employee ``is_active``
     remains ``False``.
   * A process with ZERO tasks can never have a task completed, so it never
-    activates its employee (it stays ``in_progress`` / inactive).
+    reaches readiness (it stays ``in_progress`` / inactive).
 
 The checks are fast, pure-logic checks against in-memory fakes defined inline in
 this module (no shared conftest / fakes module, to avoid collisions with the
@@ -98,7 +98,8 @@ class FakeProcessRepo:
 
     ``set_status`` mutates the stored process exactly as the real repository
     does: it updates ``status`` and ``updated_at`` and stamps ``completed_at``
-    when the process transitions to ``complete``.
+    when the process transitions to ``complete`` or
+    ``ready_for_completion`` (only ``complete`` stamps completed_at).
     """
 
     def __init__(self, process: OnboardingProcess) -> None:
@@ -358,10 +359,10 @@ def test_employee_activation_reflects_checklist_completion_exactly(
     )
 
     if total > 0 and done_count == total:
-        # Every task in a non-empty checklist is done: the process completes and
-        # the linked employee is activated within the same transaction.
-        assert process.status == OnboardingStatus.COMPLETE.value
-        assert employee.is_active is True
+        # Every task in a non-empty checklist is done: the process becomes
+        # ready for completion but does not activate the employee yet.
+        assert process.status == OnboardingStatus.READY_FOR_COMPLETION.value
+        assert employee.is_active is False
     else:
         # Either no tasks at all (zero-task process never activates) or at least
         # one task is still pending: the process stays in progress and the

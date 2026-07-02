@@ -49,17 +49,14 @@ class OnboardingCountsResponse(BaseModel):
     Attributes:
         total: Total number of processes across all statuses.
         in_progress: Number of processes with status ``in_progress``.
+        ready_for_completion: Number of processes with status ``ready_for_completion``.
         complete: Number of processes with status ``complete``.
     """
 
     total: int
     in_progress: int
+    ready_for_completion: int
     complete: int
-
-
-# ---------------------------------------------------------------------------
-# Request schemas
-# ---------------------------------------------------------------------------
 
 
 class TaskStatusUpdate(BaseModel):

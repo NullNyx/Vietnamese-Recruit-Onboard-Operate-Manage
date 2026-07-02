@@ -78,6 +78,8 @@ _OP_DUPLICATE_DETECTED = "duplicate_detected"
 # Audit operation types written by the completion / activation flow.
 _OP_TASK_COMPLETED = "task_completed"
 _OP_EMPLOYEE_ACTIVATED = "employee_activated"
+_OP_READY_FOR_COMPLETION = "ready_for_completion"
+_OP_CONFIRMED_COMPLETE = "confirmed_complete"
 
 # Maximum number of OnboardingProcess records returned per list response (the
 # pagination cap, R6.2). Mirrors ``OnboardingSettings.list_page_size_max`` /
@@ -486,7 +488,7 @@ class OnboardingService:
         actor: User,
         status: str = OnboardingTaskStatus.DONE.value,
     ) -> OnboardingTask:
-        """Mark an onboarding task done, activating the employee when complete.
+        """Mark an onboarding task done.
 
         This is the HR-facing mark-done path behind ``PATCH
         /api/onboarding/tasks/{task_id}``. The checks are performed in the exact
@@ -503,7 +505,6 @@ class OnboardingService:
            rejected with :class:`OnboardingAuthorizationError` (403) and nothing
            changes.
         4. **Idempotent no-op (R4.3, R5.8):** a task that is already ``done``
-           (so a process that is already ``complete`` with its employee active)
            returns unchanged with no audit entry.
 
         Otherwise the task is currently ``pending``. ``complete_task`` only
@@ -513,15 +514,12 @@ class OnboardingService:
         row (``SELECT ... FOR UPDATE``) to serialize concurrent completions
         (R5.5), sets the task ``done`` (with ``completed_at`` and
         ``completed_by_user_id``), writes the status-change audit entry (R4.2,
-        R8.1), and — when every task in the process is now ``done`` and the
-        process has at least one task (R5.1, R5.2, R5.7) — sets the process
-        ``complete`` and the employee ``is_active = true`` with an activation
-        audit entry (R5.3, R5.4). All of this happens in one transaction
-        committed once. Any failure rolls the whole transaction back, leaving
-        the task, process, and employee unchanged, and raises
-        :class:`AuditWriteError` (audit append failed, R8.2) or
-        :class:`OnboardingActivationError` (any other completion/activation
-        failure, R5.6).
+        R8.1), and — when every task in the process is now ``done`` and setup
+        is complete — transitions the process to ``ready_for_completion`` with
+        a readiness audit entry (no employee activation yet). All of this
+        happens in one transaction committed once. Any failure rolls the whole
+        transaction back. Raises :class:`AuditWriteError` (audit append failed,
+        R8.2) or :class:`OnboardingActivationError` (any other failure, R5.6).
 
         Args:
             task_id: The identifier of the task to mark done.
@@ -542,30 +540,24 @@ class OnboardingService:
             OnboardingActivationError: If any other completion/activation write
                 fails (state unchanged).
         """
-        # Step 1: validate the requested status value (R3.5, Property 12).
         valid_statuses = {OnboardingTaskStatus.PENDING.value, OnboardingTaskStatus.DONE.value}
         if status not in valid_statuses:
             raise InvalidTaskStatusError(status)
 
-        # Step 2: existence — checked before authorization (R4.4).
         task = await self.task_repo.get_by_id(task_id)
         if task is None:
             raise OnboardingTaskNotFoundError()
 
-        # Step 3: authorization — admin only (R4.5).
         if actor.role != UserRole.ADMIN:
             raise OnboardingAuthorizationError()
 
-        # Step 4: idempotent no-op when the target status matches current status
         if task.status == status:
             logger.info("Task %s is already %s; no-op by %s", task.id, status, actor.email)
             return task
 
-        # Step 5: locked, atomic completion + activation in a single transaction.
         try:
             process = await self.process_repo.get_for_update(task.process_id)
             if process is None:
-                # Defensive: a task always references an existing process via FK.
                 raise OnboardingActivationError(
                     f"Onboarding process {task.process_id} for task {task.id} not found"
                 )
@@ -574,7 +566,10 @@ class OnboardingService:
 
             updated_task = await self._update_task_status(task, actor, process, status)
             if status == OnboardingTaskStatus.DONE.value:
-                await self._activate_if_complete(process, actor)
+                await self._maybe_mark_ready_for_completion(process, actor)
+            elif status == OnboardingTaskStatus.PENDING.value:
+                if process.status == OnboardingStatus.READY_FOR_COMPLETION.value:
+                    await self.process_repo.set_status(process, OnboardingStatus.IN_PROGRESS.value)
             await self.session.commit()
         except OnboardingError:
             await self.session.rollback()
@@ -652,29 +647,19 @@ class OnboardingService:
         await self._append_audit(status_audit)
         return updated_task
 
-    async def _activate_if_complete(
+    async def _maybe_mark_ready_for_completion(
         self,
         process: OnboardingProcess,
         actor: User,
     ) -> None:
-        """Activate the employee when every task in the process is ``done``.
+        """Transition the process to ``ready_for_completion`` when checklist
+        is complete and all setup fields are present.
 
-        Counts the process's tasks by status (the just-completed task is already
-        flushed, so it counts as ``done``). Activation happens if and only if
-        the process has at least one task and every task is ``done`` (R5.1,
-        R5.2, R5.7): a zero-task process never activates. On activation the
-        process is set ``complete``, the linked employee is set
-        ``is_active = true``, and an activation audit entry is written (R5.3,
-        R5.4) — all within the caller's locked transaction so it commits
-        atomically with the task completion (R5.5).
-
-        Args:
-            process: The locked OnboardingProcess being evaluated.
-            actor: The acting admin user (recorded on the activation audit).
-
-        Raises:
-            AuditWriteError: If appending the activation audit entry fails.
-            OnboardingActivationError: If the linked employee cannot be found.
+        Counts the process's tasks by status. Readiness happens if and only if
+        the process has at least one task and every task is ``done``:
+        a zero-task process never becomes ready. If the linked employee is
+        missing or the setup fields are incomplete, the process remains
+        ``in_progress``.
         """
         employee = await self.employee_repo.get_by_id(process.employee_id)
         if employee is None:
@@ -693,16 +678,74 @@ class OnboardingService:
         total = sum(counts.values())
         done = counts.get(OnboardingTaskStatus.DONE.value, 0)
         if total == 0 or done != total or not setup_complete:
-            # Incomplete (or zero-task): leave in_progress, employee inactive.
             return
+
+        if process.status == OnboardingStatus.READY_FOR_COMPLETION.value:
+            return
+
+        await self.process_repo.set_status(process, OnboardingStatus.READY_FOR_COMPLETION)
+        ready_audit = OnboardingAuditLog(
+            user_id=actor.id,
+            actor_email=actor.email,
+            operation_type=_OP_READY_FOR_COMPLETION,
+            entity_type="process",
+            entity_id=process.id,
+            candidate_id=process.candidate_id,
+            previous_value={"status": OnboardingStatus.IN_PROGRESS.value},
+            new_value={"status": OnboardingStatus.READY_FOR_COMPLETION.value},
+            change_summary=f"Process {process.id} ready for completion (all tasks done)",
+            success=True,
+        )
+        await self._append_audit(ready_audit)
+        logger.info("Process %s ready for completion", process.id)
+
+    async def confirm_completion(
+        self,
+        process_id: UUID,
+        actor: User,
+    ) -> OnboardingProcess:
+        """Confirm completion of a ready onboarding process.
+
+        HR confirms completion. The process must already be in
+        ``ready_for_completion`` status. On confirmation the process transitions
+        to ``complete`` and the linked employee is activated.
+        """
+        process = await self.process_repo.get_by_id(process_id)
+        if process is None:
+            raise OnboardingProcessNotFoundError()
+
+        if process.status != OnboardingStatus.READY_FOR_COMPLETION.value:
+            raise OnboardingActivationError(
+                f"Process {process_id} is not ready for completion (status: {process.status})"
+            )
+
+        employee = await self.employee_repo.get_by_id(process.employee_id)
+        if employee is None:
+            raise OnboardingActivationError(
+                f"Employee {process.employee_id} for process {process.id} not found"
+            )
 
         await self.process_repo.set_status(process, OnboardingStatus.COMPLETE)
         employee = await self.employee_repo.update(process.employee_id, {"is_active": True})
         if employee is None:
-            # Defensive: the process always references an existing employee.
             raise OnboardingActivationError(
                 f"Employee {process.employee_id} for process {process.id} not found"
             )
+
+        completion_audit = OnboardingAuditLog(
+            user_id=actor.id,
+            actor_email=actor.email,
+            operation_type=_OP_CONFIRMED_COMPLETE,
+            entity_type="process",
+            entity_id=process.id,
+            candidate_id=process.candidate_id,
+            previous_value={"status": OnboardingStatus.READY_FOR_COMPLETION.value},
+            new_value={"status": OnboardingStatus.COMPLETE.value},
+            change_summary=f"Process {process.id} completed by {actor.email}",
+            success=True,
+        )
+        await self._append_audit(completion_audit)
+
         activation_audit = OnboardingAuditLog(
             user_id=actor.id,
             actor_email=actor.email,
@@ -718,11 +761,13 @@ class OnboardingService:
             success=True,
         )
         await self._append_audit(activation_audit)
+        await self.session.commit()
         logger.info(
             "Employee %s activated on completion of onboarding process %s",
             employee.id,
             process.id,
         )
+        return process
 
     async def _append_audit(self, entry: OnboardingAuditLog) -> None:
         """Append a mandatory audit entry, mapping failures to ``AuditWriteError``.
@@ -828,7 +873,7 @@ class OnboardingService:
             )
             await self._append_audit(setup_audit)
 
-            await self._activate_if_complete(process, actor)
+            await self._maybe_mark_ready_for_completion(process, actor)
             await self.session.commit()
             return process
         except OnboardingError:
@@ -1049,14 +1094,16 @@ class OnboardingService:
         adds a ``total`` key summing all statuses.
 
         Returns:
-            A dict with keys ``total``, ``in_progress``, and ``complete``.
+            A dict with keys ``total``, ``in_progress``, ``ready_for_completion``, and ``complete``.
             Missing statuses default to 0.
         """
         counts = await self.process_repo.counts_by_status()
         in_progress = counts.get(OnboardingStatus.IN_PROGRESS.value, 0)
+        ready = counts.get(OnboardingStatus.READY_FOR_COMPLETION.value, 0)
         complete = counts.get(OnboardingStatus.COMPLETE.value, 0)
         return {
-            "total": in_progress + complete,
+            "total": in_progress + ready + complete,
             "in_progress": in_progress,
+            "ready_for_completion": ready,
             "complete": complete,
         }
