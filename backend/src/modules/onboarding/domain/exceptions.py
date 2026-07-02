@@ -220,6 +220,7 @@ class InactiveEmployeeAccessError(OnboardingError):
             self.message = f"Employee record {employee_id} is not active"
         super().__init__(self.message)
 
+
 class OnboardingContractNotFoundError(OnboardingError):
     """Contract draft for the onboarding process does not exist.
 

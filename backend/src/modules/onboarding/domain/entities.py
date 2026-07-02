@@ -143,6 +143,7 @@ class OnboardingDocument(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
 
+
 class OnboardingContractDraft(SQLModel, table=True):
     """Contract draft scoped to an onboarding process.
 

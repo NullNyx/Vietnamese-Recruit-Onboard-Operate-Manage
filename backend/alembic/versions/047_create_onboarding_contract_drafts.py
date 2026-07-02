@@ -31,16 +31,27 @@ def upgrade() -> None:
             sa.Column("process_id", sa.Uuid(), nullable=False, index=True, unique=True),
             sa.Column("contract_type", sa.String(length=30), nullable=False),
             sa.Column("content", sa.Text(), nullable=True),
-            sa.Column("status", sa.String(length=20), nullable=False, server_default=sa.text("'draft'")),
+            sa.Column(
+                "status", sa.String(length=20), nullable=False, server_default=sa.text("'draft'")
+            ),
             sa.Column("revision", sa.Integer(), nullable=False, server_default=sa.text("1")),
             sa.Column("created_by", sa.Uuid(), nullable=True),
             sa.Column("updated_by", sa.Uuid(), nullable=True),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
             sa.PrimaryKeyConstraint("id"),
-            sa.ForeignKeyConstraint(["process_id"], ["onboarding_processes.id"],),
-            sa.ForeignKeyConstraint(["created_by"], ["users.id"],),
-            sa.ForeignKeyConstraint(["updated_by"], ["users.id"],),
+            sa.ForeignKeyConstraint(
+                ["process_id"],
+                ["onboarding_processes.id"],
+            ),
+            sa.ForeignKeyConstraint(
+                ["created_by"],
+                ["users.id"],
+            ),
+            sa.ForeignKeyConstraint(
+                ["updated_by"],
+                ["users.id"],
+            ),
         )
         op.create_index(
             "ix_onboarding_contract_drafts_process_id",

@@ -577,6 +577,7 @@ async def verify_document(
     await repo.update(doc)
     return OnboardingDocumentResponse.model_validate(doc)
 
+
 # ---------------------------------------------------------------------------
 # Contract helpers and endpoints
 # ---------------------------------------------------------------------------

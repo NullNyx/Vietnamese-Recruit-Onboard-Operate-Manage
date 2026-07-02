@@ -63,7 +63,9 @@ async def test_generate_contract_draft_and_advance_status():
     candidate_id = uuid4()
     employee_id = uuid4()
     user = User(id=uuid4(), email="hr@example.com", role=UserRole.ADMIN)
-    process = SimpleNamespace(id=process_id, candidate_id=candidate_id, employee_id=employee_id, status="in_progress")
+    process = SimpleNamespace(
+        id=process_id, candidate_id=candidate_id, employee_id=employee_id, status="in_progress"
+    )
     employee = SimpleNamespace(id=employee_id, full_name="Nguyen Van A", employee_code="NV-001")
     draft = SimpleNamespace(
         id=uuid4(),

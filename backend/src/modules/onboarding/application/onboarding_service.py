@@ -1000,9 +1000,7 @@ class OnboardingService:
                         candidate_id=process.candidate_id,
                         previous_value=previous,
                         new_value=self._contract_snapshot(draft),
-                        change_summary=(
-                            f"Contract draft {draft.id} updated by {actor.email}"
-                        ),
+                        change_summary=(f"Contract draft {draft.id} updated by {actor.email}"),
                         success=True,
                     )
                 )
