@@ -99,17 +99,19 @@ congratulations email → onboarding. This is slice 1, not the product boundary.
 _Avoid_: treating this as the only flow
 
 **Onboarding**:
-A checklist-driven process managed by HR, rooted in Onboarding Case. No
-Employee record is created automatically during onboarding.
+A checklist-driven process managed by HR, rooted in Onboarding Case. Candidate
+accepted creates an Onboarding Case; HR confirms completion before any
+Employee record is created or activated.
 _Avoid_: Promotion, Hiring
 
 **Onboarding Case**:
-Root entity for the onboarding process. Status: in_progress → completed /
-cancelled. Candidate stays a Candidate until HR closes the case.
+Root entity for the onboarding process. Status: in_progress → complete /
+cancelled. Case becomes ready for completion after checklist readiness, then HR
+confirms completion and the Employee record is created or activated.
 
 **Onboarding Task**:
 A single item in an Onboarding Case checklist.
-Status: pending / in_progress / completed / blocked.
+Status: pending / done.
 
 ## AI Capabilities
 

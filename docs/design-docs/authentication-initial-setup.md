@@ -55,8 +55,3 @@ Recommended setup flow:
 * Every additional user must be created by an administrator.
 * AI provider configuration is optional and can be modified later.
 * The system must remain usable even when no AI provider is configured.
-
----
-
-> **Note về implementation hiện tại (2026-07-01):**
-> Identity module dùng Google OAuth (không phải username/password), roles `ADMIN`/`USER` (không phải SUPER_ADMIN/HR_ADMIN/HR_STAFF), bootstrap admin qua biến môi trường `AUTH_SUPER_ADMIN_EMAIL` (không phải wizard). Tài liệu này là thiết kế mục tiêu — implementation có thể khác khi viết.

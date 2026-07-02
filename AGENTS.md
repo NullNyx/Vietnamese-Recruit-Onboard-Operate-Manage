@@ -16,6 +16,20 @@ cookie-based JWT auth · MinIO storage · pytest+Hypothesis / Vitest+fast-check.
    If your work contradicts an ADR, surface it explicitly — do not silently override.
 3. Read `docs/agents/` for issue-tracker, triage-label, and domain-doc rules.
 
+## MCP routing
+
+Use MCP only when it beats local files or browser work:
+
+- `atlassian`: Jira Tasks and Jira-linked work. Use the direct Jira fast paths in
+  `docs/agents/issue-tracker.md`; re-read after create/update to verify labels.
+- `codegraph`: repo symbol/context/impact/trace. Prefer before raw read/grep for
+  structure questions.
+- `playwright`: browser/UI verification after frontend changes.
+- `github` / `gitlab`: remote host metadata, PRs, and repo-hosted workflow.
+
+If MCP choice is obvious, use it directly. If local code answers it faster, stay
+local.
+
 ## Current scope snapshot
 
 - Scope now is HR-only: no employee login, no employee self-service surface.
@@ -25,9 +39,6 @@ cookie-based JWT auth · MinIO storage · pytest+Hypothesis / Vitest+fast-check.
   routes.
 - Live backend routers are identity/auth + admin, employee, gmail, recruitment
   (candidate, cv-review, metrics), onboarding, attendance, payslip admin, setup.
-- Use `docs/design-docs/authentication-initial-setup.md` and
-  `docs/superpowers/plans/2026-07-01-scope-refactor.md` as working context when
-  touching auth, setup, or shell work.
 
 ## How skills work (read this — it changes how you respond)
 
@@ -49,7 +60,9 @@ Trigger → skill (triggers are illustrative, not exhaustive; match on meaning):
 | same, but check against project's language/decisions and update docs                                                    | `grill-with-docs`                                               |
 | "viết PRD", "tạo PRD từ context", turn this conversation into a PRD                                                     | `to-prd`                                                        |
 | "chia issue", "tách thành ticket", break a plan/PRD into issues                                                         | `to-issues`                                                     |
-| "triage", "phân loại issue", label/route incoming bugs or requests                                                      | `triage`                                                        |
+| "implement issue", "làm task", "build feature from issue", pick up a spec or Jira task                                  | `implement`                                                     |
+| "code review", "review PR", "xem lại code theo spec"                                                                    | `code-review`                                                   |
+| "triage", "phân loại issue", label/route raw incoming bugs or requests                                                  | `triage`                                                        |
 | "làm theo TDD", "test trước", build a feature/fix bug test-first                                                        | `tdd`                                                           |
 | "debug cái này", "bug", "lỗi", "chậm/regression", diagnose a hard failure                                               | `diagnose`                                                      |
 | "cải thiện kiến trúc", "refactor", find deepening/coupling opportunities                                                | `improve-codebase-architecture`                                 |
@@ -63,8 +76,9 @@ Trigger → skill (triggers are illustrative, not exhaustive; match on meaning):
 | "tiến độ tới đâu", "có tính năng gì", "trạng thái dự án", "tìm hiểu luồng X", project status / feature map / flow trace | Project status routine (below)                                  |
 
 Default flow for a fresh feature: `grill-with-docs` → `to-prd` → `to-issues` →
-`triage` → (`tdd` / `diagnose`). Don't force every step; enter at the stage that
-matches what the user already has.
+`implement` (which runs `/tdd` internally and closes with `/code-review`).
+Use `triage` only for raw incoming issues the user did not create. Don't force
+every step; enter at the stage that matches what the user already has.
 
 ## Reporting project status, features, and flows
 
@@ -121,28 +135,6 @@ queries after the repo context is clear.
 For project status or feature-map answers, still trust `backend/src/main.py` for
 what is live. A symbol existing in Codegraph does not mean its router is wired.
 
-## Taste Skill workflow
-
-Taste Skill is optional frontend guidance for visual quality. Use the installed
-skills only on frontend UI work, and only where they fit this product's HRM nature.
-
-- Use `minimalist-ui` for Vroom HR product surfaces: dashboard, Candidate review,
-  Onboarding Task lists, Employee management, forms, and dense operational views.
-  Keep the UI calm, scannable, accessible, and consistent with shadcn/ui.
-- Use `redesign-existing-projects` when improving an existing screen. Audit first:
-  layout, spacing, hierarchy, content density, responsive behavior, and existing
-  design tokens. Preserve route structure, copy intent, form field names, and data
-  contracts unless the user asks to change them.
-- Do not use Taste Skill's landing-page-heavy defaults for admin/product screens.
-  Avoid cinematic heroes, oversized decorative motion, random GSAP, and marketing
-  composition inside the HRM app.
-- For any frontend implementation, keep this repo's frontend rules higher priority:
-  Next.js 14, TypeScript, Tailwind, shadcn/ui, lucide icons when already used, no
-  card-in-card layouts, stable responsive dimensions, and no overlapping text.
-- Before finishing UI work, run the app when feasible and verify desktop/mobile
-  layouts visually; fix text overflow, contrast failures, broken spacing, and
-  unexpected horizontal scroll.
-
 ## Documentation rules
 
 Create docs lazily — only when there is something real to record.
@@ -174,38 +166,6 @@ Allowed exception layouts (explicit user approval):
 /docs/<owner-or-team>/...      supplemental implementation-facing working docs
 /docs/project/                 product strategy, foundation, gap analysis, change plans
 ```
-
-### `docs/project/` conventions (when activated)
-
-Read `docs/project/foundation/overview.md` and `docs/project/changes/README.md`
-for full structure. Key rules:
-
-- **Numbered naming** — files use `NN-description.md` (01-, 02-, etc.) for
-  ordering. When inserting between existing files, renumber subsequent files.
-- **Language** — prose in Vietnamese for human contributors; canonical English
-  terms (from `CONTEXT.md`) kept verbatim.
-- **`foundation/`** — product statement, personas, user journeys, requirements,
-  architecture principles, AI boundary, UX tenets, security principles, data model,
-  open-source strategy. These define the intended product.
-- **`foundation/overview.md`** — index of all foundation files.
-- **`changes/`** — planned modifications tracked as numbered change docs
-  (e.g. `01-ux-redesign.md`). Each change doc maps foundation refs, current state,
-  desired state, and implementation steps.
-- **`changes/00-file-lifecycle.md`** — file state policy (Active / Superseded /
-  Obsolete / Removed). Before marking any file obsolete, check this doc.
-- **`05-gap-analysis.md`** — compares current codebase against foundation.
-  Priority list: UX redesign (1), onboarding consumer (2), product narrative
-  (3), backup/restore (4), contribution guide (5).
-- **File lifecycle** — don't delete stale files; mark them `SUPERSEDED` or
-  `OBSOLETE` per lifecycle doc. When renaming, update all cross-references.
-
-## Task plan discipline
-
-When implementing work from a plan under `docs/superpowers/plans/` or
-`docs/project/changes/`, update the checkbox markers as you go:
-- `- [ ]` → `- [x]` when a sub-task is complete
-- Do **not** batch-tick all boxes at the end; tick as each step ships
-- This keeps plan files truth-aligned with code, not backlog.
 
 ## Git: branch, commit, push, PR
 
@@ -284,6 +244,12 @@ infrastructure/` with `container.py` for DI, matching existing modules.
 ### Issue tracker
 
 Jira Tasks via Atlassian MCP. See `docs/agents/issue-tracker.md`.
+
+PRD parents and implementation slices use different names:
+
+- parent spec / PRD ticket: prefix summary with `[PRD]` or `[Spec]`
+- implementation slice: prefix summary with `[Slice]`
+- do not treat parent PRD ticket as implementation work
 
 Quick Jira checks:
 
