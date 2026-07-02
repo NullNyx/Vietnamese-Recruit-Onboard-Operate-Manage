@@ -137,6 +137,8 @@ class OnboardingDocument(SQLModel, table=True):
     uploaded_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     verified_by_hr_id: UUID | None = Field(default=None, foreign_key="users.id")
     verified_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    promoted_employee_document_id: UUID | None = Field(default=None, index=True)
+    promoted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     ai_extraction: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -170,6 +172,8 @@ class OnboardingContractDraft(SQLModel, table=True):
     revision: int = Field(default=1, nullable=False)
     created_by: UUID | None = Field(default=None, foreign_key="users.id")
     updated_by: UUID | None = Field(default=None, foreign_key="users.id")
+    promoted_contract_id: UUID | None = Field(default=None, index=True)
+    promoted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

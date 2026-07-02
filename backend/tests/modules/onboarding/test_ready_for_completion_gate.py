@@ -21,6 +21,12 @@ from uuid import UUID, uuid4
 import pytest
 
 from src.modules.employee.domain.entities import Employee
+from src.modules.employee.domain.contract import Contract
+from src.modules.employee.domain.entities import EmployeeDocument
+from src.modules.onboarding.domain.entities import (
+    OnboardingContractDraft,
+    OnboardingDocument,
+)
 from src.modules.identity.domain.entities import User, UserRole
 from src.modules.onboarding.application.onboarding_service import OnboardingService
 from src.modules.onboarding.domain.entities import (
@@ -367,3 +373,260 @@ def test_confirm_completion_rejects_unknown_process() -> None:
     """Confirm on missing process raises OnboardingProcessNotFoundError."""
     with pytest.raises(OnboardingProcessNotFoundError):
         asyncio.run(_run_confirm_unknown())
+
+# ---------------------------------------------------------------------------
+# In-memory fakes for employee document and contract repos
+# ---------------------------------------------------------------------------
+class FakeEmployeeDocumentRepo:
+    def __init__(self) -> None:
+        self.documents: list[EmployeeDocument] = []
+    async def create(self, doc: EmployeeDocument) -> EmployeeDocument:
+        self.documents.append(doc)
+        return doc
+
+class FakeEmployeeContractRepo:
+    def __init__(self) -> None:
+        self.contracts: list[Contract] = []
+    async def create(self, contract: Contract) -> Contract:
+        self.contracts.append(contract)
+        return contract
+
+
+# ---------------------------------------------------------------------------
+# Helper: build service with promotion repos
+# ---------------------------------------------------------------------------
+def _build_service_with_promotion(
+    process_repo: FakeProcessRepo,
+    task_repo: FakeTaskRepo,
+    audit_repo: FakeAuditRepo,
+    employee_repo: FakeEmployeeRepo,
+    session: FakeSession,
+    doc_repo: OnboardingDocumentRepository | None = None,
+    contract_repo: OnboardingContractRepository | None = None,
+    emp_doc_repo: FakeEmployeeDocumentRepo | None = None,
+    emp_contract_repo: FakeEmployeeContractRepo | None = None,
+) -> OnboardingService:
+    return OnboardingService(
+        process_repo=process_repo,  # type: ignore[arg-type]
+        task_repo=task_repo,  # type: ignore[arg-type]
+        audit_repo=audit_repo,  # type: ignore[arg-type]
+        employee_repo=employee_repo,  # type: ignore[arg-type]
+        session=session,  # type: ignore[arg-type]
+        document_repo=doc_repo,
+        contract_repo=contract_repo,
+        employee_document_repo=emp_doc_repo,
+        employee_contract_repo=emp_contract_repo,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fake OnboardingDocumentRepository / OnboardingContractRepository with state
+# ---------------------------------------------------------------------------
+class FakeOnboardingDocumentRepo:
+    def __init__(self, docs: list[OnboardingDocument] | None = None) -> None:
+        self.docs = docs or []
+    async def list_by_process(self, process_id: UUID) -> list[OnboardingDocument]:
+        return [d for d in self.docs if d.process_id == process_id]
+    async def update(self, doc: OnboardingDocument) -> OnboardingDocument:
+        for i, d in enumerate(self.docs):
+            if d.id == doc.id:
+                self.docs[i] = doc
+                return doc
+        self.docs.append(doc)
+        return doc
+
+class FakeOnboardingContractRepo:
+    def __init__(self, draft: OnboardingContractDraft | None = None) -> None:
+        self.draft = draft
+    async def get_by_process(self, process_id: UUID) -> OnboardingContractDraft | None:
+        return self.draft if self.draft and self.draft.process_id == process_id else None
+    async def update(self, draft: OnboardingContractDraft) -> OnboardingContractDraft:
+        self.draft = draft
+        return draft
+
+
+# ---------------------------------------------------------------------------
+# Test: promotion of verified documents
+# ---------------------------------------------------------------------------
+async def _run_confirm_with_verified_docs() -> tuple[
+    OnboardingProcess, FakeAuditRepo, FakeEmployeeDocumentRepo, FakeOnboardingDocumentRepo
+]:
+    process_repo = FakeProcessRepo()
+    task_repo = FakeTaskRepo()
+    audit_repo = FakeAuditRepo()
+    employee_repo = FakeEmployeeRepo()
+    emp_doc_repo = FakeEmployeeDocumentRepo()
+    emp_contract_repo = FakeEmployeeContractRepo()
+    session = FakeSession()
+
+    employee = _make_employee(employee_repo, setup_complete=True)
+
+    process = OnboardingProcess(
+        candidate_id=uuid4(),
+        employee_id=employee.id,
+        status=OnboardingStatus.READY_FOR_COMPLETION.value,
+    )
+    await process_repo.create(process)
+
+    tasks = _make_tasks(process.id, done_count=4, total=4)
+    await task_repo.create_many(tasks)
+
+    doc_a = OnboardingDocument(
+        process_id=process.id,
+        document_type="cccd",
+        display_name="CCCD",
+        status="verified",
+        file_name="cccd.pdf",
+        storage_path="onboarding/cccd.pdf",
+        file_size=12345,
+        mime_type="application/pdf",
+        uploaded_by_hr_id=uuid4(),
+        uploaded_at=datetime.now(UTC),
+        verified_by_hr_id=uuid4(),
+        verified_at=datetime.now(UTC),
+    )
+    doc_b = OnboardingDocument(
+        process_id=process.id,
+        document_type="degree",
+        display_name="Degree",
+        status="pending",
+    )
+    onboarding_doc_repo = FakeOnboardingDocumentRepo(docs=[doc_a, doc_b])
+
+    service = _build_service_with_promotion(
+        process_repo, task_repo, audit_repo, employee_repo, session,
+        doc_repo=onboarding_doc_repo,
+        emp_doc_repo=emp_doc_repo,
+        emp_contract_repo=emp_contract_repo,
+    )
+    actor = _admin_actor()
+
+    await service.confirm_completion(process.id, actor)
+    return process, audit_repo, emp_doc_repo, onboarding_doc_repo
+
+
+def test_promotes_verified_documents() -> None:
+    """Verified onboarding docs become Employee Documents on confirm."""
+    process, audit_repo, emp_doc_repo, onboarding_doc_repo = asyncio.run(
+        _run_confirm_with_verified_docs()
+    )
+
+    # One EmployeeDocument created (only doc_a was verified)
+    assert len(emp_doc_repo.documents) == 1
+    emp_doc = emp_doc_repo.documents[0]
+    assert emp_doc.document_type == "cccd"
+    assert emp_doc.status == "verified"
+    assert emp_doc.employee_id == process.employee_id
+
+    # Onboarding doc marked promoted
+    docs = asyncio.run(onboarding_doc_repo.list_by_process(process.id))
+    promoted = [d for d in docs if d.promoted_at is not None]
+    assert len(promoted) == 1
+    assert promoted[0].promoted_employee_document_id == emp_doc.id
+
+    # Audit entries include document_promoted
+    op_types = [e.operation_type for e in audit_repo.entries]
+    assert "document_promoted" in op_types
+
+
+# ---------------------------------------------------------------------------
+# Test: promotion of signed contract
+# ---------------------------------------------------------------------------
+async def _run_confirm_with_signed_contract() -> tuple[
+    OnboardingProcess, FakeAuditRepo, FakeEmployeeContractRepo
+]:
+    process_repo = FakeProcessRepo()
+    task_repo = FakeTaskRepo()
+    audit_repo = FakeAuditRepo()
+    employee_repo = FakeEmployeeRepo()
+    emp_doc_repo = FakeEmployeeDocumentRepo()
+    emp_contract_repo = FakeEmployeeContractRepo()
+    session = FakeSession()
+
+    employee = _make_employee(employee_repo, setup_complete=True)
+
+    process = OnboardingProcess(
+        candidate_id=uuid4(),
+        employee_id=employee.id,
+        status=OnboardingStatus.READY_FOR_COMPLETION.value,
+    )
+    await process_repo.create(process)
+
+    tasks = _make_tasks(process.id, done_count=4, total=4)
+    await task_repo.create_many(tasks)
+
+    draft = OnboardingContractDraft(
+        process_id=process.id,
+        contract_type="labor",
+        content="Contract content",
+        status="signed",
+        created_by=uuid4(),
+        updated_by=uuid4(),
+    )
+    onboarding_contract_repo = FakeOnboardingContractRepo(draft=draft)
+
+    service = _build_service_with_promotion(
+        process_repo, task_repo, audit_repo, employee_repo, session,
+        contract_repo=onboarding_contract_repo,
+        emp_doc_repo=emp_doc_repo,
+        emp_contract_repo=emp_contract_repo,
+    )
+    actor = _admin_actor()
+
+    await service.confirm_completion(process.id, actor)
+    return process, audit_repo, emp_contract_repo
+
+
+def test_promotes_signed_contract() -> None:
+    """Signed onboarding contract draft becomes Employee Contract."""
+    process, audit_repo, emp_contract_repo = asyncio.run(
+        _run_confirm_with_signed_contract()
+    )
+
+    assert len(emp_contract_repo.contracts) == 1
+    contract = emp_contract_repo.contracts[0]
+    assert contract.contract_type == "labor"
+    assert contract.status == "active"
+    assert contract.employee_id == process.employee_id
+    assert contract.content == "Contract content"
+
+    op_types = [e.operation_type for e in audit_repo.entries]
+    assert "contract_promoted" in op_types
+
+
+# ---------------------------------------------------------------------------
+# Test: idempotent — re-running confirm raises (already COMPLETE)
+# ---------------------------------------------------------------------------
+async def _run_confirm_idempotent() -> None:
+    process_repo = FakeProcessRepo()
+    task_repo = FakeTaskRepo()
+    audit_repo = FakeAuditRepo()
+    employee_repo = FakeEmployeeRepo()
+    emp_doc_repo = FakeEmployeeDocumentRepo()
+    emp_contract_repo = FakeEmployeeContractRepo()
+    session = FakeSession()
+
+    employee = _make_employee(employee_repo, setup_complete=True)
+
+    process = OnboardingProcess(
+        candidate_id=uuid4(),
+        employee_id=employee.id,
+        status=OnboardingStatus.COMPLETE.value,
+    )
+    await process_repo.create(process)
+
+    tasks = _make_tasks(process.id, done_count=4, total=4)
+    await task_repo.create_many(tasks)
+
+    service = _build_service_with_promotion(
+        process_repo, task_repo, audit_repo, employee_repo, session,
+    )
+    actor = _admin_actor()
+
+    await service.confirm_completion(process.id, actor)
+
+
+def test_confirm_idempotent_raises_on_complete() -> None:
+    """Re-confirming a COMPLETE process raises OnboardingActivationError."""
+    with pytest.raises(OnboardingActivationError):
+        asyncio.run(_run_confirm_idempotent())

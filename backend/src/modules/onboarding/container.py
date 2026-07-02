@@ -56,6 +56,8 @@ from uuid import UUID, uuid4
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from src.modules.employee.infrastructure.contract_repository import ContractRepository
+from src.modules.employee.infrastructure.document_repository import DocumentRepository
 from src.modules.employee.infrastructure.employee_repository import EmployeeRepository
 from src.modules.identity.container import get_db_session
 from src.modules.onboarding.application.onboarding_service import OnboardingService
@@ -109,6 +111,8 @@ def _build_service(session: AsyncSession) -> OnboardingService:
         document_repo=OnboardingDocumentRepository(session),
         contract_repo=OnboardingContractRepository(session),
         employee_repo=EmployeeRepository(session),
+        employee_document_repo=DocumentRepository(session),
+        employee_contract_repo=ContractRepository(session),
         session=session,
     )
 
