@@ -5,13 +5,11 @@ import {
   listOnboardingDocuments,
   uploadOnboardingDocument,
   verifyOnboardingDocument,
-  onboardingKeys,
   type OnboardingDocument,
 } from '@/lib/api/onboarding';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
-  AlertCircle,
   Check,
   FileText,
   Loader2,
@@ -21,7 +19,6 @@ import {
   RotateCcw,
   ThumbsUp,
   ThumbsDown,
-  Info,
   FileWarning,
 } from 'lucide-react';
 import { useRef, useState } from 'react';

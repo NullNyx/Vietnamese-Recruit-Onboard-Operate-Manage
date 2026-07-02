@@ -11,6 +11,7 @@ from sqlmodel import select
 
 from src.modules.onboarding.domain.entities import OnboardingDocument
 
+
 class OnboardingDocumentRepository:
     """Handles OnboardingDocument persistence using async SQLAlchemy sessions."""
 
