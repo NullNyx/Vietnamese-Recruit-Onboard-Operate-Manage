@@ -74,7 +74,6 @@ from src.modules.onboarding.api.schemas import (
 from src.modules.onboarding.application.onboarding_service import OnboardingService
 from src.modules.onboarding.container import get_onboarding_service
 from src.modules.onboarding.domain.enums import OnboardingStatus, OnboardingTaskStatus
-from src.modules.onboarding.domain.exceptions import OnboardingContractNotFoundError
 from src.modules.onboarding.infrastructure.document_repository import OnboardingDocumentRepository
 from src.modules.recruitment.domain.entities import Candidate
 from src.modules.recruitment.infrastructure.repositories import (
@@ -589,8 +588,9 @@ async def _resolve_contract_draft(
 ) -> ContractDraftResponse | None:
     """Load the contract draft for an onboarding process, if one exists."""
     try:
-        from src.modules.onboarding.domain.entities import OnboardingContractDraft
-        from src.modules.onboarding.infrastructure.contract_repository import OnboardingContractRepository
+        from src.modules.onboarding.infrastructure.contract_repository import (
+            OnboardingContractRepository,
+        )
 
         repo = OnboardingContractRepository(db_session)
         draft = await repo.get_by_process(process_id)
