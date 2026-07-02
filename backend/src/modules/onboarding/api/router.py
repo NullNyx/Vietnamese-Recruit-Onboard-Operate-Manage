@@ -456,6 +456,7 @@ async def update_employee_setup(
 # Document management endpoints
 # ---------------------------------------------------------------------------
 
+
 @onboarding_router.get(
     "/processes/{process_id}/documents",
     response_model=list[OnboardingDocumentResponse],
@@ -500,6 +501,7 @@ async def upload_document(
     (for AI-simulated or placeholder uploads).
     """
     from fastapi import HTTPException
+
     repo = OnboardingDocumentRepository(db_session)
     doc = await repo.get_by_id(document_id)
     if doc is None:
@@ -511,6 +513,7 @@ async def upload_document(
         try:
             from src.modules.employee.container import get_minio_client
             from src.modules.employee.infrastructure.minio_client import MinIOClient
+
             minio: MinIOClient = get_minio_client()
             await minio.upload_file(
                 bucket_path,
@@ -555,6 +558,7 @@ async def verify_document(
     doc = await repo.get_by_id(document_id)
     if doc is None:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="Document not found")
     if body.verified:
         doc.status = "verified"

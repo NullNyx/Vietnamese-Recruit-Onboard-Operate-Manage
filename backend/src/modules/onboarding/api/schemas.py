@@ -86,8 +86,6 @@ class EmployeeSetupUpdate(BaseModel):
     start_date: date | None = None
 
 
-
-
 class OnboardingDocumentResponse(BaseModel):
     """A single document item in the onboarding document checklist."""
 
@@ -125,6 +123,7 @@ class DocumentVerifyRequest(BaseModel):
 
     verified: bool
     reject_reason: str | None = None
+
 
 # ---------------------------------------------------------------------------
 # Response schemas
