@@ -38,6 +38,7 @@ from src.modules.employee.domain.entities import Employee
 from src.modules.employee.infrastructure.employee_repository import EmployeeRepository
 from src.modules.identity.domain.entities import User, UserRole
 from src.modules.onboarding.domain.entities import (
+    OnboardingContractDraft,
     OnboardingAuditLog,
     OnboardingDocument,
     OnboardingProcess,
@@ -54,12 +55,14 @@ from src.modules.onboarding.domain.exceptions import (
     InvalidTaskStatusError,
     OnboardingActivationError,
     OnboardingAuthorizationError,
+    OnboardingContractNotFoundError,
     OnboardingError,
     OnboardingProcessAlreadyCompletedError,
     OnboardingProcessNotFoundError,
     OnboardingTaskNotFoundError,
 )
 from src.modules.onboarding.infrastructure.audit_repository import OnboardingAuditRepository
+from src.modules.onboarding.infrastructure.contract_repository import OnboardingContractRepository
 from src.modules.onboarding.infrastructure.document_repository import OnboardingDocumentRepository
 from src.modules.onboarding.infrastructure.process_repository import OnboardingProcessRepository
 from src.modules.onboarding.infrastructure.task_repository import OnboardingTaskRepository
@@ -201,6 +204,22 @@ class ProcessDetail:
     tasks: list[ProcessTaskDetail] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class ContractDraftDetail:
+    """A single onboarding contract draft projected for the UI."""
+
+    process_id: UUID
+    id: UUID
+    contract_type: str
+    content: str | None
+    status: str
+    revision: int
+    created_by: UUID | None
+    updated_by: UUID | None
+    created_at: datetime
+    updated_at: datetime
+
+
 class OnboardingService:
     """Creates and advances onboarding processes and employee activation.
 
@@ -226,6 +245,7 @@ class OnboardingService:
         employee_repo: EmployeeRepository,
         session: AsyncSession,
         document_repo: OnboardingDocumentRepository | None = None,
+        contract_repo: OnboardingContractRepository | None = None,
     ) -> None:
         """Initialize the service with its repositories and session.
 
@@ -242,6 +262,7 @@ class OnboardingService:
         self.task_repo = task_repo
         self.audit_repo = audit_repo
         self.document_repo = document_repo
+        self.contract_repo = contract_repo
         self.employee_repo = employee_repo
         self.session = session
 
@@ -414,6 +435,23 @@ class OnboardingService:
                 for document_type, display_name, is_required in DOCUMENT_TEMPLATE
             ]
             await self.document_repo.create_many(documents)
+
+        if self.contract_repo is not None:
+            contract = OnboardingContractDraft(
+                process_id=process.id,
+                contract_type="labor",
+                content=self._build_contract_placeholder(
+                    candidate_name=full_name,
+                    employee_code=employee.employee_code,
+                    process_id=process.id,
+                    candidate_id=candidate_id,
+                ),
+                status="draft",
+                revision=1,
+                created_by=None,
+                updated_by=None,
+            )
+            await self.contract_repo.create(contract)
 
         creation_audit = OnboardingAuditLog(
             operation_type=_OP_PROCESS_CREATED,
@@ -900,6 +938,203 @@ class OnboardingService:
             await self.session.rollback()
             raise OnboardingError(f"Failed to update employee setup: {exc}") from exc
 
+    async def get_contract_draft(self, process_id: UUID) -> ContractDraftDetail:
+        """Return contract draft for an onboarding process."""
+        process = await self.process_repo.get_by_id(process_id)
+        if process is None:
+            raise OnboardingProcessNotFoundError()
+        if self.contract_repo is None:
+            raise OnboardingContractNotFoundError()
+
+        draft = await self.contract_repo.get_by_process(process_id)
+        if draft is None:
+            raise OnboardingContractNotFoundError()
+        return self._contract_detail(draft)
+
+    async def update_contract_draft(
+        self,
+        process_id: UUID,
+        actor: User,
+        data: dict[str, Any],
+    ) -> ContractDraftDetail:
+        """Update contract draft content and/or type."""
+        if actor.role != UserRole.ADMIN:
+            raise OnboardingAuthorizationError()
+        if self.contract_repo is None:
+            raise OnboardingContractNotFoundError()
+
+        try:
+            process = await self.process_repo.get_for_update(process_id)
+            if process is None:
+                raise OnboardingProcessNotFoundError()
+            draft = await self.contract_repo.get_by_process(process_id)
+            if draft is None:
+                raise OnboardingContractNotFoundError()
+            if process.status == OnboardingStatus.COMPLETE.value:
+                raise OnboardingProcessAlreadyCompletedError(
+                    "Cannot edit contract for a completed process"
+                )
+
+            previous = self._contract_snapshot(draft)
+            changed = False
+
+            if "contract_type" in data and data["contract_type"] is not None:
+                draft.contract_type = str(data["contract_type"])
+                changed = True
+            if "content" in data and data["content"] is not None:
+                draft.content = str(data["content"])
+                changed = True
+
+            if changed:
+                draft.revision += 1
+                draft.updated_by = actor.id
+                draft.updated_at = datetime.now(UTC)
+                await self.contract_repo.update(draft)
+                await self._append_audit(
+                    OnboardingAuditLog(
+                        user_id=actor.id,
+                        actor_email=actor.email,
+                        operation_type="contract_draft_updated",
+                        entity_type="contract_draft",
+                        entity_id=draft.id,
+                        candidate_id=process.candidate_id,
+                        previous_value=previous,
+                        new_value=self._contract_snapshot(draft),
+                        change_summary=(
+                            f"Contract draft {draft.id} updated by {actor.email}"
+                        ),
+                        success=True,
+                    )
+                )
+                await self.session.commit()
+            return self._contract_detail(draft)
+        except OnboardingError:
+            await self.session.rollback()
+            raise
+        except Exception as exc:
+            await self.session.rollback()
+            raise OnboardingError(f"Failed to update contract draft: {exc}") from exc
+
+    async def generate_contract_draft(
+        self,
+        process_id: UUID,
+        actor: User,
+    ) -> ContractDraftDetail:
+        """Fill contract draft with placeholder AI output."""
+        if actor.role != UserRole.ADMIN:
+            raise OnboardingAuthorizationError()
+        if self.contract_repo is None:
+            raise OnboardingContractNotFoundError()
+
+        try:
+            process = await self.process_repo.get_for_update(process_id)
+            if process is None:
+                raise OnboardingProcessNotFoundError()
+            draft = await self.contract_repo.get_by_process(process_id)
+            if draft is None:
+                raise OnboardingContractNotFoundError()
+
+            employee = await self.employee_repo.get_by_id(process.employee_id)
+            candidate_name = employee.full_name if employee else "Candidate"
+            draft.content = self._build_contract_placeholder(
+                candidate_name=candidate_name,
+                employee_code=employee.employee_code if employee else None,
+                process_id=process.id,
+                candidate_id=process.candidate_id,
+            )
+            draft.status = draft.status or OnboardingStatus.IN_PROGRESS.value
+            draft.revision += 1
+            draft.updated_by = actor.id
+            draft.updated_at = datetime.now(UTC)
+            await self.contract_repo.update(draft)
+            await self._append_audit(
+                OnboardingAuditLog(
+                    user_id=actor.id,
+                    actor_email=actor.email,
+                    operation_type="contract_draft_generated",
+                    entity_type="contract_draft",
+                    entity_id=draft.id,
+                    candidate_id=process.candidate_id,
+                    previous_value=None,
+                    new_value=self._contract_snapshot(draft),
+                    change_summary=f"Contract draft {draft.id} generated by {actor.email}",
+                    success=True,
+                )
+            )
+            await self.session.commit()
+            return self._contract_detail(draft)
+        except OnboardingError:
+            await self.session.rollback()
+            raise
+        except Exception as exc:
+            await self.session.rollback()
+            raise OnboardingError(f"Failed to generate contract draft: {exc}") from exc
+
+    async def update_contract_status(
+        self,
+        process_id: UUID,
+        actor: User,
+        status: str,
+    ) -> ContractDraftDetail:
+        """Advance contract draft status."""
+        if actor.role != UserRole.ADMIN:
+            raise OnboardingAuthorizationError()
+        if self.contract_repo is None:
+            raise OnboardingContractNotFoundError()
+
+        allowed = {
+            "draft": {"ready"},
+            "ready": {"sent"},
+            "sent": {"signed"},
+            "signed": set(),
+        }
+
+        try:
+            process = await self.process_repo.get_for_update(process_id)
+            if process is None:
+                raise OnboardingProcessNotFoundError()
+            draft = await self.contract_repo.get_by_process(process_id)
+            if draft is None:
+                raise OnboardingContractNotFoundError()
+            if status not in allowed:
+                raise OnboardingError(f"Invalid contract status: {status}")
+            if status != draft.status and status not in allowed[draft.status]:
+                raise OnboardingError(
+                    f"Invalid contract status transition: {draft.status} -> {status}"
+                )
+
+            previous = self._contract_snapshot(draft)
+            if status != draft.status:
+                draft.status = status
+                draft.revision += 1
+                draft.updated_by = actor.id
+                draft.updated_at = datetime.now(UTC)
+                await self.contract_repo.update(draft)
+                await self._append_audit(
+                    OnboardingAuditLog(
+                        user_id=actor.id,
+                        actor_email=actor.email,
+                        operation_type="contract_status_updated",
+                        entity_type="contract_draft",
+                        entity_id=draft.id,
+                        candidate_id=process.candidate_id,
+                        previous_value=previous,
+                        new_value=self._contract_snapshot(draft),
+                        change_summary=(
+                            f"Contract draft {draft.id} status set to {status} by {actor.email}"
+                        ),
+                        success=True,
+                    )
+                )
+                await self.session.commit()
+            return self._contract_detail(draft)
+        except OnboardingError:
+            await self.session.rollback()
+            raise
+        except Exception as exc:
+            await self.session.rollback()
+            raise OnboardingError(f"Failed to update contract status: {exc}") from exc
+
     async def list_processes(
         self,
         status: str | None,
@@ -1124,3 +1359,46 @@ class OnboardingService:
             "ready_for_completion": ready,
             "complete": complete,
         }
+
+    def _contract_detail(self, draft: OnboardingContractDraft) -> ContractDraftDetail:
+        return ContractDraftDetail(
+            process_id=draft.process_id,
+            id=draft.id,
+            contract_type=draft.contract_type,
+            content=draft.content,
+            status=draft.status,
+            revision=getattr(draft, "revision", 1),
+            created_by=draft.created_by,
+            updated_by=draft.updated_by,
+            created_at=draft.created_at,
+            updated_at=draft.updated_at,
+        )
+
+    def _contract_snapshot(self, draft: OnboardingContractDraft) -> dict[str, Any]:
+        return {
+            "contract_type": draft.contract_type,
+            "content": draft.content,
+            "status": draft.status,
+            "revision": getattr(draft, "revision", 1),
+        }
+
+    def _build_contract_placeholder(
+        self,
+        *,
+        candidate_name: str,
+        employee_code: str | None,
+        process_id: UUID,
+        candidate_id: UUID,
+    ) -> str:
+        code_line = f"Ma NV: {employee_code}" if employee_code else "Ma NV: [pending]"
+        return "\n".join(
+            [
+                "BAN THAO HOP DONG LAO DONG",
+                f"Ung vien: {candidate_name}",
+                code_line,
+                f"Process: {process_id}",
+                f"Candidate: {candidate_id}",
+                "",
+                "Noi dung AI placeholder: cap nhat dieu khoan, muc luong, ngay bat dau.",
+            ]
+        )

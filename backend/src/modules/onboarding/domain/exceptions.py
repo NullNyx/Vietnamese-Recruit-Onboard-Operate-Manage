@@ -219,3 +219,14 @@ class InactiveEmployeeAccessError(OnboardingError):
         if employee_id is not None:
             self.message = f"Employee record {employee_id} is not active"
         super().__init__(self.message)
+
+class OnboardingContractNotFoundError(OnboardingError):
+    """Contract draft for the onboarding process does not exist.
+
+    Raised when a contract draft operation targets a process ID that has
+    no associated contract draft.
+    """
+
+    status_code = 404
+    error_code = "ONBOARDING_CONTRACT_NOT_FOUND"
+    message = "Onboarding contract draft not found"

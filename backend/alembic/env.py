@@ -48,6 +48,7 @@ from src.modules.onboarding.domain.entities import (  # noqa: E402, F401
     OnboardingDocument,
     OnboardingProcess,
     OnboardingTask,
+ OnboardingContractDraft,
 )
 from src.modules.assistant.domain.entities import (  # noqa: E402, F401
     AssistantToolConfig,

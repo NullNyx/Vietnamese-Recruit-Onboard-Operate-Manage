@@ -69,6 +69,7 @@ from src.modules.onboarding.infrastructure.audit_repository import OnboardingAud
 from src.modules.onboarding.infrastructure.document_repository import OnboardingDocumentRepository
 from src.modules.onboarding.infrastructure.process_repository import OnboardingProcessRepository
 from src.modules.onboarding.infrastructure.task_repository import OnboardingTaskRepository
+from src.modules.onboarding.infrastructure.contract_repository import OnboardingContractRepository
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,7 @@ def _build_service(session: AsyncSession) -> OnboardingService:
         task_repo=OnboardingTaskRepository(session),
         audit_repo=OnboardingAuditRepository(session),
         document_repo=OnboardingDocumentRepository(session),
+        contract_repo=OnboardingContractRepository(session),
         employee_repo=EmployeeRepository(session),
         session=session,
     )
