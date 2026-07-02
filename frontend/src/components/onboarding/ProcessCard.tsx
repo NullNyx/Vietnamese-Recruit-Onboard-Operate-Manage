@@ -33,7 +33,7 @@ function getReadiness(process: OnboardingProcess) {
     };
     const missingCount = process.missing_setup_fields.length;
     const firstMissing = fieldMap[process.missing_setup_fields[0]] || process.missing_setup_fields[0];
-    
+
     return {
       badgeText: "Thiếu Setup",
       badgeColor: "bg-amber-100 text-amber-700",
@@ -48,6 +48,15 @@ function getReadiness(process: OnboardingProcess) {
       badgeColor: "bg-emerald-100 text-emerald-700",
       icon: Check,
       hint: "Đã kích hoạt",
+    };
+  }
+
+  if (process.status === "ready_for_completion") {
+    return {
+      badgeText: "Sẵn sàng",
+      badgeColor: "bg-emerald-100 text-emerald-800 border border-emerald-300",
+      icon: CheckCircle2,
+      hint: "Có thể kích hoạt ngay",
     };
   }
 

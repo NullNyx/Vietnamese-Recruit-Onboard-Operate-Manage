@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 
 export interface StatCardProps {
@@ -7,6 +8,7 @@ export interface StatCardProps {
   subtitle?: string;
   loading?: boolean;
   emptyLabel?: string;
+  href?: string;
 }
 
 export function StatCard({
@@ -16,11 +18,12 @@ export function StatCard({
   subtitle,
   loading,
   emptyLabel = "Chưa có dữ liệu",
+  href,
 }: StatCardProps) {
   const isEmpty = !loading && value === 0;
 
-  return (
-    <div className="rounded-lg border border-border/20 bg-card p-5">
+  const content = (
+    <div className="rounded-lg border border-border/20 bg-card p-5 transition-colors hover:border-border">
       <div className="flex items-start justify-between">
         <div className="space-y-2">
           <p className="font-label text-xs uppercase tracking-[0.08em] text-muted-foreground">
@@ -48,4 +51,14 @@ export function StatCard({
       </div>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }

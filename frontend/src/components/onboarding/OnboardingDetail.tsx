@@ -1,9 +1,9 @@
 'use client';
 
-import { getOnboardingProcess, onboardingKeys, updateTaskStatus, type OnboardingTask } from '@/lib/api/onboarding';
+import { getOnboardingProcess, onboardingKeys, updateTaskStatus, type OnboardingProcess, type OnboardingTask } from '@/lib/api/onboarding';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Circle, Loader2 } from 'lucide-react';
+import { Check, Circle, Loader2, User, Calendar, Briefcase, BadgeCheck, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -16,11 +16,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmployeeSetupForm } from './EmployeeSetupForm';
+import { getProcessStatusMeta, getTaskReadinessNote } from './onboarding-detail-utils';
 
-interface OnboardingDetailProps {
-  processId: string;
-}
+// ─── Sub-components ──────────────────────────────────────────────────────
 
 function LoadingState() {
   return (
@@ -44,9 +44,173 @@ function ErrorState({ error, onRetry }: { error: Error; onRetry: () => void }) {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
-      <p className="text-sm">Không có task nào</p>
+      <p className="text-sm">Không có dữ liệu</p>
     </div>
   );
+}
+
+// ─── Overview Tab ────────────────────────────────────────────────────────
+
+function OverviewPanel({ process }: { process: OnboardingProcess }) {
+  const initials = process.employee_full_name
+    ?.split(' ')
+    .slice(-2)
+    .map((w) => w[0])
+    .join('') || '?';
+
+  const statusMeta = getProcessStatusMeta(process.status);
+  const allDone = (process.tasks ?? []).length > 0 &&
+    (process.tasks ?? []).every((t) => t.status === 'done');
+  const pct = process.total_count > 0
+    ? Math.round((process.completed_count / process.total_count) * 100)
+    : 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Candidate info card */}
+      <div className="rounded-xl border bg-card p-6">
+        <div className="flex items-start gap-4">
+          <div className="size-12 rounded-xl bg-muted flex items-center justify-center text-lg font-semibold shrink-0">
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0 space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold">{process.employee_full_name}</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">{process.employee_email}</p>
+              </div>
+              <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border shrink-0', statusMeta.badgeClassName)}>
+                <BadgeCheck className="size-3.5" />
+                {statusMeta.label}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-sm pt-1">
+              {process.employee_code && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <User className="size-3.5" />
+                  <span>Mã NV: {process.employee_code}</span>
+                </div>
+              )}
+              {process.accepted_at && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Calendar className="size-3.5" />
+                  <span>Nhận việc: {new Date(process.accepted_at).toLocaleDateString('vi-VN')}</span>
+                </div>
+              )}
+              {process.job_opening && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Briefcase className="size-3.5" />
+                  <span>Vị trí: {process.job_opening}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress */}
+      <div className="rounded-xl border bg-card p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium">Tiến độ</h4>
+          <span className="text-sm text-muted-foreground">
+            {process.completed_count}/{process.total_count} tasks
+          </span>
+        </div>
+        <div className="h-2.5 rounded-full bg-secondary overflow-hidden">
+          <div
+            className={cn(
+              'h-full transition-all duration-300 rounded-full',
+              allDone ? 'bg-emerald-500' : 'bg-primary',
+            )}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+
+        {/* Readiness indicators */}
+        <div className="flex flex-wrap gap-2 pt-1">
+          {process.missing_setup_fields && process.missing_setup_fields.length > 0 ? (
+            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-600 border border-amber-200">
+              <AlertCircle className="size-3.5" />
+              Thiếu setup: {process.missing_setup_fields.join(', ')}
+            </span>
+          ) : process.status === 'complete' ? (
+            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-200">
+              <Check className="size-3.5" />
+              Đã hoàn tất
+            </span>
+          ) : allDone ? (
+            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-200">
+              <BadgeCheck className="size-3.5" />
+              Sẵn sàng kích hoạt — tất cả task đã hoàn thành
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Employee Setup */}
+      <EmployeeSetupForm process={process} />
+    </div>
+  );
+}
+
+// ─── Tasks Tab ───────────────────────────────────────────────────────────
+
+function TasksPanel({
+  process,
+  onToggle,
+  isPending,
+}: {
+  process: OnboardingProcess;
+  onToggle: (task: OnboardingTask) => void;
+  isPending: boolean;
+}) {
+  const tasks = (process.tasks ?? []).sort((a, b) => a.order_index - b.order_index);
+
+  if (tasks.length === 0) return <EmptyState />;
+
+  return (
+    <div className="space-y-2">
+      {tasks.map((task) => (
+        <button
+          key={task.id}
+          onClick={() => onToggle(task)}
+          disabled={isPending || process.status === 'complete'}
+          className={cn(
+            'w-full flex items-center gap-3 p-4 rounded-xl border bg-card text-left transition-all',
+            task.status === 'done' ? 'hover:bg-muted/50' : 'hover:bg-muted/30',
+            (isPending || process.status === 'complete') && 'opacity-50 cursor-not-allowed',
+          )}
+        >
+          {task.status === 'done' ? (
+            <div className="size-6 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+              <Check className="size-3.5 text-emerald-600" />
+            </div>
+          ) : (
+            <div className="size-6 rounded-full border-2 border-muted-foreground/30 flex items-center justify-center shrink-0">
+              <Circle className="size-3 text-muted-foreground/30" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className={cn('text-sm font-medium', task.status === 'done' && 'line-through text-muted-foreground')}>
+              {task.name}
+            </p>
+            {task.status === 'done' && task.completed_at && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Bởi {task.completed_by_name ?? 'Hệ thống'} · {new Date(task.completed_at).toLocaleString('vi-VN')}
+              </p>
+            )}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────
+
+interface OnboardingDetailProps {
+  processId: string;
 }
 
 export function OnboardingDetail({ processId }: OnboardingDetailProps) {
@@ -82,182 +246,78 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
   if (isError) return <ErrorState error={error as Error} onRetry={() => refetch()} />;
   if (!process) return <EmptyState />;
 
-  const tasks = process.tasks ?? [];
-  const allDone = tasks.length > 0 && tasks.every((t) => t.status === 'done');
-
   const handleToggle = (task: OnboardingTask) => {
     if (process.status === 'complete') return;
     setTaskToUpdate(task);
   };
 
-  const getReadinessNote = (task: OnboardingTask) => {
-    if (task.order_index === 2) {
-      const missing = process?.missing_setup_fields?.filter((f: string) => ['department_id', 'position_id', 'manager_id'].includes(f));
-      if (missing && missing.length > 0) {
-        return { isReady: false, note: "Vui lòng hoàn thiện thông tin phòng ban, vị trí và quản lý trực tiếp trong phần Setup trước khi hoàn thành task này." };
-      }
+  const confirmUpdate = () => {
+    if (taskToUpdate) {
+      updateMutation.mutate({
+        taskId: taskToUpdate.id,
+        status: taskToUpdate.status === 'done' ? 'pending' : 'done',
+      });
+      setTaskToUpdate(null);
     }
-    if (task.order_index === 3) {
-      if (process?.missing_setup_fields?.includes('start_date')) {
-        return { isReady: false, note: "Vui lòng chọn Ngày bắt đầu làm việc trong phần Setup trước khi hoàn thành task này." };
-      }
-    }
-    if (task.order_index === 0) {
-      return { isReady: true, note: "Hãy đảm bảo nhân viên đã ký hợp đồng hợp lệ trước khi xác nhận." };
-    }
-    if (task.order_index === 1) {
-      return { isReady: true, note: "Hãy kiểm tra và đảm bảo nhân viên đã nộp đủ hồ sơ cá nhân theo yêu cầu." };
-    }
-    return { isReady: true, note: "Xác nhận hoàn thành task này?" };
   };
+
+  const getNote = (task: OnboardingTask) => getTaskReadinessNote(process, task);
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="px-6 py-5 border-b">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="size-10 rounded-lg bg-muted flex items-center justify-center text-sm font-medium mt-1">
-              {process.employee_full_name
-                ?.split(' ')
-                .slice(-2)
-                .map((w) => w[0])
-                .join('') || '?'}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold">{process.employee_full_name}</h2>
-              </div>
-              <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <span className="truncate">{process.employee_email}</span>
-                </div>
-                {(process.accepted_at || process.job_opening) && (
-                  <div className="flex items-center gap-3 text-xs">
-                    {process.accepted_at && (
-                      <span>
-                        Nhận việc: {new Date(process.accepted_at).toLocaleDateString('vi-VN')}
-                      </span>
-                    )}
-                    {process.job_opening && <span>Vị trí: {process.job_opening}</span>}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Progress summary */}
-        <div className="mt-5 flex items-center gap-3">
-          <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
-            <div
-              className={cn(
-                'h-full transition-all duration-300',
-                allDone ? 'bg-emerald-500' : 'bg-primary',
-              )}
-              style={{
-                width: `${process.total_count > 0 ? (process.completed_count / process.total_count) * 100 : 0}%`,
-              }}
-            />
-          </div>
-          <span className="text-sm text-muted-foreground">
-            {process.completed_count}/{process.total_count} tasks
-          </span>
-          {process.missing_setup_fields && process.missing_setup_fields.length > 0 ? (
-            <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-              Thiếu setup data
-            </span>
-          ) : process.status === 'complete' ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                Đã kích hoạt
+      <Tabs defaultValue="overview" className="flex-1 flex flex-col">
+        <div className="px-6 pt-5 pb-0 border-b">
+          <TabsList>
+            <TabsTrigger value="overview" className="text-sm">Thông tin</TabsTrigger>
+            <TabsTrigger value="tasks" className="text-sm">
+              Checklist
+              <span className="ml-1.5 inline-flex items-center justify-center size-5 rounded-full bg-muted-foreground/10 text-[11px] font-medium">
+                {(process.tasks ?? []).length}
               </span>
-              {process.completed_at && (
-                <span className="text-xs text-muted-foreground">
-                  Process completed on {new Date(process.completed_at).toLocaleString('vi-VN')}
-                </span>
-              )}
-            </div>
-          ) : allDone ? (
-            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              Sẵn sàng kích hoạt
-            </span>
-          ) : null}
+            </TabsTrigger>
+          </TabsList>
         </div>
-      </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {/* Setup Form */}
-        <EmployeeSetupForm process={process} />
-
-        {/* Task list */}
-        <div className="p-6">
-          <div className="space-y-2">
-          {tasks.length === 0 ? (
-            <EmptyState />
-          ) : (
-            tasks
-              .sort((a, b) => a.order_index - b.order_index)
-              .map((task) => (
-                <button
-                  key={task.id}
-                  onClick={() => handleToggle(task)}
-                  disabled={updateMutation.isPending || process.status === 'complete'}
-                  className={cn(
-                    'w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all',
-                    task.status === 'done' ? 'bg-muted/30 hover:bg-muted/50' : 'hover:bg-muted/50',
-                    (updateMutation.isPending || process.status === 'complete') && 'opacity-50 cursor-not-allowed',
-                  )}
-                >
-                  {task.status === 'done' ? (
-                    <Check className="size-5 text-emerald-500 shrink-0" />
-                  ) : (
-                    <Circle className="size-5 text-muted-foreground/50 shrink-0" />
-                  )}
-                  <div className="flex-1 flex flex-col gap-0.5">
-                    <span
-                      className={cn(
-                        'text-sm',
-                        task.status === 'done' && 'line-through text-muted-foreground',
-                      )}
-                    >
-                      {task.name}
-                    </span>
-                    {task.status === 'done' && task.completed_at && (
-                      <span className="text-[11px] text-muted-foreground">
-                        Hoàn thành bởi {task.completed_by_name ?? 'Hệ thống'} lúc {new Date(task.completed_at).toLocaleString('vi-VN')}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))
-            )}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6">
+            <TabsContent value="overview" className="mt-0">
+              <OverviewPanel process={process} />
+            </TabsContent>
+            <TabsContent value="tasks" className="mt-0">
+              <TasksPanel
+                process={process}
+                onToggle={handleToggle}
+                isPending={updateMutation.isPending}
+              />
+            </TabsContent>
           </div>
         </div>
-      </div>
+      </Tabs>
 
-      {/* Task Confirmation Dialog */}
+      {/* Confirmation Dialog */}
       <AlertDialog open={!!taskToUpdate} onOpenChange={(open) => !open && setTaskToUpdate(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {taskToUpdate?.status === 'done' ? 'Xác nhận hoàn tác (Revert)' : 'Xác nhận hoàn thành task'}
+              {taskToUpdate?.status === 'done' ? 'Xác nhận hoàn tác' : 'Xác nhận hoàn thành'}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="mt-2 text-sm text-muted-foreground">
+              <div className="mt-2 text-sm text-muted-foreground space-y-3">
                 {taskToUpdate?.status === 'done' ? (
-                  <p>Bạn có chắc muốn đưa task <strong className="text-foreground">{taskToUpdate.name}</strong> về trạng thái chờ (pending)? Việc này có thể ảnh hưởng đến quá trình onboarding.</p>
+                  <p>Đưa task <strong className="text-foreground">{taskToUpdate.name}</strong> về trạng thái chờ?</p>
                 ) : (
                   taskToUpdate && (
-                    <div className="space-y-3">
-                      <p>Bạn đang xác nhận hoàn thành: <strong className="text-foreground">{taskToUpdate.name}</strong></p>
+                    <>
+                      <p>Xác nhận hoàn thành: <strong className="text-foreground">{taskToUpdate.name}</strong></p>
                       <div className={cn(
-                        "p-3 rounded-md border",
-                        getReadinessNote(taskToUpdate).isReady ? "bg-muted/50" : "bg-destructive/10 text-destructive border-destructive/20 font-medium"
+                        'p-3 rounded-md border text-sm',
+                        getNote(taskToUpdate).isReady
+                          ? 'bg-muted/50 text-muted-foreground'
+                          : 'bg-destructive/10 text-destructive border-destructive/20 font-medium',
                       )}>
-                        {getReadinessNote(taskToUpdate).note}
+                        {getNote(taskToUpdate).note}
                       </div>
-                    </div>
+                    </>
                   )
                 )}
               </div>
@@ -266,19 +326,11 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                if (taskToUpdate) {
-                  updateMutation.mutate({
-                    taskId: taskToUpdate.id,
-                    status: taskToUpdate.status === 'done' ? 'pending' : 'done'
-                  });
-                  setTaskToUpdate(null);
-                }
-              }}
-              disabled={taskToUpdate?.status === 'pending' && !getReadinessNote(taskToUpdate).isReady}
+              onClick={confirmUpdate}
+              disabled={taskToUpdate?.status === 'pending' && !getNote(taskToUpdate!).isReady}
               className={cn(taskToUpdate?.status === 'done' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90')}
             >
-              {taskToUpdate?.status === 'done' ? 'Xác nhận Revert' : 'Xác nhận Done'}
+              {taskToUpdate?.status === 'done' ? 'Revert' : 'Xác nhận Done'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

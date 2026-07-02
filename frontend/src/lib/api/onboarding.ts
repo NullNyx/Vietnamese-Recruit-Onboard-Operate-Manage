@@ -6,7 +6,7 @@ const BASE = "/api/onboarding";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type OnboardingStatus = "in_progress" | "complete";
+export type OnboardingStatus = "in_progress" | "ready_for_completion" | "complete";
 export type OnboardingTaskStatus = "pending" | "done";
 
 export interface OnboardingTask {
@@ -48,13 +48,13 @@ export interface OnboardingProcessListResponse {
 export interface OnboardingCounts {
   total: number;
   in_progress: number;
+  ready_for_completion: number;
   complete: number;
 }
 
-export type ProcessFilter = "all" | "in_progress" | "complete";
+export type ProcessFilter = "all" | "in_progress" | "ready_for_completion" | "complete";
 
 // ─── API Helpers ────────────────────────────────────────────────────────────
-
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
