@@ -44,10 +44,11 @@ Requirements: 4.1, 4.4, 4.5, 4.6, 5.5, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.employee.infrastructure.employee_repository import EmployeeRepository
@@ -55,8 +56,11 @@ from src.modules.identity.api.admin_router import require_admin
 from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User
 from src.modules.onboarding.api.schemas import (
+    DocumentUploadResponse,
+    DocumentVerifyRequest,
     EmployeeSetupUpdate,
     OnboardingCountsResponse,
+    OnboardingDocumentResponse,
     OnboardingProcessDetailResponse,
     OnboardingProcessListItem,
     OnboardingProcessListResponse,
@@ -66,6 +70,7 @@ from src.modules.onboarding.api.schemas import (
 from src.modules.onboarding.application.onboarding_service import OnboardingService
 from src.modules.onboarding.container import get_onboarding_service
 from src.modules.onboarding.domain.enums import OnboardingStatus, OnboardingTaskStatus
+from src.modules.onboarding.infrastructure.document_repository import OnboardingDocumentRepository
 from src.modules.recruitment.domain.entities import Candidate
 from src.modules.recruitment.infrastructure.repositories import (
     CandidateRepository,
@@ -218,6 +223,8 @@ async def get_process(
     # Enrich with candidate data
     candidate_repo = CandidateRepository(db_session)
     candidate = await candidate_repo.get_by_id(detail.candidate_id)
+    document_repo = OnboardingDocumentRepository(db_session)
+    documents = await document_repo.list_by_process(process_id)
 
     return OnboardingProcessDetailResponse(
         id=detail.process_id,
@@ -238,6 +245,7 @@ async def get_process(
             candidate.accepted_at.isoformat() if candidate and candidate.accepted_at else None
         ),
         job_opening=await _resolve_job_opening(candidate, db_session),
+        documents=[OnboardingDocumentResponse.model_validate(doc) for doc in documents],
         tasks=[
             OnboardingTaskResponse(
                 id=task.id,
@@ -369,6 +377,8 @@ async def confirm_completion(
     employee = await emp_repo.get_by_id(detail.employee_id)
     candidate_repo = CandidateRepository(db_session)
     candidate = await candidate_repo.get_by_id(detail.candidate_id)
+    document_repo = OnboardingDocumentRepository(db_session)
+    documents = await document_repo.list_by_process(process_id)
 
     return OnboardingProcessDetailResponse(
         id=detail.process_id,
@@ -389,6 +399,7 @@ async def confirm_completion(
             candidate.accepted_at.isoformat() if candidate and candidate.accepted_at else None
         ),
         job_opening=await _resolve_job_opening(candidate, db_session),
+        documents=[OnboardingDocumentResponse.model_validate(doc) for doc in documents],
         tasks=[
             OnboardingTaskResponse(
                 id=task.id,
@@ -439,3 +450,121 @@ async def update_employee_setup(
 
     # Delegate back to get_process for enriched response
     return await get_process(process_id, current_user, onboarding_service, db_session)
+
+
+# ---------------------------------------------------------------------------
+# Document management endpoints
+# ---------------------------------------------------------------------------
+
+@onboarding_router.get(
+    "/processes/{process_id}/documents",
+    response_model=list[OnboardingDocumentResponse],
+)
+async def list_documents(
+    process_id: UUID,
+    _admin: AdminUserDep,
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> list[OnboardingDocumentResponse]:
+    """List document items for an onboarding process, initialising from template if none exist."""
+    from src.modules.onboarding.domain.entities import OnboardingDocument
+    from src.modules.onboarding.domain.enums import DOCUMENT_TEMPLATE
+
+    repo = OnboardingDocumentRepository(db_session)
+    docs = await repo.list_by_process(process_id)
+    if not docs:
+        docs = [
+            OnboardingDocument(
+                process_id=process_id,
+                document_type=doc_type,
+                display_name=display_name,
+                is_required=is_required,
+                status="pending",
+            )
+            for doc_type, display_name, is_required in DOCUMENT_TEMPLATE
+        ]
+        docs = await repo.create_many(docs)
+    return [OnboardingDocumentResponse.model_validate(d) for d in docs]
+
+
+@onboarding_router.patch("/documents/{document_id}/upload", response_model=DocumentUploadResponse)
+async def upload_document(
+    document_id: UUID,
+    current_user: CurrentUserDep,
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+    file: UploadFile = File(None),
+) -> DocumentUploadResponse:
+    """Record a file upload for a document item.
+
+    When a file is provided it is stored in MinIO via the employee module's
+    MinIO client. Without a file the endpoint just updates the document status
+    (for AI-simulated or placeholder uploads).
+    """
+    from fastapi import HTTPException
+    repo = OnboardingDocumentRepository(db_session)
+    doc = await repo.get_by_id(document_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if file:
+        content = await file.read()
+        bucket_path = f"onboarding/{doc.process_id}/{document_id}/{file.filename or 'upload'}"
+        try:
+            from src.modules.employee.container import get_minio_client
+            from src.modules.employee.infrastructure.minio_client import MinIOClient
+            minio: MinIOClient = get_minio_client()
+            await minio.upload_file(
+                bucket_path,
+                content,
+                file.content_type or "application/octet-stream",
+            )
+        except Exception:
+            raise HTTPException(status_code=500, detail="File upload to storage failed")
+
+        doc.status = "uploaded"
+        doc.file_name = file.filename
+        doc.file_size = len(content)
+        doc.mime_type = file.content_type or "application/octet-stream"
+        doc.storage_path = bucket_path
+    else:
+        doc.status = "uploaded"
+
+    doc.uploaded_by_hr_id = current_user.id
+    doc.uploaded_at = datetime.now(UTC)
+    await repo.update(doc)
+    return DocumentUploadResponse(
+        id=doc.id,
+        status=doc.status,
+        file_name=doc.file_name or "",
+        file_size=doc.file_size or 0,
+        mime_type=doc.mime_type or "",
+    )
+
+
+@onboarding_router.patch(
+    "/documents/{document_id}/verify",
+    response_model=OnboardingDocumentResponse,
+)
+async def verify_document(
+    document_id: UUID,
+    body: DocumentVerifyRequest,
+    current_user: CurrentUserDep,
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> OnboardingDocumentResponse:
+    """Verify or reject a document item."""
+    repo = OnboardingDocumentRepository(db_session)
+    doc = await repo.get_by_id(document_id)
+    if doc is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Document not found")
+    if body.verified:
+        doc.status = "verified"
+        doc.verified_at = datetime.now(UTC)
+        doc.verified_by_hr_id = current_user.id
+        doc.reject_reason = None
+    else:
+        doc.status = "rejected"
+        doc.verified_at = datetime.now(UTC)
+        doc.verified_by_hr_id = current_user.id
+        doc.reject_reason = body.reject_reason
+    await repo.update(doc)
+    return OnboardingDocumentResponse.model_validate(doc)

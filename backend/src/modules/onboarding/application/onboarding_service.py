@@ -39,11 +39,13 @@ from src.modules.employee.infrastructure.employee_repository import EmployeeRepo
 from src.modules.identity.domain.entities import User, UserRole
 from src.modules.onboarding.domain.entities import (
     OnboardingAuditLog,
+    OnboardingDocument,
     OnboardingProcess,
     OnboardingTask,
 )
 from src.modules.onboarding.domain.enums import (
     CHECKLIST_TEMPLATE,
+    DOCUMENT_TEMPLATE,
     OnboardingStatus,
     OnboardingTaskStatus,
 )
@@ -58,6 +60,7 @@ from src.modules.onboarding.domain.exceptions import (
     OnboardingTaskNotFoundError,
 )
 from src.modules.onboarding.infrastructure.audit_repository import OnboardingAuditRepository
+from src.modules.onboarding.infrastructure.document_repository import OnboardingDocumentRepository
 from src.modules.onboarding.infrastructure.process_repository import OnboardingProcessRepository
 from src.modules.onboarding.infrastructure.task_repository import OnboardingTaskRepository
 
@@ -222,6 +225,7 @@ class OnboardingService:
         audit_repo: OnboardingAuditRepository,
         employee_repo: EmployeeRepository,
         session: AsyncSession,
+        document_repo: OnboardingDocumentRepository | None = None,
     ) -> None:
         """Initialize the service with its repositories and session.
 
@@ -237,6 +241,7 @@ class OnboardingService:
         self.process_repo = process_repo
         self.task_repo = task_repo
         self.audit_repo = audit_repo
+        self.document_repo = document_repo
         self.employee_repo = employee_repo
         self.session = session
 
@@ -397,6 +402,18 @@ class OnboardingService:
             for order_index, task_key, name in CHECKLIST_TEMPLATE
         ]
         await self.task_repo.create_many(tasks)
+
+        if self.document_repo is not None:
+            documents = [
+                OnboardingDocument(
+                    process_id=process.id,
+                    document_type=document_type,
+                    display_name=display_name,
+                    is_required=is_required,
+                )
+                for document_type, display_name, is_required in DOCUMENT_TEMPLATE
+            ]
+            await self.document_repo.create_many(documents)
 
         creation_audit = OnboardingAuditLog(
             operation_type=_OP_PROCESS_CREATED,

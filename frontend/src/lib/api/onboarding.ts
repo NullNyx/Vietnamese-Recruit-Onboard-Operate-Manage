@@ -36,6 +36,7 @@ export interface OnboardingProcess {
   manager_id?: string | null;
   start_date?: string | null;
   tasks?: OnboardingTask[];
+  documents?: OnboardingDocument[];
 }
 
 export interface OnboardingProcessListResponse {
@@ -123,6 +124,70 @@ export async function updateEmployeeSetup(
   }
 ): Promise<OnboardingProcess> {
   return apiFetch<OnboardingProcess>(`/processes/${processId}/employee-setup`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Document Types ──────────────────────────────────────────────────────────
+
+export interface OnboardingDocument {
+  id: string;
+  process_id: string;
+  document_type: string;
+  display_name: string;
+  is_required: boolean;
+  status: "pending" | "uploaded" | "verified" | "rejected";
+  file_name: string | null;
+  file_size: number | null;
+  mime_type: string | null;
+  reject_reason: string | null;
+  uploaded_by_hr_id: string | null;
+  uploaded_at: string | null;
+  verified_by_hr_id: string | null;
+  verified_at: string | null;
+  ai_extraction: Record<string, unknown> | null;
+}
+
+export interface DocumentUploadResponse {
+  id: string;
+  status: string;
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+}
+
+export interface DocumentVerifyRequest {
+  verified: boolean;
+  reject_reason?: string | null;
+}
+
+export interface DocumentCounts {
+  total: number;
+  pending: number;
+  uploaded: number;
+  verified: number;
+  rejected: number;
+}
+
+// ─── Document API ────────────────────────────────────────────────────────────
+
+/** GET /api/onboarding/processes/{process_id}/documents */
+export async function listOnboardingDocuments(processId: string): Promise<OnboardingDocument[]> {
+  return apiFetch<OnboardingDocument[]>(`/processes/${processId}/documents`);
+}
+
+/** PATCH /api/onboarding/documents/{document_id}/upload */
+export async function uploadOnboardingDocument(documentId: string): Promise<DocumentUploadResponse> {
+  return apiFetch<DocumentUploadResponse>(`/documents/${documentId}/upload`, { method: "PATCH" });
+}
+
+/** PATCH /api/onboarding/documents/{document_id}/verify */
+export async function verifyOnboardingDocument(
+  documentId: string,
+  data: DocumentVerifyRequest,
+): Promise<OnboardingDocument> {
+  return apiFetch<OnboardingDocument>(`/documents/${documentId}/verify`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });

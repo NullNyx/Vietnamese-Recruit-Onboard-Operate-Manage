@@ -37,6 +37,9 @@ __all__ = [
     "TaskStatusUpdate",
     "OnboardingCountsResponse",
     "EmployeeSetupUpdate",
+    "OnboardingDocumentResponse",
+    "DocumentUploadResponse",
+    "DocumentVerifyRequest",
 ]
 
 
@@ -82,6 +85,46 @@ class EmployeeSetupUpdate(BaseModel):
     manager_id: UUID | None = None
     start_date: date | None = None
 
+
+
+
+class OnboardingDocumentResponse(BaseModel):
+    """A single document item in the onboarding document checklist."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    process_id: UUID
+    document_type: str
+    display_name: str
+    is_required: bool
+    status: str
+    file_name: str | None = None
+    file_size: int | None = None
+    mime_type: str | None = None
+    reject_reason: str | None = None
+    uploaded_by_hr_id: UUID | None = None
+    uploaded_at: str | None = None
+    verified_by_hr_id: UUID | None = None
+    verified_at: str | None = None
+    ai_extraction: dict | None = None
+
+
+class DocumentUploadResponse(BaseModel):
+    """Response after uploading a document file."""
+
+    id: UUID
+    status: str
+    file_name: str
+    file_size: int
+    mime_type: str
+
+
+class DocumentVerifyRequest(BaseModel):
+    """Request body for verifying a document item."""
+
+    verified: bool
+    reject_reason: str | None = None
 
 # ---------------------------------------------------------------------------
 # Response schemas
@@ -190,3 +233,4 @@ class OnboardingProcessDetailResponse(BaseModel):
     manager_id: UUID | None = None
     start_date: str | None = None
     tasks: list[OnboardingTaskResponse] = Field(default_factory=list)
+    documents: list[OnboardingDocumentResponse] = Field(default_factory=list)

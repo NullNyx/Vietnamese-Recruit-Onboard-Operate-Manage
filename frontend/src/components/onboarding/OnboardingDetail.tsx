@@ -19,6 +19,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmployeeSetupForm } from './EmployeeSetupForm';
 import { getProcessStatusMeta, getTaskReadinessNote } from './onboarding-detail-utils';
+import { DocumentsPanel } from './DocumentsPanel';
 
 // ─── Sub-components ──────────────────────────────────────────────────────
 
@@ -269,11 +270,15 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
         <div className="px-6 pt-5 pb-0 border-b">
           <TabsList>
             <TabsTrigger value="overview" className="text-sm">Thông tin</TabsTrigger>
+            <TabsTrigger value="documents" className="text-sm">Tài liệu</TabsTrigger>
             <TabsTrigger value="tasks" className="text-sm">
               Checklist
               <span className="ml-1.5 inline-flex items-center justify-center size-5 rounded-full bg-muted-foreground/10 text-[11px] font-medium">
                 {(process.tasks ?? []).length}
               </span>
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="text-sm">
+              Tài liệu
             </TabsTrigger>
           </TabsList>
         </div>
@@ -283,12 +288,18 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
             <TabsContent value="overview" className="mt-0">
               <OverviewPanel process={process} />
             </TabsContent>
+            <TabsContent value="documents" className="mt-0">
+              <DocumentsPanel processId={processId} isComplete={process.status === 'complete'} />
+            </TabsContent>
             <TabsContent value="tasks" className="mt-0">
               <TasksPanel
                 process={process}
                 onToggle={handleToggle}
                 isPending={updateMutation.isPending}
               />
+            </TabsContent>
+            <TabsContent value="documents" className="mt-0">
+              <DocumentsPanel processId={processId} isComplete={process.status === 'complete'} />
             </TabsContent>
           </div>
         </div>
