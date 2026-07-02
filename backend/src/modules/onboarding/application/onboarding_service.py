@@ -35,7 +35,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from src.modules.employee.domain.entities import Employee
+from src.modules.employee.domain.contract import Contract
+from src.modules.employee.domain.entities import Employee, EmployeeDocument
+from src.modules.employee.infrastructure.contract_repository import ContractRepository
+from src.modules.employee.infrastructure.document_repository import DocumentRepository
 from src.modules.employee.infrastructure.employee_repository import EmployeeRepository
 from src.modules.identity.domain.entities import User, UserRole
 from src.modules.onboarding.domain.entities import (
@@ -87,6 +90,8 @@ _OP_TASK_COMPLETED = "task_completed"
 _OP_EMPLOYEE_ACTIVATED = "employee_activated"
 _OP_READY_FOR_COMPLETION = "ready_for_completion"
 _OP_CONFIRMED_COMPLETE = "confirmed_complete"
+_OP_DOCUMENT_PROMOTED = "document_promoted"
+_OP_CONTRACT_PROMOTED = "contract_promoted"
 
 # Maximum number of OnboardingProcess records returned per list response (the
 # pagination cap, R6.2). Mirrors ``OnboardingSettings.list_page_size_max`` /
@@ -250,6 +255,8 @@ class OnboardingService:
         audit_repo: Append-only repository for OnboardingAuditLog entries.
         employee_repo: Reused employee-module repository (Employee persistence
             and ``NV-XXX`` code generation).
+        employee_document_repo: Employee document repository for promotion.
+        employee_contract_repo: Employee contract repository for promotion.
         session: The shared async session whose transaction this service owns.
     """
 
@@ -262,6 +269,8 @@ class OnboardingService:
         session: AsyncSession,
         document_repo: OnboardingDocumentRepository | None = None,
         contract_repo: OnboardingContractRepository | None = None,
+        employee_document_repo: DocumentRepository | None = None,
+        employee_contract_repo: ContractRepository | None = None,
     ) -> None:
         """Initialize the service with its repositories and session.
 
@@ -279,6 +288,8 @@ class OnboardingService:
         self.audit_repo = audit_repo
         self.document_repo = document_repo
         self.contract_repo = contract_repo
+        self.employee_document_repo = employee_document_repo
+        self.employee_contract_repo = employee_contract_repo
         self.employee_repo = employee_repo
         self.session = session
 
@@ -832,6 +843,7 @@ class OnboardingService:
             success=True,
         )
         await self._append_audit(activation_audit)
+        await self._promote_employee_artifacts(process, employee, actor)
         await self.session.commit()
         logger.info(
             "Employee %s activated on completion of onboarding process %s",
@@ -839,6 +851,107 @@ class OnboardingService:
             process.id,
         )
         return process
+
+    async def _promote_employee_artifacts(
+        self,
+        process: OnboardingProcess,
+        employee: Employee,
+        actor: User,
+    ) -> None:
+        """Promote signed / verified onboarding artifacts into employee records."""
+        if self.employee_document_repo is not None and self.document_repo is not None:
+            documents = await self.document_repo.list_by_process(process.id)
+            for doc in documents:
+                if doc.status != "verified" or doc.promoted_employee_document_id is not None:
+                    continue
+                if (
+                    doc.file_name is None
+                    or doc.storage_path is None
+                    or doc.file_size is None
+                    or doc.mime_type is None
+                    or doc.uploaded_by_hr_id is None
+                ):
+                    raise OnboardingActivationError(
+                        f"Verified onboarding document {doc.id} is missing required data"
+                    )
+
+                employee_document = EmployeeDocument(
+                    employee_id=employee.id,
+                    document_type=doc.document_type,
+                    status="verified",
+                    file_name=doc.file_name,
+                    storage_path=doc.storage_path,
+                    file_size=doc.file_size,
+                    mime_type=doc.mime_type,
+                    description=doc.display_name,
+                    uploaded_by_hr_id=doc.uploaded_by_hr_id,
+                    verified_by_hr_id=doc.verified_by_hr_id,
+                    verified_at=doc.verified_at,
+                )
+                employee_document = await self.employee_document_repo.create(employee_document)
+                doc.promoted_employee_document_id = employee_document.id
+                doc.promoted_at = datetime.now(UTC)
+                await self.document_repo.update(doc)
+
+                await self._append_audit(
+                    OnboardingAuditLog(
+                        user_id=actor.id,
+                        actor_email=actor.email,
+                        operation_type=_OP_DOCUMENT_PROMOTED,
+                        entity_type="document",
+                        entity_id=doc.id,
+                        candidate_id=process.candidate_id,
+                        previous_value={"promoted_employee_document_id": None},
+                        new_value={
+                            "promoted_employee_document_id": str(employee_document.id),
+                            "employee_id": str(employee.id),
+                        },
+                        change_summary=(
+                            f"Onboarding document {doc.id} promoted to employee document "
+                            f"{employee_document.id}"
+                        ),
+                        success=True,
+                    )
+                )
+
+        if self.employee_contract_repo is not None and self.contract_repo is not None:
+            draft = await self.contract_repo.get_by_process(process.id)
+            if draft is not None and draft.status == "signed" and draft.promoted_contract_id is None:
+                employee_contract = Contract(
+                    employee_id=employee.id,
+                    contract_type=draft.contract_type,
+                    status="active",
+                    signed_on=employee.start_date,
+                    started_on=employee.start_date,
+                    content=draft.content,
+                    created_by=actor.id,
+                    updated_by=actor.id,
+                )
+                employee_contract = await self.employee_contract_repo.create(employee_contract)
+                draft.promoted_contract_id = employee_contract.id
+                draft.promoted_at = datetime.now(UTC)
+                await self.contract_repo.update(draft)
+
+                await self._append_audit(
+                    OnboardingAuditLog(
+                        user_id=actor.id,
+                        actor_email=actor.email,
+                        operation_type=_OP_CONTRACT_PROMOTED,
+                        entity_type="contract",
+                        entity_id=draft.id,
+                        candidate_id=process.candidate_id,
+                        previous_value={"promoted_contract_id": None},
+                        new_value={
+                            "promoted_contract_id": str(employee_contract.id),
+                            "employee_id": str(employee.id),
+                        },
+                        change_summary=(
+                            f"Onboarding contract {draft.id} promoted to employee contract "
+                            f"{employee_contract.id}"
+                        ),
+                        success=True,
+                    )
+                )
 
     async def _append_audit(self, entry: OnboardingAuditLog) -> None:
         """Append a mandatory audit entry, mapping failures to ``AuditWriteError``.
