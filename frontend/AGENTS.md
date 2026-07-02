@@ -15,9 +15,9 @@
 ```
 src/
 ├── app/
-│   ├── (dashboard)/     # Admin routes (employees, attendance, payroll, recruitment, settings)
-│   ├── (employee)/      # Employee self-service routes
-│   ├── login/           # Login page
+│   ├── (dashboard)/     # HR-only app routes (employees, recruitment, onboarding, gmail, attendance, settings, admin)
+│   ├── login/           # Password login page
+│   ├── setup/           # First-run setup wizard
 │   └── layout.tsx       # Root layout
 ├── components/
 │   ├── ui/              # shadcn/ui base components (DO NOT EDIT manually)
@@ -55,12 +55,11 @@ pnpm test:watch   # Vitest (watch mode)
 ## API Client Pattern
 
 ```typescript
-// lib/api/payroll.ts
-const API_BASE = "/api/payroll";
-
-export async function getPayrollPeriods() {
-  const res = await fetch(`${API_BASE}/periods`, { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch periods");
+// lib/api/employee.ts
+const API_BASE = "/api/employees";
+export async function getEmployees() {
+  const res = await fetch(`${API_BASE}`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch employees");
   return res.json();
 }
 ```
@@ -68,13 +67,13 @@ export async function getPayrollPeriods() {
 ## Page Pattern
 
 ```typescript
-// app/(dashboard)/payroll/page.tsx
+// app/(dashboard)/employees/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { getPayrollPeriods } from "@/lib/api/payroll";
+import { getEmployees } from "@/lib/api/employee";
 
-export default function PayrollPage() {
+export default function EmployeeListPage() {
   // ...
 }
 ```
@@ -83,12 +82,13 @@ export default function PayrollPage() {
 
 | Route        | Description                                 |
 | ------------ | ------------------------------------------- |
-| /login       | Google OAuth login                          |
+| /login       | Password login                              |
+| /setup/*     | First-run setup wizard                      |
 | /employees   | Employee list + CRUD                        |
 | /attendance  | Check-in/out dashboard                      |
-| /leave       | Leave management                            |
-| /payroll     | Payroll periods & payslips                  |
 | /recruitment | Candidate pipeline                          |
+| /onboarding  | Onboarding dashboard                        |
 | /gmail       | Email integration                           |
-| /settings    | Departments, positions, holidays, schedules |
-| /admin       | Whitelist, OAuth config, roles, audit       |
+| /contracts/* | Employee contract detail                    |
+| /settings    | Organization, departments, positions        |
+| /admin       | Users, assistant tools, audit               |

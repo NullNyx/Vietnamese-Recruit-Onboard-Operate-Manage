@@ -5,7 +5,6 @@ Working docs for HR-only attendance scope.
 ## Current files
 
 - `hr-attendance-correction-prd.md` — HR list + correction flow.
-- `employee-attendance-prd.md` — stale employee-facing draft; do not extend scope from it.
 
 ## Workflow
 

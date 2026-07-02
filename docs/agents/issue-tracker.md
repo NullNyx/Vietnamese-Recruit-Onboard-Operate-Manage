@@ -64,6 +64,15 @@ When a skill says "publish issues" or "create implementation tickets", create Ji
 
 Keep task descriptions implementation-guiding but not code-stale: mention domain terms, APIs, acceptance boundaries, tests, and relevant ADRs; avoid long file-path lists unless path is actual subject.
 
+## Naming convention for PRD parents vs implementation slices
+
+When a PRD is published as a Jira issue and later split into implementation work:
+
+- Use a parent ticket summary prefix like `[PRD]` or `[Spec]`.
+- Use child implementation ticket summary prefix like `[Slice]`.
+- Treat the parent as scope/spec only unless the user explicitly asks to implement the parent ticket itself.
+- Child slices should be narrow vertical cuts that an AFK agent can pick up independently.
+
 ## When a skill says "publish to the issue tracker"
 
 Create Jira Tasks in project `KAN`, not GitHub Issues.
