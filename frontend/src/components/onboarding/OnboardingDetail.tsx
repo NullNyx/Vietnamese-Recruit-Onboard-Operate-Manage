@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmployeeSetupForm } from './EmployeeSetupForm';
 import { getProcessStatusMeta, getTaskReadinessNote } from './onboarding-detail-utils';
 import { DocumentsPanel } from './DocumentsPanel';
+import { ContractPanel } from './ContractPanel';
 
 // ─── Sub-components ──────────────────────────────────────────────────────
 
@@ -271,14 +272,12 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
           <TabsList>
             <TabsTrigger value="overview" className="text-sm">Thông tin</TabsTrigger>
             <TabsTrigger value="documents" className="text-sm">Tài liệu</TabsTrigger>
+            <TabsTrigger value="contract" className="text-sm">Hợp đồng</TabsTrigger>
             <TabsTrigger value="tasks" className="text-sm">
               Checklist
               <span className="ml-1.5 inline-flex items-center justify-center size-5 rounded-full bg-muted-foreground/10 text-[11px] font-medium">
                 {(process.tasks ?? []).length}
               </span>
-            </TabsTrigger>
-            <TabsTrigger value="documents" className="text-sm">
-              Tài liệu
             </TabsTrigger>
           </TabsList>
         </div>
@@ -291,15 +290,19 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
             <TabsContent value="documents" className="mt-0">
               <DocumentsPanel processId={processId} isComplete={process.status === 'complete'} />
             </TabsContent>
+            <TabsContent value="contract" className="mt-0">
+              <ContractPanel
+                processId={processId}
+                isComplete={process.status === 'complete'}
+                initialDraft={process.contract_draft ?? null}
+              />
+            </TabsContent>
             <TabsContent value="tasks" className="mt-0">
               <TasksPanel
                 process={process}
                 onToggle={handleToggle}
                 isPending={updateMutation.isPending}
               />
-            </TabsContent>
-            <TabsContent value="documents" className="mt-0">
-              <DocumentsPanel processId={processId} isComplete={process.status === 'complete'} />
             </TabsContent>
           </div>
         </div>

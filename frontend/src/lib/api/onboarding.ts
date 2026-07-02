@@ -37,6 +37,20 @@ export interface OnboardingProcess {
   start_date?: string | null;
   tasks?: OnboardingTask[];
   documents?: OnboardingDocument[];
+  contract_draft?: OnboardingContractDraft | null;
+}
+
+export interface OnboardingContractDraft {
+  id: string;
+  process_id: string;
+  contract_type: string;
+  content: string | null;
+  status: "draft" | "ready" | "sent" | "signed";
+  revision: number;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface OnboardingProcessListResponse {
@@ -46,6 +60,8 @@ export interface OnboardingProcessListResponse {
   page_size: number;
 }
 
+
+
 export interface OnboardingCounts {
   total: number;
   in_progress: number;
@@ -54,6 +70,17 @@ export interface OnboardingCounts {
 }
 
 export type ProcessFilter = "all" | "in_progress" | "ready_for_completion" | "complete";
+
+export interface ContractDraftUpdate {
+  contract_type?: string | null;
+  content?: string | null;
+}
+
+export type ContractDraft = OnboardingContractDraft;
+
+export interface ContractDraftStatusUpdate {
+  status: OnboardingContractDraft["status"];
+}
 
 // ─── API Helpers ────────────────────────────────────────────────────────────
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -168,6 +195,54 @@ export interface DocumentCounts {
   uploaded: number;
   verified: number;
   rejected: number;
+}
+
+// ─── Contract Draft API ───────────────────────────────────────────────────────
+
+/** GET /api/onboarding/processes/{process_id}/contract */
+export async function getOnboardingContractDraft(processId: string): Promise<OnboardingContractDraft> {
+  return apiFetch<OnboardingContractDraft>(`/processes/${processId}/contract`);
+}
+
+/** PATCH /api/onboarding/processes/{process_id}/contract */
+export async function updateOnboardingContractDraft(
+  processId: string,
+  data: ContractDraftUpdate,
+): Promise<ContractDraft> {
+  return apiFetch<OnboardingContractDraft>(`/processes/${processId}/contract`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+/** PATCH /api/onboarding/processes/{process_id}/contract/generate */
+export async function generateContractDraft(processId: string): Promise<OnboardingContractDraft> {
+  return apiFetch<OnboardingContractDraft>(`/processes/${processId}/contract/generate`, {
+    method: "PATCH",
+  });
+}
+
+/** PATCH /api/onboarding/processes/{process_id}/contract/status */
+export async function updateContractStatus(
+  processId: string,
+  data: { status: string },
+): Promise<OnboardingContractDraft> {
+  return apiFetch<OnboardingContractDraft>(`/processes/${processId}/contract/status`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+/** GET /api/onboarding/processes/{process_id}/contract/export */
+export async function exportContractDraft(processId: string): Promise<string> {
+  const res = await fetch(`${BASE}/processes/${processId}/contract/export`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "Unknown error");
+    throw new Error(`API ${res.status}: ${text}`);
+  }
+  return res.text();
 }
 
 // ─── Document API ────────────────────────────────────────────────────────────

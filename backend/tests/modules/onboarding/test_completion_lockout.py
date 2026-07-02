@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+
 from src.modules.identity.domain.entities import User, UserRole
 from src.modules.onboarding.application.onboarding_service import OnboardingService
 from src.modules.onboarding.domain.entities import OnboardingProcess

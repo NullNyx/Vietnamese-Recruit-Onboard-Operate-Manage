@@ -142,3 +142,39 @@ class OnboardingDocument(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+
+
+class OnboardingContractDraft(SQLModel, table=True):
+    """Contract draft scoped to an onboarding process.
+
+    Holds the draft content HR edits during onboarding. When the onboarding
+    process completes and the employee is activated, this draft serves as the
+    basis for creating a formal Contract in the employee module.
+
+    Status: draft / ready / sent / signed.
+    Exactly one draft per onboarding process (unique process_id).
+    """
+
+    __tablename__ = "onboarding_contract_drafts"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    process_id: UUID = Field(
+        foreign_key="onboarding_processes.id",
+        nullable=False,
+        index=True,
+        unique=True,
+    )
+    contract_type: str = Field(max_length=30, nullable=False)
+    content: str | None = Field(default=None)
+    status: str = Field(default="draft", max_length=20, nullable=False)
+    revision: int = Field(default=1, nullable=False)
+    created_by: UUID | None = Field(default=None, foreign_key="users.id")
+    updated_by: UUID | None = Field(default=None, foreign_key="users.id")
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )

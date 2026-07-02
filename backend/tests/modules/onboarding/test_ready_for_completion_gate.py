@@ -38,6 +38,7 @@ from src.modules.onboarding.domain.exceptions import (
     OnboardingProcessNotFoundError,
 )
 
+
 # ---------------------------------------------------------------------------
 # In-memory fakes (inline)
 # ---------------------------------------------------------------------------

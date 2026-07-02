@@ -49,6 +49,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.employee.infrastructure.employee_repository import EmployeeRepository
@@ -56,6 +57,9 @@ from src.modules.identity.api.admin_router import require_admin
 from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User
 from src.modules.onboarding.api.schemas import (
+    ContractDraftResponse,
+    ContractDraftStatusUpdate,
+    ContractDraftUpdate,
     DocumentUploadResponse,
     DocumentVerifyRequest,
     EmployeeSetupUpdate,
@@ -225,7 +229,6 @@ async def get_process(
     candidate = await candidate_repo.get_by_id(detail.candidate_id)
     document_repo = OnboardingDocumentRepository(db_session)
     documents = await document_repo.list_by_process(process_id)
-
     return OnboardingProcessDetailResponse(
         id=detail.process_id,
         status=OnboardingStatus(detail.status),
@@ -246,6 +249,7 @@ async def get_process(
         ),
         job_opening=await _resolve_job_opening(candidate, db_session),
         documents=[OnboardingDocumentResponse.model_validate(doc) for doc in documents],
+        contract_draft=await _resolve_contract_draft(process_id, db_session),
         tasks=[
             OnboardingTaskResponse(
                 id=task.id,
@@ -379,7 +383,6 @@ async def confirm_completion(
     candidate = await candidate_repo.get_by_id(detail.candidate_id)
     document_repo = OnboardingDocumentRepository(db_session)
     documents = await document_repo.list_by_process(process_id)
-
     return OnboardingProcessDetailResponse(
         id=detail.process_id,
         status=OnboardingStatus(detail.status),
@@ -400,6 +403,7 @@ async def confirm_completion(
         ),
         job_opening=await _resolve_job_opening(candidate, db_session),
         documents=[OnboardingDocumentResponse.model_validate(doc) for doc in documents],
+        contract_draft=await _resolve_contract_draft(process_id, db_session),
         tasks=[
             OnboardingTaskResponse(
                 id=task.id,
@@ -572,3 +576,173 @@ async def verify_document(
         doc.reject_reason = body.reject_reason
     await repo.update(doc)
     return OnboardingDocumentResponse.model_validate(doc)
+
+
+# ---------------------------------------------------------------------------
+# Contract helpers and endpoints
+# ---------------------------------------------------------------------------
+
+
+async def _resolve_contract_draft(
+    process_id: UUID,
+    db_session: AsyncSession,
+) -> ContractDraftResponse | None:
+    """Load the contract draft for an onboarding process, if one exists."""
+    try:
+        from src.modules.onboarding.infrastructure.contract_repository import (
+            OnboardingContractRepository,
+        )
+
+        repo = OnboardingContractRepository(db_session)
+        draft = await repo.get_by_process(process_id)
+        if draft is None:
+            return None
+        return ContractDraftResponse(
+            id=draft.id,
+            process_id=draft.process_id,
+            contract_type=draft.contract_type,
+            content=draft.content,
+            status=draft.status,
+            revision=getattr(draft, "revision", 1),
+            created_by=draft.created_by,
+            updated_by=draft.updated_by,
+            created_at=draft.created_at.isoformat() if draft.created_at else "",
+            updated_at=draft.updated_at.isoformat() if draft.updated_at else "",
+        )
+    except Exception:
+        return None
+
+
+@onboarding_router.get(
+    "/processes/{process_id}/contract",
+    response_model=ContractDraftResponse,
+)
+async def get_contract_draft(
+    process_id: UUID,
+    _admin: AdminUserDep,
+    onboarding_service: OnboardingServiceDep,
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ContractDraftResponse:
+    """Return the contract draft for an onboarding process, or 404."""
+    draft = await onboarding_service.get_contract_draft(process_id)
+    return ContractDraftResponse(
+        id=draft.id,
+        process_id=draft.process_id,
+        contract_type=draft.contract_type,
+        content=draft.content,
+        status=draft.status,
+        revision=draft.revision,
+        created_by=draft.created_by,
+        updated_by=draft.updated_by,
+        created_at=draft.created_at.isoformat() if draft.created_at else "",
+        updated_at=draft.updated_at.isoformat() if draft.updated_at else "",
+    )
+
+
+@onboarding_router.patch(
+    "/processes/{process_id}/contract",
+    response_model=ContractDraftResponse,
+)
+async def update_contract_draft(
+    process_id: UUID,
+    body: ContractDraftUpdate,
+    current_user: CurrentUserDep,
+    onboarding_service: OnboardingServiceDep,
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ContractDraftResponse:
+    """Edit the contract draft content and/or type."""
+    draft = await onboarding_service.update_contract_draft(
+        process_id=process_id,
+        actor=current_user,
+        data=body.model_dump(exclude_unset=True),
+    )
+    return ContractDraftResponse(
+        id=draft.id,
+        process_id=draft.process_id,
+        contract_type=draft.contract_type,
+        content=draft.content,
+        status=draft.status,
+        revision=draft.revision,
+        created_by=draft.created_by,
+        updated_by=draft.updated_by,
+        created_at=draft.created_at.isoformat() if draft.created_at else "",
+        updated_at=draft.updated_at.isoformat() if draft.updated_at else "",
+    )
+
+
+@onboarding_router.patch(
+    "/processes/{process_id}/contract/generate",
+    response_model=ContractDraftResponse,
+)
+async def generate_contract_draft(
+    process_id: UUID,
+    current_user: CurrentUserDep,
+    onboarding_service: OnboardingServiceDep,
+) -> ContractDraftResponse:
+    """Trigger AI draft content generation (placeholder)."""
+    draft = await onboarding_service.generate_contract_draft(
+        process_id=process_id,
+        actor=current_user,
+    )
+    return ContractDraftResponse(
+        id=draft.id,
+        process_id=draft.process_id,
+        contract_type=draft.contract_type,
+        content=draft.content,
+        status=draft.status,
+        revision=draft.revision,
+        created_by=draft.created_by,
+        updated_by=draft.updated_by,
+        created_at=draft.created_at.isoformat() if draft.created_at else "",
+        updated_at=draft.updated_at.isoformat() if draft.updated_at else "",
+    )
+
+
+@onboarding_router.patch(
+    "/processes/{process_id}/contract/status",
+    response_model=ContractDraftResponse,
+)
+async def update_contract_status(
+    process_id: UUID,
+    body: ContractDraftStatusUpdate,
+    current_user: CurrentUserDep,
+    onboarding_service: OnboardingServiceDep,
+) -> ContractDraftResponse:
+    """Advance contract draft status (draft -> ready -> sent -> signed)."""
+    draft = await onboarding_service.update_contract_status(
+        process_id=process_id,
+        actor=current_user,
+        status=body.status,
+    )
+    return ContractDraftResponse(
+        id=draft.id,
+        process_id=draft.process_id,
+        contract_type=draft.contract_type,
+        content=draft.content,
+        status=draft.status,
+        revision=draft.revision,
+        created_by=draft.created_by,
+        updated_by=draft.updated_by,
+        created_at=draft.created_at.isoformat() if draft.created_at else "",
+        updated_at=draft.updated_at.isoformat() if draft.updated_at else "",
+    )
+
+
+@onboarding_router.get(
+    "/processes/{process_id}/contract/export",
+    response_class=PlainTextResponse,
+)
+async def export_contract_draft(
+    process_id: UUID,
+    _admin: AdminUserDep,
+    onboarding_service: OnboardingServiceDep,
+):
+    """Export the contract draft as plain text download."""
+    draft = await onboarding_service.get_contract_draft(process_id)
+    return PlainTextResponse(
+        content=draft.content or "",
+        media_type="text/plain; charset=utf-8",
+        headers={
+            "Content-Disposition": f"attachment; filename=contract-{process_id}.txt",
+        },
+    )

@@ -29,6 +29,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.modules.onboarding.domain.enums import OnboardingStatus, OnboardingTaskStatus
 
 __all__ = [
+    "ContractDraftGenerateResponse",
+    "ContractDraftResponse",
+    "ContractDraftStatusUpdate",
+    "ContractDraftUpdate",
     "OnboardingProcessDetailResponse",
     "OnboardingProcessListItem",
     "OnboardingProcessListResponse",
@@ -86,6 +90,25 @@ class EmployeeSetupUpdate(BaseModel):
     start_date: date | None = None
 
 
+class ContractDraftUpdate(BaseModel):
+    """Request body for editing onboarding contract draft."""
+
+    contract_type: str | None = None
+    content: str | None = None
+
+
+class ContractDraftStatusUpdate(BaseModel):
+    """Request body for updating contract draft status."""
+
+    status: str
+
+
+class ContractDraftGenerateResponse(BaseModel):
+    """Request body-less placeholder trigger for AI draft generation."""
+
+    force: bool = True
+
+
 class OnboardingDocumentResponse(BaseModel):
     """A single document item in the onboarding document checklist."""
 
@@ -106,6 +129,21 @@ class OnboardingDocumentResponse(BaseModel):
     verified_by_hr_id: UUID | None = None
     verified_at: str | None = None
     ai_extraction: dict | None = None
+
+
+class ContractDraftResponse(BaseModel):
+    """Onboarding contract draft returned in case detail."""
+
+    id: UUID
+    process_id: UUID
+    contract_type: str
+    content: str | None = None
+    status: str
+    revision: int
+    created_by: UUID | None = None
+    updated_by: UUID | None = None
+    created_at: str
+    updated_at: str
 
 
 class DocumentUploadResponse(BaseModel):
@@ -233,3 +271,4 @@ class OnboardingProcessDetailResponse(BaseModel):
     start_date: str | None = None
     tasks: list[OnboardingTaskResponse] = Field(default_factory=list)
     documents: list[OnboardingDocumentResponse] = Field(default_factory=list)
+    contract_draft: ContractDraftResponse | None = None

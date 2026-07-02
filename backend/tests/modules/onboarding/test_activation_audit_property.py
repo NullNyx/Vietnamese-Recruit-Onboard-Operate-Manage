@@ -39,6 +39,7 @@ from src.modules.onboarding.domain.enums import (
     OnboardingTaskStatus,
 )
 
+
 # ---------------------------------------------------------------------------
 # In-memory fakes (inline, self-contained — no shared fixtures)
 # ---------------------------------------------------------------------------

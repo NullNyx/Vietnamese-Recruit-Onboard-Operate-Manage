@@ -14,7 +14,6 @@ from uuid import uuid4
 import pytest
 
 from src.modules.onboarding.container import process_candidate_accepted
-from src.modules.onboarding.domain.enums import OnboardingStatus
 
 
 @pytest.fixture

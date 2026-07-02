@@ -34,6 +34,15 @@ class OnboardingTaskStatus(StrEnum):
     DONE = "done"
 
 
+class OnboardingContractStatus(StrEnum):
+    """Status of onboarding contract draft."""
+
+    DRAFT = "draft"
+    READY = "ready"
+    SENT = "sent"
+    SIGNED = "signed"
+
+
 class OnboardingTaskKey(StrEnum):
     """Stable keys for the four fixed onboarding checklist tasks.
 
