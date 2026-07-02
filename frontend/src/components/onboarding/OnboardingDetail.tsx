@@ -1,6 +1,13 @@
 'use client';
 
-import { getOnboardingProcess, onboardingKeys, updateTaskStatus, type OnboardingProcess, type OnboardingTask } from '@/lib/api/onboarding';
+import {
+  confirmOnboardingCompletion,
+  getOnboardingProcess,
+  onboardingKeys,
+  updateTaskStatus,
+  type OnboardingProcess,
+  type OnboardingTask,
+} from '@/lib/api/onboarding';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Circle, Loader2, User, Calendar, Briefcase, BadgeCheck, AlertCircle } from 'lucide-react';
@@ -21,6 +28,7 @@ import { EmployeeSetupForm } from './EmployeeSetupForm';
 import { getProcessStatusMeta, getTaskReadinessNote } from './onboarding-detail-utils';
 import { DocumentsPanel } from './DocumentsPanel';
 import { ContractPanel } from './ContractPanel';
+import { TimelinePanel } from './TimelinePanel';
 
 // ─── Sub-components ──────────────────────────────────────────────────────
 
@@ -53,7 +61,15 @@ function EmptyState() {
 
 // ─── Overview Tab ────────────────────────────────────────────────────────
 
-function OverviewPanel({ process }: { process: OnboardingProcess }) {
+function OverviewPanel({
+  process,
+  onComplete,
+  isCompleting,
+}: {
+  process: OnboardingProcess;
+  onComplete: () => void;
+  isCompleting: boolean;
+}) {
   const initials = process.employee_full_name
     ?.split(' ')
     .slice(-2)
@@ -146,9 +162,21 @@ function OverviewPanel({ process }: { process: OnboardingProcess }) {
               <BadgeCheck className="size-3.5" />
               Sẵn sàng kích hoạt — tất cả task đã hoàn thành
             </span>
-          ) : null}
+            ) : null}
+          </div>
+
+        {process.status === 'ready_for_completion' && (
+          <div className="flex justify-end">
+            <button
+              onClick={onComplete}
+              disabled={isCompleting}
+              className="inline-flex h-9 items-center justify-center rounded-md bg-emerald-600 px-3 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {isCompleting ? 'Đang kích hoạt...' : 'Hoàn tất hồ sơ'}
+            </button>
+          </div>
+        )}
         </div>
-      </div>
 
       {/* Employee Setup */}
       <EmployeeSetupForm process={process} />
@@ -244,6 +272,19 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
     },
   });
 
+  const completeMutation = useMutation({
+    mutationFn: () => confirmOnboardingCompletion(processId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: onboardingKeys.detail(processId) });
+      queryClient.invalidateQueries({ queryKey: onboardingKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: onboardingKeys.counts() });
+      toast.success('Đã hoàn tất hồ sơ và kích hoạt nhân viên');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Kích hoạt thất bại');
+    },
+  });
+
   if (isLoading) return <LoadingState />;
   if (isError) return <ErrorState error={error as Error} onRetry={() => refetch()} />;
   if (!process) return <EmptyState />;
@@ -270,9 +311,18 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
       <Tabs defaultValue="overview" className="flex-1 flex flex-col">
         <div className="px-6 pt-5 pb-0 border-b">
           <TabsList>
-            <TabsTrigger value="overview" className="text-sm">Thông tin</TabsTrigger>
-            <TabsTrigger value="documents" className="text-sm">Tài liệu</TabsTrigger>
-            <TabsTrigger value="contract" className="text-sm">Hợp đồng</TabsTrigger>
+            <TabsTrigger value="overview" className="text-sm">
+              Thông tin
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="text-sm">
+              Tài liệu
+            </TabsTrigger>
+            <TabsTrigger value="contract" className="text-sm">
+              Hợp đồng
+            </TabsTrigger>
+            <TabsTrigger value="timeline" className="text-sm">
+              Timeline
+            </TabsTrigger>
             <TabsTrigger value="tasks" className="text-sm">
               Checklist
               <span className="ml-1.5 inline-flex items-center justify-center size-5 rounded-full bg-muted-foreground/10 text-[11px] font-medium">
@@ -285,7 +335,11 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
         <div className="flex-1 overflow-y-auto">
           <div className="p-6">
             <TabsContent value="overview" className="mt-0">
-              <OverviewPanel process={process} />
+              <OverviewPanel
+                process={process}
+                onComplete={() => completeMutation.mutate()}
+                isCompleting={completeMutation.isPending}
+              />
             </TabsContent>
             <TabsContent value="documents" className="mt-0">
               <DocumentsPanel processId={processId} isComplete={process.status === 'complete'} />
@@ -296,6 +350,9 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
                 isComplete={process.status === 'complete'}
                 initialDraft={process.contract_draft ?? null}
               />
+            </TabsContent>
+            <TabsContent value="timeline" className="mt-0">
+              <TimelinePanel processId={processId} />
             </TabsContent>
             <TabsContent value="tasks" className="mt-0">
               <TasksPanel
@@ -339,16 +396,16 @@ export function OnboardingDetail({ processId }: OnboardingDetailProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmUpdate}
-              disabled={taskToUpdate?.status === 'pending' && !getNote(taskToUpdate!).isReady}
-              className={cn(taskToUpdate?.status === 'done' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90')}
-            >
-              {taskToUpdate?.status === 'done' ? 'Revert' : 'Xác nhận Done'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-}
+              <AlertDialogAction
+                onClick={confirmUpdate}
+                disabled={taskToUpdate?.status === 'pending' && !getNote(taskToUpdate!).isReady}
+                className={cn(taskToUpdate?.status === 'done' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90')}
+              >
+                {taskToUpdate?.status === 'done' ? 'Revert' : 'Xác nhận Done'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
+  }

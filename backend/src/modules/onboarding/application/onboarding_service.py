@@ -33,6 +33,7 @@ from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 from src.modules.employee.domain.entities import Employee
 from src.modules.employee.infrastructure.employee_repository import EmployeeRepository
@@ -218,6 +219,21 @@ class ContractDraftDetail:
     updated_by: UUID | None
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass(frozen=True)
+class TimelineEventItem:
+    """A single event in the onboarding timeline read model."""
+
+    event_type: str
+    timestamp: str
+    title: str
+    kind: str = "event"  # milestone | task | document | contract | reminder
+    description: str | None = None
+    actor_name: str | None = None
+    status: str | None = None
+    due_at: str | None = None
+    is_overdue: bool = False
 
 
 class OnboardingService:
@@ -1379,6 +1395,196 @@ class OnboardingService:
             "status": draft.status,
             "revision": getattr(draft, "revision", 1),
         }
+
+    async def get_timeline(
+        self,
+        process_id: UUID,
+        *,
+        accepted_at: str | None = None,
+        start_date: str | None = None,
+    ) -> list[TimelineEventItem]:
+        """Build chronological timeline events for an onboarding process.
+
+        Derives events from process creation, candidate acceptance, task
+        completions, document status changes, contract events, and audit
+        entries. Generates reminder items for incomplete tasks/documents.
+        """
+        process = await self.process_repo.get_by_id(process_id)
+        if process is None:
+            raise OnboardingProcessNotFoundError()
+        events: list[TimelineEventItem] = []
+
+        # --- derived milestones ---
+        if accepted_at:
+            events.append(
+                TimelineEventItem(
+                    event_type="candidate_accepted",
+                    kind="milestone",
+                    timestamp=accepted_at,
+                    title="Ứng viên chấp nhận offer",
+                )
+            )
+        events.append(
+            TimelineEventItem(
+                event_type="process_created",
+                kind="milestone",
+                timestamp=process.created_at.isoformat(),
+                title="Tạo hồ sơ onboarding",
+            )
+        )
+
+        # --- task events + reminders ---
+        tasks = await self.task_repo.list_by_process(process_id)
+        now = datetime.now(UTC)
+        today_str = now.date().isoformat()
+        for task in tasks:
+            if task.completed_at:
+                events.append(
+                    TimelineEventItem(
+                        event_type="task_completed",
+                        kind="task",
+                        timestamp=task.completed_at.isoformat(),
+                        title=f"Hoàn thành: {task.name}",
+                        status="done",
+                    )
+                )
+            else:
+                is_overdue = start_date is not None and start_date < today_str
+                events.append(
+                    TimelineEventItem(
+                        event_type="task_reminder",
+                        kind="reminder",
+                        timestamp=task.created_at.isoformat()
+                        if task.created_at
+                        else process.created_at.isoformat(),
+                        title=f"Chờ hoàn thành: {task.name}",
+                        description="Task chưa hoàn thành",
+                        status="pending",
+                        due_at=start_date,
+                        is_overdue=is_overdue,
+                    )
+                )
+
+        # --- document events + reminders ---
+        if self.document_repo is not None:
+            docs = await self.document_repo.list_by_process(process_id)
+            for doc in docs:
+                if doc.uploaded_at:
+                    label = (
+                        "Xác thực"
+                        if doc.status == "verified"
+                        else ("Từ chối" if doc.status == "rejected" else "Tải lên")
+                    )
+                    events.append(
+                        TimelineEventItem(
+                            event_type="document_status_changed",
+                            kind="document",
+                            timestamp=doc.uploaded_at.isoformat(),
+                            title=f"{label}: {doc.display_name}",
+                            status=doc.status,
+                        )
+                    )
+                elif doc.status == "pending":
+                    is_overdue = start_date is not None and start_date < today_str
+                    events.append(
+                        TimelineEventItem(
+                            event_type="document_reminder",
+                            kind="reminder",
+                            timestamp=process.created_at.isoformat(),
+                            title=f"Chờ tải lên: {doc.display_name}",
+                            description="Tài liệu chưa được tải lên",
+                            status="pending",
+                            due_at=start_date,
+                            is_overdue=is_overdue,
+                        )
+                    )
+                if doc.verified_at and doc.verified_at != doc.uploaded_at:
+                    label = "Xác thực" if doc.status == "verified" else "Từ chối"
+                    events.append(
+                        TimelineEventItem(
+                            event_type="document_status_changed",
+                            kind="document",
+                            timestamp=doc.verified_at.isoformat(),
+                            title=f"{label}: {doc.display_name}",
+                            status=doc.status,
+                        )
+                    )
+
+        # --- contract events ---
+        if self.contract_repo is not None:
+            contract = await self.contract_repo.get_by_process(process_id)
+            if contract is not None:
+                events.append(
+                    TimelineEventItem(
+                        event_type="contract_created",
+                        kind="contract",
+                        timestamp=contract.created_at.isoformat(),
+                        title=f"Tạo hợp đồng ({contract.contract_type})",
+                        status=contract.status,
+                    )
+                )
+
+        # --- audit-based completion events ---
+        audit_statement = (
+            select(OnboardingAuditLog)
+            .where(OnboardingAuditLog.candidate_id == process.candidate_id)
+            .order_by(OnboardingAuditLog.created_at)
+        )
+        audit_entries = list((await self.session.execute(audit_statement)).scalars().all())
+        for entry in audit_entries:
+            ts = entry.created_at.isoformat()
+            if entry.operation_type == _OP_READY_FOR_COMPLETION:
+                events.append(
+                    TimelineEventItem(
+                        event_type="ready_for_completion",
+                        kind="milestone",
+                        timestamp=ts,
+                        title="Sẵn sàng hoàn thành",
+                        description="Tất cả task đã hoàn thành, chờ HR xác nhận",
+                        actor_name=entry.actor_email,
+                    )
+                )
+            elif entry.operation_type == _OP_CONFIRMED_COMPLETE:
+                events.append(
+                    TimelineEventItem(
+                        event_type="completed",
+                        kind="milestone",
+                        timestamp=ts,
+                        title="Hoàn tất onboarding",
+                        description="HR xác nhận hoàn thành",
+                        actor_name=entry.actor_email,
+                    )
+                )
+            elif entry.operation_type == _OP_EMPLOYEE_ACTIVATED:
+                events.append(
+                    TimelineEventItem(
+                        event_type="employee_activated",
+                        kind="milestone",
+                        timestamp=ts,
+                        title="Kích hoạt nhân viên",
+                        description="Nhân viên đã được kích hoạt trong hệ thống",
+                        actor_name=entry.actor_email,
+                    )
+                )
+        events.sort(key=lambda e: e.timestamp)
+        return events
+
+    async def _fetch_audit_by_candidate(self, candidate_id: UUID) -> list[OnboardingAuditLog]:
+        """Query audit entries for a candidate directly through the session.
+
+        Keeps the audit repository append-only (R8.4) by not adding a
+        read method to it. Uses the session directly for this read-only
+        timeline derivation query.
+        """
+        from sqlmodel import select
+
+        statement = (
+            select(OnboardingAuditLog)
+            .where(OnboardingAuditLog.candidate_id == candidate_id)
+            .order_by(OnboardingAuditLog.created_at)
+        )
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
 
     def _build_contract_placeholder(
         self,

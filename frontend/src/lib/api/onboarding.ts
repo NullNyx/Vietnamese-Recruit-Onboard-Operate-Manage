@@ -40,6 +40,18 @@ export interface OnboardingProcess {
   contract_draft?: OnboardingContractDraft | null;
 }
 
+export interface OnboardingTimelineItem {
+  event_type: string;
+  kind: "milestone" | "task" | "document" | "contract" | "reminder";
+  timestamp: string;
+  title: string;
+  description?: string | null;
+  actor_name?: string | null;
+  status?: string | null;
+  due_at?: string | null;
+  is_overdue: boolean;
+}
+
 export interface OnboardingContractDraft {
   id: string;
   process_id: string;
@@ -80,6 +92,10 @@ export type ContractDraft = OnboardingContractDraft;
 
 export interface ContractDraftStatusUpdate {
   status: OnboardingContractDraft["status"];
+}
+
+export interface OnboardingTimelineResponse {
+  events: OnboardingTimelineItem[];
 }
 
 // ─── API Helpers ────────────────────────────────────────────────────────────
@@ -138,6 +154,18 @@ export async function updateTaskStatus(
     method: "PATCH",
     body: JSON.stringify({ status }),
   });
+}
+
+/** PATCH /api/onboarding/processes/{process_id}/complete */
+export async function confirmOnboardingCompletion(processId: string): Promise<OnboardingProcess> {
+  return apiFetch<OnboardingProcess>(`/processes/${processId}/complete`, {
+    method: "PATCH",
+  });
+}
+
+/** GET /api/onboarding/processes/{process_id}/timeline */
+export async function getOnboardingTimeline(processId: string): Promise<OnboardingTimelineResponse> {
+  return apiFetch<OnboardingTimelineResponse>(`/processes/${processId}/timeline`);
 }
 
 /** PATCH /api/onboarding/processes/{process_id}/employee-setup */

@@ -44,6 +44,8 @@ __all__ = [
     "OnboardingDocumentResponse",
     "DocumentUploadResponse",
     "DocumentVerifyRequest",
+    "OnboardingTimelineItemResponse",
+    "OnboardingTimelineResponse",
 ]
 
 
@@ -272,3 +274,23 @@ class OnboardingProcessDetailResponse(BaseModel):
     tasks: list[OnboardingTaskResponse] = Field(default_factory=list)
     documents: list[OnboardingDocumentResponse] = Field(default_factory=list)
     contract_draft: ContractDraftResponse | None = None
+
+
+class OnboardingTimelineItemResponse(BaseModel):
+    """A single timeline event in an onboarding process timeline."""
+
+    event_type: str = Field(description="Machine-readable event type key")
+    kind: str = Field(description="Timeline bucket: milestone, task, document, contract, reminder")
+    timestamp: str
+    title: str = Field(description="Human-readable event title in Vietnamese")
+    description: str | None = None
+    actor_name: str | None = None
+    status: str | None = None
+    due_at: str | None = None
+    is_overdue: bool = False
+
+
+class OnboardingTimelineResponse(BaseModel):
+    """Chronological list of events for an onboarding process timeline."""
+
+    events: list[OnboardingTimelineItemResponse] = Field(default_factory=list)
