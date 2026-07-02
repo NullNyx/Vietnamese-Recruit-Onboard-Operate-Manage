@@ -16,6 +16,19 @@ cookie-based JWT auth · MinIO storage · pytest+Hypothesis / Vitest+fast-check.
    If your work contradicts an ADR, surface it explicitly — do not silently override.
 3. Read `docs/agents/` for issue-tracker, triage-label, and domain-doc rules.
 
+## Current scope snapshot
+
+- Scope now is HR-only: no employee login, no employee self-service surface.
+- Auth is password-based (`/login`), not Google OAuth.
+- First-run flow is `/setup/*` and creates the first `SUPER_ADMIN`.
+- Frontend shell is sidebar-first; no header-nav app shell, no employee-facing
+  routes.
+- Live backend routers are identity/auth + admin, employee, gmail, recruitment
+  (candidate, cv-review, metrics), onboarding, attendance, payslip admin, setup.
+- Use `docs/design-docs/authentication-initial-setup.md` and
+  `docs/superpowers/plans/2026-07-01-scope-refactor.md` as working context when
+  touching auth, setup, or shell work.
+
 ## How skills work (read this — it changes how you respond)
 
 On every user message:
@@ -185,6 +198,14 @@ for full structure. Key rules:
   (3), backup/restore (4), contribution guide (5).
 - **File lifecycle** — don't delete stale files; mark them `SUPERSEDED` or
   `OBSOLETE` per lifecycle doc. When renaming, update all cross-references.
+
+## Task plan discipline
+
+When implementing work from a plan under `docs/superpowers/plans/` or
+`docs/project/changes/`, update the checkbox markers as you go:
+- `- [ ]` → `- [x]` when a sub-task is complete
+- Do **not** batch-tick all boxes at the end; tick as each step ships
+- This keeps plan files truth-aligned with code, not backlog.
 
 ## Git: branch, commit, push, PR
 

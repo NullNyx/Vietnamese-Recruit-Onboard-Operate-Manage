@@ -1,6 +1,6 @@
 # Employee Record & Contracts — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Build Employee Record as core module + Contract & Employment Documents as first vertical slice. HR/Admin sole actor, no employee self-service.
 
@@ -20,7 +20,7 @@
 - Create: `backend/src/modules/employee/domain/contract_amendment.py`
 - Modify: `backend/src/modules/employee/domain/__init__.py`
 
-- [ ] **Add `employment_status` + `termination_date` to Employee entity**
+- [x] **Add `employment_status` + `termination_date` to Employee entity**
 
 In `entities.py`, add fields:
 ```python
@@ -30,7 +30,7 @@ termination_date: date | None = Field(default=None)
 Make `email` nullable: `email: str | None = Field(default=None, max_length=255, unique=True, index=True)`.
 Rename `tax_code` → `personal_tax_code` in field.
 
-- [ ] **Add `Document.status` + verification fields**
+- [x] **Add `Document.status` + verification fields**
 
 In `EmployeeDocument`, add:
 ```python
@@ -42,7 +42,7 @@ expired_at: date | None = Field(default=None)
 Change `document_type` values to match spec: id_card / diploma / insurance / contract_related / other.
 Add `uploaded_by_hr_id: UUID = Field(foreign_key="users.id", nullable=False)`.
 
-- [ ] **Create EmploymentEvent entity**
+- [x] **Create EmploymentEvent entity**
 
 ```python
 # employment_event.py
@@ -58,7 +58,7 @@ class EmploymentEvent(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC), sa_column=Column(DateTime(timezone=True), nullable=False))
 ```
 
-- [ ] **Create Contract entity**
+- [x] **Create Contract entity**
 
 ```python
 # contract.py
@@ -82,7 +82,7 @@ class Contract(SQLModel, table=True):
     updated_by: UUID | None = Field(default=None, foreign_key="users.id")
 ```
 
-- [ ] **Create ContractTemplate entity**
+- [x] **Create ContractTemplate entity**
 
 ```python
 # contract_template.py
@@ -99,7 +99,7 @@ class ContractTemplate(SQLModel, table=True):
     created_by: UUID = Field(foreign_key="users.id", nullable=False)
 ```
 
-- [ ] **Create ContractAmendment entity**
+- [x] **Create ContractAmendment entity**
 
 ```python
 # contract_amendment.py
@@ -117,7 +117,7 @@ class ContractAmendment(SQLModel, table=True):
     created_by: UUID = Field(foreign_key="users.id", nullable=False)
 ```
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add backend/src/modules/employee/domain/entities.py \
@@ -141,7 +141,7 @@ git commit -m "feat(employee): add contract/event entities, employment_status to
 - Modify: `backend/src/modules/employee/infrastructure/__init__.py`
 - Modify: `backend/src/modules/employee/infrastructure/employee_repository.py` (add `update_status` method)
 
-- [ ] **Create EmploymentEventRepository**
+- [x] **Create EmploymentEventRepository**
 
 ```python
 class EmploymentEventRepository:
@@ -161,13 +161,13 @@ class EmploymentEventRepository:
         return list(result.scalars().all())
 ```
 
-- [ ] **Create ContractRepository** (standard CRUD: create, get_by_id, list_by_employee, update, delete)
+- [x] **Create ContractRepository** (standard CRUD: create, get_by_id, list_by_employee, update, delete)
 
-- [ ] **Create ContractTemplateRepository** (standard CRUD: create, get_by_id, list_active, update, archive)
+- [x] **Create ContractTemplateRepository** (standard CRUD: create, get_by_id, list_active, update, archive)
 
-- [ ] **Create ContractAmendmentRepository** (create, list_by_contract, update)
+- [x] **Create ContractAmendmentRepository** (create, list_by_contract, update)
 
-- [ ] **Update EmployeeRepository** — add `update_status` method
+- [x] **Update EmployeeRepository** — add `update_status` method
 
 ```python
 async def update_status(self, employee_id: UUID, status: str, termination_date: date | None = None) -> Employee | None:
@@ -182,9 +182,9 @@ async def update_status(self, employee_id: UUID, status: str, termination_date: 
     return emp
 ```
 
-- [ ] **Update container.py** — register new repositories and services
+- [x] **Update container.py** — register new repositories and services
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git commit -m "feat(employee): add repositories for contract/event/amendment entities"
@@ -201,7 +201,7 @@ git commit -m "feat(employee): add repositories for contract/event/amendment ent
 - Create: `backend/src/modules/employee/application/employment_event_service.py`
 - Modify: `backend/src/modules/employee/application/employee_service.py`
 
-- [ ] **Create ContractService**
+- [x] **Create ContractService**
 
 Business rules:
 - Create contract → status `draft`
@@ -211,7 +211,7 @@ Business rules:
 - Can only terminate/cancel non-terminal contracts
 - Every status change writes AuditLog + EmploymentEvent
 
-- [ ] **Create EmploymentEventService**
+- [x] **Create EmploymentEventService**
 
 ```python
 class EmploymentEventService:
@@ -219,13 +219,13 @@ class EmploymentEventService:
     async def list_by_employee(self, employee_id) -> list[EmploymentEvent]
 ```
 
-- [ ] **Update EmployeeService**
+- [x] **Update EmployeeService**
 
 Add methods:
 - `change_status(employee_id, new_status, termination_date, actor_hr_id)` — validates transition, calls repo, creates EmploymentEvent
 - `update_employee(employee_id, data, actor_hr_id)` — wrap existing update, create EmploymentEvent with before/after diff
 
-- [ ] **Update DocumentService** — add verify/reject/expire methods
+- [x] **Update DocumentService** — add verify/reject/expire methods
 
 ```python
 async def verify_document(doc_id, verified_by_hr_id) -> EmployeeDocument
@@ -233,7 +233,7 @@ async def reject_document(doc_id, verified_by_hr_id, note) -> EmployeeDocument
 async def mark_expired(doc_id) -> EmployeeDocument
 ```
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git commit -m "feat(employee): add contract/event services, employee status change with audit"
@@ -247,7 +247,7 @@ git commit -m "feat(employee): add contract/event services, employee status chan
 - Modify: `backend/src/modules/employee/api/router.py`
 - Modify: `backend/src/modules/employee/api/schemas.py`
 
-- [ ] **Add contract API endpoints**
+- [x] **Add contract API endpoints**
 
 ```
 POST   /api/employees/{id}/contracts           → create contract
@@ -260,7 +260,7 @@ POST   /api/contracts/{id}/renew               → create amendment or new contr
 POST   /api/contracts/{id}/terminate           → mark terminated
 ```
 
-- [ ] **Add contract template endpoints**
+- [x] **Add contract template endpoints**
 
 ```
 GET    /api/contract-templates         → list active templates
@@ -269,13 +269,13 @@ PUT    /api/contract-templates/{id}    → update
 POST   /api/contract-templates/{id}/archive → archive
 ```
 
-- [ ] **Add employment event endpoint**
+- [x] **Add employment event endpoint**
 
 ```
 GET    /api/employees/{id}/events     → list events (read-only)
 ```
 
-- [ ] **Add document verify/reject/expire endpoints**
+- [x] **Add document verify/reject/expire endpoints**
 
 ```
 POST   /api/documents/{id}/verify
@@ -283,15 +283,15 @@ POST   /api/documents/{id}/reject
 POST   /api/documents/{id}/expire
 ```
 
-- [ ] **Add employee status change endpoint**
+- [x] **Add employee status change endpoint**
 
 ```
 POST   /api/employees/{id}/status    → body: {status, termination_date?, note}
 ```
 
-- [ ] **Update employee schemas** — add `employment_status`, `termination_date` to EmployeeResponse, EmployeeCreate, EmployeeUpdate. Make `email` optional in create.
+- [x] **Update employee schemas** — add `employment_status`, `termination_date` to EmployeeResponse, EmployeeCreate, EmployeeUpdate. Make `email` optional in create.
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git commit -m "feat(employee): add contract/event/status API routes"
@@ -305,13 +305,13 @@ git commit -m "feat(employee): add contract/event/status API routes"
 - Modify: `frontend/src/lib/api/employees.ts`
 - Modify: `frontend/src/lib/api/types.ts`
 
-- [ ] **Add contract API client functions**
+- [x] **Add contract API client functions**
 
-- [ ] **Add contract template API client functions**
+- [x] **Add contract template API client functions**
 
-- [ ] **Add employment event API client function**
+- [x] **Add employment event API client function**
 
-- [ ] **Add document status change API functions**
+- [x] **Add document status change API functions**
 
 ```typescript
 export async function verifyDocument(documentId: string): Promise<EmployeeDocument>
@@ -320,9 +320,9 @@ export async function markDocumentExpired(documentId: string): Promise<EmployeeD
 export async function changeEmployeeStatus(employeeId: string, status: string, terminationDate?: string, note?: string): Promise<Employee>
 ```
 
-- [ ] **Update types.ts** — add Contract, ContractTemplate, ContractAmendment, EmploymentEvent interfaces. Update Employee to include employment_status.
+- [x] **Update types.ts** — add Contract, ContractTemplate, ContractAmendment, EmploymentEvent interfaces. Update Employee to include employment_status.
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git commit -m "feat(ui): add contract/event/doc-status API clients"
@@ -335,11 +335,11 @@ git commit -m "feat(ui): add contract/event/doc-status API clients"
 **Files:**
 - Modify: `frontend/src/app/(dashboard)/employees/page.tsx`
 
-- [ ] **Enhance employee table** — add columns: employee_code, full_name, department, position, employment_status, start_date, latest_contract_status (derived or fetched)
+- [x] **Enhance employee table** — add columns: employee_code, full_name, department, position, employment_status, start_date, latest_contract_status (derived or fetched)
 
-- [ ] **Add status badge styling** — colored badges for active/resigned/terminated/suspended
+- [x] **Add status badge styling** — colored badges for active/resigned/terminated/suspended
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git commit -m "feat(ui): enhance employee list with status/contract columns"
@@ -352,17 +352,17 @@ git commit -m "feat(ui): enhance employee list with status/contract columns"
 **Files:**
 - Modify: `frontend/src/app/(dashboard)/employees/[id]/page.tsx`
 
-- [ ] **Refactor page to tabbed layout** — tabs: Profile / Documents / Contracts / Events & Audit
+- [x] **Refactor page to tabbed layout** — tabs: Profile / Documents / Contracts / Events & Audit
 
-- [ ] **Profile tab** — show employee info + edit button (opens inline form or drawer). Change status action.
+- [x] **Profile tab** — show employee info + edit button (opens inline form or drawer). Change status action.
 
-- [ ] **Documents tab** — list documents with status badges. Upload, verify, reject, mark expired actions.
+- [x] **Documents tab** — list documents with status badges. Upload, verify, reject, mark expired actions.
 
-- [ ] **Contracts tab** — list contracts with status. Create contract (drawer/page). Click → Contract Detail.
+- [x] **Contracts tab** — list contracts with status. Create contract (drawer/page). Click → Contract Detail.
 
-- [ ] **Events & Audit tab** — read-only timeline of EmploymentEvent records.
+- [x] **Events & Audit tab** — read-only timeline of EmploymentEvent records.
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git commit -m "feat(ui): employee detail tabbed hub with profile/documents/contracts/events"
@@ -376,15 +376,15 @@ git commit -m "feat(ui): employee detail tabbed hub with profile/documents/contr
 - Create: `frontend/src/app/(dashboard)/employees/[id]/contracts/[contractId]/page.tsx`
 - Modify: `frontend/src/app/(dashboard)/employees/[id]/page.tsx` (create contract modal/drawer)
 
-- [ ] **Create Contract Detail page** — show contract info, status, content, signed document. Actions: edit draft, upload signed, send for signing, renew, terminate, export.
+- [x] **Create Contract Detail page** — show contract info, status, content, signed document. Actions: edit draft, upload signed, send for signing, renew, terminate, export.
 
-- [ ] **Create Contract flow** — drawer or page with: select template, enter contract_number, started_on/ended_on, content or template fill.
+- [x] **Create Contract flow** — drawer or page with: select template, enter contract_number, started_on/ended_on, content or template fill.
 
-- [ ] **Contract Amendment list** — show under contract detail. Create amendment drawer.
+- [x] **Contract Amendment list** — show under contract detail. Create amendment drawer.
 
-- [ ] **Contract status transitions** — buttons only for valid next states per role.
+- [x] **Contract status transitions** — buttons only for valid next states per role.
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git commit -m "feat(ui): contract detail page with lifecycle actions"
@@ -401,7 +401,7 @@ git commit -m "feat(ui): contract detail page with lifecycle actions"
 - Create: `backend/tests/modules/employee/test_document_status.py`
 - Modify: `backend/tests/modules/employee/__init__.py`
 
-- [ ] **Test: status change validates transitions**
+- [x] **Test: status change validates transitions**
 
 ```python
 async def test_cannot_create_contract_after_terminated(db_session, employee_factory):
@@ -409,7 +409,7 @@ async def test_cannot_create_contract_after_terminated(db_session, employee_fact
     # attempt create contract → should raise InvalidStatusTransition
 ```
 
-- [ ] **Test: document status flow**
+- [x] **Test: document status flow**
 
 ```python
 async def test_document_verify_sets_verified_by(db_session, document_factory):
@@ -420,7 +420,7 @@ async def test_document_verify_sets_verified_by(db_session, document_factory):
     assert result.verified_by_hr_id == hr_user.id
 ```
 
-- [ ] **Test: status change creates EmploymentEvent**
+- [x] **Test: status change creates EmploymentEvent**
 
 ```python
 async def test_status_change_records_event(db_session, employee_factory):
@@ -432,7 +432,7 @@ async def test_status_change_records_event(db_session, employee_factory):
     assert events[0].event_type == "status_change"
 ```
 
-- [ ] **Test: contract lifecycle transitions**
+- [x] **Test: contract lifecycle transitions**
 
 ```python
 async def test_contract_draft_to_active_flow(db_session, contract_factory):
@@ -444,7 +444,7 @@ async def test_contract_draft_to_active_flow(db_session, contract_factory):
     assert c2.status == "active"
 ```
 
-- [ ] **Test: cannot edit active contract directly**
+- [x] **Test: cannot edit active contract directly**
 
 ```python
 async def test_cannot_update_active_contract_content(db_session, contract_factory):
@@ -454,7 +454,7 @@ async def test_cannot_update_active_contract_content(db_session, contract_factor
         await svc.update_draft(contract.id, {"content": "new"})
 ```
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git commit -m "test(employee): add status/contract/document event tests"

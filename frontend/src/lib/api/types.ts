@@ -2,7 +2,7 @@ export interface Employee {
   id: string;
   employee_code: string;
   full_name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   date_of_birth: string | null;
   gender: string | null;
@@ -12,6 +12,8 @@ export interface Employee {
   start_date: string | null;
   id_number: string | null;
   tax_code: string | null;
+  employment_status: string;
+  termination_date: string | null;
   contract_type: string | null;
   candidate_id: string | null;
   is_active: boolean;
@@ -44,38 +46,17 @@ export interface EmployeeDocument {
   id: string;
   employee_id: string;
   document_type: string;
+  status: string;
   file_name: string;
   file_size: number;
   mime_type: string;
+  uploaded_by_hr_id: string | null;
+  verified_by_hr_id: string | null;
+  verified_at: string | null;
+  expired_at: string | null;
   description: string | null;
   uploaded_at: string;
 }
-
-export interface ImportResult {
-  total_rows: number;
-  success_count: number;
-  error_count: number;
-  errors: Array<{ row: number; message: string }>;
-  departments_created?: number;
-  positions_created?: number;
-}
-
-export interface EmployeeCreateData {
-  full_name: string;
-  email: string;
-  phone?: string;
-  date_of_birth?: string;
-  gender?: string;
-  address?: string;
-  department_id?: string;
-  position_id?: string;
-  start_date?: string;
-  id_number?: string;
-  tax_code?: string;
-  contract_type?: string;
-}
-
-export type EmployeeUpdateData = Partial<EmployeeCreateData>;
 
 export interface DepartmentCreateData {
   name: string;
@@ -85,6 +66,113 @@ export interface DepartmentCreateData {
 export interface PositionCreateData {
   name: string;
   department_id?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Contract Types
+// ---------------------------------------------------------------------------
+
+export interface Contract {
+  id: string;
+  employee_id: string;
+  contract_number: string | null;
+  template_id: string | null;
+  contract_type: string;
+  status: string;
+  signed_on: string | null;
+  started_on: string | null;
+  ended_on: string | null;
+  file_path: string | null;
+  signed_document_path: string | null;
+  content: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  updated_by: string | null;
+}
+
+export interface ContractCreateData {
+  contract_type: string;
+  contract_number?: string;
+  template_id?: string;
+  content?: string;
+  started_on?: string;
+  ended_on?: string;
+}
+
+export interface ContractUpdateData {
+  contract_number?: string;
+  content?: string;
+  started_on?: string;
+  ended_on?: string;
+  file_path?: string;
+  signed_document_path?: string;
+}
+
+export interface ContractSignData {
+  signed_document_path?: string;
+  signed_on?: string;
+}
+
+export interface ContractRenewData {
+  new_started_on?: string;
+  new_ended_on?: string;
+  new_content?: string;
+}
+
+export interface ContractTemplate {
+  id: string;
+  name: string;
+  version: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+}
+
+export interface ContractTemplateCreateData {
+  name: string;
+  content: string;
+  file_path?: string;
+}
+
+export interface ContractTemplateUpdateData {
+  name?: string;
+  content?: string;
+  file_path?: string;
+}
+
+export interface ContractAmendment {
+  id: string;
+  contract_id: string;
+  name: string;
+  status: string;
+  signed_on: string | null;
+  file_path: string | null;
+  signed_document_path: string | null;
+  created_at: string;
+  created_by: string;
+}
+
+export interface ContractAmendmentCreateData {
+  name: string;
+  content: string;
+  file_path?: string;
+}
+
+export interface EmploymentEvent {
+  id: string;
+  employee_id: string;
+  event_type: string;
+  actor_hr_id: string;
+  note: string | null;
+  created_at: string;
+}
+
+export interface EmployeeStatusChangeData {
+  status: string;
+  termination_date?: string;
+  note?: string;
 }
 
 // ---------------------------------------------------------------------------

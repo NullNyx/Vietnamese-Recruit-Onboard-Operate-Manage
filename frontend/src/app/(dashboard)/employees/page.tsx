@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { UserPlus, FileSpreadsheet } from "lucide-react";
 
 import { DataTable, type ColumnDef } from "@/components/data-table";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useEmployees } from "@/hooks/queries/use-employees";
 import { useDepartments } from "@/hooks/queries/use-departments";
@@ -18,7 +19,8 @@ interface EmployeeRow extends Record<string, unknown> {
   email: string;
   department_name: string;
   position_name: string;
-  is_active: boolean;
+  employment_status: string;
+  contract_type: string;
 }
 
 const columns: ColumnDef<EmployeeRow>[] = [
@@ -27,17 +29,36 @@ const columns: ColumnDef<EmployeeRow>[] = [
   { key: "department_name", header: "Phòng ban" },
   { key: "position_name", header: "Chức vụ" },
   {
-    key: "is_active",
+    key: "employment_status",
     header: "Trạng thái",
+    cell: (row) => <EmploymentStatusBadge status={row.employment_status} />,
+  },
+  {
+    key: "contract_type",
+    header: "Hợp đồng",
     cell: (row) => (
-      <span
-        className={row.is_active ? "text-green-600" : "text-muted-foreground"}
-      >
-        {row.is_active ? "Đang làm" : "Đã nghỉ"}
-      </span>
+      <Badge variant="outline" className="font-medium">
+        {row.contract_type || "—"}
+      </Badge>
     ),
   },
 ];
+
+function EmploymentStatusBadge({ status }: { status: string }) {
+  const meta =
+    {
+      active: { label: "Đang làm", className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+      resigned: { label: "Đã nghỉ", className: "border-amber-200 bg-amber-50 text-amber-700" },
+      terminated: { label: "Chấm dứt", className: "border-rose-200 bg-rose-50 text-rose-700" },
+      suspended: { label: "Tạm ngưng", className: "border-slate-200 bg-slate-50 text-slate-700" },
+    }[status] ?? { label: status || "—", className: "border-muted bg-muted text-muted-foreground" };
+
+  return (
+    <Badge variant="outline" className={meta.className}>
+      {meta.label}
+    </Badge>
+  );
+}
 
 export default function EmployeesPage() {
   const router = useRouter();
@@ -66,7 +87,7 @@ export default function EmployeesPage() {
     const deptMap = new Map(departments.map((d) => [d.id, d.name]));
     const posMap = new Map(positions.map((p) => [p.id, p.name]));
 
-    return employeesData.items.map((emp: Employee) => ({
+      return employeesData.items.map((emp: Employee) => ({
       id: emp.id,
       full_name: emp.full_name,
       email: emp.email,
@@ -76,7 +97,8 @@ export default function EmployeesPage() {
       position_name: emp.position_id
         ? (posMap.get(emp.position_id) ?? "—")
         : "—",
-      is_active: emp.is_active,
+      employment_status: emp.employment_status,
+      contract_type: emp.contract_type ?? "—",
     }));
   }, [employeesData?.items, departments, positions]);
 

@@ -100,6 +100,7 @@ position_router = APIRouter(prefix="/api/positions", tags=["positions"])
 document_router = APIRouter(prefix="/api/documents", tags=["documents"])
 contract_router = APIRouter(prefix="/api/contracts", tags=["contracts"])
 contract_template_router = APIRouter(prefix="/api/contract-templates", tags=["contract-templates"])
+amendment_router = APIRouter(prefix="/api/contract-amendments", tags=["contract-amendments"])
 
 # ---------------------------------------------------------------------------
 # Employee endpoints
@@ -604,6 +605,116 @@ async def archive_contract_template(
     template = await template_service.archive(template_id)
     return ContractTemplateResponse.model_validate(template)
 
+
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Contract Amendment endpoints
+# ---------------------------------------------------------------------------
+
+@contract_router.get("/{contract_id}/amendments", response_model=list[ContractAmendmentResponse])
+async def list_contract_amendments(
+    contract_id: UUID,
+    current_user: AdminUserDep,
+    amendment_service: ContractAmendmentServiceDep,
+) -> list[ContractAmendmentResponse]:
+    amendments = await amendment_service.list_by_contract(contract_id)
+    return [ContractAmendmentResponse.model_validate(a) for a in amendments]
+
+@contract_router.post("/{contract_id}/amendments", response_model=ContractAmendmentResponse, status_code=201)
+async def create_contract_amendment(
+    contract_id: UUID,
+    body: ContractAmendmentCreate,
+    current_user: AdminUserDep,
+    amendment_service: ContractAmendmentServiceDep,
+) -> ContractAmendmentResponse:
+    data = body.model_dump(exclude_unset=True)
+    data["contract_id"] = contract_id
+    amendment = await amendment_service.create(data, created_by=current_user.id)
+    return ContractAmendmentResponse.model_validate(amendment)
+
+@amendment_router.put("/{amendment_id}", response_model=ContractAmendmentResponse)
+async def update_amendment(
+    amendment_id: UUID,
+    body: ContractAmendmentCreate,
+    current_user: AdminUserDep,
+    amendment_service: ContractAmendmentServiceDep,
+) -> ContractAmendmentResponse:
+    amendment = await amendment_service.update(amendment_id, body.model_dump(exclude_unset=True))
+    return ContractAmendmentResponse.model_validate(amendment)
+
+# ---------------------------------------------------------------------------
+# Employment event endpoints
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+
+
+@employee_router.get("/{employee_id}/events", response_model=list[EmploymentEventResponse])
+async def list_employment_events(
+    employee_id: UUID,
+    current_user: CurrentUserDep,
+    current_employee: CurrentUserEmployee,
+    event_service: EmploymentEventServiceDep,
+) -> list[EmploymentEventResponse]:
+    if current_user.role != "admin":
+        if current_employee is None or employee_id != current_employee.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+    events = await event_service.list_by_employee(employee_id)
+    return [EmploymentEventResponse.model_validate(evt) for evt in events]
+
+
+@employee_router.patch("/{employee_id}/status", response_model=EmployeeResponse)
+async def change_employee_status(
+    employee_id: UUID,
+    body: EmployeeStatusChangeRequest,
+    current_user: AdminUserDep,
+    employee_service: EmployeeServiceDep,
+) -> EmployeeResponse:
+    employee = await employee_service.change_status(
+        employee_id,
+        body.status,
+        actor_hr_id=current_user.id,
+        termination_date=body.termination_date,
+        note=body.note,
+    )
+    return EmployeeResponse.model_validate(employee)
+
+
+# ---------------------------------------------------------------------------
+# Document status endpoints
+# ---------------------------------------------------------------------------
+
+
+@document_router.post("/{document_id}/verify", response_model=DocumentResponse)
+async def verify_document(
+    document_id: UUID,
+    current_user: AdminUserDep,
+    document_service: DocumentServiceDep,
+) -> DocumentResponse:
+    document = await document_service.verify_document(document_id, current_user.id)
+    return DocumentResponse.model_validate(document)
+
+
+@document_router.post("/{document_id}/reject", response_model=DocumentResponse)
+async def reject_document(
+    document_id: UUID,
+    body: DocumentRejectRequest,
+    current_user: AdminUserDep,
+    document_service: DocumentServiceDep,
+) -> DocumentResponse:
+    document = await document_service.reject_document(document_id, current_user.id, body.note)
+    return DocumentResponse.model_validate(document)
+
+
+@document_router.post("/{document_id}/expire", response_model=DocumentResponse)
+async def expire_document(
+    document_id: UUID,
+    current_user: AdminUserDep,
+    document_service: DocumentServiceDep,
+) -> DocumentResponse:
+    document = await document_service.mark_expired(document_id)
+    return DocumentResponse.model_validate(document)
+
 # ---------------------------------------------------------------------------
 # Include sub-routers into the main router
 # ---------------------------------------------------------------------------
@@ -614,3 +725,4 @@ router.include_router(position_router)
 router.include_router(document_router)
 router.include_router(contract_router)
 router.include_router(contract_template_router)
+router.include_router(amendment_router)

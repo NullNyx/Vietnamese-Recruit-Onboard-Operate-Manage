@@ -285,3 +285,130 @@ class TestDeleteDocument:
 
         with pytest.raises(EmployeeError, match="Document not found"):
             await service.delete_document(uuid4())
+
+
+class TestVerifyDocument:
+    """Tests for DocumentService.verify_document."""
+
+    async def test_marks_as_verified(
+        self, document_repo: AsyncMock, employee_repo: AsyncMock,
+        minio_client: AsyncMock, settings: EmployeeSettings,
+    ) -> None:
+        from datetime import UTC, datetime
+        employee = Employee(id=uuid4(), full_name="Test", employee_code="NV-001")
+        employee_repo.get_by_id.return_value = employee
+
+        doc = EmployeeDocument(
+            id=uuid4(), employee_id=employee.id,
+            document_type="cccd", file_name="card.pdf",
+            storage_path="e/c.pdf", file_size=100,
+            mime_type="application/pdf", uploaded_by_hr_id=uuid4(),
+            status="uploaded",
+        )
+        document_repo.get_by_id.return_value = doc
+        document_repo.session = MagicMock()
+        document_repo.session.flush = AsyncMock()
+
+        svc = DocumentService(
+            document_repository=document_repo,
+            employee_repository=employee_repo,
+            minio_client=minio_client,
+            settings=settings,
+        )
+
+        hr_id = uuid4()
+        result = await svc.verify_document(doc.id, hr_id)
+
+        assert result.status == "verified"
+        assert result.verified_by_hr_id == hr_id
+        assert result.verified_at is not None
+        document_repo.session.add.assert_called_with(doc)
+        document_repo.session.flush.assert_awaited_once()
+
+
+class TestRejectDocument:
+    async def test_marks_as_rejected(
+        self, document_repo: AsyncMock, employee_repo: AsyncMock,
+        minio_client: AsyncMock, settings: EmployeeSettings,
+    ) -> None:
+        employee = Employee(id=uuid4(), full_name="Test", employee_code="NV-001")
+        employee_repo.get_by_id.return_value = employee
+
+        doc = EmployeeDocument(
+            id=uuid4(), employee_id=employee.id,
+            document_type="cccd", file_name="card.pdf",
+            storage_path="e/c.pdf", file_size=100,
+            mime_type="application/pdf", uploaded_by_hr_id=uuid4(),
+            status="uploaded",
+        )
+        document_repo.get_by_id.return_value = doc
+        document_repo.session = MagicMock()
+        document_repo.session.flush = AsyncMock()
+
+        svc = DocumentService(
+            document_repository=document_repo,
+            employee_repository=employee_repo,
+            minio_client=minio_client,
+            settings=settings,
+        )
+
+        hr_id = uuid4()
+        result = await svc.reject_document(doc.id, hr_id, note="Invalid")
+
+        assert result.status == "rejected"
+        assert result.verified_by_hr_id == hr_id
+        document_repo.session.add.assert_called_with(doc)
+        document_repo.session.flush.assert_awaited_once()
+
+
+class TestMarkExpired:
+    async def test_marks_as_expired(
+        self, document_repo: AsyncMock, employee_repo: AsyncMock,
+        minio_client: AsyncMock, settings: EmployeeSettings,
+    ) -> None:
+        employee = Employee(id=uuid4(), full_name="Test", employee_code="NV-001")
+        employee_repo.get_by_id.return_value = employee
+
+        doc = EmployeeDocument(
+            id=uuid4(), employee_id=employee.id,
+            document_type="cccd", file_name="card.pdf",
+            storage_path="e/c.pdf", file_size=100,
+            mime_type="application/pdf", uploaded_by_hr_id=uuid4(),
+            status="uploaded",
+        )
+        document_repo.get_by_id.return_value = doc
+        document_repo.session = MagicMock()
+        document_repo.session.flush = AsyncMock()
+
+        svc = DocumentService(
+            document_repository=document_repo,
+            employee_repository=employee_repo,
+            minio_client=minio_client,
+            settings=settings,
+        )
+
+        result = await svc.mark_expired(doc.id)
+
+        assert result.status == "expired"
+        document_repo.session.add.assert_called_with(doc)
+        document_repo.session.flush.assert_awaited_once()
+
+
+class TestVerifyDocumentNotFound:
+    async def test_raises_when_missing(
+        self, document_repo: AsyncMock, employee_repo: AsyncMock,
+        minio_client: AsyncMock, settings: EmployeeSettings,
+    ) -> None:
+        employee = Employee(id=uuid4(), full_name="Test", employee_code="NV-001")
+        employee_repo.get_by_id.return_value = employee
+        document_repo.get_by_id.return_value = None
+
+        svc = DocumentService(
+            document_repository=document_repo,
+            employee_repository=employee_repo,
+            minio_client=minio_client,
+            settings=settings,
+        )
+
+        with pytest.raises(EmployeeError, match="Document not found"):
+            await svc.verify_document(uuid4(), uuid4())

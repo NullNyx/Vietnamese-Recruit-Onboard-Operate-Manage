@@ -1,6 +1,6 @@
 # Scope Refactor — Vroom HR Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Replace employee-self-service + Google OAuth + header-nav layout with HR-only auth/setup/shell according to design-docs.
 
@@ -65,52 +65,52 @@
 **Files:**
 - Delete: `frontend/src/app/(employee)/`
 
-- [ ] **Delete `(employee)` route group**
+- [x] **Delete `(employee)` route group**
 
 ```bash
 rm -rf frontend/src/app/\(employee\)/
 ```
 
-- [ ] **Delete employee-only lib files**
+- [x] **Delete employee-only lib files**
 
 ```bash
 rm -f frontend/src/lib/ess-nav-config.ts
 rm -f frontend/src/lib/employee-navigation.ts
 ```
 
-- [ ] **Delete employee-only components**
+- [x] **Delete employee-only components**
 
 ```bash
 rm -f frontend/src/components/employee-sidebar.tsx
 rm -f frontend/src/components/employee-mobile-nav.tsx
 ```
 
-- [ ] **Delete employee API libs**
+- [x] **Delete employee API libs**
 
 ```bash
 rm -f frontend/src/lib/api/employee-requests.ts
 rm -f frontend/src/lib/api/employee-assistant.ts
 ```
 
-- [ ] **Delete admin employee-requests**
+- [x] **Delete admin employee-requests**
 
 ```bash
 rm -rf frontend/src/app/\(dashboard\)/admin/employee-requests/
 ```
 
-- [ ] **Delete related test files**
+- [x] **Delete related test files**
 
 ```bash
 rm -f frontend/src/app/\(employee\)/**/*.test.*
 find frontend/src -path '*/__tests__/*' -name '*employee*' | xargs rm -f
 ```
 
-- [ ] **Verify no remaining imports from deleted files**
+- [x] **Verify no remaining imports from deleted files**
 
 Run: `rg -n "ess-nav-config\|employee-navigation\|employee-requests\|employee-assistant\|employee-sidebar\|employee-mobile" frontend/src --type ts --type tsx`
 Expected: no matches (or matches in test/plan files we want to keep)
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -122,7 +122,7 @@ git commit -m "refactor: remove employee self-service surface"
 **Files:**
 - Modify: `backend/src/main.py`
 
-- [ ] **Unregister employee_request, employee_assistant, employee_payslip routers from main.py**
+- [x] **Unregister employee_request, employee_assistant, employee_payslip routers from main.py**
 
 Edit `backend/src/main.py`: delete lines importing and including these routers:
 ```
@@ -134,22 +134,22 @@ src/modules.payslip.api.employee_router
 
 Keep admin_payslip_router if it exists (HR-admin payslip is in scope).
 
-- [ ] **Remove unused error handler registrations**
+- [x] **Remove unused error handler registrations**
 
 Delete `register_employee_request_error_handlers(app)` from main.py.
 
-- [ ] **Remove the backend module directories**
+- [x] **Remove the backend module directories**
 
 ```bash
 rm -rf backend/src/modules/employee_request/
 ```
 
-- [ ] **Search for remaining employee-payslip references**
+- [x] **Search for remaining employee-payslip references**
 
 Run: `rg -n "employee_request\|employee_assistant\|employee_payslip" backend/src/`
 Expected: no matches (or matches in admin-only code we keep)
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -163,24 +163,24 @@ git commit -m "refactor: remove employee-facing backend modules"
 - Modify: `frontend/src/lib/navigation.ts`
 - Modify: `frontend/src/components/header-navigation/header-utilities.tsx`
 
-- [ ] **Remove employee links from admin-nav-config**
+- [x] **Remove employee links from admin-nav-config**
 
 Edit `frontend/src/lib/admin-nav-config.ts`: remove `/employee/documents` link, `/admin/employee-requests` link.
 
-- [ ] **Remove employee sidebar link from header-utilities**
+- [x] **Remove employee sidebar link from header-utilities**
 
 Edit `frontend/src/components/header-navigation/header-utilities.tsx`: remove `<a href="/employee/profile">`.
 
-- [ ] **Update navigation.ts if needed**
+- [x] **Update navigation.ts if needed**
 
 Check if `/employee/*` routes appear in `frontend/src/lib/navigation.ts` and remove.
 
-- [ ] **Fix tests referencing removed routes**
+- [x] **Fix tests referencing removed routes**
 
 Run: `cd frontend && npx jest --no-coverage 2>&1 | head -50`
 If tests fail because of removed routes, update test assertions.
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -194,13 +194,13 @@ git commit -m "refactor: clean nav configs after employee scope cut"
 - Delete: `frontend/src/app/(dashboard)/admin/whitelist/`
 - Delete: `frontend/src/app/(dashboard)/admin/domains/` (if exists)
 
-- [ ] **Remove OAuth config page**
+- [x] **Remove OAuth config page**
 
 ```bash
 rm -rf frontend/src/app/\(dashboard\)/admin/oauth/
 ```
 
-- [ ] **Remove whitelist page**
+- [x] **Remove whitelist page**
 
 ```bash
 rm -rf frontend/src/app/\(dashboard\)/admin/whitelist/
@@ -209,7 +209,7 @@ rm -rf frontend/src/app/\(dashboard\)/admin/whitelist/
 Verify: `rg -n "/admin/oauth\|/admin/whitelist\|/admin/domains" frontend/src/`
 Expected: no matches in nav configs (if any exist, remove them too)
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -225,7 +225,7 @@ git commit -m "refactor: remove OAuth/whitelist admin pages"
 **Files:**
 - Modify: `backend/src/modules/identity/domain/entities.py`
 
-- [ ] **Extend UserRole enum with new roles**
+- [x] **Extend UserRole enum with new roles**
 
 Edit the `UserRole` enum in `entities.py`:
 ```python
@@ -236,7 +236,7 @@ class UserRole(str, Enum):
     READ_ONLY = "read_only"
 ```
 
-- [ ] **Add password_hash field to User model**
+- [x] **Add password_hash field to User model**
 
 ```python
 class User(SQLModel, table=True):
@@ -245,13 +245,13 @@ class User(SQLModel, table=True):
     # Keep google_sub for migration period, mark nullable
 ```
 
-- [ ] **Run migration**
+- [x] **Run migration**
 
 ```bash
 cd backend && alembic revision --autogenerate -m "add password_hash and role enum"
 ```
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -263,7 +263,7 @@ git commit -m "feat: add password auth fields to identity model"
 **Files:**
 - Create: `backend/src/modules/identity/application/password_service.py`
 
-- [ ] **Create PasswordService**
+- [x] **Create PasswordService**
 
 ```python
 """PasswordService for hashing and verifying passwords."""
@@ -298,7 +298,7 @@ class PasswordService:
 
 (ponytail: SHA-256 + salt is acceptable for MVP. Upgrade to bcrypt/argon2 when compliance audit required.)
 
-- [ ] **Add test**
+- [x] **Add test**
 
 Create `backend/tests/modules/identity/test_password_service.py`:
 ```python
@@ -312,7 +312,7 @@ def test_hash_and_verify():
 Run: `cd backend && python -m pytest tests/modules/identity/test_password_service.py -v`
 Expected: PASS
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -326,7 +326,7 @@ git commit -m "feat: add password hash/verify service"
 - Modify: `backend/src/modules/identity/api/schemas.py`
 - Modify: `backend/src/modules/identity/container.py`
 
-- [ ] **Create LoginRequest/RegisterRequest schemas**
+- [x] **Create LoginRequest/RegisterRequest schemas**
 
 Add to `schemas.py`:
 ```python
@@ -340,7 +340,7 @@ class RegisterRequest(BaseModel):
     name: str
 ```
 
-- [ ] **Add password_login endpoint**
+- [x] **Add password_login endpoint**
 
 In `router.py`:
 ```python
@@ -372,14 +372,14 @@ async def password_login(
     return AuthResponse(access_token=tokens.access_token, refresh_token=tokens.refresh_token)
 ```
 
-- [ ] **Register PasswordService in container.py**
+- [x] **Register PasswordService in container.py**
 
 ```python
 from src.modules.identity.application.password_service import PasswordService
 # Add to identity container providers
 ```
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -394,7 +394,7 @@ git commit -m "feat: add password login endpoint"
 - Create: `backend/src/modules/setup/container.py`
 - Modify: `backend/src/main.py`
 
-- [ ] **Create SetupService**
+- [x] **Create SetupService**
 
 In `backend/src/modules/setup/application/setup_service.py`:
 ```python
@@ -437,7 +437,7 @@ class SetupService:
         await self._session.commit()
 ```
 
-- [ ] **Create setup API endpoints**
+- [x] **Create setup API endpoints**
 
 ```python
 # router.py
@@ -493,18 +493,18 @@ async def complete_setup(
     return {"status": "completed"}
 ```
 
-- [ ] **Register in main.py**
+- [x] **Register in main.py**
 
 ```python
 from src.modules.setup.api.router import router as setup_router
 app.include_router(setup_router)
 ```
 
-- [ ] **Add setup guard to middleware**
+- [x] **Add setup guard to middleware**
 
 In `frontend/src/middleware.ts`: if setup not complete and path not `/login` or `/setup`, redirect to `/setup`.
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -522,7 +522,7 @@ git commit -m "feat: add initial setup wizard backend"
 - Create: `frontend/src/app/setup/templates/page.tsx`
 - Create: `frontend/src/app/setup/complete/page.tsx`
 
-- [ ] **Build setup layout with step indicator**
+- [x] **Build setup layout with step indicator**
 
 ```tsx
 // layout.tsx — centered card, step progress bar at top
@@ -538,31 +538,31 @@ export default function SetupLayout({ children }: { children: React.ReactNode })
 }
 ```
 
-- [ ] **Build welcome step**
+- [x] **Build welcome step**
 
 Welcome screen: logo, welcome text, "Bắt đầu" button → next step.
 
-- [ ] **Build administrator step**
+- [x] **Build administrator step**
 
 Form: email, name, password, confirm password. POST `/api/setup/admin`.
 
-- [ ] **Build organization step**
+- [x] **Build organization step**
 
 Form: company name, tax code, timezone. POST `/api/setup/organization`.
 
-- [ ] **Build AI config step**
+- [x] **Build AI config step**
 
 Radio/select: OpenAI / Gemini / OpenAI-compatible / Local / Disabled. POST `/api/setup/ai-provider`.
 
-- [ ] **Build template step**
+- [x] **Build template step**
 
 Optional: upload or skip. POST `/api/setup/templates` (or skip).
 
-- [ ] **Build complete step**
+- [x] **Build complete step**
 
 Success message, "Vào Dashboard" button → redirect to `/`.
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -574,7 +574,7 @@ git commit -m "feat: add initial setup wizard UI"
 **Files:**
 - Modify: `frontend/src/app/login/page.tsx`
 
-- [ ] **Replace Google OAuth with username/password form**
+- [x] **Replace Google OAuth with username/password form**
 
 Remove: GoogleIcon, Google OAuth button, disabled email/password form, disabled checkboxes.
 Keep: Logo, general page structure.
@@ -635,11 +635,11 @@ export default function LoginPage() {
 }
 ```
 
-- [ ] **Update login page tests**
+- [x] **Update login page tests**
 
 Fix tests that reference removed Google OAuth elements.
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -656,7 +656,7 @@ git commit -m "feat: replace Google OAuth login with password login"
 - Modify: `frontend/src/app/(dashboard)/layout.tsx`
 - Install: `frontend/src/components/app-sidebar.tsx` (update if exists)
 
-- [ ] **Rewrite dashboard layout**
+- [x] **Rewrite dashboard layout**
 
 From current header-nav layout to sidebar layout matching Pencil:
 
@@ -676,18 +676,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 }
 ```
 
-- [ ] **Build sidebar component**
+- [x] **Build sidebar component**
 
 Based on Pencil design: logo top, nav items: Dashboard, Candidates, Job Openings, Onboarding, Employees, Settings.
 Use lucide icons. Active state highlighting.
 
-- [ ] **Remove header-nav import from layout**
+- [x] **Remove header-nav import from layout**
 
 ```bash
 # Remove HeaderNavigation, Breadcrumbs, NavigationProgress, PageTransition references
 ```
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -701,7 +701,7 @@ git commit -m "feat: replace header-nav with sidebar layout"
 - Create: `frontend/src/components/onboarding/StatCard.tsx`
 - Create: `frontend/src/components/onboarding/ActivityFeed.tsx`
 
-- [ ] **Replace onboarding page with Pencil design**
+- [x] **Replace onboarding page with Pencil design**
 
 From current left/right panel split to:
 - Top: stat cards (Total Active, In Progress, Pending Docs, Overdue)
@@ -731,15 +731,15 @@ export default function OnboardingPage() {
 }
 ```
 
-- [ ] **Build DashboardCard component**
+- [x] **Build DashboardCard component**
 
 Match Pencil reusable component B7Za3O: label, value, icon, trend.
 
-- [ ] **Build stat queries**
+- [x] **Build stat queries**
 
 Use react-query from existing `@/lib/api/onboarding`.
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -751,7 +751,7 @@ git commit -m "feat: redesign onboarding dashboard matching Pencil"
 **Files:**
 - Create: `frontend/src/components/tour-overlay.tsx`
 
-- [ ] **Implement tour component**
+- [x] **Implement tour component**
 
 7 steps: welcome overlay, highlight overview, highlight AI summary, etc.
 Semi-transparent backdrop + tooltip/instruction card at target position.
@@ -782,11 +782,11 @@ export function TourOverlay({ step, onNext, onSkip }: TourOverlayProps) {
 }
 ```
 
-- [ ] **Add tour trigger to dashboard**
+- [x] **Add tour trigger to dashboard**
 
 Show tour on first visit (localStorage flag or API).
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -798,7 +798,7 @@ git commit -m "feat: add onboarding tour overlay"
 **Files:**
 - Modify: `frontend/src/middleware.ts`
 
-- [ ] **Update middleware**
+- [x] **Update middleware**
 
 Remove `/employee/*` route protection. Add `/setup/*` unprotected route.
 Ensure `/login` redirects to `/` if already authenticated.
@@ -818,18 +818,18 @@ export function middleware(request: NextRequest) {
 }
 ```
 
-- [ ] **Verify no dead links in remaining codebase**
+- [x] **Verify no dead links in remaining codebase**
 
 Run: `rg -n "/employee/" frontend/src/ --type ts --type tsx`
 Expected: no matches (or only matches in comments/tests for deleted features)
 
-- [ ] **Run FE tests**
+- [x] **Run FE tests**
 
 ```bash
 cd frontend && npx jest --no-coverage 2>&1 | tail -20
 ```
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -842,19 +842,19 @@ git commit -m "refactor: update middleware, remove employee routes"
 
 ### Task 4.1: Remove unused dependencies and dead imports
 
-- [ ] **Scan for dead imports**
+- [x] **Scan for dead imports**
 
 Run: `rg "gapi\|google\|OAuth\|ess-" frontend/src/ --type ts --type tsx`
 Remove or comment any remaining references.
 
-- [ ] **Verify build**
+- [x] **Verify build**
 
 ```bash
 cd frontend && npx next build 2>&1 | tail -20
 ```
 Expected: Build succeeds, no module-not-found errors.
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git add -A
@@ -863,28 +863,28 @@ git commit -m "chore: remove dead imports after scope change"
 
 ### Task 4.2: Final verification
 
-- [ ] **Verify route tree**
+- [x] **Verify route tree**
 
 ```bash
 find frontend/src/app -name "page.tsx" | sort
 ```
 Expected: only `login`, `setup/*`, `(dashboard)/*` routes remain.
 
-- [ ] **Verify backend router tree**
+- [x] **Verify backend router tree**
 
 ```bash
 rg "include_router" backend/src/main.py
 ```
 Expected: no employee_request, employee_assistant, employee_payslip.
 
-- [ ] **Run backend tests**
+- [x] **Run backend tests**
 
 ```bash
 cd backend && pytest -x --no-header -q 2>&1 | tail -20
 ```
 Expected: all tests pass.
 
-- [ ] **Final commit**
+- [x] **Final commit**
 
 ```bash
 git add -A
