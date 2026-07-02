@@ -916,7 +916,11 @@ class OnboardingService:
 
         if self.employee_contract_repo is not None and self.contract_repo is not None:
             draft = await self.contract_repo.get_by_process(process.id)
-            if draft is not None and draft.status == "signed" and draft.promoted_contract_id is None:
+            if (
+                draft is not None
+                and draft.status == "signed"
+                and draft.promoted_contract_id is None
+            ):
                 employee_contract = Contract(
                     employee_id=employee.id,
                     contract_type=draft.contract_type,
