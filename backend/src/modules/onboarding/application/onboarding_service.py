@@ -38,8 +38,8 @@ from src.modules.employee.domain.entities import Employee
 from src.modules.employee.infrastructure.employee_repository import EmployeeRepository
 from src.modules.identity.domain.entities import User, UserRole
 from src.modules.onboarding.domain.entities import (
-    OnboardingContractDraft,
     OnboardingAuditLog,
+    OnboardingContractDraft,
     OnboardingDocument,
     OnboardingProcess,
     OnboardingTask,
