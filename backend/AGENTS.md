@@ -1,4 +1,4 @@
-# Backend Agent Instructions
+# Hướng dẫn Agent cho Backend
 
 ## Stack
 
@@ -9,9 +9,9 @@
 
 ---
 
-## Database Migrations Map
+## Bản đồ Migrations Database
 
-Alembic migrations trong `alembic/versions/`, chạy theo thứ tự số:
+Alembic migrations nằm trong `alembic/versions/`, chạy theo thứ tự số:
 
 ### Identity Module
 
@@ -71,7 +71,7 @@ Alembic migrations trong `alembic/versions/`, chạy theo thứ tự số:
 
 ---
 
-## Cross-Module Data Flow
+## Dòng chảy dữ liệu giữa module
 
 ```
 Gmail Incoming Email → Gmail Module → Recruitment Pipeline
@@ -89,7 +89,7 @@ Gmail Incoming Email → Gmail Module → Recruitment Pipeline
                                          Payslip Email → Gmail Outbound
 ```
 
-### Key Flows
+### Luồng chính
 
 1. **Recruitment → Employee**: `recruitment_service.promote_candidate()` tạo employee từ candidate được hire
 
@@ -174,7 +174,7 @@ from src.modules.<module>.container import router
 app.include_router(router, prefix="/api/<module>")
 ```
 
-### Error Handling Pattern
+### Mẫu xử lý lỗi
 
 ```python
 # 1. Domain exception (trong domain/exceptions.py)
@@ -197,7 +197,7 @@ async def handle_employee_not_found(request: Request, exc: EmployeeNotFoundError
 
 ---
 
-## Error Codes Registry
+## Danh mục Error Codes
 
 ### Identity Module (Auth)
 
@@ -340,37 +340,37 @@ python scripts/seed_attendance.py
 python scripts/seed_payroll.py
 ```
 
-## Module Structure (MANDATORY)
+## Module Structure (BẮT BUỘC)
 
-Every module in `src/modules/` MUST follow:
+Mọi module trong `src/modules/` PHẢI theo:
 
 ```
 src/modules/<name>/
 ├── api/
-│   ├── router.py          # FastAPI router with prefix /api/<name>
-│   ├── schemas.py         # Pydantic request/response models
-│   └── error_handler.py   # Domain exception → HTTPException mapping
+│   ├── router.py          # FastAPI router với prefix /api/<name>
+│   ├── schemas.py        # Pydantic request/response models
+│   └── error_handler.py   # Mapping domain exception → HTTPException
 ├── application/
-│   └── <name>_service.py  # Business logic (no framework deps)
+│   └── <name>_service.py  # Business logic (không phụ thuộc framework)
 ├── domain/
 │   ├── entities.py        # SQLModel table classes
 │   ├── enums.py           # str Enums
-│   └── exceptions.py      # Domain-specific exceptions (not HTTP)
+│   └── exceptions.py      # Domain-specific exceptions (không phải HTTP)
 ├── infrastructure/
-│   ├── config.py          # pydantic-settings with env prefix
+│   ├── config.py          # pydantic-settings với env prefix
 │   └── <name>_repository.py  # Async DB operations
 └── container.py           # FastAPI Depends() wiring
 ```
 
-## Key Rules
+## Quy tắc chính
 
-1. **Async-first:** All DB operations use `AsyncSession`
-2. **DI via container.py:** Never instantiate services in routers directly
-3. **Domain exceptions:** Raise domain exceptions in services, map to HTTP in error_handler
-4. **No raw SQL in services:** Use repository pattern
-5. **Auth:** Import `get_current_user` from `src.modules.identity.container`
-6. **Schemas:** Use Pydantic v2 models with `model_config = {"from_attributes": True}`
-7. **Migrations:** One migration per table/change, numbered sequentially (001, 002...)
+1. **Async-first:** mọi DB operation dùng `AsyncSession`
+2. **DI qua container.py:** không bao giờ instantiate service trực tiếp trong router
+3. **Domain exceptions:** raise domain exception trong service, map sang HTTP ở error_handler
+4. **Không raw SQL trong service:** dùng repository pattern
+5. **Auth:** import `get_current_user` từ `src.modules.identity.container`
+6. **Schemas:** dùng Pydantic v2 với `model_config = {"from_attributes": True}`
+7. **Migrations:** một migration cho mỗi table/change, đánh số tuần tự (001, 002...)
 
 ## Commands
 
@@ -394,7 +394,7 @@ pytest tests/
 pytest tests/modules/payroll/ -q  # specific module
 ```
 
-## Existing Modules
+## Module hiện có
 
 | Module       | Prefix                                           | Description                                 |
 | ------------ | ------------------------------------------------ | ------------------------------------------- |

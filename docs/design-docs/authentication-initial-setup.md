@@ -1,57 +1,59 @@
-# Authentication & Initial Setup
+# Xác thực & Thiết lập Ban đầu
 
-## Goal
+## Mục tiêu
 
-The system is designed for **self-hosted deployment**. It is an **internal HR platform**, not a public SaaS application.
+Hệ thống được thiết kế cho **triển khai self-hosted**. Đây là **nền tảng HR nội bộ**,
+không phải ứng dụng SaaS công khai.
 
-Only **HR/Admin** users access the system. **Employees do not have accounts and cannot log in.**
+Chỉ **HR/Admin** truy cập hệ thống. **Employee không có tài khoản và không thể đăng nhập.**
 
-## Authentication
+## Xác thực
 
-### Initial Setup
+### Thiết lập ban đầu
 
-When the system starts for the first time and no administrator exists:
+Khi hệ thống chạy lần đầu và chưa có administrator nào:
 
-* Redirect all requests to the **Initial Setup Wizard**.
-* Allow creation of the **first administrator account**.
-* The first account is assigned the `SUPER_ADMIN` role.
-* After setup completes, the setup endpoint is permanently disabled unless explicitly reset by the system owner.
+* Chuyển hướng mọi request tới **Initial Setup Wizard**.
+* Cho phép tạo **tài khoản administrator đầu tiên**.
+* Tài khoản đầu tiên được gán role `SUPER_ADMIN`.
+* Sau khi thiết lập hoàn tất, endpoint setup bị vô hiệu hóa vĩnh viễn trừ khi
+  chủ sở hữu hệ thống reset rõ ràng.
 
-### Login
+### Đăng nhập
 
-After initialization:
+Sau khi khởi tạo:
 
-* Authentication is available only through the **Login** page.
-* Users authenticate with **username/email + password**.
-* Public registration is **not supported**.
+* Xác thực chỉ khả dụng qua trang **Login**.
+* Người dùng xác thực bằng **username/email + mật khẩu**.
+* Đăng ký công khai **không được hỗ trợ**.
 
-### User Management
+### Quản lý người dùng
 
-Only `SUPER_ADMIN` can create additional system users.
+Chỉ `SUPER_ADMIN` mới tạo được system user bổ sung.
 
-Suggested roles:
+Các role đề xuất:
 
 * `SUPER_ADMIN`
 * `HR_ADMIN`
 * `HR_STAFF`
-* `READ_ONLY` (optional for future expansion)
+* `READ_ONLY` (tùy chọn cho mở rộng sau này)
 
 ## Initial Setup Wizard
 
-Recommended setup flow:
+Luồng thiết lập đề xuất:
 
-1. Create first administrator account
-2. Configure company information
-3. Configure AI provider (OpenAI, Gemini, OpenAI-compatible endpoint, Local LLM, or Disabled)
-4. Configure default contract templates (optional)
-5. Import or create initial employee records (optional)
-6. Finish setup and enter the dashboard
+1. Tạo tài khoản administrator đầu tiên
+2. Cấu hình thông tin công ty
+3. Cấu hình AI provider (OpenAI, Gemini, endpoint tương thích OpenAI, Local LLM, hoặc Disabled)
+4. Cấu hình mẫu hợp đồng mặc định (tùy chọn)
+5. Import hoặc tạo employee records ban đầu (tùy chọn)
+6. Kết thúc thiết lập và vào dashboard
 
-## Design Rules
+## Quy tắc thiết kế
 
-* No public sign-up.
-* No employee-facing accounts.
-* HR/Admin are the only system actors.
-* Every additional user must be created by an administrator.
-* AI provider configuration is optional and can be modified later.
-* The system must remain usable even when no AI provider is configured.
+* Không đăng ký công khai.
+* Không có tài khoản cho employee.
+* HR/Admin là system actor duy nhất.
+* Mỗi người dùng bổ sung phải do administrator tạo.
+* Cấu hình AI provider là tùy chọn và có thể sửa sau.
+* Hệ thống phải dùng được ngay cả khi chưa cấu hình AI provider.

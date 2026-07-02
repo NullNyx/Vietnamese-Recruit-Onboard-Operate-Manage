@@ -1,22 +1,24 @@
 # Issue tracker: Jira
 
-Issues, PRDs, and implementation tasks for this repo live as Jira Tasks in `KAN`.
-Use Atlassian MCP for all Jira operations.
+Issue, PRD, và task implementation của repo này đều là Jira Tasks trong project `KAN`.
+Dùng Atlassian MCP cho mọi thao tác Jira.
 
-## Workflow from docs
+## Workflow từ docs
 
-When working from `docs/design-docs/`:
+Khi làm việc từ `docs/design-docs/`:
 
-- `grill-with-docs` resolves glossary / decision gaps.
-- `to-prd` turns settled direction into PRD text.
-- `to-issues` turns PRD into Jira Tasks.
-- `triage` applies labels / routing.
+- `grill-with-docs` giải quyết gap glossary / quyết định.
+- `to-prd` biến hướng đi đã chốt thành văn bản PRD.
+- `to-issues` biến PRD thành Jira Tasks.
+- `triage` áp dụng nhãn / routing.
 
-Do not skip straight from draft to tickets if wording or scope is still unsettled.
+Không nhảy từ bản nháp thẳng tới ticket nếu từ ngữ hoặc scope chưa ổn định.
 
-## Fast path for checking tasks
+## Đường nhanh kiểm tra task
 
-When user says "check task", "check tasks", "xem task trên Jira", or similar without a Jira key, list Jira Tasks in `KAN`. Do not ask for a key first. Call Atlassian MCP directly:
+Khi user nói "check task", "check tasks", "xem task trên Jira", hoặc tương tự
+mà không có Jira key, liệt kê Jira Tasks trong `KAN`. Không hỏi key trước.
+Gọi Atlassian MCP trực tiếp:
 
 - Tool: `searchJiraIssuesUsingJql`
 - `cloudId`: `https://nullnyx.atlassian.net/`
@@ -25,29 +27,33 @@ When user says "check task", "check tasks", "xem task trên Jira", or similar wi
 - `fields`: `summary`, `status`, `labels`, `assignee`, `created`, `updated`, `issuetype`, `priority`
 - `responseContentFormat`: `markdown`
 
-When user includes Jira key, e.g. `KAN-8` or `KAN-08`, read that task directly. Do not browse web, scan source, or list MCP tools first.
+Khi user có Jira key, ví dụ `KAN-8` hoặc `KAN-08`, đọc task đó trực tiếp.
+Không duyệt web, scan source, hay liệt kê MCP tools trước.
 
 - Tool: `getJiraIssue`
 - `cloudId`: `https://nullnyx.atlassian.net/`
-- `issueIdOrKey`: requested key
+- `issueIdOrKey`: key được yêu cầu
 - `fields`: `summary`, `description`, `status`, `labels`, `comment`, `assignee`, `issuelinks`, `created`, `updated`, `issuetype`, `priority`, `reporter`
 - `responseContentFormat`: `markdown`
 
-If direct call fails, use configured `atlassian` MCP server through `mcp-remote` and call `tools/call` with `searchJiraIssuesUsingJql` or `getJiraIssue`. Only list tools/resources when diagnosing fallback.
+Nếu gọi trực tiếp lỗi, dùng server `atlassian` MCP đã cấu hình qua `mcp-remote`
+và gọi `tools/call` với `searchJiraIssuesUsingJql` hoặc `getJiraIssue`.
+Chỉ liệt kê tools/resources khi đang chẩn đoán fallback.
 
-## Conventions
+## Quy ước
 
-- Create task: Jira project key `KAN`, issue type `Task`, concise English summary.
-- Read task: fetch by key with description, status, labels, comments, assignee, linked issues.
-- List tasks: JQL through Atlassian MCP.
-- Comment: add Jira comment on task key.
-- Apply labels: use strings in `docs/agents/triage-labels.md`.
-- Dependencies: use Jira issue links; directional links use `Blocks`.
-- Close / transition: only when explicitly asked or triage workflow says so.
+- Tạo task: Jira project key `KAN`, issue type `Task`, summary tiếng Anh ngắn gọn.
+- Đọc task: lấy theo key kèm description, status, labels, comments, assignee, linked issues.
+- Liệt kê task: JQL qua Atlassian MCP.
+- Bình luận: thêm Jira comment trên task key.
+- Áp dụng nhãn: dùng chuỗi trong `docs/agents/triage-labels.md`.
+- Phụ thuộc: dùng Jira issue links; directional links dùng `Blocks`.
+- Đóng / chuyển trạng thái: chỉ khi được yêu cầu rõ ràng hoặc triage workflow yêu cầu.
 
-## Task body shape
+## Cấu trúc task body
 
-When a skill says "publish issues" or "create implementation tickets", create Jira Tasks with this structure:
+Khi skill nói "publish issues" hoặc "create implementation tickets", tạo Jira Tasks
+với cấu trúc này:
 
 ```markdown
 ## What to build
@@ -62,25 +68,29 @@ When a skill says "publish issues" or "create implementation tickets", create Ji
 ## Blocked by
 ```
 
-Keep task descriptions implementation-guiding but not code-stale: mention domain terms, APIs, acceptance boundaries, tests, and relevant ADRs; avoid long file-path lists unless path is actual subject.
+Giữ mô tả task ở mức hướng dẫn implementation nhưng không lỗi thời với code:
+nhắc domain terms, APIs, ranh giới acceptance, test, và ADR liên quan; tránh
+danh sách đường dẫn file dài trừ khi đường dẫn là chủ đề thực sự.
 
-## Naming convention for PRD parents vs implementation slices
+## Quy ước đặt tên PRD parent vs implementation slices
 
-When a PRD is published as a Jira issue and later split into implementation work:
+Khi PRD được publish thành Jira issue và sau đó chia thành các implementation work:
 
-- Use a parent ticket summary prefix like `[PRD]` or `[Spec]`.
-- Use child implementation ticket summary prefix like `[Slice]`.
-- Treat the parent as scope/spec only unless the user explicitly asks to implement the parent ticket itself.
-- Child slices should be narrow vertical cuts that an AFK agent can pick up independently.
+- Dùng prefix summary ticket cha kiểu `[PRD]` hoặc `[Spec]`.
+- Dùng prefix ticket implementation con kiểu `[Slice]`.
+- Coi ticket cha là scope/spec chỉ khi user yêu cầu implement chính ticket đó.
+- Slice con nên là lát cắt dọc hẹp mà agent AFK có thể nhặt độc lập.
 
-## When a skill says "publish to the issue tracker"
+## Khi skill nói "publish to the issue tracker"
 
-Create Jira Tasks in project `KAN`, not GitHub Issues.
+Tạo Jira Tasks trong project `KAN`, không phải GitHub Issues.
 
-## When a skill says "fetch the relevant ticket"
+## Khi skill nói "fetch the relevant ticket"
 
-Read the Jira task by key, e.g. `KAN-14`.
+Đọc Jira task theo key, ví dụ `KAN-14`.
 
-## Atlassian MCP note
+## Lưu ý Atlassian MCP
 
-The older `https://mcp.atlassian.com/v1/sse` transport is deprecated after 2026-06-30. Prefer `https://mcp.atlassian.com/v1/mcp` when configuring MCP clients that support the newer transport.
+Transport cũ `https://mcp.atlassian.com/v1/sse` đã deprecated sau 2026-06-30.
+Ưu tiên `https://mcp.atlassian.com/v1/mcp` khi cấu hình MCP client hỗ trợ
+transport mới hơn.

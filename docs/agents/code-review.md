@@ -1,45 +1,49 @@
-# Jira-PR Code Review Integration via OCR
+# Tích hợp Jira-PR Code Review qua OCR
 
-This guide defines how the Agent should integrate Jira Task requirements with GitHub Pull Request reviews using the Open Code Review (OCR) CLI.
+Hướng dẫn này định nghĩa cách Agent tích hợp yêu cầu Jira Task với GitHub Pull
+Request review dùng Open Code Review (OCR) CLI.
 
 > [!IMPORTANT]
-> Tất cả các nhận xét, phản hồi review (bao gồm inline comments trên GitHub, review summary, và bình luận trên Jira task) nên được viết bằng **tiếng Việt**, ngoại trừ các thuật ngữ kỹ thuật tiếng Anh (ví dụ: endpoint, database query, validation, test suite, mock...).
+> Tất cả nhận xét, phản hồi review (gồm inline comments trên GitHub, review
+> summary, và bình luận trên Jira task) viết bằng **tiếng Việt**, ngoại trừ
+> thuật ngữ kỹ thuật tiếng Anh (ví dụ: endpoint, database query, validation,
+> test suite, mock...).
 
+## Kích hoạt
 
-## Trigger
-
-When the user requests a code review matching a GitHub PR to a Jira Task, e.g.:
+Khi user yêu cầu code review đối chiếu GitHub PR với Jira Task, ví dụ:
 - "Review PR #12 đối chiếu với Jira task KAN-45"
 - "ocr review PR 15 check against KAN-22 requirements"
 
-Follow this sequence of steps to execute the review.
+Chạy theo trình tự các bước sau.
 
 ---
 
-## 1. Retrieve Jira Task Context
+## 1. Lấy ngữ cảnh Jira Task
 
-Call the Atlassian MCP tool `getJiraIssue` for the specified Jira Task ID (e.g., `KAN-45`).
-Extract the following sections from the Jira issue description:
-*   `## Output cần đạt` (Expected Outputs)
-*   `## Acceptance criteria` (Acceptance Criteria)
+Gọi Atlassian MCP tool `getJiraIssue` cho Jira Task ID (vd `KAN-45`).
+Trích xuất các phần sau từ mô tả issue:
+*   `## Output cần đạt`
+*   `## Acceptance criteria`
 
-These sections serve as the business context for the code review.
-
----
-
-## 2. Retrieve GitHub Pull Request Context
-
-Call the GitHub MCP tools to fetch the PR details:
-*   Use `get_pull_request` to fetch general PR information (source/target branches, title).
-*   Use `get_pull_request_files` to identify the modified files and obtain the diff.
+Các phần này làm ngữ cảnh nghiệp vụ cho code review.
 
 ---
 
-## 3. Generate Dynamic Review Rules
+## 2. Lấy ngữ cảnh GitHub Pull Request
 
-Before running OCR, generate a temporary rules JSON file at `.opencodereview/temp_jira_rules.json` to instruct the LLM on specific criteria it must verify. 
+Gọi GitHub MCP tools để lấy chi tiết PR:
+*   Dùng `get_pull_request` lấy thông tin chung (source/target branches, title).
+*   Dùng `get_pull_request_files` xác định file đã sửa và lấy diff.
 
-Format the JSON file as follows:
+---
+
+## 3. Tạo Dynamic Review Rules
+
+Trước khi chạy OCR, tạo file rules JSON tạm tại
+`.opencodereview/temp_jira_rules.json` để hướng dẫn LLM tiêu chí cần kiểm tra.
+
+File JSON có format:
 
 ```json
 {
@@ -54,35 +58,36 @@ Format the JSON file as follows:
 
 ---
 
-## 4. Run Open Code Review (OCR)
+## 4. Chạy Open Code Review (OCR)
 
-Run the OCR CLI command using the custom rules:
+Chạy OCR CLI với custom rules:
 
 ```bash
 ocr review --rule .opencodereview/temp_jira_rules.json
 ```
 
-Or run using business context directly if rules are not needed:
+Hoặc dùng business context trực tiếp nếu không cần rules:
 
 ```bash
 ocr review -b "Requirements from Jira: [INSERT REQUIREMENTS HERE]"
 ```
 
-*Note: Clean up the `.opencodereview/temp_jira_rules.json` file after execution is complete.*
+*Lưu ý: Xoá file `.opencodereview/temp_jira_rules.json` sau khi chạy xong.*
 
 ---
 
-## 5. Report Findings
+## 5. Báo cáo kết quả
 
-After OCR generates the review results, automate the reporting:
+Sau khi OCR tạo kết quả review, báo cáo tự động:
 
-### A. Post Review to GitHub
-Call the GitHub MCP tool `create_pull_request_review` to:
-*   Post inline comments for specific line changes if OCR identified issues.
-*   Submit a global review summary indicating if the PR satisfies the Jira Task's requirements (APPROVE or REQUEST_CHANGES).
+### A. Đăng Review lên GitHub
+Gọi GitHub MCP tool `create_pull_request_review` để:
+*   Đăng inline comments cho các dòng cụ thể nếu OCR phát hiện vấn đề.
+*   Gửi review summary tổng thể chỉ ra PR có đáp ứng yêu cầu Jira Task hay không
+    (APPROVE hoặc REQUEST_CHANGES).
 
-### B. Comment on Jira Task
-Call the Atlassian MCP tool `addCommentToJiraIssue` to post a summary of the review results:
-*   PR Link: Link to the GitHub PR.
-*   Status: E.g., `Review completed - [Pass/Fail]`.
-*   Key Findings: Bullet points summarizing the main feedback or blocks.
+### B. Bình luận trên Jira Task
+Gọi Atlassian MCP tool `addCommentToJiraIssue` để đăng tóm tắt kết quả review:
+*   PR Link: Link đến GitHub PR.
+*   Status: Ví dụ `Review completed - [Pass/Fail]`.
+*   Key Findings: Danh sách gạch đầu dòng tóm tắt phản hồi chính hoặc block.

@@ -1,158 +1,156 @@
-# Agent Instructions — Vroom HR
+# Hướng dẫn Agent — Vroom HR
 
-You are working on Vroom HR: a self-hosted HRM platform for Vietnamese companies
-(Recruit-Onboard-Operate-Manage). One deployment serves exactly one company.
-Users prompt in Vietnamese or English; detect intent in either language.
+Bạn đang làm việc trên Vroom HR: nền tảng HRM tự triển khai cho doanh nghiệp Việt Nam
+(Tuyển dụng - Onboarding - Vận hành - Quản lý). Một bản cài đặt phục vụ đúng một công ty.
+User nhập bằng tiếng Việt hoặc tiếng Anh; phát hiện intent bằng cả hai ngôn ngữ.
 
 Stack: FastAPI + SQLModel + PostgreSQL 15 + Redis 7 (Python 3.11+, MyPy strict,
 Ruff line-length 100) · Next.js 14 + TypeScript + pnpm + Tailwind + shadcn/ui ·
 cookie-based JWT auth · MinIO storage · pytest+Hypothesis / Vitest+fast-check.
 
-## Always do first
+## Luôn làm trước
 
-1. Read `CONTEXT.md` (root). Use its canonical terms verbatim; never substitute a
-   synonym it lists under `_Avoid_`.
-2. Read the ADRs in `docs/decisions/` that touch the area you are about to change.
-   If your work contradicts an ADR, surface it explicitly — do not silently override.
-3. Read `docs/agents/` for issue-tracker, triage-label, and domain-doc rules.
+1. Đọc `CONTEXT.md` (gốc). Dùng canonical terms y nguyên; không thay thế bằng
+   synonym nó liệt kê trong `_Avoid_`.
+2. Đọc ADR trong `docs/decisions/` liên quan tới vùng bạn sắp sửa.
+   Nếu việc làm mâu thuẫn ADR, nêu rõ — không âm thầm ghi đè.
+3. Đọc `docs/agents/` để biết luật issue-tracker, triage-label, domain-doc.
 
-## MCP routing
+## Điều phối MCP
 
-Use MCP only when it beats local files or browser work:
+Chỉ dùng MCP khi nó tốt hơn file cục bộ hoặc dùng trình duyệt:
 
-- `atlassian`: Jira Tasks and Jira-linked work. Use the direct Jira fast paths in
-  `docs/agents/issue-tracker.md`; re-read after create/update to verify labels.
-- `codegraph`: repo symbol/context/impact/trace. Prefer before raw read/grep for
-  structure questions.
-- `playwright`: browser/UI verification after frontend changes.
-- `github` / `gitlab`: remote host metadata, PRs, and repo-hosted workflow.
+- `atlassian`: Jira Tasks và việc liên quan Jira. Dùng đường nhanh Jira trong
+  `docs/agents/issue-tracker.md`; đọc lại sau create/update để xác minh labels.
+- `codegraph`: symbol/context/impact/trace repo. Ưu tiên trước read/grep thô cho
+  câu hỏi cấu trúc.
+- `playwright`: xác minh trình duyệt/UI sau thay đổi frontend.
+- `github` / `gitlab`: metadata host từ xa, PR, workflow trên repo.
 
-If MCP choice is obvious, use it directly. If local code answers it faster, stay
-local.
+Nếu chọn MCP rõ ràng, dùng trực tiếp. Nếu code cục bộ trả lời nhanh hơn, ở lại.
 
-## Current scope snapshot
+## Ảnh chụp scope hiện tại
 
-- Scope now is HR-only: no employee login, no employee self-service surface.
-- Auth is password-based (`/login`), not Google OAuth.
-- First-run flow is `/setup/*` and creates the first `SUPER_ADMIN`.
-- Frontend shell is sidebar-first; no header-nav app shell, no employee-facing
-  routes.
-- Live backend routers are identity/auth + admin, employee, gmail, recruitment
+- Scope bây giờ là HR-only: không có employee login, không có employee self-service.
+- Auth dùng mật khẩu (`/login`), không Google OAuth.
+- Luồng chạy đầu tiên là `/setup/*` và tạo `SUPER_ADMIN` đầu tiên.
+- Frontend shell là sidebar-first; không có header-nav app shell, không có route
+  employee-facing.
+- Backend router đang sống: identity/auth + admin, employee, gmail, recruitment
   (candidate, cv-review, metrics), onboarding, attendance, payslip admin, setup.
 
-## How skills work (read this — it changes how you respond)
+## Cách skill hoạt động (đọc cái này — nó thay đổi cách bạn trả lời)
 
-On every user message:
+Mỗi tin nhắn user:
 
-1. Detect intent and match it against the trigger table below.
-2. If a skill matches, activate it and follow its process for the rest of the task.
-   Do not improvise a substitute for a skill that exists.
-3. Announce in one line which skill you are running (e.g. "Running `diagnose`.").
-4. If two skills could match, prefer the more specific one; if genuinely ambiguous,
-   ask one short question.
-5. If no skill matches, proceed normally.
+1. Phát hiện intent và đối chiếu với bảng trigger bên dưới.
+2. Nếu skill khớp, kích hoạt và làm theo quy trình của nó cho phần còn lại của task.
+   Không tự chế thay thế cho skill tồn tại.
+3. Thông báo một dòng bạn đang chạy skill nào (vd "Running `diagnose`.").
+4. Nếu hai skill cùng khớp, ưu tiên skill cụ thể hơn; nếu thực sự mơ hồ,
+   hỏi một câu ngắn.
+5. Nếu không skill nào khớp, xử lý bình thường.
 
-Trigger → skill (triggers are illustrative, not exhaustive; match on meaning):
+Trigger → skill (triggers để minh họa, không đầy đủ; khớp theo ý nghĩa):
 
-| User intent (VI / EN)                                                                                                   | Skill                                                           |
-| ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| "grill me", "quay tôi", "phản biện plan", stress-test a design                                                          | `grill-me`                                                      |
-| same, but check against project's language/decisions and update docs                                                    | `grill-with-docs`                                               |
-| "viết PRD", "tạo PRD từ context", turn this conversation into a PRD                                                     | `to-prd`                                                        |
-| "chia issue", "tách thành ticket", break a plan/PRD into issues                                                         | `to-issues`                                                     |
-| "implement issue", "làm task", "build feature from issue", pick up a spec or Jira task                                  | `implement`                                                     |
-| "code review", "review PR", "xem lại code theo spec"                                                                    | `code-review`                                                   |
-| "triage", "phân loại issue", label/route raw incoming bugs or requests                                                  | `triage`                                                        |
-| "làm theo TDD", "test trước", build a feature/fix bug test-first                                                        | `tdd`                                                           |
-| "debug cái này", "bug", "lỗi", "chậm/regression", diagnose a hard failure                                               | `diagnose`                                                      |
-| "cải thiện kiến trúc", "refactor", find deepening/coupling opportunities                                                | `improve-codebase-architecture`                                 |
-| explore code structure: repo map, symbols, callers/callees, impact                                                      | `srcwalk` (run `srcwalk guide` first; use before raw read/grep) |
-| "codegraph", "trace bằng codegraph", static call graph / symbol impact                                                  | Codegraph workflow (below)                                      |
-| "tasteskill", "taste skill", improve frontend taste / redesign UI                                                       | Taste Skill workflow (below)                                    |
-| "zoom out", "bức tranh lớn", unfamiliar with how code fits together                                                     | `zoom-out`                                                      |
-| "prototype", "thử nghiệm", sanity-check a data model / state machine / UI                                               | `prototype`                                                     |
-| "handoff", "bàn giao", compact this session for a successor agent                                                       | `handoff`                                                       |
-| "có skill nào cho…", "find a skill", need a capability you don't have                                                   | `find-skills`                                                   |
-| "tiến độ tới đâu", "có tính năng gì", "trạng thái dự án", "tìm hiểu luồng X", project status / feature map / flow trace | Project status routine (below)                                  |
+| User intent (VI / EN) | Skill |
+|---|---|
+| "grill me", "quay tôi", "phản biện plan", stress-test a design | `grill-me` |
+| same, kèm check project language/decisions và update docs | `grill-with-docs` |
+| "viết PRD", "tạo PRD từ context", turn this conversation into a PRD | `to-prd` |
+| "chia issue", "tách thành ticket", break a plan/PRD into issues | `to-issues` |
+| "implement issue", "làm task", "build feature from issue", pick up a spec hoặc Jira task | `implement` |
+| "code review", "review PR", "xem lại code theo spec" | `code-review` |
+| "triage", "phân loại issue", label/route raw incoming bugs hoặc requests | `triage` |
+| "làm theo TDD", "test trước", build feature/fix bug test-first | `tdd` |
+| "debug cái này", "bug", "lỗi", "chậm/regression", diagnose a hard failure | `diagnose` |
+| "cải thiện kiến trúc", "refactor", find deepening/coupling opportunities | `improve-codebase-architecture` |
+| explore code structure: repo map, symbols, callers/callees, impact | `srcwalk` (chạy `srcwalk guide` trước; dùng trước read/grep thô) |
+| "codegraph", "trace bằng codegraph", static call graph / symbol impact | Codegraph workflow (bên dưới) |
+| "tasteskill", "taste skill", cải thiện frontend taste / redesign UI | Taste Skill workflow (bên dưới) |
+| "zoom out", "bức tranh lớn", unfamiliar with how code fits together | `zoom-out` |
+| "prototype", "thử nghiệm", sanity-check data model / state machine / UI | `prototype` |
+| "handoff", "bàn giao", compact this session cho successor agent | `handoff` |
+| "có skill nào cho…", "find a skill", cần capability bạn không có | `find-skills` |
+| "tiến độ tới đâu", "có tính năng gì", "trạng thái dự án", "tìm hiểu luồng X", project status / feature map / flow trace | Project status routine (bên dưới) |
 
-Default flow for a fresh feature: `grill-with-docs` → `to-prd` → `to-issues` →
-`implement` (which runs `/tdd` internally and closes with `/code-review`).
-Use `triage` only for raw incoming issues the user did not create. Don't force
-every step; enter at the stage that matches what the user already has.
+Luồng mặc định cho feature mới: `grill-with-docs` → `to-prd` → `to-issues` →
+`implement` (chạy `/tdd` nội bộ và kết thúc với `/code-review`).
+Dùng `triage` chỉ cho issue raw đến mà user không tự tạo. Không ép mọi bước;
+vào ở stage khớp với những gì user đã có.
 
-## Reporting project status, features, and flows
+## Báo cáo trạng thái dự án, tính năng, và luồng
 
-Trigger: the user asks where the project stands, what features exist, or wants to
-understand a specific flow ("tiến độ tới đâu rồi", "dự án có những tính năng gì",
+Trigger: user hỏi dự án đang ở đâu, có tính năng gì, hoặc muốn hiểu luồng cụ thể
+("tiến độ tới đâu rồi", "dự án có những tính năng gì",
 "trạng thái hiện tại", "tìm hiểu luồng tuyển dụng/onboarding", "how does X work",
-"trace the X flow"). This is read-only reporting — synthesize from the repo's live
-state, never from a static progress doc, and never write progress into `docs/`.
+"trace the X flow"). Đây là báo cáo chỉ đọc — tổng hợp từ trạng thái sống của repo,
+không bao giờ từ progress doc tĩnh, và không bao giờ ghi progress vào `docs/`.
 
-Build the answer from these sources of truth (not from memory):
+Xây câu trả lời từ các nguồn chân lý này (không từ trí nhớ):
 
-- **What's actually shipped** — read `backend/src/main.py` to see which module
-  routers are wired in (currently: identity/auth + admin, employee, gmail,
-  recruitment [candidate, cv-review, metrics], onboarding). A module existing on
-  disk but not registered there is not live.
-- **Why things are the way they are** — `docs/decisions/` ADRs (e.g. scope is the
-  recruit→onboard Backbone Flow; attendance/payroll/self-service were shelved).
-- **Open work** — Jira Tasks via Atlassian MCP (project `KAN`; filter by
+- **What's actually shipped** — đọc `backend/src/main.py` xem module router nào
+  được đấu dây (hiện tại: identity/auth + admin, employee, gmail,
+  recruitment [candidate, cv-review, metrics], onboarding). Module tồn tại trên đĩa
+  nhưng không đăng ký ở đó là không sống.
+- **Why things are the way they are** — `docs/decisions/` ADRs (vd scope là
+  recruit→onboard Backbone Flow; attendance/payroll/self-service bị shelved).
+- **Open work** — Jira Tasks qua Atlassian MCP (project `KAN`; filter theo
   status/label/assignee).
-- **Recent activity** — `git log --oneline -n 20` and merged PRs for momentum.
+- **Recent activity** — `git log --oneline -n 20` và PR đã merged cho momentum.
 
-Then answer in the shape the user asked for:
+Sau đó trả lời theo hình user yêu cầu:
 
-- **Status / progress** → a short per-area table: area · state (shipped / in spec /
-  shelved) · evidence (router wired, ADR). Call out the
-  Backbone Flow's completeness specifically.
-- **Feature map** → group live capabilities by module, tied to registered routers.
-- **Flow trace** → pick the flow and walk it end to end across modules using
-  `srcwalk` for the call path; name each step with the `CONTEXT.md` term.
+- **Status / progress** → bảng ngắn theo area: area · state (shipped / in spec /
+  shelved) · evidence (router wired, ADR). Nêu rõ mức độ hoàn thiện của
+  Backbone Flow.
+- **Feature map** → nhóm capability sống theo module, gắn với router đã đăng ký.
+- **Flow trace** → chọn luồng và đi nó end-to-end qua các module dùng
+  `srcwalk` cho call path; đặt tên mỗi bước bằng term từ `CONTEXT.md`.
 
-Use canonical terms from `CONTEXT.md`. If a spec contradicts what's wired in code,
-trust the code and flag the drift.
+Dùng canonical terms từ `CONTEXT.md`. Nếu spec mâu thuẫn với code đã đấu dây,
+tin code và flag drift.
 
 ## Codegraph workflow
 
-Use Codegraph for static code-intelligence tasks when available, especially when
-the user asks how a flow works, where a symbol is used, or what a refactor will
-affect. Codegraph complements `srcwalk`: use `srcwalk` when the trigger table
-activates that skill, and use Codegraph for call graph, symbol context, and impact
-queries after the repo context is clear.
+Dùng Codegraph cho static code-intelligence khi có sẵn, đặc biệt khi
+user hỏi flow hoạt động thế nào, symbol dùng ở đâu, hoặc refactor ảnh hưởng gì.
+Codegraph bổ sung cho `srcwalk`: dùng `srcwalk` khi trigger table
+kích hoạt skill đó, và dùng Codegraph cho call graph, symbol context, impact
+query sau khi repo context rõ ràng.
 
-- Start with `codegraph_context` for architecture, bug, or "how does X work"
-  questions. It returns entry points, related symbols, and key code in one call.
-- Use `codegraph_trace` for "how does A reach B" flow questions. Prefer one trace
-  over chaining many raw file reads.
-- Use `codegraph_callers` / `codegraph_callees` for local call graph questions.
-- Use `codegraph_impact` before refactoring a shared symbol or changing a public
+- Bắt đầu với `codegraph_context` cho câu hỏi architecture, bug, hoặc "how does X work".
+  Nó trả về entry points, related symbols, và key code trong một call.
+- Dùng `codegraph_trace` cho câu hỏi "how does A reach B". Ưu tiên một trace
+  hơn xâu chuỗi nhiều file read thô.
+- Dùng `codegraph_callers` / `codegraph_callees` cho câu hỏi call graph cục bộ.
+- Dùng `codegraph_impact` trước khi refactor shared symbol hoặc đổi public
   application service API.
-- Use `codegraph_files` / `codegraph_search` to orient quickly, then read only the
-  files needed for exact edits.
-- Do not commit `.codegraph/`. It is a local generated index; regenerate it from
-  source when stale.
+- Dùng `codegraph_files` / `codegraph_search` để định hướng nhanh, sau đó chỉ đọc
+  file cần cho edit chính xác.
+- Không commit `.codegraph/`. Nó là index sinh cục bộ; tái sinh từ source khi cũ.
 
-For project status or feature-map answers, still trust `backend/src/main.py` for
-what is live. A symbol existing in Codegraph does not mean its router is wired.
+Cho project status hoặc feature-map, vẫn tin `backend/src/main.py` cho
+cái nào sống. Symbol tồn tại trong Codegraph không có nghĩa router của nó được đấu dây.
 
-## Documentation rules
+## Quy tắc tài liệu
 
-Create docs lazily — only when there is something real to record.
+Tạo doc lazily — chỉ khi có thứ gì thực sự cần ghi lại.
 
-- A domain term is settled → update `CONTEXT.md`. Keep it a glossary only: no
-  implementation details, no spec, no scratch notes.
-- A decision that is hard to reverse AND surprising without context AND the result
-  of a real trade-off → add an ADR to `docs/decisions/` (next sequential number,
-  short title + 1–3 sentences).
-- Issues, PRDs, and progress/task lists go to Jira Tasks, never into markdown
-  under `docs/` by default.
-- Exception: when the user or repo owner explicitly asks for implementation-facing
-  working docs so human contributors can understand or execute a task, the agent
-  may create or update supplemental markdown under `docs/<owner-or-team>/...`.
-  Treat these files as temporary working docs, not canonical domain docs or issue
-  tracker replacements.
+- Domain term được chốt → cập nhật `CONTEXT.md`. Giữ nó chỉ là glossary: không
+  implementation details, không spec, không ghi chú nháp.
+- Quyết định khó đảo ngược VÀ gây ngạc nhiên nếu thiếu context VÀ là kết quả
+  của trade-off thực sự → thêm ADR vào `docs/decisions/` (số thứ tự tiếp theo,
+  title ngắn + 1–3 câu).
+- Issues, PRD, và progress/task lists vào Jira Tasks, không bao giờ vào markdown
+  dưới `docs/` mặc định.
+- Ngoại lệ: khi user hoặc repo owner yêu cầu implementation-facing working docs
+  để human contributor có thể hiểu hoặc thực thi task, agent có thể tạo hoặc
+  cập nhật markdown bổ sung dưới `docs/<owner-or-team>/...`.
+  Coi các file này là working docs tạm thời, không phải canonical domain docs
+  hay issue tracker replacement.
 
-Default layout:
+Layout mặc định:
 
 ```
 /CONTEXT.md            glossary
@@ -160,7 +158,7 @@ Default layout:
 /docs/decisions/       ADRs
 ```
 
-Allowed exception layouts (explicit user approval):
+Layout ngoại lệ được phép (user approval rõ ràng):
 
 ```
 /docs/<owner-or-team>/...      supplemental implementation-facing working docs
@@ -169,17 +167,17 @@ Allowed exception layouts (explicit user approval):
 
 ## Git: branch, commit, push, PR
 
-Trigger: when the user says "commit", "push", "đẩy code", "tạo branch", "mở PR",
-"tạo pull request" (or equivalent), run this full workflow autonomously end-to-end
-without asking for confirmation at each step. Constraints that always hold:
+Trigger: khi user nói "commit", "push", "đẩy code", "tạo branch", "mở PR",
+"tạo pull request" (hoặc tương đương), chạy full workflow này tự động end-to-end
+không cần xác nhận từng bước. Constraint luôn giữ:
 
-- Never commit or push to `main`. Always work on a branch.
-- Only create commits when the user asks for it (the trigger above counts as asking).
-- Never run destructive git (`push --force`, `reset --hard`, `clean -f`, branch -D)
-  unless the user explicitly requests it.
-- Flag any file that looks like it holds secrets (`.env`, credentials) before staging.
+- Không bao giờ commit hoặc push lên `main`. Luôn làm trên branch.
+- Chỉ tạo commit khi user yêu cầu (trigger trên được tính là yêu cầu).
+- Không bao giờ chạy destructive git (`push --force`, `reset --hard`, `clean -f`, branch -D)
+  trừ khi user yêu cầu rõ ràng.
+- Flag file nào trông chứa secret (`.env`, credentials) trước khi stage.
 
-Branch — always cut from fresh `main`:
+Branch — luôn cắt từ `main` mới:
 
 ```bash
 git checkout main && git pull origin main
@@ -187,9 +185,9 @@ git checkout -b <type>/<short-english-desc>
 ```
 
 `<type>` ∈ `feature|fix|chore|refactor|docs|hotfix`. Name: lowercase English,
-`-`-separated, 2–4 words. No personal names, Vietnamese, underscores, or capitals.
+`-`-separated, 2–4 words. Không tên riêng, tiếng Việt, underscore, hoặc capitals.
 
-Commit — atomic, stage explicit files (avoid `git add .`):
+Commit — atomic, stage file rõ ràng (tránh `git add .`):
 
 ```bash
 git add <files>
@@ -198,9 +196,9 @@ git commit -m "<type>(<scope>): <imperative english summary>"
 
 `<type>` ∈ `feat|fix|docs|refactor|chore|test|perf|style`. `<scope>` ∈
 `identity|employee|gmail|recruitment|attendance|payroll|self-service|frontend|ui|infra|migrations|decisions`.
-Summary: imperative, lowercase, < 72 chars. E.g. `feat(payroll): add tax calc for dependents`.
+Summary: imperative, lowercase, < 72 ký tự. Vd `feat(payroll): add tax calc for dependents`.
 
-Push + PR — rebase first, set upstream, open PR with What/Why/Testing:
+Push + PR — rebase trước, set upstream, mở PR với What/Why/Testing:
 
 ```bash
 git fetch origin main && git rebase origin/main
@@ -213,72 +211,71 @@ gh pr create --title "<type>(<scope>): <summary>" --body "## What
 - ..."
 ```
 
-PR title uses the commit format. Squash merge. Requires ≥1 approval + passing CI.
+PR title dùng format commit. Squash merge. Yêu cầu ≥1 approval + CI pass.
 
 ## Domain invariants
 
-- All API routes are prefixed `/api/`.
-- Auth uses httpOnly secure cookies (`access_token`, `refresh_token`), not Bearer headers.
-- Employees are soft-deleted via the `is_active` flag.
-- Every admin action must write an audit log.
-- OAuth tokens are encrypted AES-256-GCM.
-- Vietnamese tax: personal deduction 11M VND/month, dependent 4.4M/person.
-- Insurance (employee): 10.5% = BHXH 8% + BHYT 1.5% + BHTN 1%.
-- Salary uses 26 work days/month.
+- Tất cả API routes có prefix `/api/`.
+- Auth dùng httpOnly secure cookies (`access_token`, `refresh_token`), không Bearer headers.
+- Employee được soft-delete qua flag `is_active`.
+- Mọi admin action phải ghi audit log.
+- OAuth tokens được mã hóa AES-256-GCM.
+- Thuế Việt Nam: giảm trừ cá nhân 11M VND/tháng, người phụ thuộc 4.4M/người.
+- Bảo hiểm (employee): 10.5% = BHXH 8% + BHYT 1.5% + BHTN 1%.
+- Lương dùng 26 ngày công/tháng.
 
 ## Backend & dev environment
 
-- New backend code follows the module layout `api/ → application/ → domain/ →
-infrastructure/` with `container.py` for DI, matching existing modules.
+- Backend code mới phải theo layout module `api/ → application/ → domain/ →
+  infrastructure/` với `container.py` cho DI, matching module hiện có.
 
-## Agent skills config
+## Cấu hình agent skills
 
-- Issue tracker: Jira Tasks via Atlassian MCP → `docs/agents/issue-tracker.md`.
-- Triage labels: five canonical roles, default strings → `docs/agents/triage-labels.md`.
+- Issue tracker: Jira Tasks qua Atlassian MCP → `docs/agents/issue-tracker.md`.
+- Triage labels: năm vai trò canonical, default strings → `docs/agents/triage-labels.md`.
 - Domain docs: single-context, `CONTEXT.md` + `docs/decisions/` → `docs/agents/domain.md`.
 - Code review (OCR): Open Code Review (OCR) CLI instructions → `docs/ocr.md`.
-- Code review workflow: Jira-GitHub PR integration via OCR → `docs/agents/code-review.md`.
+- Code review workflow: Jira-GitHub PR integration qua OCR → `docs/agents/code-review.md`.
 
 ## Agent skills
 
 ### Issue tracker
 
-Jira Tasks via Atlassian MCP. See `docs/agents/issue-tracker.md`.
+Jira Tasks qua Atlassian MCP. Xem `docs/agents/issue-tracker.md`.
 
-PRD parents and implementation slices use different names:
+PRD parents và implementation slices dùng tên khác nhau:
 
-- parent spec / PRD ticket: prefix summary with `[PRD]` or `[Spec]`
-- implementation slice: prefix summary with `[Slice]`
-- do not treat parent PRD ticket as implementation work
+- parent spec / PRD ticket: prefix summary với `[PRD]` hoặc `[Spec]`
+- implementation slice: prefix summary với `[Slice]`
+- không coi parent PRD ticket là implementation work
 
-Quick Jira checks:
+Kiểm tra Jira nhanh:
 
-- Natural-language shortcut: `check task` / `xem task trên jira` lists recent
-  Jira Tasks in `KAN`.
-- Keyed shortcut: `check task KAN-11 bằng mcp jira` reads that specific task.
-- Fast path for unkeyed checks: call Atlassian MCP `searchJiraIssuesUsingJql`
-  directly with `project = KAN ORDER BY created DESC`. Do not browse, scan source,
-  ask for a key, or list MCP tools first.
-- Fast path for keyed checks: call Atlassian MCP `getJiraIssue` directly with
+- Shortcut tự nhiên: `check task` / `xem task trên jira` liệt kê Jira Tasks
+  trong `KAN`.
+- Shortcut có key: `check task KAN-11 bằng mcp jira` đọc task cụ thể đó.
+- Fast path cho unkeyed checks: gọi Atlassian MCP `searchJiraIssuesUsingJql`
+  trực tiếp với `project = KAN ORDER BY created DESC`. Không browse, scan source,
+  hỏi key, hoặc list MCP tools trước.
+- Fast path cho keyed checks: gọi Atlassian MCP `getJiraIssue` trực tiếp với
   `cloudId: "https://nullnyx.atlassian.net/"`, `issueIdOrKey: "KAN-11"`, fields
   `summary`, `description`, `status`, `labels`, `comment`, `assignee`,
-  `issuelinks`, `created`, `updated`, `issuetype`, `priority`, `reporter`, and
+  `issuelinks`, `created`, `updated`, `issuetype`, `priority`, `reporter`, và
   `responseContentFormat: "markdown"`.
-- When creating Jira Tasks through Atlassian MCP, do not trust labels passed at
-  create time to persist. After each `createJiraIssue`, immediately re-read or
-  patch the issue with `editJiraIssue` and verify the `labels` field contains
-  the expected values.
-- If direct Atlassian tools are unavailable, fallback to the configured
-  `atlassian` MCP server through `mcp-remote` and call `tools/call` with
-  `name: "searchJiraIssuesUsingJql"` for unkeyed checks or `name: "getJiraIssue"`
-  for keyed checks; only list tools/resources while diagnosing fallback.
-- List tasks via JQL: call `searchJiraIssuesUsingJql` with
+- Khi tạo Jira Tasks qua Atlassian MCP, không tin labels truyền lúc create sẽ
+  tồn tại. Sau mỗi `createJiraIssue`, lập tức đọc lại hoặc patch issue với
+  `editJiraIssue` và verify field `labels` chứa giá trị mong đợi.
+- Nếu Atlassian tools trực tiếp không có, fallback tới server `atlassian` MCP
+  đã cấu hình qua `mcp-remote` và gọi `tools/call` với
+  `name: "searchJiraIssuesUsingJql"` cho unkeyed checks hoặc `name: "getJiraIssue"`
+  cho keyed checks; chỉ list tools/resources khi đang chẩn đoán fallback.
+- Liệt kê tasks qua JQL: gọi `searchJiraIssuesUsingJql` với
   `project = KAN ORDER BY created DESC`.
 
 ### Triage labels
 
-Five canonical roles; labels use the default strings. See `docs/agents/triage-labels.md`.
+Năm vai trò canonical; labels dùng default strings. Xem `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context repo: root `CONTEXT.md` + `docs/decisions/`. See `docs/agents/domain.md`.
+Repo single-context: root `CONTEXT.md` + `docs/decisions/`. Xem `docs/agents/domain.md`.
