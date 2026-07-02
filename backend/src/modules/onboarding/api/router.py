@@ -120,7 +120,7 @@ async def list_processes(
     _admin: AdminUserDep,
     onboarding_service: OnboardingServiceDep,
     status: OnboardingStatus | None = Query(
-        default=None, description="Filter by process status (in_progress or complete)"
+        default=None, description="Filter by status: in_progress, ready_for_completion, complete"
     ),
     page: int = Query(default=1, ge=1, description="Page number (1-indexed)"),
     page_size: int = Query(default=50, ge=1, le=50, description="Items per page (capped at 50)"),
@@ -327,6 +327,79 @@ async def update_task(
         order_index=task.order_index,
         completed_at=task.completed_at.isoformat() if task.completed_at else None,
         completed_by_name=completed_by_name,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Confirm onboarding completion
+# ---------------------------------------------------------------------------
+
+
+@onboarding_router.patch(
+    "/processes/{process_id}/complete",
+    response_model=OnboardingProcessDetailResponse,
+)
+async def confirm_completion(
+    process_id: UUID,
+    current_user: CurrentUserDep,
+    onboarding_service: OnboardingServiceDep,
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> OnboardingProcessDetailResponse:
+    """Confirm completion of a ready onboarding process.
+
+    The process must be in ``ready_for_completion`` status. On confirmation
+    the process transitions to ``complete`` and the linked employee is
+    activated (``is_active = true``). Admin only.
+
+    Args:
+        process_id: The identifier of the process to complete.
+        current_user: The authenticated admin user.
+        onboarding_service: The onboarding application service.
+
+    Returns:
+        The updated process detail with ``complete`` status.
+    """
+    await onboarding_service.confirm_completion(
+        process_id=process_id,
+        actor=current_user,
+    )
+
+    detail = await onboarding_service.get_process(process_id)
+    emp_repo = EmployeeRepository(db_session)
+    employee = await emp_repo.get_by_id(detail.employee_id)
+    candidate_repo = CandidateRepository(db_session)
+    candidate = await candidate_repo.get_by_id(detail.candidate_id)
+
+    return OnboardingProcessDetailResponse(
+        id=detail.process_id,
+        status=OnboardingStatus(detail.status),
+        employee_id=detail.employee_id,
+        employee_full_name=employee.full_name if employee else "",
+        employee_email=employee.email if employee else "",
+        employee_code=employee.employee_code if employee else None,
+        completed_count=detail.completed_count,
+        total_count=detail.total_count,
+        missing_setup_fields=detail.missing_setup_fields,
+        completed_at=detail.completed_at,
+        department_id=detail.department_id,
+        position_id=detail.position_id,
+        manager_id=detail.manager_id,
+        start_date=detail.start_date.isoformat() if detail.start_date else None,
+        accepted_at=(
+            candidate.accepted_at.isoformat() if candidate and candidate.accepted_at else None
+        ),
+        job_opening=await _resolve_job_opening(candidate, db_session),
+        tasks=[
+            OnboardingTaskResponse(
+                id=task.id,
+                name=task.name,
+                status=OnboardingTaskStatus(task.status),
+                order_index=task.order_index,
+                completed_at=task.completed_at,
+                completed_by_name=task.completed_by_name,
+            )
+            for task in detail.tasks
+        ],
     )
 
 

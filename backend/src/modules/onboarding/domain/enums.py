@@ -14,12 +14,13 @@ from typing import Final
 class OnboardingStatus(StrEnum):
     """Overall status of an onboarding process.
 
-    An onboarding process starts ``in_progress`` and becomes ``complete`` only
-    when every onboarding task in its checklist has status ``done`` (and the
-    linked employee is activated).
+    An onboarding process starts ``in_progress``, becomes
+    ``ready_for_completion`` when every task is done and setup is complete,
+    and reaches ``complete`` only after HR explicitly confirms completion.
     """
 
     IN_PROGRESS = "in_progress"
+    READY_FOR_COMPLETION = "ready_for_completion"
     COMPLETE = "complete"
 
 

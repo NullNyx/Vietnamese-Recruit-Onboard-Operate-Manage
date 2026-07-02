@@ -19,12 +19,12 @@ class TestOnboardingStatus:
     """Tests for the OnboardingStatus enum (Requirement 6.x process status)."""
 
     def test_contains_only_allowed_values(self):
-        """OnboardingStatus has exactly the two allowed values."""
-        assert {s.value for s in OnboardingStatus} == {"in_progress", "complete"}
+        """OnboardingStatus has the three defined status values."""
+        assert {s.value for s in OnboardingStatus} == {"in_progress", "ready_for_completion", "complete"}
 
     def test_exactly_two_members(self):
-        """OnboardingStatus defines exactly two members."""
-        assert len(list(OnboardingStatus)) == 2
+        """OnboardingStatus defines exactly three members."""
+        assert len(list(OnboardingStatus)) == 3
 
     def test_member_values(self):
         """Each member maps to its expected string value."""

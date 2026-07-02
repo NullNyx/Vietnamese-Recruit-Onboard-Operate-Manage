@@ -10,7 +10,7 @@ audit entry.
 ``complete_task`` cannot be exercised for this case because it requires an
 existing task to act on, and a zero-task process has none. The clearest way to
 pin the zero-task boundary is to drive the private activation helper
-:meth:`OnboardingService._activate_if_complete` directly with a zero-task
+:meth:`OnboardingService._maybe_mark_ready_for_completion` directly with a zero-task
 process. Accessing the private method here is deliberate and acceptable for an
 edge-case test: it isolates exactly the branch under test
 (``total == 0 -> return`` without activation) with no surrounding noise. A
@@ -243,7 +243,7 @@ def test_zero_task_process_never_activates_employee() -> None:
     """A zero-task process leaves the employee inactive and process in_progress.
 
     Drives the activation helper directly on a process that has no tasks and
-    asserts the no-activation branch (R5.7): the employee stays inactive, the
+    asserts the no-readiness branch (R5.7): the employee stays inactive, the
     process stays ``in_progress``, the process is never moved to ``COMPLETE``,
     the employee is never updated, and no activation audit entry is written.
 
@@ -254,7 +254,7 @@ def test_zero_task_process_never_activates_employee() -> None:
     )
     actor = _make_admin_actor()
 
-    asyncio.run(service._activate_if_complete(process, actor))
+    asyncio.run(service._maybe_mark_ready_for_completion(process, actor))
 
     # Employee stays inactive and the process stays in_progress.
     assert employee.is_active is False
@@ -280,7 +280,7 @@ def test_zero_task_process_has_empty_status_counts() -> None:
     """Black-box sanity: a zero-task process reports a total task count of zero.
 
     The activation gate is ``total == 0 or done != total``; this confirms the
-    ``total == 0`` precondition that drives the no-activation branch (R5.7).
+    ``total == 0`` precondition that drives the no-readiness branch (R5.7).
 
     Validates: Requirements 5.7
     """
