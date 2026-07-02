@@ -28,6 +28,46 @@ export interface EmployeeListResponse {
   page_size: number;
 }
 
+export interface EmployeeCreateData {
+  employee_code?: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  date_of_birth?: string;
+  gender?: string;
+  address?: string;
+  department_id?: string;
+  position_id?: string;
+  start_date?: string;
+  id_number?: string;
+  tax_code?: string;
+  employment_status?: string;
+  termination_date?: string;
+  contract_type?: string;
+  candidate_id?: string;
+}
+
+export interface EmployeeUpdateData {
+  employee_code?: string;
+  full_name?: string;
+  email?: string;
+  phone?: string;
+  date_of_birth?: string;
+  gender?: string;
+  address?: string;
+  department_id?: string;
+  position_id?: string;
+  start_date?: string;
+  id_number?: string;
+  tax_code?: string;
+  employment_status?: string;
+  termination_date?: string;
+  contract_type?: string;
+  candidate_id?: string;
+  is_active?: boolean;
+}
+
+
 export interface Department {
   id: string;
   name: string;
@@ -123,6 +163,7 @@ export interface ContractRenewData {
 export interface ContractTemplate {
   id: string;
   name: string;
+  content: string;
   version: number;
   status: string;
   created_at: string;
@@ -146,6 +187,7 @@ export interface ContractAmendment {
   id: string;
   contract_id: string;
   name: string;
+  content: string;
   status: string;
   signed_on: string | null;
   file_path: string | null;
@@ -173,6 +215,22 @@ export interface EmployeeStatusChangeData {
   status: string;
   termination_date?: string;
   note?: string;
+}
+
+
+export interface ImportError {
+  row: number;
+  field: string;
+  message: string;
+}
+
+export interface ImportResult {
+  total_rows: number;
+  success_count: number;
+  error_count: number;
+  errors: ImportError[];
+  departments_created?: number;
+  positions_created?: number;
 }
 
 // ---------------------------------------------------------------------------

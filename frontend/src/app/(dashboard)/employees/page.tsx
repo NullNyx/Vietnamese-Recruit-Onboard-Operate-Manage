@@ -16,7 +16,7 @@ import type { Employee } from "@/lib/api/types";
 interface EmployeeRow extends Record<string, unknown> {
   id: string;
   full_name: string;
-  email: string;
+  email: string | null;
   department_name: string;
   position_name: string;
   employment_status: string;

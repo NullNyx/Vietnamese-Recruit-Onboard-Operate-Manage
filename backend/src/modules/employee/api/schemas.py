@@ -293,12 +293,16 @@ class ImportResult(BaseModel):
         success_count: Number of rows successfully imported.
         error_count: Number of rows that failed validation.
         errors: Detailed list of row-level errors.
+        departments_created: Number of departments auto-created.
+        positions_created: Number of positions auto-created.
     """
 
     total_rows: int
     success_count: int
     error_count: int
     errors: list[ImportError]
+    departments_created: int = 0
+    positions_created: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -341,6 +345,7 @@ class DocumentResponse(BaseModel):
 # Contract schemas
 # ---------------------------------------------------------------------------
 
+
 class ContractCreate(BaseModel):
     contract_type: str
     contract_number: str | None = None
@@ -348,6 +353,7 @@ class ContractCreate(BaseModel):
     content: str | None = None
     started_on: date | None = None
     ended_on: date | None = None
+
 
 class ContractUpdate(BaseModel):
     contract_number: str | None = None
@@ -357,14 +363,17 @@ class ContractUpdate(BaseModel):
     file_path: str | None = None
     signed_document_path: str | None = None
 
+
 class ContractSignRequest(BaseModel):
     signed_document_path: str | None = None
     signed_on: date | None = None
+
 
 class ContractRenewRequest(BaseModel):
     new_started_on: date | None = None
     new_ended_on: date | None = None
     new_content: str | None = None
+
 
 class ContractResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -386,39 +395,47 @@ class ContractResponse(BaseModel):
     created_by: UUID
     updated_by: UUID | None = None
 
+
 # ---------------------------------------------------------------------------
 # Contract template schemas
 # ---------------------------------------------------------------------------
+
 
 class ContractTemplateCreate(BaseModel):
     name: str
     content: str
     file_path: str | None = None
 
+
 class ContractTemplateUpdate(BaseModel):
     name: str | None = None
     content: str | None = None
     file_path: str | None = None
+
 
 class ContractTemplateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     name: str
+    content: str
     version: int
     status: str
     created_at: datetime
     updated_at: datetime
     created_by: UUID
 
+
 # ---------------------------------------------------------------------------
 # Contract amendment schemas
 # ---------------------------------------------------------------------------
+
 
 class ContractAmendmentCreate(BaseModel):
     name: str
     content: str
     file_path: str | None = None
+
 
 class ContractAmendmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -433,9 +450,11 @@ class ContractAmendmentResponse(BaseModel):
     created_at: datetime
     created_by: UUID
 
+
 # ---------------------------------------------------------------------------
 # Employment event schemas
 # ---------------------------------------------------------------------------
+
 
 class EmploymentEventResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -447,9 +466,11 @@ class EmploymentEventResponse(BaseModel):
     note: str | None = None
     created_at: datetime
 
+
 # ---------------------------------------------------------------------------
 # Status change schema
 # ---------------------------------------------------------------------------
+
 
 class StatusChangeRequest(BaseModel):
     status: str
@@ -463,6 +484,9 @@ EmployeeStatusChangeRequest = StatusChangeRequest
 # Document verification schemas
 # ---------------------------------------------------------------------------
 
+
 class DocumentRejectRequest(BaseModel):
     note: str | None = None
+
+
 EmployeeStatusChangeRequest = StatusChangeRequest

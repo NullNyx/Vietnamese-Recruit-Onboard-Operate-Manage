@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -39,9 +38,7 @@ class ContractTemplateService:
         )
         return await self._template_repo.create(template)
 
-    async def update(
-        self, template_id: UUID, data: dict[str, Any]
-    ) -> ContractTemplate:
+    async def update(self, template_id: UUID, data: dict[str, Any]) -> ContractTemplate:
         template = await self._template_repo.update(template_id, data)
         if template is None:
             raise EmployeeError("Contract template not found")

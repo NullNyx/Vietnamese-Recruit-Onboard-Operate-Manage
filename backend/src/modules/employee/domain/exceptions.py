@@ -150,32 +150,20 @@ class ContractNotFoundError(EmployeeError):
     error_code = "CONTRACT_NOT_FOUND"
     message = "Contract not found"
 
+
 class ContractTemplateNotFoundError(EmployeeError):
     status_code = 404
     error_code = "CONTRACT_TEMPLATE_NOT_FOUND"
     message = "Contract template not found"
+
 
 class ContractAmendmentNotFoundError(EmployeeError):
     status_code = 404
     error_code = "CONTRACT_AMENDMENT_NOT_FOUND"
     message = "Contract amendment not found"
 
+
 class ContractStatusTransitionError(EmployeeError):
     status_code = 409
     error_code = "CONTRACT_STATUS_TRANSITION"
     message = "Invalid contract status transition"
-
-class ContractAlreadyActiveError(EmployeeError):
-    status_code = 409
-    error_code = "CONTRACT_ALREADY_ACTIVE"
-    message = "Contract is already active, cannot edit draft"
-
-class InvalidStatusTransitionError(EmployeeError):
-    status_code = 409
-    error_code = "INVALID_STATUS_TRANSITION"
-    message = "Invalid employee status transition"
-
-class DocumentNotFoundError(EmployeeError):
-    status_code = 404
-    error_code = "DOCUMENT_NOT_FOUND"
-    message = "Document not found"

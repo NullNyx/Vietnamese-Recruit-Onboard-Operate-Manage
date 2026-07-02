@@ -20,6 +20,9 @@ from src.modules.employee.domain.exceptions import (
 )
 
 if TYPE_CHECKING:
+    from src.modules.employee.application.employment_event_service import (
+        EmploymentEventService,
+    )
     from src.modules.employee.infrastructure.config import EmployeeSettings
     from src.modules.employee.infrastructure.document_repository import (
         DocumentRepository,
@@ -28,9 +31,6 @@ if TYPE_CHECKING:
         EmployeeRepository,
     )
     from src.modules.employee.infrastructure.minio_client import MinIOClient
-    from src.modules.employee.application.employment_event_service import (
-        EmploymentEventService,
-    )
 
 #: MIME types accepted for document uploads.
 ALLOWED_MIME_TYPES: set[str] = {
@@ -178,7 +178,9 @@ class DocumentService:
             )
         return document
 
-    async def reject_document(self, document_id: UUID, verified_by_hr_id: UUID, note: str | None = None) -> EmployeeDocument:
+    async def reject_document(
+        self, document_id: UUID, verified_by_hr_id: UUID, note: str | None = None
+    ) -> EmployeeDocument:
         """Mark a document as rejected."""
         document = await self._document_repo.get_by_id(document_id)
         if document is None:

@@ -24,8 +24,6 @@ if TYPE_CHECKING:
     from src.modules.employee.application.employment_event_service import (
         EmploymentEventService,
     )
-    from src.modules.identity.application.audit_service import AuditService
-    from src.modules.identity.domain.entities import User
     from src.modules.employee.infrastructure.department_repository import (
         DepartmentRepository,
     )
@@ -35,6 +33,7 @@ if TYPE_CHECKING:
     from src.modules.employee.infrastructure.position_repository import (
         PositionRepository,
     )
+    from src.modules.identity.application.audit_service import AuditService
 
 
 class EmployeeService:
@@ -215,7 +214,11 @@ class EmployeeService:
 
         # Validate email uniqueness if email is being changed
         new_email = data.get("email")
-        if new_email is not None and employee.email is not None and new_email.lower() != employee.email.lower():
+        if (
+            new_email is not None
+            and employee.email is not None
+            and new_email.lower() != employee.email.lower()
+        ):
             existing = await self._employee_repo.get_by_email(new_email)
             if existing is not None:
                 raise DuplicateEmailError()
@@ -289,9 +292,7 @@ class EmployeeService:
             raise InvalidStatusTransitionError()
 
         before = employee.model_dump(mode="json")
-        updated = await self._employee_repo.update_status(
-            employee_id, new_status, termination_date
-        )
+        updated = await self._employee_repo.update_status(employee_id, new_status, termination_date)
         if updated is None:
             raise EmployeeNotFoundError()
 

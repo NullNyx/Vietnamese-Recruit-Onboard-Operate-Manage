@@ -1,6 +1,5 @@
 """Repository for ContractAmendment entity CRUD operations."""
 
-from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -30,9 +29,7 @@ class ContractAmendmentRepository:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
-    async def update(
-        self, amendment_id: UUID, data: dict[str, Any]
-    ) -> ContractAmendment | None:
+    async def update(self, amendment_id: UUID, data: dict[str, Any]) -> ContractAmendment | None:
         stmt = select(ContractAmendment).where(ContractAmendment.id == amendment_id)
         result = await self._session.execute(stmt)
         amendment = result.scalars().first()

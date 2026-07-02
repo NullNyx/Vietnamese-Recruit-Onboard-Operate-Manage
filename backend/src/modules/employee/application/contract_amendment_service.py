@@ -33,9 +33,7 @@ class ContractAmendmentService:
     async def list_by_contract(self, contract_id: UUID) -> list[ContractAmendment]:
         return await self._amendment_repo.list_by_contract(contract_id)
 
-    async def update(
-        self, amendment_id: UUID, data: dict[str, Any]
-    ) -> ContractAmendment:
+    async def update(self, amendment_id: UUID, data: dict[str, Any]) -> ContractAmendment:
         amendment = await self._amendment_repo.update(amendment_id, data)
         if amendment is None:
             raise EmployeeError("Contract amendment not found")

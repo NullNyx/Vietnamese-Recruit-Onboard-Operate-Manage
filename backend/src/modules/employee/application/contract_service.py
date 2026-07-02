@@ -14,11 +14,11 @@ from src.modules.employee.domain.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from src.modules.employee.infrastructure.contract_repository import (
-        ContractRepository,
-    )
     from src.modules.employee.application.employment_event_service import (
         EmploymentEventService,
+    )
+    from src.modules.employee.infrastructure.contract_repository import (
+        ContractRepository,
     )
 
 
@@ -122,7 +122,9 @@ class ContractService:
         return await self._change_status(contract, "cancelled", actor_id)
 
     async def renew(
-        self, contract_id: UUID, actor_id: UUID,
+        self,
+        contract_id: UUID,
+        actor_id: UUID,
         new_started_on: date | None = None,
         new_ended_on: date | None = None,
         new_content: str | None = None,
@@ -148,9 +150,7 @@ class ContractService:
         }
         return await self.create_contract(new_data, actor_id)
 
-    async def _change_status(
-        self, contract: Contract, new_status: str, actor_id: UUID
-    ) -> Contract:
+    async def _change_status(self, contract: Contract, new_status: str, actor_id: UUID) -> Contract:
         old_status = contract.status
         updated = await self._contract_repo.update(contract.id, {"status": new_status})
         if updated is None:

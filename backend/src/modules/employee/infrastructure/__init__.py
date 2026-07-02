@@ -1,14 +1,14 @@
 """Infrastructure layer for the Employee Management module."""
 
 from src.modules.employee.infrastructure.contract_amendment_repository import (
-    ContractAmendmentRepository,
+    ContractAmendmentRepository as ContractAmendmentRepository,
 )
 from src.modules.employee.infrastructure.contract_repository import (
-    ContractRepository,
+    ContractRepository as ContractRepository,
 )
 from src.modules.employee.infrastructure.contract_template_repository import (
-    ContractTemplateRepository,
+    ContractTemplateRepository as ContractTemplateRepository,
 )
 from src.modules.employee.infrastructure.employment_event_repository import (
-    EmploymentEventRepository,
+    EmploymentEventRepository as EmploymentEventRepository,
 )

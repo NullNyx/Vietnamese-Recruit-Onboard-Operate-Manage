@@ -408,20 +408,16 @@ export default function ContractDetailPage() {
         <div className="grid gap-3 md:grid-cols-3">
           <div className="space-y-1.5 md:col-span-1">
             <Label htmlFor="amendment_name">Name</Label>
-            <Input id="amendment_name" value={amendmentName} onChange={(e) => setAmendmentName(e.target.value)} />
-          </div>
-          <div className="space-y-1.5 md:col-span-2">
-            <Label htmlFor="amendment_file">File path</Label>
-            <Input id="amendment_file" value={amendmentFilePath} onChange={(e) => setAmendmentFilePath(e.target.value)} />
+            <Input id="amendment_name" value={amendName} onChange={(e) => setAmendName(e.target.value)} />
           </div>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="amendment_content">Content</Label>
-          <Textarea id="amendment_content" rows={4} value={amendmentContent} onChange={(e) => setAmendmentContent(e.target.value)} />
+          <Textarea id="amendment_content" rows={4} value={amendContent} onChange={(e) => setAmendContent(e.target.value)} />
         </div>
-        <Button onClick={handleCreateAmendment} disabled={amendmentSaving || !amendmentName || !amendmentContent}>
+        <Button onClick={handleCreateAmendment} disabled={amendSaving || !amendName || !amendContent}>
           <Plus className="mr-1.5 h-4 w-4" />
-          {amendmentSaving ? "Creating..." : "Create Amendment"}
+          {amendSaving ? "Creating..." : "Create Amendment"}
         </Button>
       </div>
           {/* Amendments section */}
