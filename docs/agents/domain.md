@@ -1,18 +1,18 @@
 # Domain Docs
 
-How engineering skills should consume repo domain docs when exploring codebase.
+Cách skill engineering tiêu thụ domain docs khi khám phá codebase.
 
-## Source order
+## Thứ tự nguồn
 
-1. `CONTEXT.md` — canonical glossary.
-2. `docs/design-docs/` — working docs reviewed by `grill-with-docs`, `to-prd`, `to-issues`, and follow-up skills. Treat HR-only scope here as source over stale employee wording elsewhere.
-3. `docs/decisions/` — ADRs for locked choices and real tradeoffs.
+1. `CONTEXT.md` — từ điển thuật ngữ chuẩn.
+2. `docs/design-docs/` — working docs được `grill-with-docs`, `to-prd`, `to-issues`, và các skill khác xem xét. Scope HR-only ở đây được ưu tiên hơn từ ngữ cũ về employee ở chỗ khác.
+3. `docs/decisions/` — ADR cho các quyết định đã chốt và tradeoff thực sự.
 
-If any file missing, proceed silently. Do not invent docs or ask user to create them upfront.
+Nếu thiếu file nào, cứ tiếp tục im lặng. Không tự chế tài liệu hay yêu cầu user tạo trước.
 
-## File structure
+## Cấu trúc file
 
-Single-context repo:
+Repo single-context:
 
 ```
 /
@@ -23,20 +23,20 @@ Single-context repo:
 └── backend/ , frontend/
 ```
 
-There is no `CONTEXT-MAP.md` and no per-context `CONTEXT.md` files. Read root `CONTEXT.md` only.
+Không có `CONTEXT-MAP.md` và không có file `CONTEXT.md` riêng theo context. Chỉ đọc `CONTEXT.md` gốc.
 
-## Use glossary vocabulary
+## Dùng từ vựng trong glossary
 
-When output names domain concept, use term as defined in `CONTEXT.md`. Avoid glossary-banned synonyms.
+Khi output nhắc tới khái niệm domain, dùng term như định nghĩa trong `CONTEXT.md`. Tránh synonym bị cấm trong glossary.
 
-If needed concept missing from glossary, treat as gap for `/grill-with-docs`, not a synonym search.
+Nếu khái niệm cần thiết chưa có trong glossary, coi là gap cho `/grill-with-docs`, không phải tìm synonym.
 
-## Flag ADR conflicts
+## Báo ADR xung đột
 
-If output contradicts ADR, surface it explicitly rather than silently overriding:
+Nếu output mâu thuẫn với ADR, nêu rõ thay vì âm thầm ghi đè:
 
-> _Contradicts ADR-0005 (remove policy engine) — but worth reopening because…_
+> _Mâu thuẫn với ADR-0005 (remove policy engine) — nhưng đáng xem xét lại vì…_
 
-## Working-doc rule
+## Quy tắc working-doc
 
-`docs/design-docs/` is draft space only. Turn settled rules into `CONTEXT.md` or `docs/decisions/` when product choice is locked. Do not duplicate full specs in `docs/agents/`.
+`docs/design-docs/` chỉ là không gian nháp. Chuyển quy tắc đã chốt vào `CONTEXT.md` hoặc `docs/decisions/` khi lựa chọn sản phẩm đã khóa. Không copy spec đầy đủ vào `docs/agents/`.

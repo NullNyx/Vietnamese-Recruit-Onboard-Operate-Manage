@@ -1,15 +1,17 @@
-# Triage Labels
+# Nhãn Triage
 
-The skills speak in terms of five canonical triage roles. This file maps those roles to the actual Jira label strings used in this repo's `KAN` project.
+Các skill nói bằng năm vai trò triage chuẩn. File này ánh xạ vai trò đó thành
+chuỗi nhãn Jira thực tế dùng trong project `KAN`.
 
-| Label in mattpocock/skills | Jira label           | Meaning                                  |
-| -------------------------- | -------------------- | ---------------------------------------- |
-| `needs-triage`             | `needs-triage`       | Maintainer needs to evaluate this issue  |
-| `needs-info`               | `needs-info`         | Waiting on reporter for more information |
-| `ready-for-agent`          | `ready-for-agent`    | Fully specified, ready for an AFK agent  |
-| `ready-for-human`          | `ready-for-human`    | Requires human implementation            |
-| `wontfix`                  | `wontfix`            | Will not be actioned                     |
+| Nhãn trong skill | Nhãn Jira | Ý nghĩa |
+|---|---|---|
+| `needs-triage` | `needs-triage` | Maintainer cần đánh giá issue này |
+| `needs-info` | `needs-info` | Đang đợi reporter cung cấp thêm thông tin |
+| `ready-for-agent` | `ready-for-agent` | Đã spec đầy đủ, sẵn sàng cho agent AFK |
+| `ready-for-human` | `ready-for-human` | Cần con người thực hiện |
+| `wontfix` | `wontfix` | Sẽ không xử lý |
 
-When a skill mentions a role (e.g. "apply the AFK-ready triage label"), apply the corresponding Jira label string from this table.
+Khi skill nhắc đến vai trò (ví dụ "gán nhãn AFK-ready"), áp dụng chuỗi nhãn Jira
+tương ứng từ bảng này.
 
-Edit the right-hand column to match whatever vocabulary you actually use.
+Sửa cột bên phải nếu từ vựng thực tế bạn dùng khác.

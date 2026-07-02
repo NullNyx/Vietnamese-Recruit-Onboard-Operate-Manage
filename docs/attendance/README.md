@@ -1,19 +1,21 @@
 # Attendance Docs
 
-Working docs for HR-only attendance scope.
+Working docs cho scope chấm công HR-only.
 
-## Current files
+## File hiện tại
 
-- `hr-attendance-correction-prd.md` — HR list + correction flow.
+- `hr-attendance-correction-prd.md` — Danh sách chấm công + luồng sửa bản ghi.
 
 ## Workflow
 
-Use the design-doc skills as the ladder:
+Dùng ladder skill design-doc:
 
-- `grill-with-docs` for scope, glossary, ADR drift.
-- `to-prd` to turn settled notes into PRD text.
-- `to-issues` to break PRD into Jira Tasks.
+- `grill-with-docs` cho scope, glossary, ADR drift.
+- `to-prd` biến ghi chú đã chốt thành văn bản PRD.
+- `to-issues` tách PRD thành Jira Tasks.
 
-## Boundary
+## Ranh giới
 
-This folder is for attendance-specific working docs only. HR-only scope wins over any employee wording here. If a rule becomes canonical, move it to `CONTEXT.md` or `docs/decisions/` instead of duplicating it here.
+Folder này chỉ chứa working docs về chấm công. Scope HR-only thắng từ ngữ
+employee ở đây. Nếu quy tắc trở thành chuẩn, chuyển vào `CONTEXT.md` hoặc
+`docs/decisions/` thay vì copy ở đây.

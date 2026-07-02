@@ -1,4 +1,4 @@
-# Frontend Agent Instructions
+# Hướng dẫn Agent cho Frontend
 
 ## Stack
 
@@ -10,7 +10,7 @@
 - pnpm package manager
 - Vitest + fast-check (property-based testing)
 
-## Project Structure
+## Cấu trúc project
 
 ```
 src/
@@ -20,27 +20,27 @@ src/
 │   ├── setup/           # First-run setup wizard
 │   └── layout.tsx       # Root layout
 ├── components/
-│   ├── ui/              # shadcn/ui base components (DO NOT EDIT manually)
+│   ├── ui/              # shadcn/ui base components (KHÔNG sửa tay)
 │   └── *.tsx            # App-specific components (sidebar, data-table, etc.)
 ├── hooks/               # Custom hooks (use-current-user, use-sidebar, use-debounce)
 └── lib/
-    ├── api/             # API client functions (one file per module)
+    ├── api/             # API client functions (mỗi module một file)
     ├── navigation.ts    # Sidebar nav config
     └── utils.ts         # cn() helper, formatters
 ```
 
-## Key Rules
+## Quy tắc chính
 
-1. **App Router:** Use `app/` directory with layouts, pages, loading, error boundaries
-2. **Server Components by default:** Only add `"use client"` when needed (interactivity, hooks)
-3. **API calls:** Use `lib/api/<module>.ts` — fetch from `/api/...` (proxied to backend)
-4. **Forms:** Always use react-hook-form + zod schema validation
-5. **UI components:** Use shadcn/ui. Run `pnpm dlx shadcn@latest add <component>` for new ones
-6. **Styling:** Tailwind only. No CSS modules, no styled-components
-7. **Icons:** lucide-react only. No other icon libraries
-8. **Toasts:** Use sonner (`toast.success()`, `toast.error()`)
-9. **Dark mode:** All components must work in both light and dark mode
-10. **No Bearer tokens:** Auth is cookie-based. API calls don't need Authorization headers
+1. **App Router:** dùng thư mục `app/` với layouts, pages, loading, error boundaries
+2. **Server Components by default:** chỉ thêm `"use client"` khi thật cần (interactivity, hooks)
+3. **API calls:** dùng `lib/api/<module>.ts` — fetch từ `/api/...` (proxy tới backend)
+4. **Forms:** luôn dùng react-hook-form + zod schema validation
+5. **UI components:** dùng shadcn/ui. Chạy `pnpm dlx shadcn@latest add <component>` cho component mới
+6. **Styling:** chỉ Tailwind. Không CSS modules, không styled-components
+7. **Icons:** chỉ lucide-react. Không dùng icon library khác
+8. **Toasts:** dùng sonner (`toast.success()`, `toast.error()`)
+9. **Dark mode:** mọi component phải chạy được ở light và dark mode
+10. **Không Bearer tokens:** auth dùng cookie-based. API calls không cần Authorization headers
 
 ## Commands
 
@@ -52,7 +52,7 @@ pnpm test         # Vitest (single run)
 pnpm test:watch   # Vitest (watch mode)
 ```
 
-## API Client Pattern
+## Mẫu API Client
 
 ```typescript
 // lib/api/employee.ts
@@ -64,7 +64,7 @@ export async function getEmployees() {
 }
 ```
 
-## Page Pattern
+## Mẫu Page
 
 ```typescript
 // app/(dashboard)/employees/page.tsx
@@ -78,7 +78,7 @@ export default function EmployeeListPage() {
 }
 ```
 
-## Existing Pages
+## Trang hiện có
 
 | Route        | Description                                 |
 | ------------ | ------------------------------------------- |

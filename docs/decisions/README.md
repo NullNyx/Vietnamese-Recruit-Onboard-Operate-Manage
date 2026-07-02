@@ -1,26 +1,30 @@
-# Decisions
+# Quyết định
 
-Decision records explain why important product or architecture choices were made.
+Các bản ghi quyết định giải thích tại sao các lựa chọn sản phẩm hoặc kiến trúc
+quan trọng được đưa ra.
 
-## Source of truth
+## Nguồn chân lý
 
-- `docs/design-docs/` holds draft direction, gaps, and review material. HR-only scope there wins over stale employee wording in working docs.
-- `docs/decisions/` holds only locked choices with lasting impact.
-- `CONTEXT.md` holds canonical glossary terms.
+- `docs/design-docs/` chứa hướng đi dạng nháp, khoảng trống, và tài liệu xem xét.
+  Scope HR-only ở đó thắng từ ngữ cũ về employee trong working docs.
+- `docs/decisions/` chỉ chứa lựa chọn đã chốt có tác động lâu dài.
+- `CONTEXT.md` chứa thuật ngữ glossary chuẩn.
 
-## When to add ADR
+## Khi nào thêm ADR
 
-Use ADR format from `grill-with-docs` when a choice becomes real and hard to reverse:
-short title plus 1–3 sentences: context, what was decided, why. Number files sequentially (`0008-slug.md`, ...).
+Dùng format ADR từ `grill-with-docs` khi lựa chọn trở nên thực tế và khó đảo
+ngược: tiêu đề ngắn, cộng 1–3 câu: bối cảnh, quyết định, lý do. Đánh số file
+tuần tự (`0008-slug.md`, ...).
 
-Add a decision when:
+Thêm quyết định khi:
 
-- A locked technical choice changes.
-- A product rule changes meaningfully.
-- A validation requirement is added, removed, or weakened.
-- A high-risk feature chooses one design over another.
-- The source-of-truth hierarchy changes.
+- Lựa chọn kỹ thuật đã chốt thay đổi.
+- Quy tắc sản phẩm thay đổi có ý nghĩa.
+- Yêu cầu validation được thêm, bỏ, hoặc giảm nhẹ.
+- Feature có rủi ro cao chọn thiết kế này thay vì thiết kế kia.
+- Hệ thống phân cấp nguồn chân lý thay đổi.
 
-## Rule of thumb
+## Nguyên tắc
 
-If a note is still being debated, keep it in design docs. If teams must code to it for the foreseeable future, write ADR.
+Nếu ghi chú còn đang tranh luận, giữ trong design docs. Nếu team phải code theo
+nó trong tương lai gần, viết ADR.
