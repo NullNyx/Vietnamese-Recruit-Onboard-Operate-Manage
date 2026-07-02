@@ -127,3 +127,43 @@ class UnsupportedFileTypeError(EmployeeError):
     status_code = 415
     error_code = "UNSUPPORTED_FILE_TYPE"
     message = "File type not supported"
+
+
+class InvalidStatusTransitionError(EmployeeError):
+    """Raised when a status change violates allowed transitions."""
+
+    status_code = 409
+    error_code = "INVALID_STATUS_TRANSITION"
+    message = "Invalid status transition"
+
+
+class ContractAlreadyActiveError(EmployeeError):
+    """Raised when trying to edit an active contract as a draft."""
+
+    status_code = 409
+    error_code = "CONTRACT_ALREADY_ACTIVE"
+    message = "Contract is already active"
+
+
+class ContractNotFoundError(EmployeeError):
+    status_code = 404
+    error_code = "CONTRACT_NOT_FOUND"
+    message = "Contract not found"
+
+
+class ContractTemplateNotFoundError(EmployeeError):
+    status_code = 404
+    error_code = "CONTRACT_TEMPLATE_NOT_FOUND"
+    message = "Contract template not found"
+
+
+class ContractAmendmentNotFoundError(EmployeeError):
+    status_code = 404
+    error_code = "CONTRACT_AMENDMENT_NOT_FOUND"
+    message = "Contract amendment not found"
+
+
+class ContractStatusTransitionError(EmployeeError):
+    status_code = 409
+    error_code = "CONTRACT_STATUS_TRANSITION"
+    message = "Invalid contract status transition"

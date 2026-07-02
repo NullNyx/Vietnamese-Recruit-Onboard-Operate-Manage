@@ -151,3 +151,33 @@ _Avoid_: Write-tool, Action-tool
 The structured proposal returned by a Draft-Tool. HR reviews; on confirm, the
 frontend calls the real write endpoint directly (never the LLM).
 _Avoid_: Auto-action, Command
+
+## Authentication & Setup
+
+**Authentication**:
+Password-based login (email + password) using PBKDF2-SHA-256 hashing.
+Uses httpOnly secure cookies (`access_token`, `refresh_token`).
+No Google OAuth, no social login, no public registration.
+_Avoid_: OAuth, Bearer tokens
+
+**Initial Setup Wizard**:
+One-time flow that creates the first SUPER_ADMIN and configures the
+Organization before the dashboard is accessible. Routes: `/setup/*`.
+Once completed, setup endpoints are permanently locked.
+_Avoid_: calling it "onboarding"
+
+**SUPER_ADMIN**:
+The highest-privilege role, created during Initial Setup Wizard.
+Can manage system users, assign roles, and perform all HR operations.
+Exactly one SUPER_ADMIN exists per deployment.
+_Avoid_: Super User (legacy)
+
+**HR_ADMIN**:
+Full HR operational role. Can manage employees, contracts, onboarding,
+recruitment, attendance, payroll, and AI configuration.
+_Avoid_: Admin (ambiguous with SUPER_ADMIN)
+
+**HR_STAFF**:
+Limited HR role with read+write access to employee operations but no
+system administration or user management.
+_Avoid_: User (ambiguous with auth-account), Employee

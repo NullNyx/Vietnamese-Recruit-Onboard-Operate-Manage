@@ -12,6 +12,7 @@ from src.modules.employee.domain.exceptions import (
     DepartmentNotFoundError,
     DuplicateEmailError,
     EmployeeNotFoundError,
+    InvalidStatusTransitionError,
     PositionNotFoundError,
 )
 
@@ -437,3 +438,56 @@ class TestPromoteCandidate:
         assert created.candidate_id == candidate_id
         assert created.phone == "0901234567"
         assert created.employee_code == "NV-010"
+
+class TestChangeStatus:
+    """Tests for EmployeeService.change_status."""
+
+    async def test_valid_transition_active_to_resigned(
+        self, service: EmployeeService, employee_repo: AsyncMock
+    ) -> None:
+        employee = AsyncMock(spec=Employee)
+        employee.id = uuid4()
+        employee.employment_status = "active"
+        employee_repo.get_by_id.return_value = employee
+        employee_repo.update_status.return_value = employee
+
+        result = await service.change_status(employee.id, "resigned", uuid4())
+
+        employee_repo.update_status.assert_called_once_with(employee.id, "resigned", None)
+        assert result == employee
+
+    async def test_invalid_transition_resigned_to_active(
+        self, service: EmployeeService, employee_repo: AsyncMock
+    ) -> None:
+        employee = AsyncMock(spec=Employee)
+        employee.id = uuid4()
+        employee.employment_status = "resigned"
+        employee_repo.get_by_id.return_value = employee
+
+        with pytest.raises(InvalidStatusTransitionError):
+            await service.change_status(employee.id, "active", uuid4())
+
+    async def test_invalid_transition_terminated_to_anything(
+        self, service: EmployeeService, employee_repo: AsyncMock
+    ) -> None:
+        employee = AsyncMock(spec=Employee)
+        employee.id = uuid4()
+        employee.employment_status = "terminated"
+        employee_repo.get_by_id.return_value = employee
+
+        with pytest.raises(InvalidStatusTransitionError):
+            await service.change_status(employee.id, "suspended", uuid4())
+
+    async def test_termination_sets_date(
+        self, service: EmployeeService, employee_repo: AsyncMock
+    ) -> None:
+        from datetime import date
+        employee = AsyncMock(spec=Employee)
+        employee.id = uuid4()
+        employee.employment_status = "active"
+        employee_repo.get_by_id.return_value = employee
+        employee_repo.update_status.return_value = employee
+
+        await service.change_status(employee.id, "terminated", uuid4(), termination_date=date(2026, 6, 1))
+
+        employee_repo.update_status.assert_called_once_with(employee.id, "terminated", date(2026, 6, 1))

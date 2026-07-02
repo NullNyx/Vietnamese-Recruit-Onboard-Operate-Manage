@@ -26,6 +26,18 @@ from src.modules.employee.domain.entities import (  # noqa: E402, F401
     EmployeeDocument,
     Position,
 )
+from src.modules.employee.domain.contract import (  # noqa: E402, F401
+    Contract,
+)
+from src.modules.employee.domain.contract_template import (  # noqa: E402, F401
+    ContractTemplate,
+)
+from src.modules.employee.domain.contract_amendment import (  # noqa: E402, F401
+    ContractAmendment,
+)
+from src.modules.employee.domain.employment_event import (  # noqa: E402, F401
+    EmploymentEvent,
+)
 from src.modules.identity.domain.entities import (  # noqa: E402, F401
     OAuthGrant,
     RefreshToken,

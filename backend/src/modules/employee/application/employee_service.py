@@ -7,6 +7,7 @@ business rules such as email uniqueness and referential integrity.
 
 from __future__ import annotations
 
+from datetime import date
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -15,10 +16,14 @@ from src.modules.employee.domain.exceptions import (
     DepartmentNotFoundError,
     DuplicateEmailError,
     EmployeeNotFoundError,
+    InvalidStatusTransitionError,
     PositionNotFoundError,
 )
 
 if TYPE_CHECKING:
+    from src.modules.employee.application.employment_event_service import (
+        EmploymentEventService,
+    )
     from src.modules.employee.infrastructure.department_repository import (
         DepartmentRepository,
     )
@@ -28,6 +33,7 @@ if TYPE_CHECKING:
     from src.modules.employee.infrastructure.position_repository import (
         PositionRepository,
     )
+    from src.modules.identity.application.audit_service import AuditService
 
 
 class EmployeeService:
@@ -47,6 +53,8 @@ class EmployeeService:
         employee_repository: EmployeeRepository,
         department_repository: DepartmentRepository,
         position_repository: PositionRepository,
+        event_service: EmploymentEventService | None = None,
+        audit_service: AuditService | None = None,
     ) -> None:
         """Initialize EmployeeService with required repositories.
 
@@ -54,10 +62,13 @@ class EmployeeService:
             employee_repository: Repository for employee CRUD operations.
             department_repository: Repository for department lookups.
             position_repository: Repository for position lookups.
+            event_service: Optional EmploymentEventService for audit trail.
         """
         self._employee_repo = employee_repository
         self._department_repo = department_repository
         self._position_repo = position_repository
+        self._event_service = event_service
+        self._audit_service = audit_service
 
     async def list_employees(
         self,
@@ -154,7 +165,7 @@ class EmployeeService:
         employee = Employee(
             employee_code=employee_code,
             full_name=data["full_name"],
-            email=data["email"],
+            email=data.get("email"),
             phone=data.get("phone"),
             date_of_birth=data.get("date_of_birth"),
             gender=data.get("gender"),
@@ -163,14 +174,19 @@ class EmployeeService:
             position_id=position_id,
             start_date=data.get("start_date"),
             id_number=data.get("id_number"),
-            tax_code=data.get("tax_code"),
+            personal_tax_code=data.get("tax_code"),
             contract_type=data.get("contract_type"),
             candidate_id=data.get("candidate_id"),
         )
 
         return await self._employee_repo.create(employee)
 
-    async def update_employee(self, employee_id: UUID, data: dict[str, Any]) -> Employee:
+    async def update_employee(
+        self,
+        employee_id: UUID,
+        data: dict[str, Any],
+        actor_hr_id: UUID | None = None,
+    ) -> Employee:
         """Update an existing employee record.
 
         Validates that the employee exists, checks email uniqueness if
@@ -194,10 +210,15 @@ class EmployeeService:
         employee = await self._employee_repo.get_by_id(employee_id)
         if employee is None:
             raise EmployeeNotFoundError()
+        before = employee.model_dump(mode="json")
 
         # Validate email uniqueness if email is being changed
         new_email = data.get("email")
-        if new_email is not None and new_email.lower() != employee.email.lower():
+        if (
+            new_email is not None
+            and employee.email is not None
+            and new_email.lower() != employee.email.lower()
+        ):
             existing = await self._employee_repo.get_by_email(new_email)
             if existing is not None:
                 raise DuplicateEmailError()
@@ -218,6 +239,14 @@ class EmployeeService:
         updated = await self._employee_repo.update(employee_id, data)
         if updated is None:
             raise EmployeeNotFoundError()
+        if self._event_service and actor_hr_id is not None:
+            await self._event_service.record(
+                employee_id=employee_id,
+                event_type="profile_update",
+                actor_hr_id=actor_hr_id,
+                before=before,
+                after=updated.model_dump(mode="json"),
+            )
         return updated
 
     async def delete_employee(self, employee_id: UUID) -> Employee:
@@ -241,6 +270,42 @@ class EmployeeService:
         if deleted is None:
             raise EmployeeNotFoundError()
         return deleted
+
+    async def change_status(
+        self,
+        employee_id: UUID,
+        new_status: str,
+        actor_hr_id: UUID,
+        termination_date: date | None = None,
+        note: str | None = None,
+    ) -> Employee:
+        """Change an employee's employment status with event recording."""
+        employee = await self.get_employee(employee_id)
+
+        allowed = {
+            "active": {"suspended", "resigned", "terminated"},
+            "suspended": {"active", "resigned", "terminated"},
+            "resigned": set(),
+            "terminated": set(),
+        }
+        if new_status not in allowed.get(employee.employment_status, set()):
+            raise InvalidStatusTransitionError()
+
+        before = employee.model_dump(mode="json")
+        updated = await self._employee_repo.update_status(employee_id, new_status, termination_date)
+        if updated is None:
+            raise EmployeeNotFoundError()
+
+        if self._event_service:
+            await self._event_service.record(
+                employee_id=employee_id,
+                event_type="status_change",
+                actor_hr_id=actor_hr_id,
+                before=before,
+                after=updated.model_dump(mode="json"),
+                note=note,
+            )
+        return updated
 
     async def promote_candidate(self, data: dict[str, Any]) -> Employee:
         """Create an employee from a promoted candidate.
@@ -284,7 +349,7 @@ class EmployeeService:
         # Create new employee from candidate data
         create_data = {
             "full_name": data["full_name"],
-            "email": data["email"],
+            "email": data.get("email"),
             "phone": data.get("phone"),
             "department_id": data.get("department_id"),
             "position_id": data.get("position_id"),

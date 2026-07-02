@@ -7,6 +7,7 @@ MinIOClient while enforcing file size and MIME type constraints.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -19,6 +20,9 @@ from src.modules.employee.domain.exceptions import (
 )
 
 if TYPE_CHECKING:
+    from src.modules.employee.application.employment_event_service import (
+        EmploymentEventService,
+    )
     from src.modules.employee.infrastructure.config import EmployeeSettings
     from src.modules.employee.infrastructure.document_repository import (
         DocumentRepository,
@@ -59,6 +63,7 @@ class DocumentService:
         employee_repository: EmployeeRepository,
         minio_client: MinIOClient,
         settings: EmployeeSettings,
+        event_service: EmploymentEventService | None = None,
     ) -> None:
         """Initialize DocumentService with required dependencies.
 
@@ -72,6 +77,7 @@ class DocumentService:
         self._employee_repo = employee_repository
         self._minio_client = minio_client
         self._settings = settings
+        self._event_service = event_service
 
     async def list_documents(self, employee_id: UUID) -> list[EmployeeDocument]:
         """Retrieve all documents for a given employee.
@@ -98,6 +104,7 @@ class DocumentService:
         file_name: str,
         file_data: bytes,
         content_type: str,
+        uploaded_by_hr_id: UUID | None = None,
     ) -> EmployeeDocument:
         """Upload a document to the employee document vault.
 
@@ -147,9 +154,68 @@ class DocumentService:
             storage_path=storage_path,
             file_size=len(file_data),
             mime_type=content_type,
+            uploaded_by_hr_id=uploaded_by_hr_id or employee_id,
         )
 
         return await self._document_repo.create(document)
+
+    async def verify_document(self, document_id: UUID, verified_by_hr_id: UUID) -> EmployeeDocument:
+        """Mark a document as verified."""
+        document = await self._document_repo.get_by_id(document_id)
+        if document is None:
+            raise EmployeeError("Document not found")
+        document.status = "verified"
+        document.verified_by_hr_id = verified_by_hr_id
+        document.verified_at = datetime.now(UTC)
+        self._document_repo.session.add(document)
+        await self._document_repo.session.flush()
+        if self._event_service:
+            await self._event_service.record(
+                employee_id=document.employee_id,
+                event_type="document_update",
+                actor_hr_id=verified_by_hr_id,
+                after={"document_id": str(document.id), "status": "verified"},
+            )
+        return document
+
+    async def reject_document(
+        self, document_id: UUID, verified_by_hr_id: UUID, note: str | None = None
+    ) -> EmployeeDocument:
+        """Mark a document as rejected."""
+        document = await self._document_repo.get_by_id(document_id)
+        if document is None:
+            raise EmployeeError("Document not found")
+        document.status = "rejected"
+        document.verified_by_hr_id = verified_by_hr_id
+        document.verified_at = datetime.now(UTC)
+        self._document_repo.session.add(document)
+        await self._document_repo.session.flush()
+        if self._event_service:
+            await self._event_service.record(
+                employee_id=document.employee_id,
+                event_type="document_update",
+                actor_hr_id=verified_by_hr_id,
+                after={"document_id": str(document.id), "status": "rejected"},
+                note=note,
+            )
+        return document
+
+    async def mark_expired(self, document_id: UUID) -> EmployeeDocument:
+        """Mark a document as expired."""
+        document = await self._document_repo.get_by_id(document_id)
+        if document is None:
+            raise EmployeeError("Document not found")
+        document.status = "expired"
+        self._document_repo.session.add(document)
+        await self._document_repo.session.flush()
+        if self._event_service:
+            await self._event_service.record(
+                employee_id=document.employee_id,
+                event_type="document_update",
+                actor_hr_id=document.uploaded_by_hr_id,
+                after={"document_id": str(document.id), "status": "expired"},
+            )
+        return document
 
     async def download_document(self, document_id: UUID) -> tuple[EmployeeDocument, bytes]:
         """Download a document from the vault.

@@ -7,7 +7,7 @@ SQLAlchemy async sessions with SQLModel.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -176,6 +176,24 @@ class EmployeeRepository:
                 setattr(employee, key, value)
 
         employee.updated_at = datetime.now(UTC)
+        self.session.add(employee)
+        await self.session.flush()
+        return employee
+
+    async def update_status(
+        self,
+        employee_id: UUID,
+        status: str,
+        termination_date: date | None = None,
+    ) -> Employee | None:
+        """Update employment status for one employee."""
+        employee = await self.get_by_id(employee_id)
+        if employee is None:
+            return None
+
+        employee.employment_status = status
+        if termination_date is not None:
+            employee.termination_date = termination_date
         self.session.add(employee)
         await self.session.flush()
         return employee
