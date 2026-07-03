@@ -75,8 +75,13 @@ from src.modules.onboarding.api.schemas import (
 )
 from src.modules.onboarding.application.onboarding_service import OnboardingService
 from src.modules.onboarding.container import get_onboarding_service
-from src.modules.onboarding.domain.enums import OnboardingStatus, OnboardingTaskStatus
+from src.modules.onboarding.domain.enums import (
+    DOCUMENT_TEMPLATE,
+    OnboardingStatus,
+    OnboardingTaskStatus,
+)
 from src.modules.onboarding.infrastructure.document_repository import OnboardingDocumentRepository
+from src.modules.onboarding.infrastructure.template_repository import OnboardingTemplateRepository
 from src.modules.recruitment.domain.entities import Candidate
 from src.modules.recruitment.infrastructure.repositories import (
     CandidateRepository,
@@ -509,21 +514,34 @@ async def list_documents(
 ) -> list[OnboardingDocumentResponse]:
     """List document items for an onboarding process, initialising from template if none exist."""
     from src.modules.onboarding.domain.entities import OnboardingDocument
-    from src.modules.onboarding.domain.enums import DOCUMENT_TEMPLATE
 
     repo = OnboardingDocumentRepository(db_session)
     docs = await repo.list_by_process(process_id)
     if not docs:
-        docs = [
-            OnboardingDocument(
-                process_id=process_id,
-                document_type=doc_type,
-                display_name=display_name,
-                is_required=is_required,
-                status="pending",
-            )
-            for doc_type, display_name, is_required in DOCUMENT_TEMPLATE
-        ]
+        template_repo = OnboardingTemplateRepository(db_session)
+        templates = await template_repo.list(template_type="document")
+        if templates:
+            docs = [
+                OnboardingDocument(
+                    process_id=process_id,
+                    document_type=template.key,
+                    display_name=template.display_name,
+                    is_required=template.is_required,
+                    status="pending",
+                )
+                for template in templates
+            ]
+        else:
+            docs = [
+                OnboardingDocument(
+                    process_id=process_id,
+                    document_type=document_type,
+                    display_name=display_name,
+                    is_required=is_required,
+                    status="pending",
+                )
+                for document_type, display_name, is_required in DOCUMENT_TEMPLATE
+            ]
         docs = await repo.create_many(docs)
     return [OnboardingDocumentResponse.model_validate(d) for d in docs]
 

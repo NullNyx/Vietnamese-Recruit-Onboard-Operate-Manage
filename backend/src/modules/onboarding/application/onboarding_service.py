@@ -47,6 +47,7 @@ from src.modules.onboarding.domain.entities import (
     OnboardingDocument,
     OnboardingProcess,
     OnboardingTask,
+    OnboardingTemplate,
 )
 from src.modules.onboarding.domain.enums import (
     CHECKLIST_TEMPLATE,
@@ -70,6 +71,7 @@ from src.modules.onboarding.infrastructure.contract_repository import Onboarding
 from src.modules.onboarding.infrastructure.document_repository import OnboardingDocumentRepository
 from src.modules.onboarding.infrastructure.process_repository import OnboardingProcessRepository
 from src.modules.onboarding.infrastructure.task_repository import OnboardingTaskRepository
+from src.modules.onboarding.infrastructure.template_repository import OnboardingTemplateRepository
 
 logger = logging.getLogger(__name__)
 
@@ -269,6 +271,7 @@ class OnboardingService:
         session: AsyncSession,
         document_repo: OnboardingDocumentRepository | None = None,
         contract_repo: OnboardingContractRepository | None = None,
+        template_repo: OnboardingTemplateRepository | None = None,
         employee_document_repo: DocumentRepository | None = None,
         employee_contract_repo: ContractRepository | None = None,
     ) -> None:
@@ -288,6 +291,7 @@ class OnboardingService:
         self.audit_repo = audit_repo
         self.document_repo = document_repo
         self.contract_repo = contract_repo
+        self.template_repo = template_repo
         self.employee_document_repo = employee_document_repo
         self.employee_contract_repo = employee_contract_repo
         self.employee_repo = employee_repo
@@ -439,39 +443,24 @@ class OnboardingService:
         )
         await self.process_repo.create(process)
 
-        tasks = [
-            OnboardingTask(
-                process_id=process.id,
-                task_key=task_key.value,
-                name=name,
-                status=OnboardingTaskStatus.PENDING.value,
-                order_index=order_index,
-            )
-            for order_index, task_key, name in CHECKLIST_TEMPLATE
-        ]
+        tasks = await self._build_tasks_from_templates(process.id)
         await self.task_repo.create_many(tasks)
 
         if self.document_repo is not None:
-            documents = [
-                OnboardingDocument(
-                    process_id=process.id,
-                    document_type=document_type,
-                    display_name=display_name,
-                    is_required=is_required,
-                )
-                for document_type, display_name, is_required in DOCUMENT_TEMPLATE
-            ]
+            documents = await self._build_documents_from_templates(process.id)
             await self.document_repo.create_many(documents)
 
         if self.contract_repo is not None:
+            template = await self._get_contract_template()
             contract = OnboardingContractDraft(
                 process_id=process.id,
-                contract_type="labor",
+                contract_type=template.key if template is not None else "labor",
                 content=self._build_contract_placeholder(
                     candidate_name=full_name,
                     employee_code=employee.employee_code,
                     process_id=process.id,
                     candidate_id=candidate_id,
+                    template=template,
                 ),
                 status="draft",
                 revision=1,
@@ -502,6 +491,114 @@ class OnboardingService:
         await self.audit_repo.append(creation_audit)
 
         return process
+
+    async def _build_tasks_from_templates(self, process_id: UUID) -> list[OnboardingTask]:
+        templates = await self._list_templates("task")
+        return [
+            OnboardingTask(
+                process_id=process_id,
+                task_key=template.key,
+                name=template.display_name,
+                status=OnboardingTaskStatus.PENDING.value,
+                order_index=template.order_index,
+            )
+            for template in templates
+        ]
+
+    async def _build_documents_from_templates(self, process_id: UUID) -> list[OnboardingDocument]:
+        templates = await self._list_templates("document")
+        return [
+            OnboardingDocument(
+                process_id=process_id,
+                document_type=template.key,
+                display_name=template.display_name,
+                is_required=template.is_required,
+            )
+            for template in templates
+        ]
+
+    async def _get_contract_template(self) -> OnboardingTemplate | None:
+        templates = await self._list_templates("contract")
+        if not templates:
+            return None
+        system_templates = [template for template in templates if template.is_system]
+        if system_templates:
+            return system_templates[0]
+        return min(templates, key=lambda template: template.order_index)
+
+    async def _list_templates(self, template_type: str) -> list[OnboardingTemplate]:
+        if self.template_repo is not None:
+            templates = await self.template_repo.list(template_type=template_type)
+            if templates:
+                return templates
+
+        if template_type == "task":
+            return [
+                OnboardingTemplate(
+                    template_type="task",
+                    key=task_key.value,
+                    display_name=name,
+                    order_index=order_index,
+                    is_required=True,
+                    is_system=True,
+                )
+                for order_index, task_key, name in CHECKLIST_TEMPLATE
+            ]
+        if template_type == "document":
+            return [
+                OnboardingTemplate(
+                    template_type="document",
+                    key=document_type,
+                    display_name=display_name,
+                    is_required=is_required,
+                    order_index=order_index,
+                    is_system=True,
+                )
+                for order_index, (document_type, display_name, is_required) in enumerate(
+                    DOCUMENT_TEMPLATE
+                )
+            ]
+        if template_type == "contract":
+            return [
+                OnboardingTemplate(
+                    template_type="contract",
+                    key="labor_contract",
+                    display_name="Labor Contract",
+                    description="Mẫu hợp đồng lao động cho onboarding.",
+                    template_body=(
+                        "Labor Contract\n"
+                        "Candidate: {{candidate_name}}\n"
+                        "Employee code: {{employee_code}}\n"
+                        "Process ID: {{process_id}}\n"
+                    ),
+                    order_index=0,
+                    is_required=True,
+                    is_system=True,
+                )
+            ]
+        return []
+
+    def _build_contract_placeholder(
+        self,
+        candidate_name: str,
+        employee_code: str | None,
+        process_id: UUID,
+        candidate_id: UUID,
+        template: OnboardingTemplate | None = None,
+    ) -> str:
+        if template is not None and template.template_body:
+            return (
+                template.template_body.replace("{{candidate_name}}", candidate_name)
+                .replace("{{employee_code}}", employee_code or "")
+                .replace("{{process_id}}", str(process_id))
+                .replace("{{candidate_id}}", str(candidate_id))
+            )
+        return (
+            "Labor Contract\n"
+            f"Candidate: {candidate_name}\n"
+            f"Employee code: {employee_code or ''}\n"
+            f"Process ID: {process_id}\n"
+        )
 
     async def _create_inactive_employee(
         self,
@@ -1702,24 +1799,3 @@ class OnboardingService:
         )
         result = await self.session.execute(statement)
         return list(result.scalars().all())
-
-    def _build_contract_placeholder(
-        self,
-        *,
-        candidate_name: str,
-        employee_code: str | None,
-        process_id: UUID,
-        candidate_id: UUID,
-    ) -> str:
-        code_line = f"Ma NV: {employee_code}" if employee_code else "Ma NV: [pending]"
-        return "\n".join(
-            [
-                "BAN THAO HOP DONG LAO DONG",
-                f"Ung vien: {candidate_name}",
-                code_line,
-                f"Process: {process_id}",
-                f"Candidate: {candidate_id}",
-                "",
-                "Noi dung AI placeholder: cap nhat dieu khoan, muc luong, ngay bat dau.",
-            ]
-        )
