@@ -182,3 +182,63 @@ class OnboardingContractDraft(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+
+
+# ─── OnboardingTemplate ─────────────────────────────────────────────────────
+# Template entities for configurable onboarding case generation (KAN-62).
+# Seeded system defaults exist so onboarding works on a fresh deployment.
+# HR can manage (create, edit, archive) templates via the settings surface.
+
+
+class OnboardingTemplate(SQLModel, table=True):
+    """A reusable template for onboarding case generation.
+
+    Types: ``task`` (checklist tasks), ``document`` (required documents),
+    ``contract`` (contract draft placeholders). System defaults are seeded
+    at startup. Scoped to the single Organization (self-hosted deployment).
+    """
+
+    __tablename__ = "onboarding_templates"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    template_type: str = Field(
+        max_length=20,
+        nullable=False,
+        index=True,
+        description="task | document | contract",
+    )
+    key: str = Field(
+        max_length=40,
+        nullable=False,
+        description="Stable identifier (e.g. sign_contract, cccd)",
+    )
+    display_name: str = Field(max_length=100, nullable=False)
+    description: str | None = Field(default=None, max_length=500)
+    template_body: str | None = Field(default=None)
+    is_required: bool = Field(default=True, nullable=False)
+    order_index: int = Field(default=0, nullable=False)
+    version: int = Field(default=1, nullable=False)
+    is_system: bool = Field(default=False, nullable=False)
+    is_archived: bool = Field(default=False, nullable=False, index=True)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+    def archive(self) -> None:
+        """Soft-delete this template."""
+        self.is_archived = True
+        self.updated_at = datetime.now(UTC)
+
+    def unarchive(self) -> None:
+        """Restore an archived template."""
+        self.is_archived = False
+        self.updated_at = datetime.now(UTC)
+
+    def bump_version(self) -> None:
+        """Increment version on edit."""
+        self.version += 1

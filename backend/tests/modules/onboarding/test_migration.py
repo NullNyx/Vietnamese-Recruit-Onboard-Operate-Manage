@@ -1,13 +1,14 @@
 """Migration smoke test for the onboarding tables (revision 028).
 
 These are integration tests: they spin up a real PostgreSQL 15 instance with
-``testcontainers``, run ``alembic upgrade head`` against it, and verify two
+``testcontainers``, run ``alembic upgrade head`` against it, and verify three
 things:
 
 1. The migration applies cleanly and the three onboarding tables exist.
 2. The ``UNIQUE`` index on ``onboarding_processes.candidate_id`` rejects a
    second process for the same candidate (the database invariant that backs
    idempotent event consumption — R1.3, R2.7, R3.4).
+3. The onboarding template table exists and its type/key pair is unique.
 
 The test reuses the project's real Alembic environment (``backend/alembic`` +
 ``alembic.ini``), driving the async (asyncpg) engine that ``env.py`` builds via
@@ -40,6 +41,7 @@ ONBOARDING_TABLES = {
     "onboarding_processes",
     "onboarding_tasks",
     "onboarding_audit_logs",
+    "onboarding_templates",
 }
 
 
@@ -133,7 +135,7 @@ def _insert_employee(conn: object) -> str:
 def test_migration_applies_cleanly_and_creates_onboarding_tables(
     migrated_engine: object,
 ) -> None:
-    """`alembic upgrade head` creates the three onboarding tables (and employees).
+    """`alembic upgrade head` creates the onboarding tables (and employees).
 
     Requirements: 1.3, 2.7, 3.4
     """
@@ -153,6 +155,14 @@ def test_migration_applies_cleanly_and_creates_onboarding_tables(
     )
     assert candidate_index is not None, "candidate_id index is missing"
     assert candidate_index["unique"] is True, "candidate_id index is not unique"
+
+    template_indexes = inspector.get_indexes("onboarding_templates")  # type: ignore[attr-defined]
+    type_key_index = next(
+        (ix for ix in template_indexes if ix["column_names"] == ["template_type", "key"]),
+        None,
+    )
+    assert type_key_index is not None, "template_type/key index is missing"
+    assert type_key_index["unique"] is True, "template_type/key index is not unique"
 
 
 @pytest.mark.integration

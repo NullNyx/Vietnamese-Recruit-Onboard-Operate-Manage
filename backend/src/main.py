@@ -38,6 +38,7 @@ from src.modules.onboarding.api.error_handler import (  # noqa: E402
     register_onboarding_error_handlers,
 )
 from src.modules.onboarding.api.router import onboarding_router  # noqa: E402
+from src.modules.onboarding.api.template_router import template_router  # noqa: E402
 from src.modules.payslip.api.admin_router import admin_payslip_router  # noqa: E402
 from src.modules.payslip.api.error_handler import register_payslip_error_handlers  # noqa: E402
 from src.modules.recruitment.api.candidate_router import candidate_router  # noqa: E402
@@ -177,6 +178,25 @@ async def _seed_assistant_tool_configs() -> None:
             logger.info("Assistant tool configs already present -- skipping seed.")
 
 
+async def _seed_onboarding_templates() -> None:
+    """Seed default onboarding templates at startup."""
+    from src.bootstrap.onboarding_templates import seed_onboarding_templates
+    from src.modules.identity.container import _get_async_session_maker
+
+    session_maker = _get_async_session_maker()
+    async with session_maker() as session:
+        created = await seed_onboarding_templates(session)
+        if created:
+            await session.commit()
+            logger.info(
+                "Seeded %d onboarding templates: %s",
+                len(created),
+                [template.key for template in created],
+            )
+        else:
+            logger.info("Onboarding templates already present -- skipping seed.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler for startup and shutdown events."""
@@ -186,6 +206,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await _seed_demo_attendance()
     await _seed_demo_payslips()
     await _seed_assistant_tool_configs()
+    await _seed_onboarding_templates()
     yield
     # Shutdown (nothing to clean up currently)
 
@@ -206,6 +227,7 @@ app.include_router(candidate_router)
 app.include_router(cv_review_router)
 app.include_router(metrics_router)
 app.include_router(onboarding_router)
+app.include_router(template_router)
 app.include_router(attendance_router)
 app.include_router(job_opening_router)
 app.include_router(runtime_router)

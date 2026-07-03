@@ -91,9 +91,6 @@ Backend ưu tiên `ruff check`, `mypy`, `pytest`; frontend ưu tiên `npm run li
 `npm run test`, `npm run build`; task UI thì thêm Playwright/browser QA.
 Nếu slice chạm scope file cụ thể, kiểm tra không sửa ngoài scope trừ khi có
 defer hợp lệ. Không nhận "xong" nếu thiếu log test hoặc thiếu bằng chứng chạy.
-Micro-harness v1 sống trong `agent-harness/`: giữ allowlist, evidence log, và
-gate scripts ở đó; `AGENTS.md` chỉ giữ rule nền.
-
 Khi task chạm vào giao diện web, `implement` kích hoạt FE sub-workflow theo
 thứ tự này. Nếu có màn mới, redesign, hoặc cần chốt bố cục trước khi code,
 dùng Pencil MCP để dựng `.pen` canvas làm source of truth cho từng screen.
@@ -251,9 +248,31 @@ gh pr create --title "<type>(<scope>): <summary>" --body "## What
 
 PR title dùng format commit. Squash merge. Yêu cầu ≥1 approval + CI pass.
 
+## Preflight — trước khi code (gate ngăn tốn thời gian)
+
+Mỗi lần implement một slice, làm đúng thứ tự này, không nhảy bước:
+
+1. **Chốt runner** — kiểm tra `which uv && which pnpm` trước. Nếu project dùng `uv run pytest` thì không gọi `pytest` bare.
+2. **Check baseline debt** — 
+   - Chạy `ruff check` trên một file mới tạo để biết baseline format có sẵn không.
+   - Chạy `mypy` trên một file module cũ (ví dụ `src/modules/onboarding/domain/entities.py`). Nếu nổ lỗi baseline cũ, ghi nhận noise và không chạy repo-wide mypy cho slice này.
+   - Nếu test migration fail vì migration cũ, ghi note debt và dừng mở rộng.
+3. **Chốt file scope** — đọc spec AC, liệt kê file sẽ đụng và file sẽ không đụng. Không đọc file ngoài list đó.
+4. **Xác nhận seam** — đọc tối đa 5 file trước patch đầu. Nếu sau 5 file chưa thấy seam, dừng và hỏi user trước khi mở rộng.
+5. **Gate mỏng sau patch đầu** — chạy ruff/pytest ngay trên file đã sửa, không chờ cuối.
+6. **No old-debt fixes** — không sửa lỗi baseline cũ ngoài slice. Nếu test/mypy fail vì lỗi cũ, bỏ qua gate đó và báo user thay vì mở rộng scope.
+
 ## Cách thực hiện task Jira
 
 Khi user yêu cầu **implement task Jira**:
+
+### Khi nhận ticket Jira
+
+1. Đọc summary + acceptance criteria từ ticket.
+2. Map AC thành checklist (dòng ngắn, pass condition gốc).
+3. Đối chiếu checklist với router sống trong `backend/src/main.py`.
+4. Chỉ đọc file nếu AC buộc phải sửa nó. Nếu router chưa tồn tại, đó là output mới, không cần đọc trước.
+
 
 1. Trước khi code, đặt `/goal` từ summary + acceptance criteria của ticket.
 2. Sau khi code, chạy gate đúng slice: backend dùng `ruff check`, `mypy`,
@@ -264,7 +283,7 @@ Khi user yêu cầu **implement task Jira**:
 5. Chạy verify cuối để bảo đảm không còn lỗi runtime / test / lint / typecheck
    liên quan tới slice đó.
 6. Gửi user link PR và trạng thái verified pass.
-5. Dừng tại đó.
+7. Dừng tại đó.
 
 Không tự merge, không tự approve, không tự chuyển Jira Done, trừ khi user
 giao thêm bước đó.
@@ -335,56 +354,17 @@ Năm vai trò canonical; labels dùng default strings. Xem `docs/agents/triage-l
 
 Repo single-context: root `CONTEXT.md` + `docs/decisions/`. Xem `docs/agents/domain.md`.
 
-# --- just-harness start ---
-
-## Harness workflow
-
-### Phân loại task
-→ docs/FEATURE_INTAKE.md
-
-### Gate scope
-→ scripts/run-gate.sh --profile full-stack --allowlist <file>
-
-### Ghi evidence
-→ scripts/record-evidence.sh "<label>" <command>
-
-### Ghi note nếu truth stale
-→ scripts/record-note.sh <topic> <scope> <content>
-
-### Luật nền
-
-1. Dùng docs/workflow-skills.md để map phase → skill.
-2. Task dài dùng /goal từ đầu với outcome + acceptance.
-3. Task mơ hồ dùng /plan trước.
-4. Gate trước khi báo xong: chứng minh bằng lệnh thật.
-   - Backend: ruff check, mypy, pytest
-   - Frontend: npm run lint, npm run test, npm run build
-   - UI: Playwright (screenshot, console, accessibility)
-5. Evidence là output thật từ gate/test/build, không phải lời model.
-6. Friction lặp → ghi note → về sau biến thành rule.
-
-### Quy ước
-
-- state/ chỉ runtime state của harness, không commit.
-- docs/notes/ giữ truth tạm thay đổi nhanh.
-- scripts/ dùng lại được qua slice.
-
-# --- just-harness end ---
-
-## Gate tối thiểu
-
-- Backend: `ruff check`, `mypy`, `pytest`
-- Frontend: `npm run lint`, `npm run test`, `npm run build`
-- UI: thêm Playwright/browser QA nếu đụng màn hình
-- Slice có allowlist: không sửa file ngoài scope nếu không có defer hợp lệ
-
 ## Luồng mặc định
 
 1. Nếu task còn mơ hồ, chạy `grill-with-docs` hoặc `/plan`.
 2. Task lớn: tạo `/goal` ngay từ đầu.
 3. Task mới: đi theo `grill-with-docs` → `to-prd` → `to-issues` → `implement`.
 4. `implement` phải kết thúc bằng `/tdd` nội bộ và `/code-review` khi phù hợp.
-5. Trước khi báo xong, chạy gate thật và ghi evidence.
+5. Trước khi báo xong, chứng minh bằng lệnh thật:
+   - Backend: `ruff check`, `mypy`, `pytest`
+   - Frontend: `npm run lint`, `npm run test`, `npm run build`
+   - UI: thêm Playwright/browser QA
+6. Evidence là output thật, không phải lời model.
 
 ## Tài liệu cần đọc trước khi sửa
 
@@ -394,4 +374,3 @@ Repo single-context: root `CONTEXT.md` + `docs/decisions/`. Xem `docs/agents/dom
 - `docs/agents/triage-labels.md`
 - `docs/agents/domain.md`
 
-# --- just-harness end ---

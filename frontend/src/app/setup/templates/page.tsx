@@ -26,16 +26,16 @@ export default function SetupTemplatesPage() {
   return (
     <div className="w-full max-w-[520px] rounded-2xl border border-[#E4E4E7] bg-white p-10 shadow-sm">
       <div className="space-y-6">
-        <div className="space-y-1 text-center">
-          <h1 className="text-lg font-bold text-[#09090B]">Import template</h1>
-          <p className="text-sm text-[#71717A]">
-            Bước này là tuỳ chọn. Có thể bỏ qua và bổ sung sau trong dashboard.
-          </p>
-        </div>
+          <div className="space-y-1 text-center">
+            <h1 className="text-lg font-bold text-[#09090B]">Import template</h1>
+            <p className="text-sm text-[#71717A]">
+              Template mặc định được nạp sẵn. Có thể chỉnh lại trong dashboard sau setup.
+            </p>
+          </div>
 
-        <div className="rounded-lg border border-[#E4E4E7] bg-[#F8FAFC] p-4 text-sm text-[#71717A]">
-          Chưa có template mặc định được nạp.
-        </div>
+          <div className="rounded-lg border border-[#E4E4E7] bg-[#F8FAFC] p-4 text-sm text-[#71717A]">
+            Hệ thống đã có bộ template mặc định cho task, document, và contract.
+          </div>
 
         {error && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">

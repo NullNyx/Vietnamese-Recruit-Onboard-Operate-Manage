@@ -8,8 +8,9 @@ Create Date: 2026-07-02
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.engine.reflection import Inspector
+
+from alembic import op
 
 revision: str = "047"
 down_revision: str | None = "046"
@@ -28,7 +29,7 @@ def upgrade() -> None:
         op.create_table(
             "onboarding_contract_drafts",
             sa.Column("id", sa.Uuid(), nullable=False),
-            sa.Column("process_id", sa.Uuid(), nullable=False, index=True, unique=True),
+            sa.Column("process_id", sa.Uuid(), nullable=False, unique=True),
             sa.Column("contract_type", sa.String(length=30), nullable=False),
             sa.Column("content", sa.Text(), nullable=True),
             sa.Column(

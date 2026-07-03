@@ -98,6 +98,24 @@ export interface OnboardingTimelineResponse {
   events: OnboardingTimelineItem[];
 }
 
+export type OnboardingTemplateType = "task" | "document" | "contract";
+
+export interface OnboardingTemplate {
+  id: string;
+  template_type: OnboardingTemplateType;
+  key: string;
+  display_name: string;
+  description: string | null;
+  template_body: string | null;
+  is_required: boolean;
+  order_index: number;
+  version: number;
+  is_system: boolean;
+  is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── API Helpers ────────────────────────────────────────────────────────────
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -271,6 +289,78 @@ export async function exportContractDraft(processId: string): Promise<string> {
     throw new Error(`API ${res.status}: ${text}`);
   }
   return res.text();
+}
+
+// ─── Template API ────────────────────────────────────────────────────────────
+
+export interface OnboardingTemplateCreateInput {
+  template_type: OnboardingTemplateType;
+  key: string;
+  display_name: string;
+  description?: string | null;
+  template_body?: string | null;
+  is_required?: boolean;
+  order_index?: number;
+  version?: number;
+  is_system?: boolean;
+  is_archived?: boolean;
+}
+
+export interface OnboardingTemplateUpdateInput {
+  display_name?: string | null;
+  description?: string | null;
+  template_body?: string | null;
+  is_required?: boolean | null;
+  order_index?: number | null;
+  is_archived?: boolean | null;
+}
+
+async function templateFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  return apiFetch<T>(`/templates${path}`, init);
+}
+
+export async function listOnboardingTemplates(
+  templateType?: OnboardingTemplateType,
+  includeArchived = false,
+): Promise<{ items: OnboardingTemplate[] }> {
+  const params = new URLSearchParams();
+  if (templateType) params.set("template_type", templateType);
+  if (includeArchived) params.set("include_archived", "true");
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return templateFetch<{ items: OnboardingTemplate[] }>(suffix);
+}
+
+export async function createOnboardingTemplate(
+  data: OnboardingTemplateCreateInput,
+): Promise<OnboardingTemplate> {
+  return templateFetch<OnboardingTemplate>("", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateOnboardingTemplate(
+  templateId: string,
+  data: OnboardingTemplateUpdateInput,
+): Promise<OnboardingTemplate> {
+  return templateFetch<OnboardingTemplate>(`/${templateId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function archiveOnboardingTemplate(templateId: string): Promise<OnboardingTemplate> {
+  return templateFetch<OnboardingTemplate>(`/${templateId}/archive`, {
+    method: "POST",
+  });
+}
+
+export async function previewOnboardingTemplate(
+  templateId: string,
+): Promise<{ id: string; template_type: OnboardingTemplateType; preview: string }> {
+  return templateFetch<{ id: string; template_type: OnboardingTemplateType; preview: string }>(
+    `/${templateId}/preview`,
+  );
 }
 
 // ─── Document API ────────────────────────────────────────────────────────────
