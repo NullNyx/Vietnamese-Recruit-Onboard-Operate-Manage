@@ -47,7 +47,7 @@ import { HeaderNavigation } from "../header-navigation";
 
 const adminUser = {
   id: "1",
-  email: "admin@vroom.vn",
+  email: "admin@hrspace.local",
   name: "Admin User",
   avatar_url: null,
   role: "admin" as const,
@@ -84,7 +84,7 @@ describe("Layout Integration: HeaderNavigation", () => {
       expect(screen.getByText("Hệ thống")).toBeInTheDocument();
     });
 
-    it("renders the Vroom logo linking to admin dashboard", () => {
+    it("renders the HR Space logo linking to admin dashboard", () => {
       mockUseCurrentUser.mockReturnValue({
         user: adminUser,
         loading: false,
@@ -93,7 +93,7 @@ describe("Layout Integration: HeaderNavigation", () => {
 
       render(React.createElement(HeaderNavigation));
 
-      const logoLink = screen.getByRole("link", { name: /V\s*Vroom/i });
+      const logoLink = screen.getByRole("link", { name: /V\s*HR Space/i });
       expect(logoLink).toHaveAttribute("href", "/");
     });
 

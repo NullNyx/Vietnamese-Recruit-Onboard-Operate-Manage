@@ -21,10 +21,10 @@ class ConnectionStatus(StrEnum):
 
 
 class EmailCategory(StrEnum):
-    """Classification category for emails processed by VroomHR.
+    """Classification category for emails processed by HRSpace.
 
-    Used to assign Gmail labels (VroomHR/{category}) and track
-    email processing pipeline stage. Designed for Vietnamese HR context.
+    Used to assign Gmail labels (HRSpace/{category}) and track
+    email processing pipeline stage. Designed for HR context.
     """
 
     # Recruitment pipeline

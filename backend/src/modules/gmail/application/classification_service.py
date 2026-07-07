@@ -2,7 +2,7 @@
 
 Orchestrates automatic email categorization after sync using a two-tier
 approach: rule-based pre-filter for obvious patterns, then LLM fallback
-for ambiguous emails. Designed for Vietnamese HR context.
+for ambiguous emails. Designed for HR context.
 
 Flow:
 1. Email synced → processing_status = "unprocessed"

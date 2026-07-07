@@ -414,7 +414,7 @@ class CandidateService:
         4. If new: creates with status="new"
         5. Links the CV document to the candidate
         6. Stores confidence_score and parsed_cv_json
-        7. Applies "VroomHR/processed" Gmail label
+        7. Applies "HRSpace/processed" Gmail label
         8. Logs audit entry
 
         Args:
@@ -469,7 +469,7 @@ class CandidateService:
         # Commit all changes
         await self._session.commit()
 
-        # Step 6: Apply Gmail label "VroomHR/processed" (best-effort)
+        # Step 6: Apply Gmail label "HRSpace/processed" (best-effort)
         await self._apply_processed_label(source_email_id)
 
         # Step 7: Log audit entry
@@ -729,7 +729,7 @@ class CandidateService:
             await self._cv_document_repo.update(cv_doc)
 
     async def _apply_processed_label(self, source_email_id: UUID | None) -> None:
-        """Apply "VroomHR/processed" Gmail label to the source email.
+        """Apply "HRSpace/processed" Gmail label to the source email.
 
         This is a best-effort operation — failures are logged but do not
         block candidate creation.
@@ -759,13 +759,13 @@ class CandidateService:
                 await self._gmail_label_service.add_label(
                     user_id=user_id,
                     message_id=str(source_email_id),
-                    label_name="VroomHR/processed",
+                    label_name="HRSpace/processed",
                     access_token=access_token,
                 )
         except Exception as exc:
             # Best-effort: log but don't block candidate creation
             logger.warning(
-                "Failed to apply 'VroomHR/processed' label for email %s: %s",
+                "Failed to apply 'HRSpace/processed' label for email %s: %s",
                 source_email_id,
                 exc,
             )

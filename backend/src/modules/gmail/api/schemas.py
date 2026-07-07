@@ -129,7 +129,7 @@ class LabelRemoveRequest(BaseModel):
     """Request schema for removing a label from an email.
 
     Attributes:
-        label_name: Name of the label to remove (must be in VroomHR/ namespace).
+        label_name: Name of the label to remove (must be in HRSpace/ namespace).
     """
 
     label_name: str
@@ -137,9 +137,9 @@ class LabelRemoveRequest(BaseModel):
     @field_validator("label_name")
     @classmethod
     def validate_namespace(cls, v: str) -> str:
-        """Ensure label is within the VroomHR/ namespace."""
-        if not v.startswith("VroomHR/"):
-            msg = "Label must be within the VroomHR/ namespace"
+        """Ensure label is within the HRSpace/ namespace."""
+        if not v.startswith("HRSpace/"):
+            msg = "Label must be within the HRSpace/ namespace"
             raise ValueError(msg)
         return v
 

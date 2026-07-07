@@ -283,7 +283,7 @@ class IntentClassifierService:
         """Process the classification result: apply labels and enqueue if CV.
 
         For CV intent:
-        - Apply Gmail label "VroomHR/recruitment" to the email
+        - Apply Gmail label "HRSpace/recruitment" to the email
         - Enqueue CV processing via ARQ
 
         For other intents:
@@ -299,17 +299,17 @@ class IntentClassifierService:
         intent = intent_result.intent
 
         if intent == EmailIntent.CV:
-            # Requirement 1.4: Apply Gmail label "VroomHR/recruitment"
+            # Requirement 1.4: Apply Gmail label "HRSpace/recruitment"
             if self._gmail_label_service and user_id and access_token:
                 try:
                     await self._gmail_label_service.add_label(
                         user_id=user_id,
                         message_id=gmail_message_id,
-                        label_name="VroomHR/recruitment",
+                        label_name="HRSpace/recruitment",
                         access_token=access_token,
                     )
                     logger.info(
-                        "Applied label 'VroomHR/recruitment' to email %s",
+                        "Applied label 'HRSpace/recruitment' to email %s",
                         gmail_message_id,
                         extra={"gmail_message_id": gmail_message_id},
                     )

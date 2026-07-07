@@ -33,7 +33,7 @@ class LabelServiceProtocol(Protocol):
     """Protocol for LabelService dependency to avoid circular imports."""
 
     async def initialize_labels(self, user_id: UUID, access_token: str) -> None:
-        """Initialize VroomHR labels on the user's Gmail account."""
+        """Initialize HRSpace labels on the user's Gmail account."""
         ...
 
 

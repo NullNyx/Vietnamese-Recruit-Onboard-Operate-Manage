@@ -72,15 +72,15 @@ class GmailConnectFailedException(GmailError):
 
 
 class LabelNamespaceViolationException(GmailError):
-    """Attempted to modify a label outside the VroomHR/ namespace.
+    """Attempted to modify a label outside the HRSpace/ namespace.
 
     Raised when a label removal or modification request targets a label
-    that does not start with the "VroomHR/" prefix.
+    that does not start with the "HRSpace/" prefix.
     """
 
     status_code = 400
     error_code = "LABEL_NAMESPACE_VIOLATION"
-    message = "Label must be within the VroomHR/ namespace"
+    message = "Label must be within the HRSpace/ namespace"
 
 
 class GmailFetchError(GmailError):

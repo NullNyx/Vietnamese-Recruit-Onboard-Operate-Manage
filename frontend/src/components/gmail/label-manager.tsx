@@ -20,8 +20,8 @@ export function LabelManager({
 }: LabelManagerProps) {
   const { addToast } = useToast();
 
-  // Filter to only VroomHR labels
-  const vroomLabels = labelIds.filter(
+  // Filter to only HRSpace labels
+  const hrSpaceLabels = labelIds.filter(
     (id) => getLabelCategory(id) !== null
   );
 
@@ -42,13 +42,13 @@ export function LabelManager({
     }
   };
 
-  if (vroomLabels.length === 0) {
+  if (hrSpaceLabels.length === 0) {
     return null;
   }
 
   return (
     <div className="flex flex-wrap gap-2">
-      {vroomLabels.map((labelId) => {
+      {hrSpaceLabels.map((labelId) => {
         const category = getLabelCategory(labelId)!;
         const colors = LABEL_COLORS[category] ?? {
           bg: "bg-gray-100",

@@ -1,1 +1,1 @@
-"""Gmail Integration module for Vroom HR."""
+"""Gmail Integration module for HR Space."""

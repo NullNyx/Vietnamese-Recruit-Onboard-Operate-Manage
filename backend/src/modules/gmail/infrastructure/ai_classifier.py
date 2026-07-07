@@ -2,7 +2,7 @@
 
 Handles ambiguous emails that the rule-based classifier cannot confidently
 categorize. Uses an OpenAI-compatible API endpoint with structured prompts
-designed for Vietnamese HR email context.
+designed for HR email context.
 
 Features:
 - Retry with exponential backoff (1s, 2s, 4s) up to 3 attempts

@@ -34,7 +34,7 @@ export interface ChatInterfaceProps {
 export function ChatInterface({
   sendMessage = sendChatMessage,
   confirmAction,
-  title = "Trợ lý AI Vroom HR",
+  title = "Trợ lý AI HR Space",
   description = "Hỏi tôi về dữ liệu nhân sự của bạn.",
   suggestions,
   icon,

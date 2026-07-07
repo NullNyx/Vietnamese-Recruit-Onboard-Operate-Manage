@@ -1,6 +1,6 @@
-# Vroom HR
+# HR Space
 
-Vietnamese Recruit-Onboard-Operate-Manage — HRM platform for Vietnamese businesses.
+HR operations work system — AI-assisted, work-queue-first, human-in-loop.
 
 ## Project status & features
 
@@ -26,8 +26,8 @@ workflow, git/branch/commit/PR), see [`AGENTS.md`](./AGENTS.md).
 
 ```bash
 # Clone and setup
-git clone https://github.com/your-org/Vietnamese-Recruit-Onboard-Operate-Manage.git
-cd Vietnamese-Recruit-Onboard-Operate-Manage
+git clone https://github.com/your-org/hr-space.git
+cd hr-space
 
 # Start infrastructure
 docker compose up -d postgres redis
@@ -53,7 +53,7 @@ pnpm dev
 
 ```env
 # Database & Redis
-AUTH_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/vroom_hr
+AUTH_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/hr_space
 AUTH_REDIS_URL=redis://localhost:6379/0
 
 # Google OAuth

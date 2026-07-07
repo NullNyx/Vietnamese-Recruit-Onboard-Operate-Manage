@@ -99,19 +99,19 @@ describe("formatFileSize", () => {
 // ---------------------------------------------------------------------------
 
 describe("getLabelCategory", () => {
-  it("extracts category from VroomHR label", () => {
-    expect(getLabelCategory("VroomHR/recruitment")).toBe("recruitment");
-    expect(getLabelCategory("VroomHR/interview")).toBe("interview");
-    expect(getLabelCategory("VroomHR/onboarding")).toBe("onboarding");
-    expect(getLabelCategory("VroomHR/processed")).toBe("processed");
+  it("extracts category from HRSpace label", () => {
+    expect(getLabelCategory("HRSpace/recruitment")).toBe("recruitment");
+    expect(getLabelCategory("HRSpace/interview")).toBe("interview");
+    expect(getLabelCategory("HRSpace/onboarding")).toBe("onboarding");
+    expect(getLabelCategory("HRSpace/processed")).toBe("processed");
   });
 
   it("handles Vietnamese label names", () => {
-    expect(getLabelCategory("VroomHR/Ứng viên")).toBe("Ứng viên");
-    expect(getLabelCategory("VroomHR/Phỏng vấn")).toBe("Phỏng vấn");
+    expect(getLabelCategory("HRSpace/Ứng viên")).toBe("Ứng viên");
+    expect(getLabelCategory("HRSpace/Phỏng vấn")).toBe("Phỏng vấn");
   });
 
-  it("returns null for non-VroomHR labels", () => {
+  it("returns null for non-HRSpace labels", () => {
     expect(getLabelCategory("INBOX")).toBeNull();
     expect(getLabelCategory("SENT")).toBeNull();
     expect(getLabelCategory("IMPORTANT")).toBeNull();
@@ -119,9 +119,9 @@ describe("getLabelCategory", () => {
   });
 
   it("returns null for partial matches", () => {
-    expect(getLabelCategory("VroomHR/")).toBeNull();
-    expect(getLabelCategory("VroomHR")).toBeNull();
-    expect(getLabelCategory("NotVroomHR/recruitment")).toBeNull();
+    expect(getLabelCategory("HRSpace/")).toBeNull();
+    expect(getLabelCategory("HRSpace")).toBeNull();
+    expect(getLabelCategory("NotHRSpace/recruitment")).toBeNull();
   });
 });
 

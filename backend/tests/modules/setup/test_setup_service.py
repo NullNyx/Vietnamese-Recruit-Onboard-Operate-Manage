@@ -45,9 +45,9 @@ async def test_create_first_admin_hashes_password_and_sets_role() -> None:
     session.flush = AsyncMock()
     service = SetupService(session)
 
-    user = await service.create_first_admin("admin@vroom.local", "password123", "Admin")
+    user = await service.create_first_admin("admin@hrspace.local", "password123", "Admin")
 
-    assert user.email == "admin@vroom.local"
+    assert user.email == "admin@hrspace.local"
     assert user.role == UserRole.SUPER_ADMIN
     assert user.google_sub.startswith("setup:")
     assert PasswordService.verify_password("password123", user.password_hash)

@@ -1,4 +1,4 @@
-"""Vroom HR Backend - FastAPI application entrypoint."""
+"""HR Space Backend - FastAPI application entrypoint."""
 
 from __future__ import annotations
 
@@ -191,8 +191,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(
-    title="Vroom HR",
-    description="Vietnamese Recruit-Onboard-Operate-Manage platform",
+    title="HR Space",
+    description="HR operations work system",
     version="0.1.0",
     lifespan=lifespan,
 )

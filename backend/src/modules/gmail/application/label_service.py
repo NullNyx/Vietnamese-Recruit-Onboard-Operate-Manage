@@ -1,8 +1,8 @@
 """Application service for Gmail label management.
 
-Manages VroomHR label lifecycle on Gmail: initialization, assignment,
+Manages HRSpace label lifecycle on Gmail: initialization, assignment,
 removal, and namespace validation. All label operations are restricted
-to the "VroomHR/" namespace to prevent accidental modification of
+to the "HRSpace/" namespace to prevent accidental modification of
 user-created Gmail labels.
 """
 
@@ -28,10 +28,10 @@ logger = logging.getLogger(__name__)
 
 
 class LabelService:
-    """Manages VroomHR Gmail labels.
+    """Manages HRSpace Gmail labels.
 
     Handles label initialization (creating required labels on Gmail),
-    adding/removing labels from messages, and enforcing the VroomHR/
+    adding/removing labels from messages, and enforcing the HRSpace/
     namespace constraint on all label operations.
 
     Args:
@@ -62,7 +62,7 @@ class LabelService:
         self._audit_logger = audit_logger
 
     async def initialize_labels(self, user_id: UUID, access_token: str) -> None:
-        """Create required VroomHR labels on Gmail if they do not exist.
+        """Create required HRSpace labels on Gmail if they do not exist.
 
         Lists existing Gmail labels, checks which required labels already
         exist (reusing their IDs), and creates any missing labels with
@@ -148,7 +148,7 @@ class LabelService:
 
         Args:
             access_token: OAuth2 access token for Gmail API calls.
-            label_name: The full label name to create (e.g., "VroomHR/processed").
+            label_name: The full label name to create (e.g., "HRSpace/processed").
 
         Returns:
             The Gmail label ID if creation succeeded, None if all retries failed.
@@ -189,7 +189,7 @@ class LabelService:
         label_name: str,
         access_token: str,
     ) -> None:
-        """Add a VroomHR label to a Gmail message.
+        """Add a HRSpace label to a Gmail message.
 
         Validates the label namespace, resolves the label name to a Gmail
         label ID, and applies it to the specified message.
@@ -197,16 +197,16 @@ class LabelService:
         Args:
             user_id: The UUID of the user who owns the message.
             message_id: The Gmail message ID to label.
-            label_name: The full label name (must start with "VroomHR/").
+            label_name: The full label name (must start with "HRSpace/").
             access_token: OAuth2 access token for Gmail API calls.
 
         Raises:
-            LabelNamespaceViolationException: If label_name is outside VroomHR/ namespace.
+            LabelNamespaceViolationException: If label_name is outside HRSpace/ namespace.
             GmailFetchError: If the Gmail API call fails after retries.
         """
         if not self.validate_namespace(label_name):
             raise LabelNamespaceViolationException(
-                f"Label '{label_name}' is not within the VroomHR/ namespace"
+                f"Label '{label_name}' is not within the HRSpace/ namespace"
             )
 
         gmail_label_id = await self._label_repo.get_label_id_by_name(user_id, label_name)
@@ -239,7 +239,7 @@ class LabelService:
         label_name: str,
         access_token: str,
     ) -> None:
-        """Remove a VroomHR label from a Gmail message.
+        """Remove a HRSpace label from a Gmail message.
 
         Validates the label namespace, resolves the label name to a Gmail
         label ID, and removes it from the specified message.
@@ -247,16 +247,16 @@ class LabelService:
         Args:
             user_id: The UUID of the user who owns the message.
             message_id: The Gmail message ID to unlabel.
-            label_name: The full label name (must start with "VroomHR/").
+            label_name: The full label name (must start with "HRSpace/").
             access_token: OAuth2 access token for Gmail API calls.
 
         Raises:
-            LabelNamespaceViolationException: If label_name is outside VroomHR/ namespace.
+            LabelNamespaceViolationException: If label_name is outside HRSpace/ namespace.
             GmailFetchError: If the Gmail API call fails after retries.
         """
         if not self.validate_namespace(label_name):
             raise LabelNamespaceViolationException(
-                f"Label '{label_name}' is not within the VroomHR/ namespace"
+                f"Label '{label_name}' is not within the HRSpace/ namespace"
             )
 
         gmail_label_id = await self._label_repo.get_label_id_by_name(user_id, label_name)
@@ -289,7 +289,7 @@ class LabelService:
         label_name: str,
         access_token: str,
     ) -> None:
-        """Add a VroomHR label to multiple Gmail messages in batch.
+        """Add a HRSpace label to multiple Gmail messages in batch.
 
         Uses Gmail API batchModify to efficiently label up to 100 messages
         per API call. For lists exceeding 100 messages, the adapter
@@ -298,16 +298,16 @@ class LabelService:
         Args:
             user_id: The UUID of the user who owns the messages.
             message_ids: List of Gmail message IDs to label.
-            label_name: The full label name (must start with "VroomHR/").
+            label_name: The full label name (must start with "HRSpace/").
             access_token: OAuth2 access token for Gmail API calls.
 
         Raises:
-            LabelNamespaceViolationException: If label_name is outside VroomHR/ namespace.
+            LabelNamespaceViolationException: If label_name is outside HRSpace/ namespace.
             GmailFetchError: If the Gmail API call fails after retries.
         """
         if not self.validate_namespace(label_name):
             raise LabelNamespaceViolationException(
-                f"Label '{label_name}' is not within the VroomHR/ namespace"
+                f"Label '{label_name}' is not within the HRSpace/ namespace"
             )
 
         if not message_ids:
@@ -337,16 +337,16 @@ class LabelService:
         )
 
     def validate_namespace(self, label_name: str) -> bool:
-        """Validate that a label name is within the VroomHR/ namespace.
+        """Validate that a label name is within the HRSpace/ namespace.
 
         All label operations must target labels starting with the configured
-        label prefix (default "VroomHR/") to prevent accidental modification
+        label prefix (default "HRSpace/") to prevent accidental modification
         of user-created Gmail labels.
 
         Args:
             label_name: The label name to validate.
 
         Returns:
-            True if the label name starts with the VroomHR/ prefix, False otherwise.
+            True if the label name starts with the HRSpace/ prefix, False otherwise.
         """
         return label_name.startswith(self._settings.label_prefix)

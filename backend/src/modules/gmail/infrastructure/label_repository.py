@@ -2,7 +2,7 @@
 
 Provides async database access for retrieving and upserting Gmail label
 mappings per user. Each (user_id, label_name) pair is unique, allowing
-the system to map VroomHR label names to Gmail internal label IDs.
+the system to map HRSpace label names to Gmail internal label IDs.
 """
 
 from datetime import UTC, datetime
@@ -96,7 +96,7 @@ class LabelRepository:
 
         Args:
             user_id: The UUID of the user.
-            label_name: The VroomHR label name (e.g., "VroomHR/processed").
+            label_name: The HRSpace label name (e.g., "HRSpace/processed").
 
         Returns:
             The Gmail internal label ID string if found, None otherwise.

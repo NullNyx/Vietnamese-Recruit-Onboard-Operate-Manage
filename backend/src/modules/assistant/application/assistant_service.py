@@ -34,7 +34,7 @@ _TOOL_LOOP_FALLBACK = (
 )
 
 # System prompt — static, hardcoded per grill decision
-_SYSTEM_PROMPT = """You are the AI Assistant for Vroom HR, a Vietnamese HR management platform.
+_SYSTEM_PROMPT = """You are the AI Assistant for HR Space, an HR operations work system.
 
 You help HR administrators with recruitment and onboarding data.
 You speak Vietnamese when the user speaks Vietnamese, English otherwise.

@@ -1,7 +1,7 @@
 [project]
-name = "vroom-hr-backend"
+name = "hr-space-backend"
 version = "0.1.0"
-description = "Vroom HR - Vietnamese Recruit-Onboard-Operate-Manage platform"
+description = "HR Space - HR operations work system"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",

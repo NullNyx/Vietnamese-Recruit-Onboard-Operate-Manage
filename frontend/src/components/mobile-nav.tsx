@@ -51,7 +51,7 @@ export function MobileNav() {
               V
             </div>
             <SheetTitle className="text-lg font-semibold text-foreground">
-              Vroom HR
+              HR Space
             </SheetTitle>
           </div>
           <SheetDescription className="sr-only">

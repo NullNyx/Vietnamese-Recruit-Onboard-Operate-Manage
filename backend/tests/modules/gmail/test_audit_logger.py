@@ -63,7 +63,7 @@ class TestLogOperation:
     ) -> None:
         """Logs an operation with additional metadata."""
         user_id = uuid4()
-        metadata = {"label_name": "VroomHR/processed", "gmail_message_id": "abc123"}
+        metadata = {"label_name": "HRSpace/processed", "gmail_message_id": "abc123"}
 
         await audit_logger.log_operation(
             operation_type="label_modify",
@@ -93,7 +93,7 @@ class TestLogOperation:
             "attachment_data": b"binary - SHOULD BE STRIPPED",
             "attachment_binary": b"binary - SHOULD BE STRIPPED",
             "content": "content - SHOULD BE STRIPPED",
-            "label_name": "VroomHR/processed",
+            "label_name": "HRSpace/processed",
         }
 
         await audit_logger.log_operation(
@@ -106,7 +106,7 @@ class TestLogOperation:
         audit_entry = session.add.call_args[0][0]
         assert audit_entry.metadata_ == {
             "gmail_message_id": "msg123",
-            "label_name": "VroomHR/processed",
+            "label_name": "HRSpace/processed",
         }
 
     @pytest.mark.asyncio

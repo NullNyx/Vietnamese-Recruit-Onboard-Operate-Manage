@@ -1,7 +1,7 @@
 import { ChatInterface } from '@/components/assistant/chat-interface';
 
 export const metadata = {
-  title: 'Trợ lý AI | Vroom HR',
+  title: 'Trợ lý AI | HR Space',
   description: 'AI Assistant for HR administrators',
 };
 

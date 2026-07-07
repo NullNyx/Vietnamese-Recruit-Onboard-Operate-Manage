@@ -267,7 +267,7 @@ async def handle_employee_not_found(request: Request, exc: EmployeeNotFoundError
 | `UNAUTHORIZED`              | 401  | Missing or invalid authentication session |
 | `GMAIL_NOT_CONNECTED`       | 403  | Gmail is not connected                    |
 | `GMAIL_CONNECT_FAILED`      | 400  | Gmail connection failed                   |
-| `LABEL_NAMESPACE_VIOLATION` | 400  | Label must be within VroomHR/ namespace   |
+| `LABEL_NAMESPACE_VIOLATION` | 400  | Label must be within HR Space namespace   |
 | `GMAIL_FETCH_ERROR`         | 502  | Failed to fetch data from Gmail API       |
 | `MESSAGE_NOT_FOUND`         | 404  | Gmail message not found                   |
 | `GMAIL_LABEL_REMOVE_FAILED` | 502  | Failed to remove label                    |
@@ -406,7 +406,7 @@ pytest tests/modules/payroll/ -q  # specific module
 | payroll      | /api/payroll, /api/salary                        | Salary config, payslips, tax                |
 | self_service | /api/ess                                         | Employee self-service portal                |
 
-## Business Rules (Vietnamese HR)
+## Business Rules (locale-specific payroll)
 
 - Personal tax deduction: 11,000,000 VND/month
 - Dependent deduction: 4,400,000 VND/person/month

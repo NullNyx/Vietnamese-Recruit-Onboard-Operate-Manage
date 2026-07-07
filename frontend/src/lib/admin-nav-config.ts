@@ -25,7 +25,7 @@ import {
 import type { HeaderNavConfig } from './header-nav-config';
 
 export const adminNavConfig: HeaderNavConfig = {
-  logo: { label: 'Vroom', href: '/' },
+  logo: { label: 'HR Space', href: '/' },
   groups: [
     {
       id: 'nhan-su',

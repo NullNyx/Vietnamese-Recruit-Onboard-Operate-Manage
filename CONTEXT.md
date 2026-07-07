@@ -1,184 +1,239 @@
-# Vroom HR
+# HR Space — Glossary
 
-Vroom HR là nền tảng HRM mã nguồn mở, tự triển khai cho doanh nghiệp Việt Nam.
-Mỗi công ty chạy một bản riêng (một database, một server).
-Bảng thuật ngữ này chuẩn hóa tên gọi domain để cả đội dùng một từ cho một
-khái niệm xuyên suốt spec, code, và tài liệu.
+Bảng thuật ngữ chuẩn. Dùng từ này xuyên suốt spec, code, doc.
+Không synonym, không phát minh từ mới khi đã có.
+Nguồn: ADR 0021–0029.
 
-## Quy tắc Actor
+## Actor
 
-**HR/Admin** là actor duy nhất. Mọi hành động ghi đều do HR/Admin thực hiện.
-Không có actor hướng đến employee; không có employee login hay self-service.
-Dữ liệu employee được cung cấp làm input (ví dụ đơn nghỉ phép, cập nhật hồ sơ)
-được HR/Admin nhập hoặc import, không phải employee tự nhập.
+**HR** là actor duy nhất. Mọi hành động ghi do HR thực hiện.
+Employee không login, không self-service, không quyền ghi.
 _Avoid_: Employee, Applicant, User làm actor
 
-## Ngôn ngữ
+## Domain
 
 **Organization**:
-Công ty duy nhất sở hữu một bản cài đặt. Là singleton — chính xác một
-mỗi instance đang chạy. Chứa cấu hình cấp công ty (tên, mã số thuế,
-múi giờ, ngày lễ, domain email được phép). KHÔNG phải ranh giới phân cách dữ liệu.
+Công ty sở hữu instance. Chứa cấu hình (tên, mã số thuế, múi giờ).
+Single-tenant MVP; `organization_id` pre-placed trên aggregate roots.
 _Avoid_: Company, Tenant, Account, Client
 
-**Tenant**:
-Thuật ngữ kế thừa từ Policy Engine, nơi `tenant_id` được thiết kế làm khóa
-phân cách đa công ty. Trong mô hình self-hosted chỉ có một công ty
-mỗi bản cài đặt, nên `tenant_id` thực chất là hằng số.
-_Avoid_: dùng Tenant như thể nhiều công ty chung một bản cài đặt
+**WorkItem**:
+Trung tâm vận hành. Một item trong work queue, có lifecycle
+từ activation → complete → archive. Không phải "công việc trong module X".
+Status: active / in_progress / waiting / completed / reopened / archived.
+Source: inbox / system / manual / dependent.
+Works through link tables: People, Document, Contract, WorkItem.
+_Avoid_: Task, Case, Ticket, Job
 
-**HR**:
-Vai trò người dùng duy nhất. Quản lý hồ sơ employee, hợp đồng, tài liệu, và
-vận hành cho Organization. Ánh xạ tới role `admin` hiện tại.
-_Avoid_: User (User là khái niệm tài khoản auth)
+**InboxItem**:
+Raw input trước triage. Email, file upload, request, system notification.
+Chưa phải work item cho tới khi triage. Status: new / triaged / dismissed.
+_Avoid_: Inbox message, raw email entity
 
-**Employee**:
-Người có hồ sơ lao động trong hệ thống. Employee là thực thể gốc
-— mọi tác vụ HR (hợp đồng, tài liệu, chấm công, nghỉ phép, lương,
-sự kiện lao động) xoay quanh bản ghi này. Employee KHÔNG phải system user — không
-login, không self-service, không quyền ghi.
-_Avoid_: User, Account, Member
+**People**:
+Common identity/contact layer. Type: employee / candidate / contact.
+Không chứa type-specific fields.
+Employee and Candidate data đi ở profile extension.
+_Avoid_: Employee (khi muốn nói về hồ sơ nhân sự), Contact
 
-**Employee Record**:
-Tập hợp toàn bộ dữ liệu gắn với một Employee: thông tin cá nhân, trạng thái
-lao động, hợp đồng, tài liệu, sự kiện lao động. Nguồn chân lý cho các tác vụ HR.
-Chính xác một bản ghi mỗi Employee.
-_Avoid_: Profile (quá hẹp), Staff file
+**EmployeeProfile**:
+Extension 1:1 với People khi type = employee.
+Chứa department, position, manager, employment_status, started_at, termination_date.
+_Avoid_: Employee (dùng People + EmployeeProfile)
 
-**Employment Status**:
-Trạng thái hiện tại của mối quan hệ giữa Employee với Organization.
-Giá trị: active / resigned / terminated / suspended. Lưu trực tiếp trên Employee.
+**CandidateProfile**:
+Extension 1:1 với People khi type = candidate.
+Chứa pipeline_status, summary, source_email, job_opening_ref.
+_Avoid_: Applicant
 
 **Document**:
-File đính kèm vào Employee Record (ví dụ scan CCCD, bằng cấp, thẻ bảo hiểm).
-Trạng thái: uploaded / verified / rejected / expired. Do HR upload.
-_Avoid_: Attachment (quá chung chung)
-
-**Employment Event**:
-Thay đổi được ghi nhận trong dữ liệu hoặc trạng thái của Employee.
-Loại: profile*update, promotion, transfer, status_change, termination,
-document_update, contract_update. Lưu ảnh chụp trước/sau và actor.
-\_Avoid*: Audit log (audit log là khái niệm hệ thống rộng hơn)
+Pure library entity cho file / giấy tờ.
+Status: uploaded / verified / rejected / expired.
+Không sở hữu relationship collections — link qua link tables.
+Không lưu AI suggestion (AISuggestion giữ extraction draft).
+Chỉ giữ `applied_extracted_data_json` sau HR confirm.
+_Avoid_: Attachment
 
 **Contract**:
-Văn bản pháp lý giữa Organization và Employee (hợp đồng lao động,
-thư mời nhận việc, NDA). Trạng thái: draft / pending*signature / active /
-expired / terminated / cancelled. Một Employee có thể có nhiều Contract.
-\_Avoid*: Employment contract (quá hẹp cho NDA/offer)
+Hợp đồng lao động, offer, NDA, amendment.
+Status: draft / ready / sent / signed / expired / terminated / cancelled.
+Contract type constraint: offer → candidate; labor_contract/amendment/termination → employee.
+AI điền template draft, không tự ghi Contract.
+_Avoid_: Employment contract (quá hẹp)
 
-**Contract Template**:
-Mẫu dùng lại để tạo nháp Contract. Có phiên bản (versioning).
-Trạng thái: active / archived.
+**Template**:
+Mẫu dùng lại. type: contract / document / checklist / task.
+Versioned. scope: org_default / position / department.
+Tự không sinh work item — Work service làm phần đó.
+_Avoid_: Form mẫu, template không rõ loại
 
-**Contract Amendment**:
-Văn bản bổ sung đính kèm vào Contract đang active. Trạng thái: draft /
-pending_signature / signed / cancelled.
+## Work Execution Surfaces
 
-## Tuyển dụng (vertical slice 1)
+**Today**:
+Command Center — entry point mặc định. Decision layer giúp HR quyết định
+việc nào làm trước. Không phải dashboard, không phải module page.
+_Avoid_: Dashboard, Homepage
 
-Các thuật ngữ bên dưới thuộc slice Tuyển dụng & Onboarding — vertical đầu tiên
-xây dựng trên Employee Record làm module lõi. Chúng vẫn là chuẩn trong slice đó.
+**All Work**:
+Operations Center — toàn bộ work items đang sống. Tra cứu, filter, search, batch action.
+Không giới hạn theo ngày.
+_Avoid_: Work list page
 
-**Candidate**:
-Người đang được xem xét tuyển dụng, được tạo (tự động hoặc thủ công) từ
-CV đã phân tích. Di chuyển qua pipeline: new → reviewing → interview*scheduled →
-accepted/rejected/archived. Candidate KHÔNG phải Employee.
-\_Avoid*: Applicant, Employee
+**Work Detail**:
+Execution Screen — nơi xử lý một work item. Chỉ mở khi cần multi-step /
+draft / coordinate. Trả lời 3 câu: việc gì, bước tiếp theo, làm sao hoàn thành nhanh.
+Không phải "màn xem toàn bộ entity fields".
+_Avoid_: Detail page, Form screen, Record view
 
-**Job Opening**:
-Nhu cầu tuyển cụ thể cho một Position trong Organization. Department của nó
-được suy ra từ Position đó. Tùy chọn nhóm các Candidate đang xét và
-theo dõi target headcount. Vòng đời: draft → open → closed/cancelled.
-_Avoid_: Recruitment Plan, Hiring Plan, Vacancy, Requisition
+**Inbox**:
+Intake surface — nơi tiếp nhận đầu vào thô, triage, convert thành work item.
+Không phải queue xử lý chính.
+_Avoid_: Email inbox
 
-**Backbone Flow**:
-Vertical slice đầu tiên: email đến → phân loại intent bằng AI → phân tích
-CV → Candidate → HR review → lên lịch phỏng vấn → accept →
-email chúc mừng → onboarding. Đây là slice 1, không phải ranh giới sản phẩm.
-_Avoid_: coi đây là luồng duy nhất
+**Context Libraries**:
+People, Documents, Contracts, Templates — nơi inspect/reference.
+Không phải trung tâm vận hành. Work mở sang đây khi cần context.
+_Avoid_: Modules, Trang quản lý employee
 
-**Onboarding**:
-Quy trình theo checklist do HR điều phối, dựa trên Onboarding Case. Candidate
-được accept tạo ra Onboarding Case; HR xác nhận hoàn tất trước khi
-Employee record được tạo hoặc kích hoạt.
-_Avoid_: Promotion, Hiring
+## Decision Model
 
-**Onboarding Case**:
-Thực thể gốc cho quy trình onboarding. Trạng thái: in_progress → complete /
-cancelled. Case sẵn sàng hoàn tất sau khi checklist đủ điều kiện, sau đó HR
-xác nhận hoàn tất và Employee record được tạo hoặc kích hoạt.
+**Decision Label**:
+Nhãn quyết định trên Today: Critical / Attention / Planned Today / Waiting.
+Derived/cache từ signal + rule evaluation, không phải source of truth.
 
-**Onboarding Task**:
-Một mục đơn lẻ trong checklist của Onboarding Case.
-Trạng thái: pending / done.
+**Priority Order**:
+Thứ tự ưu tiên khi tín hiệu xung đột:
+1. Blocking others
+2. Overdue
+3. Legal / compliance risk
+4. External person waiting
+5. Manager escalation
+6. Due today
+7. Due soon
+8. Recently changed + unresolved
+9. Planned today
 
-## Năng lực AI
+## Work Taxonomy
 
-**AI Automation**:
-Tác vụ AI nền chạy theo sự kiện, không có hội thoại: phân loại intent email,
-phân tích CV, trích xuất tài liệu.
-_Avoid_: gọi nó là "the AI Agent"
+**Action Types**:
+Thao tác xử lý việc — độc lập domain.
+Intake / Review / Draft / Update / Coordinate / Follow-up / Monitor / Answer / Complete.
+Mọi Work Type trải qua một subset.
 
-**AI Assistant**:
-Trợ lý hội thoại chỉ dành cho HR. Có thể ĐỌC dữ liệu từ Employee Records,
-tuyển dụng, và onboarding; SOẠN THẢO hành động (ví dụ soạn hợp đồng, tạo
-nhắc nhở); và TỔNG HỢP dữ liệu. Không bao giờ ghi — an toàn cấu trúc: không
-có tool nào trong bộ tool của LLM có thể ghi database. HR xác nhận mọi lần ghi.
-_Avoid_: Chatbot (quá chung chung), Agent (ngụ ý tự chủ ghi)
+**Work Types**:
+Đơn vị việc HR theo dõi trên desk. Không phải module, không phải domain.
+W1 Hồ sơ nhân sự, W2 Bộ giấy tờ, W3 Chuẩn bị đi làm (onboarding),
+W4 Hợp đồng, W5 Tuyển dụng, W6 Yêu cầu nội bộ, W7 Tác vụ đơn, W8 Hỏi đáp/Báo cáo.
+W3 (Chuẩn bị đi làm) là super work type — chứa W2 + W4 + W7.
 
-**AI Agent (autonomous)**:
-Năng lực giả định tương lai nơi AI tự quyết và thực hiện ghi.
-Hoàn toàn ngoài phạm vi.
-_Avoid_: dùng "Agent" cho Assistant hiện tại
+**Interaction Levels**:
+L1 Instant Action — 1 click trên Today.
+L2 Inline Action — expand, context ngắn, form nhỏ.
+L3 Focused Work — Work Detail, multi-step, draft, coordinate.
+L4 Cross-context Work — qua Context Libraries rồi quay lại work.
 
-## Bên trong AI Assistant
+## AI
 
-**Tool**:
-Hàm có kiểu mà AI Assistant có thể gọi. Chính xác hai loại: Read-Tool và
-Draft-Tool. LLM không bao giờ có tool có khả năng ghi.
-_Avoid_: Function, Plugin, Skill
+**AISuggestion**:
+AI output chờ HR confirm. source_entity_type whitelist:
+work_item, inbox_item, document, contract, people.
+Status: pending / accepted / rejected / superseded.
+_Avoid_: AI decision, auto-result, tự ghi
 
-**Read-Tool**:
-Thực thi một lần đọc thực sự qua service có sẵn, trả về dữ liệu thực.
-An toàn gọi tự do.
-_Avoid_: Query (dành riêng cho tầng command/query)
+**PromptRun**:
+Trace một lần gọi AI. Chỉ lưu sanitized_prompt / sanitized_response.
+Raw payload opt-in, restricted, redacted.
+_Avoid_: Raw log mặc định
 
-**Draft-Tool**:
-Trả về Draft Action có cấu trúc (loại action + tham số + bản xem trước) mà
-không ghi. LLM chỉ có thể đề xuất; không thể hành động.
-_Avoid_: Write-tool, Action-tool
+**AIJob**:
+AI job nền. Job type: classification / extraction / batch_draft / daily_summary.
+Status: queued / running / completed / failed.
 
-**Draft Action**:
-Đề xuất có cấu trúc do Draft-Tool trả về. HR xem xét; khi xác nhận,
-frontend gọi trực tiếp endpoint ghi thực sự (không qua LLM).
-_Avoid_: Auto-action, Command
+**AI Capabilities**:
+classify, extract, summarize, fill, suggest, remind, answer, rank.
+Hỗ trợ action types, không phải work type hay domain.
 
-## Xác thực & Thiết lập
+**AI Role trong Decision Model**:
+detect → suggest → explain.
+Không tự quyết: không tự biến item thành Critical không có signal cứng,
+không tự xoá item khỏi Today, không tự override priority rule.
+
+## Xác thực & vai trò
 
 **Authentication**:
-Đăng nhập bằng mật khẩu (email + mật khẩu) dùng PBKDF2-SHA-256 hashing.
-Dùng httpOnly secure cookies (`access_token`, `refresh_token`).
-Không Google OAuth, không social login, không đăng ký công khai.
-_Avoid_: OAuth, Bearer tokens
+App login dùng **password**, httpOnly cookies (`access_token`, `refresh_token`).
+PBKDF2-SHA-256. Không dùng OAuth để login app.
+_Avoid_: Bearer tokens, Google OAuth cho app login
+
+**Gmail OAuth**:
+Chỉ dùng cho Gmail Integration (sync mailbox / poll email / ingest inbox item).
+Tách biệt với app login. Token Gmail có vòng đời riêng: refresh, revoke, rotate.
+Không dùng OAuth này để đăng nhập HR Space.
+_Avoid_: dùng OAuth từ Gmail cho app login
 
 **Initial Setup Wizard**:
-Luồng một lần tạo SUPER*ADMIN đầu tiên và cấu hình Organization
-trước khi dashboard có thể truy cập. Route: `/setup/*`.
-Sau khi hoàn tất, endpoint setup bị khóa vĩnh viễn.
-\_Avoid\*: gọi nó là "onboarding"
+Luồng một lần tạo SUPER_ADMIN + cấu hình Organization.
+Route: `/api/v1/setup/*`. Khóa sau khi hoàn tất.
+_Avoid_: gọi nó là onboarding
 
 **SUPER_ADMIN**:
-Vai trò có quyền cao nhất, được tạo trong Initial Setup Wizard.
-Có thể quản lý system user, gán vai trò, và thực hiện mọi tác vụ HR.
-Chính xác một SUPER*ADMIN tồn tại mỗi bản cài đặt.
-\_Avoid*: Super User (kế thừa)
+Vai trò cao nhất, tạo bởi Setup Wizard. Quản lý user, gán role, mọi tác vụ HR.
+Một SUPER_ADMIN mỗi instance.
+_Avoid_: Super User
 
 **HR_ADMIN**:
-Vai trò tác vụ HR đầy đủ. Có thể quản lý employee, hợp đồng, onboarding,
-tuyển dụng, chấm công, lương, và cấu hình AI.
+Vai trò HR đầy đủ: assign/archive work, contract lifecycle, document verify, settings.
 _Avoid_: Admin (gây nhầm với SUPER_ADMIN)
 
 **HR_STAFF**:
-Vai trò HR giới hạn, có quyền đọc+ghi vào tác vụ employee nhưng không
-có quản trị hệ thống hay quản lý người dùng.
-_Avoid_: User (gây nhầm với auth-account), Employee
+Vai trò HR giới hạn: read work, update/complete assigned work, add note, read context.
+_Avoid_: User (gây nhầm với auth-account)
+
+## Service & API
+
+**WorkService**:
+Owns WorkItem lifecycle + WorkItemPeopleLink / WorkItemDocumentLink /
+WorkItemContractLink / WorkItemWorkLink.
+
+**InboxService**:
+Owns intake, classify, triage, dismiss, convert to work item.
+
+**PeopleService**:
+Owns People + EmployeeProfile + CandidateProfile.
+
+**DocumentService**:
+Owns Document lifecycle + PeopleDocumentLink.
+
+**ContractService**:
+Owns Contract lifecycle + ContractDocumentLink.
+
+**AIService**:
+Owns AISuggestion, PromptRun, AIJob.
+KHÔNG tự mutate domain entity. Accept đi qua target service.
+
+**AuditService**:
+Helper/writer. Ghi AuditEvent trong cùng transaction với mutation.
+Không tự mở transaction riêng.
+
+**Idempotency-Key**:
+Header cho write/action endpoints.
+Same key + same user + same route + same payload hash = idempotent.
+Khác payload → 409 IDEMPOTENCY_CONFLICT. Retention 24h.
+
+**If-Unmodified-Since**:
+Header cho optimistic concurrency trên entity quan trọng.
+409 nếu stale.
+
+## Cross-cutting
+
+**Note**:
+Ghi chú nội bộ. linked_entity_type whitelist: work_item, people, document, contract.
+
+**Notification**:
+Reminder / alert / daily_brief. linked_entity_type whitelist.
+API create internal-only.
+
+**AuditEvent**:
+Log action cho transition quan trọng. Cùng transaction với mutation.
+Ghi actor, action, entity_type/id, before/after (redacted), reason, source.
+_Avoid_: Activity log không rõ source

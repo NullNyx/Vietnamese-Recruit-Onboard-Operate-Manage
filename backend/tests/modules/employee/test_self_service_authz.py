@@ -63,7 +63,7 @@ def _make_employee(employee_id=None, is_active=True):
     emp.is_active = is_active
     emp.employee_code = "NV-001"
     emp.full_name = "Test Employee"
-    emp.email = "test@vroom.local"
+    emp.email = "test@hrspace.local"
     emp.phone = "0901000001"
     emp.address = "123 Test St"
     emp.date_of_birth = date(2000, 1, 1)
