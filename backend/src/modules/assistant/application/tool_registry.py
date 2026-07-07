@@ -183,7 +183,7 @@ class ToolRegistry:
         <div style="font-family: sans-serif; line-height: 1.5;">
             <h3>Thư Mời Phỏng Vấn</h3>
             <p>Thân gửi <strong>{safe_name}</strong>,</p>
-            <p>Chúng tôi trân trọng kính mời bạn tham gia phỏng vấn tại Vroom HR.</p>
+            <p>Chúng tôi trân trọng kính mời bạn tham gia phỏng vấn tại HR Space.</p>
             <ul>
                 <li><strong>Ngày:</strong> {safe_date}</li>
                 <li><strong>Thời gian:</strong> {safe_time}</li>
@@ -242,13 +242,13 @@ class ToolRegistry:
         safe_position = html.escape(str(position))
         safe_date = html.escape(str(start_date))
 
-        subject = "Chúc mừng bạn đã trúng tuyển - Vroom HR"
+        subject = "Chúc mừng bạn đã trúng tuyển - HR Space"
         body_html = f"""
         <div style="font-family: sans-serif; line-height: 1.5;">
             <h3>Thư Báo Trúng Tuyển</h3>
             <p>Thân gửi <strong>{safe_name}</strong>,</p>
             <p>Chúc mừng bạn đã trúng tuyển vào vị trí <strong>{safe_position}</strong>
-            tại Vroom HR.</p>
+            tại HR Space.</p>
             <p>Ngày bắt đầu làm việc dự kiến: <strong>{safe_date}</strong>.</p>
             <p>Vui lòng phản hồi lại email này để xác nhận nhận việc. Chúng tôi sẽ hướng dẫn thủ tục
             Onboarding tiếp theo.</p>

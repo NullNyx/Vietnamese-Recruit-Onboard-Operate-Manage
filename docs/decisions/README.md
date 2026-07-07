@@ -5,16 +5,16 @@ quan trọng được đưa ra.
 
 ## Nguồn chân lý
 
-- `docs/design-docs/` chứa hướng đi dạng nháp, khoảng trống, và tài liệu xem xét.
-  Scope HR-only ở đó thắng từ ngữ cũ về employee trong working docs.
 - `docs/decisions/` chỉ chứa lựa chọn đã chốt có tác động lâu dài.
 - `CONTEXT.md` chứa thuật ngữ glossary chuẩn.
+- PRD theo slice sẽ nằm ở `docs/prd/` khi phase phân rã bắt đầu.
+- Nội dung còn tranh luận sống trong hội thoại hoặc Jira, không giữ ở file nháp.
 
 ## Khi nào thêm ADR
 
 Dùng format ADR từ `grill-with-docs` khi lựa chọn trở nên thực tế và khó đảo
 ngược: tiêu đề ngắn, cộng 1–3 câu: bối cảnh, quyết định, lý do. Đánh số file
-tuần tự (`0008-slug.md`, ...).
+tuần tự (`0021-product-identity-and-work-taxonomy.md`, ...).
 
 Thêm quyết định khi:
 
@@ -26,5 +26,5 @@ Thêm quyết định khi:
 
 ## Nguyên tắc
 
-Nếu ghi chú còn đang tranh luận, giữ trong design docs. Nếu team phải code theo
-nó trong tương lai gần, viết ADR.
+Nếu ghi chú còn đang tranh luận, giữ trong hội thoại / Jira. Nếu team phải code
+theo nó trong tương lai gần, viết ADR hoặc PRD tương ứng.

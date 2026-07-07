@@ -1,11 +1,11 @@
 services:
   postgres:
     image: postgres:15
-    container_name: vroom-postgres
+    container_name: hr_space-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: vroom_hr
+      POSTGRES_DB: hr_space
     ports:
       - "5432:5432"
     volumes:
@@ -18,7 +18,7 @@ services:
 
   redis:
     image: redis:7
-    container_name: vroom-redis
+    container_name: hr_space-redis
     ports:
       - "6379:6379"
     healthcheck:
@@ -29,7 +29,7 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: vroom-minio
+    container_name: hr_space-minio
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin

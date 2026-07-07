@@ -494,7 +494,7 @@ class TestCandidateServiceCreateOrUpdate:
         mock_session: AsyncMock,
         sample_parsed_cv: ParsedCV,
     ) -> None:
-        """Gmail label 'VroomHR/processed' is applied after candidate creation."""
+        """Gmail label 'HRSpace/processed' is applied after candidate creation."""
         mock_label_service = AsyncMock()
         user_id = uuid4()
         access_token = "test_token"
@@ -526,7 +526,7 @@ class TestCandidateServiceCreateOrUpdate:
         mock_label_service.add_label.assert_called_once_with(
             user_id=user_id,
             message_id=str(source_email_id),
-            label_name="VroomHR/processed",
+            label_name="HRSpace/processed",
             access_token=access_token,
         )
 

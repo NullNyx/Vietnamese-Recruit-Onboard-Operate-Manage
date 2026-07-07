@@ -1,0 +1,2383 @@
+{
+  "version": "2.14",
+  "children": [
+    {
+      "type": "frame",
+      "id": "gBBq8",
+      "x": 13480,
+      "y": 0,
+      "name": "Auth — Login",
+      "clip": true,
+      "width": 1440,
+      "height": 1200,
+      "fill": "$bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "Z16Lln",
+          "name": "Hero",
+          "width": 540,
+          "height": "fill_container",
+          "fill": "#0F1112",
+          "layout": "vertical",
+          "gap": 24,
+          "padding": 56,
+          "children": [
+            {
+              "type": "text",
+              "id": "BblAF",
+              "name": "Brand",
+              "fill": "#FFFFFF",
+              "content": "HR Space",
+              "fontFamily": "IBM Plex Sans",
+              "fontSize": 18,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "i621yE",
+              "name": "Headline",
+              "fill": "#FFFFFF",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Sign in to HR Space",
+              "fontFamily": "IBM Plex Sans",
+              "fontSize": 42,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "GycjT",
+              "name": "Support",
+              "fill": "#C7CDD2",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Work smarter with AI-powered HR operations.",
+              "fontFamily": "IBM Plex Sans",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "q0jw9G",
+              "name": "Features",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 14,
+              "padding": [
+                12,
+                0,
+                0,
+                0
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "v9dU1",
+                  "name": "Password login",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 999,
+                      "id": "R4aXeD",
+                      "name": "Dot",
+                      "fill": "$accent",
+                      "width": 8,
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "id": "aceQm",
+                      "name": "Label",
+                      "fill": "#D6DBDF",
+                      "content": "Your data, on your servers",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "acQ7n",
+                  "name": "Cookie session",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 999,
+                      "id": "neric",
+                      "name": "Dot",
+                      "fill": "$accent",
+                      "width": 8,
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "id": "uwtbf",
+                      "name": "Label",
+                      "fill": "#D6DBDF",
+                      "content": "Secure, kept between sessions",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yCMFM",
+                  "name": "Setup wizard",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 999,
+                      "id": "rI7XW",
+                      "name": "Dot",
+                      "fill": "$accent",
+                      "width": 8,
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "id": "iAaLJ",
+                      "name": "Label",
+                      "fill": "#D6DBDF",
+                      "content": "Quick setup in one step",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hyEnt",
+              "name": "Login Visual",
+              "width": "fill_container",
+              "fill": "#18181B",
+              "cornerRadius": 10,
+              "stroke": "#E2E8F0",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 18,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "GNsq1",
+                  "name": "Visual Eyebrow",
+                  "fill": "#C7CDD2",
+                  "content": "YOUR DESK",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "U0V7K",
+                  "name": "Visual Title",
+                  "fill": "#FFFFFF",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Decide what matters today.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 22,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "Mc6l5",
+                  "name": "Visual Copy",
+                  "fill": "#D6DBDF",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Work items sorted by priority. The inbox feeds the queue. Every action leaves an audit trail.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 14
+                },
+                {
+                  "type": "frame",
+                  "id": "xiXCw",
+                  "name": "Decision Deck",
+                  "width": "fill_container",
+                  "fill": "#0F1112",
+                  "cornerRadius": 8,
+                  "stroke": "#2B3036",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "yB9y2",
+                      "name": "Deck Title",
+                      "fill": "#FFFFFF",
+                      "content": "Today — Command Center",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "p2VTO",
+                      "name": "Deck Subtitle",
+                      "fill": "#C7CDD2",
+                      "content": "Decision labels help HR act on the right work first.",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "oSW07",
+                      "name": "Priority Levels",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "q9YHEC",
+                          "name": "Priority Critical",
+                          "width": "fill_container",
+                          "fill": "#FCE4E4",
+                          "cornerRadius": 6,
+                          "stroke": "#D14343",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": 10,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "zU1fK",
+                              "name": "Priority Dot Critical",
+                              "width": 8,
+                              "height": 8,
+                              "fill": "#D14343",
+                              "cornerRadius": 999
+                            },
+                            {
+                              "type": "text",
+                              "id": "pkwi0",
+                              "name": "Priority Label Critical",
+                              "fill": "#D14343",
+                              "content": "Critical",
+                              "fontFamily": "IBM Plex Sans",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "gmb5G",
+                              "name": "Priority Count Critical",
+                              "fill": "#6F7478",
+                              "content": "Work items",
+                              "fontFamily": "IBM Plex Mono",
+                              "fontSize": 9,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "E6g1O8",
+                          "name": "Priority Attention",
+                          "width": "fill_container",
+                          "fill": "#FEF3C7",
+                          "cornerRadius": 6,
+                          "stroke": "#C28A1B",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": 10,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "YRxgB",
+                              "name": "Priority Dot Attention",
+                              "width": 8,
+                              "height": 8,
+                              "fill": "#C28A1B",
+                              "cornerRadius": 999
+                            },
+                            {
+                              "type": "text",
+                              "id": "f4Wur1",
+                              "name": "Priority Label Attention",
+                              "fill": "#C28A1B",
+                              "content": "Attention",
+                              "fontFamily": "IBM Plex Sans",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "xnJYT",
+                              "name": "Priority Count Attention",
+                              "fill": "#6F7478",
+                              "content": "Work items",
+                              "fontFamily": "IBM Plex Mono",
+                              "fontSize": 9,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "jaHcD",
+                          "name": "Priority Planned",
+                          "width": "fill_container",
+                          "fill": "#E0F5EC",
+                          "cornerRadius": 6,
+                          "stroke": "#00A36C",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": 10,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "fqteZ",
+                              "name": "Priority Dot Planned",
+                              "width": 8,
+                              "height": 8,
+                              "fill": "#00A36C",
+                              "cornerRadius": 999
+                            },
+                            {
+                              "type": "text",
+                              "id": "y7aNY",
+                              "name": "Priority Label Planned",
+                              "fill": "#00A36C",
+                              "content": "Planned",
+                              "fontFamily": "IBM Plex Sans",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "PJ0Wu",
+                              "name": "Priority Count Planned",
+                              "fill": "#6F7478",
+                              "content": "Work items",
+                              "fontFamily": "IBM Plex Mono",
+                              "fontSize": 9,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "TGico",
+                  "name": "Inbox Mini",
+                  "width": "fill_container",
+                  "fill": "#0F1112",
+                  "cornerRadius": 6,
+                  "stroke": "#2B3036",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "CfpvX",
+                      "name": "Inbox Mini Icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "inbox",
+                      "library": "lucide",
+                      "fill": "#00A36C"
+                    },
+                    {
+                      "type": "text",
+                      "id": "pn0nq",
+                      "name": "Inbox Mini Text",
+                      "fill": "#FFFFFF",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Inbox items triaged into the queue.",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "owXiC",
+                  "name": "Login Footer Visual",
+                  "width": "fill_container",
+                  "fill": "#0F1112",
+                  "cornerRadius": 8,
+                  "stroke": "#2B3036",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "T930c",
+                      "name": "Footer Eyebrow",
+                      "fill": "#C7CDD2",
+                      "content": "ACCESS FLOW",
+                      "fontFamily": "IBM Plex Mono",
+                      "fontSize": 10,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "z8q2g",
+                      "name": "Footer Row",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "FeHUF",
+                          "name": "Footer Password",
+                          "width": "fill_container",
+                          "fill": "#18181B",
+                          "cornerRadius": 6,
+                          "stroke": "#2B3036",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": 10,
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 999,
+                              "id": "T4wTPe",
+                              "name": "Footer Dot Password",
+                              "fill": "#00A36C",
+                              "width": 8,
+                              "height": 8
+                            },
+                            {
+                              "type": "text",
+                              "id": "dH5y5",
+                              "name": "Footer Label Password",
+                              "fill": "#FFFFFF",
+                              "content": "Password",
+                              "fontFamily": "IBM Plex Sans",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "vgxa8",
+                          "name": "Footer Recovery",
+                          "width": "fill_container",
+                          "fill": "#18181B",
+                          "cornerRadius": 6,
+                          "stroke": "#2B3036",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": 10,
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 999,
+                              "id": "Lh9dk",
+                              "name": "Footer Dot Recovery",
+                              "fill": "#C28A1B",
+                              "width": 8,
+                              "height": 8
+                            },
+                            {
+                              "type": "text",
+                              "id": "IEC7K",
+                              "name": "Footer Label Recovery",
+                              "fill": "#FFFFFF",
+                              "content": "Recovery",
+                              "fontFamily": "IBM Plex Sans",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "gzYKz",
+                          "name": "Footer Workspace",
+                          "width": "fill_container",
+                          "fill": "#18181B",
+                          "cornerRadius": 6,
+                          "stroke": "#2B3036",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": 10,
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 999,
+                              "id": "Pwx7Z",
+                              "name": "Footer Dot Workspace",
+                              "fill": "#E2E8F0",
+                              "width": 8,
+                              "height": 8
+                            },
+                            {
+                              "type": "text",
+                              "id": "c6BX9W",
+                              "name": "Footer Label Workspace",
+                              "fill": "#FFFFFF",
+                              "content": "Workspace",
+                              "fontFamily": "IBM Plex Sans",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "zTfwU",
+                      "name": "Footer Copy",
+                      "fill": "#D6DBDF",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "No Gmail login. No invites by email. Setup, sign in, recover access stay direct.",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "CwrUf",
+          "name": "Form Area",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 20,
+          "padding": [
+            64,
+            72
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "vA6Eg",
+              "name": "Login Card",
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 10,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 18,
+              "padding": 28,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Iht2t",
+                  "name": "Title",
+                  "fill": "$text-primary",
+                  "content": "Sign in",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "Y79aA",
+                  "name": "Subtitle",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Use the username and password given to you by your HR administrator.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "bES2l",
+                  "name": "Fields",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "TatCa",
+                      "name": "Username Row",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "gBPqY",
+                          "name": "Username Label",
+                          "fill": "$text-primary",
+                          "content": "Username",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "t9m8E",
+                          "name": "Username Input",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "OcOWM",
+                              "name": "Username Value",
+                              "fill": "$text-primary",
+                              "content": "hr.admin",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "F83tkO",
+                          "name": "Username Hint",
+                          "fill": "$text-secondary",
+                          "content": "Primary identifier for login",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Vo6CZ",
+                      "name": "Password Row",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "y2Yj4A",
+                          "name": "Password Label",
+                          "fill": "$text-primary",
+                          "content": "Password",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "M37TKM",
+                          "name": "Password Input",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "K3Z5M",
+                              "name": "Password Value",
+                              "fill": "$text-primary",
+                              "content": "••••••••••••",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "PGkMy",
+                          "name": "Password Hint",
+                          "fill": "$text-secondary",
+                          "content": "Minimum 12 characters",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "S20hGW",
+                  "name": "Actions",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "UJNuN",
+                      "name": "Sign In Button",
+                      "fill": "$accent",
+                      "cornerRadius": 6,
+                      "gap": 8,
+                      "padding": [
+                        14,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YRBdA",
+                          "name": "Btn Label",
+                          "fill": "#FFFFFF",
+                          "content": "Sign in",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "cmQYE",
+                      "name": "Forgot Link",
+                      "fill": "$accent-deep",
+                      "content": "Forgot password?",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hEb3W",
+                  "name": "Security Note",
+                  "width": "fill_container",
+                  "fill": "$accent-soft",
+                  "cornerRadius": 6,
+                  "gap": 10,
+                  "padding": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 999,
+                      "id": "xgOiQ",
+                      "name": "Note Mark",
+                      "fill": "$accent",
+                      "width": 10,
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "wA97L",
+                      "name": "Note Text",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Too many wrong attempts will lock access for 15 minutes.",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "K1ilND",
+      "x": 15000,
+      "y": 0,
+      "name": "Auth — Setup Wizard",
+      "clip": true,
+      "width": 1440,
+      "height": 1200,
+      "fill": "$bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "TBqkY",
+          "name": "Setup Hero",
+          "width": 420,
+          "height": "fill_container",
+          "fill": "#0F1112",
+          "layout": "vertical",
+          "gap": 24,
+          "padding": [
+            56,
+            48
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "HAy84",
+              "name": "Brand",
+              "fill": "#FFFFFF",
+              "content": "HR Space",
+              "fontFamily": "IBM Plex Sans",
+              "fontSize": 18,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "VjHE1",
+              "name": "Headline",
+              "fill": "#FFFFFF",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Set up your workspace",
+              "fontFamily": "IBM Plex Sans",
+              "fontSize": 40,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "NZnmO",
+              "name": "Support",
+              "fill": "#C7CDD2",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Name your organization and create the first admin account.",
+              "fontFamily": "IBM Plex Sans",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "aNw1s",
+              "name": "Steps",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "MOzLn",
+                  "name": "Step 1",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 999,
+                      "id": "NWsLn",
+                      "name": "Badge",
+                      "fill": "$accent",
+                      "width": 28,
+                      "height": 28
+                    },
+                    {
+                      "type": "frame",
+                      "id": "zJFXg",
+                      "name": "Copy",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ADeAb",
+                          "name": "Step Title",
+                          "fill": "#FFFFFF",
+                          "content": "Organization",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "m4nNA",
+                          "name": "Step Desc",
+                          "fill": "#C7CDD2",
+                          "content": "Name, timezone, tax ID",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "fzXR5",
+                  "name": "Step 2",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 999,
+                      "id": "QLKH3",
+                      "name": "Badge",
+                      "fill": "$accent",
+                      "width": 28,
+                      "height": 28
+                    },
+                    {
+                      "type": "frame",
+                      "id": "deEMq",
+                      "name": "Copy",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "GiJcZ",
+                          "name": "Step Title",
+                          "fill": "#FFFFFF",
+                          "content": "Super admin",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "fpAw9",
+                          "name": "Step Desc",
+                          "fill": "#C7CDD2",
+                          "content": "Username + password",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tJMuq",
+                  "name": "Step 3",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 999,
+                      "id": "J2jXvd",
+                      "name": "Badge",
+                      "fill": "$accent",
+                      "width": 28,
+                      "height": 28
+                    },
+                    {
+                      "type": "frame",
+                      "id": "a36BRe",
+                      "name": "Copy",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "h28tQC",
+                          "name": "Step Title",
+                          "fill": "#FFFFFF",
+                          "content": "Finish",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "H5IH8s",
+                          "name": "Step Desc",
+                          "fill": "#C7CDD2",
+                          "content": "Lock the setup route",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "O2WZLV",
+              "name": "Setup Visual",
+              "width": "fill_container",
+              "fill": "#18181B",
+              "cornerRadius": 10,
+              "stroke": "#E2E8F0",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 18,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "bsuLb",
+                  "name": "Visual Eyebrow",
+                  "fill": "#C7CDD2",
+                  "content": "WORKSPACE PREVIEW",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "GeJfK",
+                  "name": "Visual Title",
+                  "fill": "#FFFFFF",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Your HR desk, ready in 3 steps.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 22,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "puTcs",
+                  "name": "Visual Copy",
+                  "fill": "#D6DBDF",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Create organization, define admin access, then enter the workspace. Nothing extra in the way.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 14
+                },
+                {
+                  "type": "frame",
+                  "id": "aCcmC",
+                  "name": "Progress Strip",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "GLSGE",
+                      "name": "Progress Organization",
+                      "width": "fill_container",
+                      "fill": "#0F1112",
+                      "cornerRadius": 6,
+                      "stroke": "#2B3036",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 999,
+                          "id": "i7dbbx",
+                          "name": "Progress Dot Organization",
+                          "fill": "#00A36C",
+                          "width": 10,
+                          "height": 10
+                        },
+                        {
+                          "type": "text",
+                          "id": "RcXny",
+                          "name": "Progress Label Organization",
+                          "fill": "#FFFFFF",
+                          "content": "Organization",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dJPD2",
+                      "name": "Progress Admin",
+                      "width": "fill_container",
+                      "fill": "#0F1112",
+                      "cornerRadius": 6,
+                      "stroke": "#2B3036",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 999,
+                          "id": "U9z7K",
+                          "name": "Progress Dot Admin",
+                          "fill": "#E2E8F0",
+                          "width": 10,
+                          "height": 10
+                        },
+                        {
+                          "type": "text",
+                          "id": "G5EoRU",
+                          "name": "Progress Label Admin",
+                          "fill": "#FFFFFF",
+                          "content": "Admin",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "s6ODv",
+                      "name": "Progress Ready",
+                      "width": "fill_container",
+                      "fill": "#0F1112",
+                      "cornerRadius": 6,
+                      "stroke": "#2B3036",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 999,
+                          "id": "D2AS1",
+                          "name": "Progress Dot Ready",
+                          "fill": "#E2E8F0",
+                          "width": 10,
+                          "height": 10
+                        },
+                        {
+                          "type": "text",
+                          "id": "JV8Jj",
+                          "name": "Progress Label Ready",
+                          "fill": "#FFFFFF",
+                          "content": "Ready",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "O6QaGa",
+                  "name": "Workspace Preview",
+                  "width": "fill_container",
+                  "fill": "#0F1112",
+                  "cornerRadius": 8,
+                  "stroke": "#2B3036",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "GwEr1",
+                      "name": "Preview Title",
+                      "fill": "#FFFFFF",
+                      "content": "Today",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "WNCyJ",
+                      "name": "Preview Subtitle",
+                      "fill": "#C7CDD2",
+                      "content": "Command Center",
+                      "fontFamily": "IBM Plex Mono",
+                      "fontSize": 10,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n903T8",
+                      "name": "Preview Row",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Mgwrw",
+                          "name": "Sidebar Preview",
+                          "width": 110,
+                          "fill": "#18181B",
+                          "cornerRadius": 6,
+                          "stroke": "#2B3036",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "wCWtC",
+                              "name": "Sidebar Item Today",
+                              "width": "fill_container",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 999,
+                                  "id": "U9gSK",
+                                  "name": "Sidebar Dot Today",
+                                  "fill": "#00A36C",
+                                  "width": 6,
+                                  "height": 6
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Ca70s",
+                                  "name": "Sidebar Label Today",
+                                  "fill": "#D6DBDF",
+                                  "content": "Today",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 10,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ehkqN",
+                              "name": "Sidebar Item All Work",
+                              "width": "fill_container",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 999,
+                                  "id": "yEidH",
+                                  "name": "Sidebar Dot All Work",
+                                  "fill": "#6F7478",
+                                  "width": 6,
+                                  "height": 6
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "W0nn2",
+                                  "name": "Sidebar Label All Work",
+                                  "fill": "#D6DBDF",
+                                  "content": "All Work",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 10,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ChH5d",
+                              "name": "Sidebar Item Inbox",
+                              "width": "fill_container",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 999,
+                                  "id": "NBAzw",
+                                  "name": "Sidebar Dot Inbox",
+                                  "fill": "#6F7478",
+                                  "width": 6,
+                                  "height": 6
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ywXDI",
+                                  "name": "Sidebar Label Inbox",
+                                  "fill": "#D6DBDF",
+                                  "content": "Inbox",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 10,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "lefm4",
+                              "name": "Sidebar Item Search",
+                              "width": "fill_container",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 999,
+                                  "id": "o2T6n",
+                                  "name": "Sidebar Dot Search",
+                                  "fill": "#6F7478",
+                                  "width": 6,
+                                  "height": 6
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "S5jM9",
+                                  "name": "Sidebar Label Search",
+                                  "fill": "#D6DBDF",
+                                  "content": "Search",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 10,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "jJFyb",
+                          "name": "Queue Preview",
+                          "width": "fill_container",
+                          "fill": "#18181B",
+                          "cornerRadius": 6,
+                          "stroke": "#2B3036",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "F9VemZ",
+                              "name": "Queue Item Critical",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "padding": [
+                                4,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 999,
+                                  "id": "uqYuk",
+                                  "name": "Queue Dot Critical",
+                                  "fill": "#D14343",
+                                  "width": 7,
+                                  "height": 7
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "y8ouWy",
+                                  "name": "Queue Label Critical",
+                                  "fill": "#D6DBDF",
+                                  "content": "Critical",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "g1j8mW",
+                                  "name": "Queue Meta Critical",
+                                  "fill": "#6F7478",
+                                  "content": "Setup → Work",
+                                  "fontFamily": "IBM Plex Mono",
+                                  "fontSize": 9,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "bvmcW",
+                              "name": "Queue Item Attention",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "padding": [
+                                4,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 999,
+                                  "id": "z6EcT",
+                                  "name": "Queue Dot Attention",
+                                  "fill": "#C28A1B",
+                                  "width": 7,
+                                  "height": 7
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "jj3ZG",
+                                  "name": "Queue Label Attention",
+                                  "fill": "#D6DBDF",
+                                  "content": "Attention",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "OB8WS",
+                                  "name": "Queue Meta Attention",
+                                  "fill": "#6F7478",
+                                  "content": "Setup → Work",
+                                  "fontFamily": "IBM Plex Mono",
+                                  "fontSize": 9,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "xiT1X",
+                              "name": "Queue Item Waiting",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "padding": [
+                                4,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 999,
+                                  "id": "L9FQ6z",
+                                  "name": "Queue Dot Waiting",
+                                  "fill": "#C28A1B",
+                                  "width": 7,
+                                  "height": 7
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "E2miG",
+                                  "name": "Queue Label Waiting",
+                                  "fill": "#D6DBDF",
+                                  "content": "Waiting",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "i5j7g",
+                                  "name": "Queue Meta Waiting",
+                                  "fill": "#6F7478",
+                                  "content": "Setup → Work",
+                                  "fontFamily": "IBM Plex Mono",
+                                  "fontSize": 9,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "a4XQz",
+          "name": "Setup Area",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 18,
+          "padding": [
+            56,
+            64
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "eChOz",
+              "name": "Wizard Card",
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 10,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 18,
+              "padding": 28,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "jNcOl",
+                  "name": "Title",
+                  "fill": "$text-primary",
+                  "content": "Create admin account",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "lfoYu",
+                  "name": "Subtitle",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "This is the main account for your organization. Keep the credentials safe.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "QcuJw",
+                  "name": "Fields",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "JYRiZ",
+                      "name": "Organization name Row",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "U88raG",
+                          "name": "Organization name Label",
+                          "fill": "$text-primary",
+                          "content": "Organization name",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "E4x3V",
+                          "name": "Organization name Input",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "oHGWb",
+                              "name": "Organization name Value",
+                              "fill": "$text-primary",
+                              "content": "Vroom Co.",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "PUeIt",
+                          "name": "Organization name Hint",
+                          "fill": "$text-secondary",
+                          "content": "Shown in the app",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "gxupG",
+                      "name": "Timezone Row",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "HXVqX",
+                          "name": "Timezone Label",
+                          "fill": "$text-primary",
+                          "content": "Timezone",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "z8Btl",
+                          "name": "Timezone Input",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "vbbab",
+                              "name": "Timezone Value",
+                              "fill": "$text-primary",
+                              "content": "Asia/Ho_Chi_Minh",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "y6JD4",
+                          "name": "Timezone Hint",
+                          "fill": "$text-secondary",
+                          "content": "Used for due dates and schedules",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "EMSVm",
+                      "name": "Admin username Row",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "VIoFb",
+                          "name": "Admin username Label",
+                          "fill": "$text-primary",
+                          "content": "Admin username",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "rLXLM",
+                          "name": "Admin username Input",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "aV09D",
+                              "name": "Admin username Value",
+                              "fill": "$text-primary",
+                              "content": "superadmin",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "g6eXU",
+                          "name": "Admin username Hint",
+                          "fill": "$text-secondary",
+                          "content": "Cannot be changed after setup",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DdgBH",
+                      "name": "Admin password Row",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ZM6Td",
+                          "name": "Admin password Label",
+                          "fill": "$text-primary",
+                          "content": "Admin password",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "BnvUg",
+                          "name": "Admin password Input",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "bE7yY",
+                              "name": "Admin password Value",
+                              "fill": "$text-primary",
+                              "content": "••••••••••••",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "M4jIH",
+                          "name": "Admin password Hint",
+                          "fill": "$text-secondary",
+                          "content": "12+ chars, uppercase, number, special char",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "T5nZB",
+                  "name": "Actions",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ycvPq",
+                      "name": "Back Button",
+                      "fill": "#FFFFFF",
+                      "cornerRadius": 6,
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 8,
+                      "padding": [
+                        14,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mr0RK",
+                          "name": "Back Label",
+                          "fill": "$text-primary",
+                          "content": "Back",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DiJNF",
+                      "name": "Finish Button",
+                      "fill": "$accent",
+                      "cornerRadius": 6,
+                      "gap": 8,
+                      "padding": [
+                        14,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Jxh12",
+                          "name": "Finish Label",
+                          "fill": "#FFFFFF",
+                          "content": "Create and lock setup",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "nXMFI",
+                  "name": "Setup Note",
+                  "width": "fill_container",
+                  "fill": "$danger-soft",
+                  "cornerRadius": 6,
+                  "gap": 10,
+                  "padding": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 999,
+                      "id": "kcE4k",
+                      "name": "Warning Mark",
+                      "fill": "$danger",
+                      "width": 10,
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "eKriq",
+                      "name": "Warning Text",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Setup cannot be repeated. Once finished, the workspace is locked.",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "yixXC",
+      "x": 16520,
+      "y": 0,
+      "name": "Auth — Reset Password",
+      "clip": true,
+      "width": 1440,
+      "height": 1200,
+      "fill": "$bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "UGIkr",
+          "name": "Reset Column",
+          "width": 720,
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 20,
+          "padding": 72,
+          "children": [
+            {
+              "type": "text",
+              "id": "l6WB0",
+              "name": "Brand",
+              "fill": "$text-primary",
+              "content": "HR Space",
+              "fontFamily": "IBM Plex Sans",
+              "fontSize": 18,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "aNVsr",
+              "name": "Headline",
+              "fill": "$text-primary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Recover access",
+              "fontFamily": "IBM Plex Sans",
+              "fontSize": 36,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "MnlPR",
+              "name": "Support",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Enter your username. If your account has an email, we will send you a reset link.",
+              "fontFamily": "IBM Plex Sans",
+              "fontSize": 15,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "UhhhM",
+              "name": "Reset Card",
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 10,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 28,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "rbVcD",
+                  "name": "Title",
+                  "fill": "$text-primary",
+                  "content": "Recover access",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 22,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "bR0wc",
+                  "name": "Fields",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "T5KTFJ",
+                      "name": "Username Row",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "m2HVL6",
+                          "name": "Username Label",
+                          "fill": "$text-primary",
+                          "content": "Username",
+                          "fontFamily": "$font-body",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "KXyyh",
+                          "name": "Username Input",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "C5jsV",
+                              "name": "Username Value",
+                              "fill": "$text-primary",
+                              "content": "hr.admin",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "mZvZ1",
+                          "name": "Username Hint",
+                          "fill": "$text-secondary",
+                          "content": "Primary identifier",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "m8eHdk",
+                      "name": "Email Row",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Nys7S",
+                          "name": "Email Label",
+                          "fill": "$text-primary",
+                          "content": "Email",
+                          "fontFamily": "$font-body",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "eDqYX",
+                          "name": "Email Input",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "zg8sl",
+                              "name": "Email Value",
+                              "fill": "$text-primary",
+                              "content": "admin@vroomhr.vn",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "sTEqS",
+                          "name": "Email Hint",
+                          "fill": "$text-secondary",
+                          "content": "Optional for email recovery",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "b0cD3",
+                  "name": "Actions",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "HCA1v",
+                      "name": "Send Button",
+                      "fill": "$accent",
+                      "cornerRadius": 6,
+                      "gap": 8,
+                      "padding": [
+                        14,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "x7lXC",
+                          "name": "Send Label",
+                          "fill": "#FFFFFF",
+                          "content": "Send reset link",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "dyX0g",
+                      "name": "Fallback Link",
+                      "fill": "$accent-deep",
+                      "content": "Ask your admin for help",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Fhd9H",
+                  "name": "Reset Note",
+                  "width": "fill_container",
+                  "fill": "$accent-soft",
+                  "cornerRadius": 6,
+                  "gap": 10,
+                  "padding": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 999,
+                      "id": "D0OSX",
+                      "name": "Reset Mark",
+                      "fill": "$accent",
+                      "width": 10,
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "r1IfF",
+                      "name": "Reset Text",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Too many wrong attempts will lock access for 15 minutes.",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "themes": {
+    "mode": [
+      "light",
+      "dark"
+    ]
+  },
+  "variables": {
+    "bg": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FAFAF8",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#1A1A1A",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "surface": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#18181B",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "border": {
+      "type": "color",
+      "value": "#E2E8F0"
+    },
+    "text-primary": {
+      "type": "color",
+      "value": "#0F1112"
+    },
+    "text-secondary": {
+      "type": "color",
+      "value": "#6F7478"
+    },
+    "accent": {
+      "type": "color",
+      "value": "#00A36C"
+    },
+    "accent-soft": {
+      "type": "color",
+      "value": "#E0F5EC"
+    },
+    "accent-deep": {
+      "type": "color",
+      "value": "#007F51"
+    },
+    "success": {
+      "type": "color",
+      "value": "#1D9A6C"
+    },
+    "success-soft": {
+      "type": "color",
+      "value": "#D1FAE5"
+    },
+    "warning": {
+      "type": "color",
+      "value": "#C28A1B"
+    },
+    "warning-soft": {
+      "type": "color",
+      "value": "#FEF3C7"
+    },
+    "danger": {
+      "type": "color",
+      "value": "#D14343"
+    },
+    "danger-soft": {
+      "type": "color",
+      "value": "#FCE4E4"
+    },
+    "gray": {
+      "type": "color",
+      "value": "#9CA3AF"
+    },
+    "on-primary": {
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    "text-muted": {
+      "type": "color",
+      "value": "#9CA3AF"
+    },
+    "font-body": {
+      "type": "string",
+      "value": "Inter"
+    },
+    "verified-bg": {
+      "type": "color",
+      "value": "#D1FAE5"
+    },
+    "verified-text": {
+      "type": "color",
+      "value": "#065F46"
+    },
+    "pending-bg": {
+      "type": "color",
+      "value": "#FEF3C7"
+    },
+    "pending-text": {
+      "type": "color",
+      "value": "#C28A1B"
+    },
+    "expired-bg": {
+      "type": "color",
+      "value": "#FCE4E4"
+    },
+    "expired-text": {
+      "type": "color",
+      "value": "#D14343"
+    },
+    "archived-bg": {
+      "type": "color",
+      "value": "#F3F4F6"
+    },
+    "archived-text": {
+      "type": "color",
+      "value": "#6F7478"
+    },
+    "status-active": {
+      "type": "color",
+      "value": "#D1FAE5"
+    },
+    "status-active-text": {
+      "type": "color",
+      "value": "#065F46"
+    },
+    "status-resigned": {
+      "type": "color",
+      "value": "#F3F4F6"
+    },
+    "status-resigned-text": {
+      "type": "color",
+      "value": "#4B5563"
+    },
+    "status-suspended": {
+      "type": "color",
+      "value": "#FEF3C7"
+    },
+    "status-suspended-text": {
+      "type": "color",
+      "value": "#92400E"
+    },
+    "status-terminated": {
+      "type": "color",
+      "value": "#FEE2E2"
+    },
+    "status-terminated-text": {
+      "type": "color",
+      "value": "#991B1B"
+    }
+  },
+  "fileToken": "ffba3b2b-fe5b-4802-84e1-8e5af6db717d"
+}

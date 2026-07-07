@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 const steps = [
   {
     title: "🎉 Workspace đã sẵn sàng!",
-    desc: "Chào mừng bạn đến với Vroom HR. Hãy cùng dành khoảng 30 giây để xem qua giao diện vận hành cốt lõi giúp bạn làm quen nhanh nhất.",
+    desc: "Chào mừng bạn đến với HR Space. Hãy cùng dành khoảng 30 giây để xem qua giao diện vận hành cốt lõi giúp bạn làm quen nhanh nhất.",
     mode: "dialog" as const,
   },
   {

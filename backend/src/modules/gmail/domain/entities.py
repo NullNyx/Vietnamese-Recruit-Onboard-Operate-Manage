@@ -78,10 +78,10 @@ class SyncCursor(SQLModel, table=True):
 
 
 class GmailLabelMapping(SQLModel, table=True):
-    """Maps VroomHR label names to Gmail internal label IDs.
+    """Maps HRSpace label names to Gmail internal label IDs.
 
     Stores the relationship between human-readable label names
-    (e.g., "VroomHR/processed") and Gmail's opaque label IDs per user.
+    (e.g., "HRSpace/processed") and Gmail's opaque label IDs per user.
     """
 
     __tablename__ = "gmail_label_mappings"

@@ -26,7 +26,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Vroom HR",
+  title: "HR Space",
   description: "Nền tảng quản lý nhân sự thông minh cho doanh nghiệp Việt Nam",
 };
 

@@ -1,0 +1,3526 @@
+{
+  "version": "2.14",
+  "children": [
+    {
+      "type": "frame",
+      "id": "mjeOX",
+      "x": -1568,
+      "y": 0,
+      "name": "Search — Default",
+      "clip": true,
+      "width": 1440,
+      "height": 1024,
+      "fill": "$bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "UuzBj",
+          "name": "Sidebar",
+          "width": 264,
+          "height": "fill_container",
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "right": 1
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            22,
+            18
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "U2VGC",
+              "name": "Brand",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "AtggD",
+                  "name": "Brand Mark",
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "../hr-space-logo.svg",
+                    "mode": "fit"
+                  },
+                  "width": 34,
+                  "height": 34,
+                  "stroke": "$accent"
+                },
+                {
+                  "type": "frame",
+                  "id": "oPZLW",
+                  "name": "Brand Copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uXt6Y",
+                      "name": "Brand Title",
+                      "fill": "$text-primary",
+                      "content": "HR Space",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "M5cj9",
+                      "name": "Brand Subtitle",
+                      "fill": "$text-secondary",
+                      "content": "Operations workspace",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "UEQNU",
+              "name": "Core Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "L1yo2K",
+                  "name": "Core Label",
+                  "fill": "$text-secondary",
+                  "content": "WORK",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "NiL2h",
+                  "name": "Nav Today",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "PrtOW",
+                      "name": "Icon Today",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-dashboard",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "EnF6X",
+                      "name": "Label Today",
+                      "fill": "$text-primary",
+                      "content": "Today",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dGVdt",
+                  "name": "Nav All Work",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "mcd0p",
+                      "name": "Icon All Work",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "list",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "V0g3DK",
+                      "name": "Label All Work",
+                      "fill": "$text-primary",
+                      "content": "All Work",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "SVFR2",
+                  "name": "Nav Inbox",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "YOdje",
+                      "name": "Icon Inbox",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "inbox",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "LpL7e",
+                      "name": "Label Inbox",
+                      "fill": "$text-primary",
+                      "content": "Inbox",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "a0V8l",
+                  "name": "Nav Search",
+                  "width": "fill_container",
+                  "fill": "$accent-soft",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "s40r3V",
+                      "name": "Icon Search",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$accent"
+                    },
+                    {
+                      "type": "text",
+                      "id": "D60tG",
+                      "name": "Label Search",
+                      "fill": "$text-primary",
+                      "content": "Search",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "gwtxt",
+              "name": "Divider",
+              "fill": "$border",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "Q1o1P",
+              "name": "Library Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "j43wcM",
+                  "name": "Library Label",
+                  "fill": "$text-secondary",
+                  "content": "LIBRARIES",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "c4p9T",
+                  "name": "Lib People",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "bQXZJ",
+                      "name": "Lib Icon People",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "users",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "i3qln",
+                      "name": "Lib Label People",
+                      "fill": "$text-primary",
+                      "content": "People",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jGhLQ",
+                  "name": "Lib Documents",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "w0P7x",
+                      "name": "Lib Icon Documents",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Nq8rr",
+                      "name": "Lib Label Documents",
+                      "fill": "$text-primary",
+                      "content": "Documents",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "nynFC",
+                  "name": "Lib Contracts",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "yRPjt",
+                      "name": "Lib Icon Contracts",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "folder",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "G9L20p",
+                      "name": "Lib Label Contracts",
+                      "fill": "$text-primary",
+                      "content": "Contracts",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "RfAbu",
+                  "name": "Lib Templates",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "el0kP",
+                      "name": "Lib Icon Templates",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-template",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "g62eAP",
+                      "name": "Lib Label Templates",
+                      "fill": "$text-primary",
+                      "content": "Templates",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "a8TssT",
+                  "name": "Lib Reports",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "cY1ab",
+                      "name": "Lib Icon Reports",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "activity",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "n3R8q8",
+                      "name": "Lib Label Reports",
+                      "fill": "$text-primary",
+                      "content": "Reports",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Y6PIfK",
+                  "name": "Lib Admin",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "y08jaS",
+                      "name": "Lib Icon Admin",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "settings",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "YTiOz",
+                      "name": "Lib Label Admin",
+                      "fill": "$text-primary",
+                      "content": "Admin",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "UzB2J",
+              "name": "Spacer",
+              "width": "fill_container",
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "nRFkK",
+              "name": "User Chip",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                10,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "DcRUT",
+                  "name": "Avatar",
+                  "fill": "$accent-soft",
+                  "width": 28,
+                  "height": 28
+                },
+                {
+                  "type": "text",
+                  "id": "athbO",
+                  "name": "User Name",
+                  "fill": "$text-primary",
+                  "content": "HR Admin",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "v98fwE",
+          "name": "Main",
+          "width": 1176,
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 20,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "qoG7Y",
+              "name": "Header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "wwtdD",
+                  "name": "Eyebrow",
+                  "fill": "$text-secondary",
+                  "content": "SEARCH / CONTEXT LIBRARY",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "fXMbz",
+                  "name": "Title",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Search across HR context libraries.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 30,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "VdM1w",
+                  "name": "Subtitle",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Find people, documents, contracts, and templates from one search lane. Open a library only when context matters.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 15,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "oQLp2",
+              "name": "Search Toolbar",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "CrL8n",
+                  "name": "Search Bar",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 10,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "k215Qw",
+                      "name": "Search Icon",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "DXptd",
+                      "name": "Search Hint",
+                      "fill": "$text-secondary",
+                      "content": "Search people, documents, contracts, templates...",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "htnQm",
+                  "name": "Filter Row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "CCRDY",
+                      "name": "Filter People",
+                      "fill": "$accent-soft",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "V51wh",
+                          "name": "Filter Label People",
+                          "fill": "$text-primary",
+                          "content": "People",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "WEY6e",
+                          "name": "Filter Chevron People",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "chevron-down",
+                          "library": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "L2047g",
+                      "name": "Filter Documents",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "x6pnnY",
+                          "name": "Filter Label Documents",
+                          "fill": "$text-primary",
+                          "content": "Documents",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "O6POK",
+                          "name": "Filter Chevron Documents",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "chevron-down",
+                          "library": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "HCKPq",
+                      "name": "Filter Contracts",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "h7Nkn",
+                          "name": "Filter Label Contracts",
+                          "fill": "$text-primary",
+                          "content": "Contracts",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "EuOyY",
+                          "name": "Filter Chevron Contracts",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "chevron-down",
+                          "library": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pK60t",
+                      "name": "Filter Templates",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YQXil",
+                          "name": "Filter Label Templates",
+                          "fill": "$text-primary",
+                          "content": "Templates",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "BqWOT",
+                          "name": "Filter Chevron Templates",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "chevron-down",
+                          "library": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "WpxGC",
+                      "name": "Filter Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "p57Uh",
+                      "name": "Result Count",
+                      "fill": "$text-secondary",
+                      "content": "42 results",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "HAsHH",
+              "name": "Results",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ZG7Qm",
+                  "name": "Section People",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "s3B2w9",
+                      "name": "Section Title People",
+                      "fill": "$text-primary",
+                      "content": "People",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rPDRZ",
+                      "name": "Section Rows People",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 1,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "B94L56",
+                          "name": "People Result",
+                          "width": "fill_container",
+                          "fill": "$surface",
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 14,
+                          "padding": [
+                            14,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "wmptS",
+                              "name": "Result Left",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 3,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "IshBw",
+                                  "name": "People Title",
+                                  "fill": "$text-primary",
+                                  "content": "Nguyen An",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Sgr3a",
+                                  "name": "People Meta",
+                                  "fill": "$text-secondary",
+                                  "content": "HR Manager · People Operations",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "U67n3",
+                                  "name": "People Snippet",
+                                  "fill": "$text-secondary",
+                                  "content": "Primary contact on onboarding and contract work.",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "yR3sW",
+                              "name": "People Status",
+                              "fill": "$status-active",
+                              "gap": 5,
+                              "padding": [
+                                4,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "id": "FAe9A",
+                                  "name": "People Dot",
+                                  "fill": "$status-active-text",
+                                  "width": 5,
+                                  "height": 5
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Pnx72",
+                                  "name": "People Status Label",
+                                  "fill": "$status-active-text",
+                                  "content": "Active",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "dcyzv",
+                              "name": "Open Action",
+                              "fill": "$accent-soft",
+                              "gap": 6,
+                              "padding": [
+                                8,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "ssKWt",
+                                  "name": "Open Label",
+                                  "fill": "$accent-deep",
+                                  "content": "Open",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "qh0E3",
+                                  "name": "Open Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "arrow-right",
+                                  "library": "lucide",
+                                  "fill": "$accent-deep"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "l8dc0",
+                          "name": "People Result",
+                          "width": "fill_container",
+                          "fill": "$surface",
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 14,
+                          "padding": [
+                            14,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "X8UwF",
+                              "name": "Result Left",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 3,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "R7eKi",
+                                  "name": "People Title",
+                                  "fill": "$text-primary",
+                                  "content": "Tran Duy",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "B1d6Xg",
+                                  "name": "People Meta",
+                                  "fill": "$text-secondary",
+                                  "content": "IT Recruiter · Technology",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "i10Ju7",
+                                  "name": "People Snippet",
+                                  "fill": "$text-secondary",
+                                  "content": "Used in background checks and interview scheduling.",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ty9I5",
+                              "name": "People Status",
+                              "fill": "$status-resigned",
+                              "gap": 5,
+                              "padding": [
+                                4,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "id": "RcL4u",
+                                  "name": "People Dot",
+                                  "fill": "$status-resigned-text",
+                                  "width": 5,
+                                  "height": 5
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "hB6v9",
+                                  "name": "People Status Label",
+                                  "fill": "$status-resigned-text",
+                                  "content": "Resigned",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "NGUWz",
+                              "name": "Open Action",
+                              "fill": "$accent-soft",
+                              "gap": 6,
+                              "padding": [
+                                8,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "wMdrO",
+                                  "name": "Open Label",
+                                  "fill": "$accent-deep",
+                                  "content": "Open",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "CdSuQ",
+                                  "name": "Open Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "arrow-right",
+                                  "library": "lucide",
+                                  "fill": "$accent-deep"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "POBYA",
+                  "name": "Section Documents",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "aYjR1",
+                      "name": "Section Title Documents",
+                      "fill": "$text-primary",
+                      "content": "Documents",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "S2U8H",
+                      "name": "Section Rows Documents",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 1,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "IHv1i",
+                          "name": "Documents Result",
+                          "width": "fill_container",
+                          "fill": "$surface",
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 14,
+                          "padding": [
+                            14,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "e0bT3G",
+                              "name": "Result Left",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 3,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "WhG0t",
+                                  "name": "Documents Title",
+                                  "fill": "$text-primary",
+                                  "content": "ID Card Scan",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "vd6Fw",
+                                  "name": "Documents Meta",
+                                  "fill": "$text-secondary",
+                                  "content": "Employee identity document",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Q34zZ",
+                                  "name": "Documents Snippet",
+                                  "fill": "$text-secondary",
+                                  "content": "Latest verified scan linked from profile.",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "FfCcv",
+                              "name": "Open Action",
+                              "fill": "$accent-soft",
+                              "gap": 6,
+                              "padding": [
+                                8,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "l40DY",
+                                  "name": "Open Label",
+                                  "fill": "$accent-deep",
+                                  "content": "Open",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "K40uh8",
+                                  "name": "Open Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "arrow-right",
+                                  "library": "lucide",
+                                  "fill": "$accent-deep"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ysPoL",
+                          "name": "Documents Result",
+                          "width": "fill_container",
+                          "fill": "$surface",
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 14,
+                          "padding": [
+                            14,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Z9kZUu",
+                              "name": "Result Left",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 3,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "mixkj",
+                                  "name": "Documents Title",
+                                  "fill": "$text-primary",
+                                  "content": "Bank Statement",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Ab54Z",
+                                  "name": "Documents Meta",
+                                  "fill": "$text-secondary",
+                                  "content": "Payroll setup document",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ekemb",
+                                  "name": "Documents Snippet",
+                                  "fill": "$text-secondary",
+                                  "content": "Used for payroll account verification.",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "OQtWF",
+                              "name": "Open Action",
+                              "fill": "$accent-soft",
+                              "gap": 6,
+                              "padding": [
+                                8,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "uKuzO",
+                                  "name": "Open Label",
+                                  "fill": "$accent-deep",
+                                  "content": "Open",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "K5m3DY",
+                                  "name": "Open Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "arrow-right",
+                                  "library": "lucide",
+                                  "fill": "$accent-deep"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "L8LwH",
+                  "name": "Section Contracts",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zPQoo",
+                      "name": "Section Title Contracts",
+                      "fill": "$text-primary",
+                      "content": "Contracts",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tDPpZ",
+                      "name": "Section Rows Contracts",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 1,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "jyiic",
+                          "name": "Contracts Result",
+                          "width": "fill_container",
+                          "fill": "$surface",
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 14,
+                          "padding": [
+                            14,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "nwdic",
+                              "name": "Result Left",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 3,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "llJKN",
+                                  "name": "Contracts Title",
+                                  "fill": "$text-primary",
+                                  "content": "Employment Contract",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "v4W6PC",
+                                  "name": "Contracts Meta",
+                                  "fill": "$text-secondary",
+                                  "content": "Nguyen An · Permanent",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "duMbR",
+                                  "name": "Contracts Snippet",
+                                  "fill": "$text-secondary",
+                                  "content": "Latest signed employment contract with renewal dates.",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Xh3JS",
+                              "name": "Contracts Status",
+                              "fill": "$status-active",
+                              "gap": 5,
+                              "padding": [
+                                4,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "id": "yc5Rb",
+                                  "name": "Contracts Dot",
+                                  "fill": "$status-active-text",
+                                  "width": 5,
+                                  "height": 5
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "DrXae",
+                                  "name": "Contracts Status Label",
+                                  "fill": "$status-active-text",
+                                  "content": "Active",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ugR06",
+                              "name": "Open Action",
+                              "fill": "$accent-soft",
+                              "gap": 6,
+                              "padding": [
+                                8,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Aux2N",
+                                  "name": "Open Label",
+                                  "fill": "$accent-deep",
+                                  "content": "Open",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "vcDwT",
+                                  "name": "Open Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "arrow-right",
+                                  "library": "lucide",
+                                  "fill": "$accent-deep"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "g4LV7m",
+                          "name": "Contracts Result",
+                          "width": "fill_container",
+                          "fill": "$surface",
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 14,
+                          "padding": [
+                            14,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "mNttF",
+                              "name": "Result Left",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 3,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "e3r4sl",
+                                  "name": "Contracts Title",
+                                  "fill": "$text-primary",
+                                  "content": "Termination Letter",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "VALXW",
+                                  "name": "Contracts Meta",
+                                  "fill": "$text-secondary",
+                                  "content": "Hoang Duc · Exit",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "gF4g2",
+                                  "name": "Contracts Snippet",
+                                  "fill": "$text-secondary",
+                                  "content": "Archived termination record for audit lookup.",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "xPEoT",
+                              "name": "Contracts Status",
+                              "fill": "$status-terminated",
+                              "gap": 5,
+                              "padding": [
+                                4,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "id": "NjvO4",
+                                  "name": "Contracts Dot",
+                                  "fill": "$status-terminated-text",
+                                  "width": 5,
+                                  "height": 5
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "J1aEo3",
+                                  "name": "Contracts Status Label",
+                                  "fill": "$status-terminated-text",
+                                  "content": "Terminated",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "BpfkR",
+                              "name": "Open Action",
+                              "fill": "$accent-soft",
+                              "gap": 6,
+                              "padding": [
+                                8,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "PtTXS",
+                                  "name": "Open Label",
+                                  "fill": "$accent-deep",
+                                  "content": "Open",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "U8IgH",
+                                  "name": "Open Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "arrow-right",
+                                  "library": "lucide",
+                                  "fill": "$accent-deep"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "X635dS",
+                  "name": "Section Templates",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "L0rAsU",
+                      "name": "Section Title Templates",
+                      "fill": "$text-primary",
+                      "content": "Templates",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "vT571",
+                      "name": "Section Rows Templates",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 1,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "pmzUB",
+                          "name": "Templates Result",
+                          "width": "fill_container",
+                          "fill": "$surface",
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 14,
+                          "padding": [
+                            14,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "HjOvd",
+                              "name": "Result Left",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 3,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "ehtZX",
+                                  "name": "Templates Title",
+                                  "fill": "$text-primary",
+                                  "content": "Onboarding Checklist",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "gS4lk",
+                                  "name": "Templates Meta",
+                                  "fill": "$text-secondary",
+                                  "content": "Template v4",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "hNyzL",
+                                  "name": "Templates Snippet",
+                                  "fill": "$text-secondary",
+                                  "content": "Used when opening a new employee context.",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "VOrpf",
+                              "name": "Open Action",
+                              "fill": "$accent-soft",
+                              "gap": 6,
+                              "padding": [
+                                8,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "D1Wxg",
+                                  "name": "Open Label",
+                                  "fill": "$accent-deep",
+                                  "content": "Open",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "ySuVg",
+                                  "name": "Open Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "arrow-right",
+                                  "library": "lucide",
+                                  "fill": "$accent-deep"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "V2Q7X3",
+                          "name": "Templates Result",
+                          "width": "fill_container",
+                          "fill": "$surface",
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 14,
+                          "padding": [
+                            14,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "BBUW6",
+                              "name": "Result Left",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 3,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "dy4fL",
+                                  "name": "Templates Title",
+                                  "fill": "$text-primary",
+                                  "content": "Offer Letter",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "iBhiK",
+                                  "name": "Templates Meta",
+                                  "fill": "$text-secondary",
+                                  "content": "Template v2",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Qo2Ku",
+                                  "name": "Templates Snippet",
+                                  "fill": "$text-secondary",
+                                  "content": "Starter template for recruitment workflows.",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "mIklP",
+                              "name": "Open Action",
+                              "fill": "$accent-soft",
+                              "gap": 6,
+                              "padding": [
+                                8,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "vC3Y9",
+                                  "name": "Open Label",
+                                  "fill": "$accent-deep",
+                                  "content": "Open",
+                                  "fontFamily": "IBM Plex Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "ylbIh",
+                                  "name": "Open Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "arrow-right",
+                                  "library": "lucide",
+                                  "fill": "$accent-deep"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "rpX7u",
+      "x": 0,
+      "y": 0,
+      "name": "Search — Empty",
+      "clip": true,
+      "width": 1440,
+      "height": 1024,
+      "fill": "$bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "O41jyN",
+          "name": "Sidebar",
+          "width": 264,
+          "height": "fill_container",
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "right": 1
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            22,
+            18
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "sA5a8",
+              "name": "Brand",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "j0uBV",
+                  "name": "Brand Mark",
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "../hr-space-logo.svg",
+                    "mode": "fit"
+                  },
+                  "width": 34,
+                  "height": 34,
+                  "stroke": "$accent"
+                },
+                {
+                  "type": "frame",
+                  "id": "nkj89",
+                  "name": "Brand Copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "nky9T",
+                      "name": "Brand Title",
+                      "fill": "$text-primary",
+                      "content": "HR Space",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "f6UXd",
+                      "name": "Brand Subtitle",
+                      "fill": "$text-secondary",
+                      "content": "Operations workspace",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "fo150",
+              "name": "Core Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "rvsCj",
+                  "name": "Core Label",
+                  "fill": "$text-secondary",
+                  "content": "WORK",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "GfhAS",
+                  "name": "Nav Today",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "uJsic",
+                      "name": "Icon Today",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-dashboard",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "TXV5r",
+                      "name": "Label Today",
+                      "fill": "$text-primary",
+                      "content": "Today",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "F8mWF",
+                  "name": "Nav All Work",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "OOXsm",
+                      "name": "Icon All Work",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "list",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "b1FOO",
+                      "name": "Label All Work",
+                      "fill": "$text-primary",
+                      "content": "All Work",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Y9ngm",
+                  "name": "Nav Inbox",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "waI2C",
+                      "name": "Icon Inbox",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "inbox",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "vkRG4",
+                      "name": "Label Inbox",
+                      "fill": "$text-primary",
+                      "content": "Inbox",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "HWyfA",
+                  "name": "Nav Search",
+                  "width": "fill_container",
+                  "fill": "$accent-soft",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "zM7Wm",
+                      "name": "Icon Search",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$accent"
+                    },
+                    {
+                      "type": "text",
+                      "id": "p2sax",
+                      "name": "Label Search",
+                      "fill": "$text-primary",
+                      "content": "Search",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "lRnHx",
+              "name": "Divider",
+              "fill": "$border",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "w4mecZ",
+              "name": "Library Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "PNAlP",
+                  "name": "Library Label",
+                  "fill": "$text-secondary",
+                  "content": "LIBRARIES",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "lsZ7B",
+                  "name": "Lib People",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "mqYLr",
+                      "name": "Lib Icon People",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "users",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "lV6ZH",
+                      "name": "Lib Label People",
+                      "fill": "$text-primary",
+                      "content": "People",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "T8axUG",
+                  "name": "Lib Documents",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "Is94X",
+                      "name": "Lib Icon Documents",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "v1dMJ",
+                      "name": "Lib Label Documents",
+                      "fill": "$text-primary",
+                      "content": "Documents",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "x4DoG3",
+                  "name": "Lib Contracts",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "NkPoF",
+                      "name": "Lib Icon Contracts",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "folder",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "KfVOV",
+                      "name": "Lib Label Contracts",
+                      "fill": "$text-primary",
+                      "content": "Contracts",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "lASHu",
+                  "name": "Lib Templates",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "n7jzd",
+                      "name": "Lib Icon Templates",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-template",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "jGnp5",
+                      "name": "Lib Label Templates",
+                      "fill": "$text-primary",
+                      "content": "Templates",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "FoNE6",
+                  "name": "Lib Reports",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "U1bxe",
+                      "name": "Lib Icon Reports",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "activity",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ZqZjG",
+                      "name": "Lib Label Reports",
+                      "fill": "$text-primary",
+                      "content": "Reports",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Z1Hhn",
+                  "name": "Lib Admin",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "ifsi2",
+                      "name": "Lib Icon Admin",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "settings",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "j2Lt1S",
+                      "name": "Lib Label Admin",
+                      "fill": "$text-primary",
+                      "content": "Admin",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "h3OOM",
+              "name": "Spacer",
+              "width": "fill_container",
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "IfKdS",
+              "name": "User Chip",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                10,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "VBt3f",
+                  "name": "Avatar",
+                  "fill": "$accent-soft",
+                  "width": 28,
+                  "height": 28
+                },
+                {
+                  "type": "text",
+                  "id": "FOVfR",
+                  "name": "User Name",
+                  "fill": "$text-primary",
+                  "content": "HR Admin",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "R9nme",
+          "name": "Main",
+          "width": 1176,
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 20,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "y2oYC2",
+              "name": "Header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Nd8A2",
+                  "name": "Eyebrow",
+                  "fill": "$text-secondary",
+                  "content": "SEARCH / CONTEXT LIBRARY",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "cwuy8",
+                  "name": "Title",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Search across HR context libraries.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 30,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "eEcAd",
+                  "name": "Subtitle",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Find people, documents, contracts, and templates from one search lane. Open a library only when context matters.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 15,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "K4ucP",
+              "name": "Search Toolbar",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "lePTr",
+                  "name": "Search Bar",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 10,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "X07Uf8",
+                      "name": "Search Icon",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "XUQDC",
+                      "name": "Search Hint",
+                      "fill": "$text-secondary",
+                      "content": "Search people, documents, contracts, templates...",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tqT4k",
+                  "name": "Filter Row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "q7TjaJ",
+                      "name": "Filter People",
+                      "fill": "$accent-soft",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "im4bU",
+                          "name": "Filter Label People",
+                          "fill": "$text-primary",
+                          "content": "People",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "Djclu",
+                          "name": "Filter Chevron People",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "chevron-down",
+                          "library": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Q2kIz",
+                      "name": "Filter Documents",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "NV9Ml",
+                          "name": "Filter Label Documents",
+                          "fill": "$text-primary",
+                          "content": "Documents",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "EZDqD",
+                          "name": "Filter Chevron Documents",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "chevron-down",
+                          "library": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "TekQo",
+                      "name": "Filter Contracts",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uanBg",
+                          "name": "Filter Label Contracts",
+                          "fill": "$text-primary",
+                          "content": "Contracts",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "QSYXy",
+                          "name": "Filter Chevron Contracts",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "chevron-down",
+                          "library": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "iBcwn",
+                      "name": "Filter Templates",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Ju5rA",
+                          "name": "Filter Label Templates",
+                          "fill": "$text-primary",
+                          "content": "Templates",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "g3FxBo",
+                          "name": "Filter Chevron Templates",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "chevron-down",
+                          "library": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "DpiD3",
+              "name": "Empty Center",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": [
+                120,
+                0,
+                0,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "u5te3p",
+                  "name": "Empty Icon",
+                  "width": 56,
+                  "height": 56,
+                  "icon": "search",
+                  "library": "lucide",
+                  "fill": "$border"
+                },
+                {
+                  "type": "text",
+                  "id": "u4jtkD",
+                  "name": "Empty Title",
+                  "fill": "$text-primary",
+                  "content": "No matches found",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 22,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "U45Bw",
+                  "name": "Empty Copy",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": 420,
+                  "content": "Try a person name, document title, or contract number. Search stays the entry point for context libraries.",
+                  "textAlign": "center",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "yZR9E",
+                  "name": "Empty CTA",
+                  "fill": "$accent",
+                  "gap": 8,
+                  "padding": [
+                    12,
+                    24
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "l0YRz2",
+                      "name": "Empty CTA Label",
+                      "fill": "$on-primary",
+                      "content": "Clear filters",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "XpzK1",
+      "x": 1519,
+      "y": 0,
+      "name": "Search — Loading",
+      "clip": true,
+      "width": 1440,
+      "height": 1024,
+      "fill": "$bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "JhQQ1",
+          "name": "Sidebar",
+          "width": 264,
+          "height": "fill_container",
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "right": 1
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            22,
+            18
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "Ldfh6",
+              "name": "Brand",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "zkrcr",
+                  "name": "Brand Mark",
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "../hr-space-logo.svg",
+                    "mode": "fit"
+                  },
+                  "width": 34,
+                  "height": 34,
+                  "stroke": "$accent"
+                },
+                {
+                  "type": "frame",
+                  "id": "LUZ8c",
+                  "name": "Brand Copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ygJ8u",
+                      "name": "Brand Title",
+                      "fill": "$text-primary",
+                      "content": "HR Space",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "r6UALY",
+                      "name": "Brand Subtitle",
+                      "fill": "$text-secondary",
+                      "content": "Operations workspace",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "lIUKy",
+              "name": "Core Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "MzwwL",
+                  "name": "Core Label",
+                  "fill": "$text-secondary",
+                  "content": "WORK",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "FuX55",
+                  "name": "Nav Today",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "n7w5nK",
+                      "name": "Icon Today",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-dashboard",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "I0SOxx",
+                      "name": "Label Today",
+                      "fill": "$text-primary",
+                      "content": "Today",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dRBs0",
+                  "name": "Nav All Work",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "JCSXD",
+                      "name": "Icon All Work",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "list",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "FEyTW",
+                      "name": "Label All Work",
+                      "fill": "$text-primary",
+                      "content": "All Work",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "vQEFo",
+                  "name": "Nav Inbox",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "z9QpEz",
+                      "name": "Icon Inbox",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "inbox",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Dq7Za",
+                      "name": "Label Inbox",
+                      "fill": "$text-primary",
+                      "content": "Inbox",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "LdNos",
+                  "name": "Nav Search",
+                  "width": "fill_container",
+                  "fill": "$accent-soft",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "k1jH3",
+                      "name": "Icon Search",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$accent"
+                    },
+                    {
+                      "type": "text",
+                      "id": "B7nEbj",
+                      "name": "Label Search",
+                      "fill": "$text-primary",
+                      "content": "Search",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "f6xsK",
+              "name": "Divider",
+              "fill": "$border",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "NTtrp",
+              "name": "Library Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "wtvv8",
+                  "name": "Library Label",
+                  "fill": "$text-secondary",
+                  "content": "LIBRARIES",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "qJknq",
+                  "name": "Lib People",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "o736L",
+                      "name": "Lib Icon People",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "users",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "RxFuS",
+                      "name": "Lib Label People",
+                      "fill": "$text-primary",
+                      "content": "People",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "fEGpC",
+                  "name": "Lib Documents",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "Hf75U",
+                      "name": "Lib Icon Documents",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "YedFi",
+                      "name": "Lib Label Documents",
+                      "fill": "$text-primary",
+                      "content": "Documents",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "spHpg",
+                  "name": "Lib Contracts",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "LlT7T",
+                      "name": "Lib Icon Contracts",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "folder",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "WS1o0",
+                      "name": "Lib Label Contracts",
+                      "fill": "$text-primary",
+                      "content": "Contracts",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "QY4Fu",
+                  "name": "Lib Templates",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "DlgWQ",
+                      "name": "Lib Icon Templates",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-template",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "UsfUB",
+                      "name": "Lib Label Templates",
+                      "fill": "$text-primary",
+                      "content": "Templates",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Lwubs",
+                  "name": "Lib Reports",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "Y7R2v",
+                      "name": "Lib Icon Reports",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "activity",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "P2j2za",
+                      "name": "Lib Label Reports",
+                      "fill": "$text-primary",
+                      "content": "Reports",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Ou7Eh",
+                  "name": "Lib Admin",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "iXaTI",
+                      "name": "Lib Icon Admin",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "settings",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "NBnoF",
+                      "name": "Lib Label Admin",
+                      "fill": "$text-primary",
+                      "content": "Admin",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "jVkXj",
+              "name": "Spacer",
+              "width": "fill_container",
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "kKXbC",
+              "name": "User Chip",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                10,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "lQNIb",
+                  "name": "Avatar",
+                  "fill": "$accent-soft",
+                  "width": 28,
+                  "height": 28
+                },
+                {
+                  "type": "text",
+                  "id": "mS0dm",
+                  "name": "User Name",
+                  "fill": "$text-primary",
+                  "content": "HR Admin",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "vOYcq",
+          "name": "Main",
+          "width": 1176,
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 20,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "ZzRYI",
+              "name": "Header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "U77fi",
+                  "name": "Eyebrow",
+                  "fill": "$text-secondary",
+                  "content": "SEARCH / CONTEXT LIBRARY",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "w9wsa",
+                  "name": "Title",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Search across HR context libraries.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 30,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "ydYg7",
+                  "name": "Subtitle",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Find people, documents, contracts, and templates from one search lane. Open a library only when context matters.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 15,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "CDSF5",
+              "name": "Search Toolbar",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "nO6qi",
+                  "name": "Search Skeleton",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "ZBd4w",
+                      "name": "Search Sk Head",
+                      "fill": "$border",
+                      "width": 320,
+                      "height": 18
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "a7qKw",
+                  "name": "Filter Skeleton Row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "s85kR",
+                      "name": "Chip Sk 1",
+                      "fill": "$border",
+                      "width": 92,
+                      "height": 28
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "dhYnk",
+                      "name": "Chip Sk 2",
+                      "fill": "$border",
+                      "width": 110,
+                      "height": 28
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "Pw8sA",
+                      "name": "Chip Sk 3",
+                      "fill": "$border",
+                      "width": 100,
+                      "height": 28
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "Bwgyt",
+                      "name": "Chip Sk 4",
+                      "fill": "$border",
+                      "width": 104,
+                      "height": 28
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Em14k",
+              "name": "Loading Stack",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uXRCC",
+                  "name": "Loading Row 1",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "i7ofv",
+                      "name": "L1 A",
+                      "fill": "$border",
+                      "width": 220,
+                      "height": 18
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "UrEZ3",
+                      "name": "L1 B",
+                      "fill": "$bg",
+                      "width": 420,
+                      "height": 42,
+                      "stroke": "$border",
+                      "strokeWidth": 1
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "QkPOc",
+                  "name": "Loading Row 2",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "mcuEj",
+                      "name": "L2 A",
+                      "fill": "$border",
+                      "width": 260,
+                      "height": 18
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "MLeWg",
+                      "name": "L2 B",
+                      "fill": "$bg",
+                      "width": 420,
+                      "height": 42,
+                      "stroke": "$border",
+                      "strokeWidth": 1
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qShbp",
+                  "name": "Loading Row 3",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "EfsBb",
+                      "name": "L3 A",
+                      "fill": "$border",
+                      "width": 240,
+                      "height": 18
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "fkbKR",
+                      "name": "L3 B",
+                      "fill": "$bg",
+                      "width": 420,
+                      "height": 42,
+                      "stroke": "$border",
+                      "strokeWidth": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "themes": {
+    "mode": [
+      "light",
+      "dark"
+    ]
+  },
+  "variables": {
+    "bg": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FAFAF8",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#1A1A1A",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "surface": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#18181B",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "border": {
+      "type": "color",
+      "value": "#E2E8F0"
+    },
+    "text-primary": {
+      "type": "color",
+      "value": "#0F1112"
+    },
+    "text-secondary": {
+      "type": "color",
+      "value": "#6F7478"
+    },
+    "accent": {
+      "type": "color",
+      "value": "#00A36C"
+    },
+    "accent-soft": {
+      "type": "color",
+      "value": "#E0F5EC"
+    },
+    "accent-deep": {
+      "type": "color",
+      "value": "#007F51"
+    },
+    "danger": {
+      "type": "color",
+      "value": "#D14343"
+    },
+    "danger-soft": {
+      "type": "color",
+      "value": "#FCE4E4"
+    },
+    "warning": {
+      "type": "color",
+      "value": "#C28A1B"
+    },
+    "warning-soft": {
+      "type": "color",
+      "value": "#F8EED2"
+    },
+    "success": {
+      "type": "color",
+      "value": "#1D9A6C"
+    },
+    "success-soft": {
+      "type": "color",
+      "value": "#D1FAE5"
+    },
+    "gray": {
+      "type": "color",
+      "value": "#9CA3AF"
+    },
+    "on-primary": {
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    "status-active": {
+      "type": "color",
+      "value": "#D1FAE5"
+    },
+    "status-active-text": {
+      "type": "color",
+      "value": "#065F46"
+    },
+    "status-resigned": {
+      "type": "color",
+      "value": "#F3F4F6"
+    },
+    "status-resigned-text": {
+      "type": "color",
+      "value": "#4B5563"
+    },
+    "status-terminated": {
+      "type": "color",
+      "value": "#FEE2E2"
+    },
+    "status-terminated-text": {
+      "type": "color",
+      "value": "#991B1B"
+    },
+    "status-suspended": {
+      "type": "color",
+      "value": "#FEF3C7"
+    },
+    "status-suspended-text": {
+      "type": "color",
+      "value": "#92400E"
+    }
+  },
+  "fileToken": "b70cec39-388a-47c7-9128-b6edf37830a0"
+}

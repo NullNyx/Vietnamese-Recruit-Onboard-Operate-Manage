@@ -4,7 +4,7 @@ Provides fast, free classification for emails with obvious patterns
 (known sender domains, keyword matches in subject/snippet, attachment
 indicators). Handles ~60% of HR emails without needing LLM calls.
 
-Designed for Vietnamese HR context with bilingual keyword support.
+Designed for HR context with bilingual keyword support.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ class ClassificationRule:
     base_confidence: float = 0.7
 
 
-# ─── Vietnamese HR Classification Rules ────────────────────────────────
+# --- HR Classification Rules ────────────────────────────────
 
 CLASSIFICATION_RULES: list[ClassificationRule] = [
     # === TUYỂN DỤNG ===

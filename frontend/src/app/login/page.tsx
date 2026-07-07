@@ -46,7 +46,7 @@ export default function LoginPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <span className="text-sm font-bold text-white">V</span>
           </div>
-          <span className="text-sm font-semibold text-foreground">Vroom HR</span>
+          <span className="text-sm font-semibold text-foreground">HR Space</span>
           <h2 className="text-xl font-semibold text-[#09090B]">Đăng nhập vào Workspace</h2>
           <p className="text-sm text-[#71717A]">Hệ thống quản lý nhân sự</p>
         </div>

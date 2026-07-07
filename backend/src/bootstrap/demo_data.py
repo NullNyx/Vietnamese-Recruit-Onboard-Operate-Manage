@@ -21,7 +21,7 @@ from src.modules.employee.infrastructure.minio_client import MinIOClient
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DEMO_SUPER_ADMIN_EMAIL = "admin@vroom.local"
+DEFAULT_DEMO_SUPER_ADMIN_EMAIL = "admin@hrspace.local"
 
 
 async def _count_rows(session: AsyncSession, model: type[SQLModel]) -> int:
@@ -222,8 +222,8 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
                 check_out_at=check_out,
                 check_in_ip="192.168.1.100",
                 check_out_ip="192.168.1.100" if check_out else None,
-                check_in_user_agent="VroomHR-Demo/1.0",
-                check_out_user_agent="VroomHR-Demo/1.0" if check_out else None,
+                check_in_user_agent="HRSpace-Demo/1.0",
+                check_out_user_agent="HRSpace-Demo/1.0" if check_out else None,
                 source=AttendanceSource.WEB,
             )
             records.append(record)

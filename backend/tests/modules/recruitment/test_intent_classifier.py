@@ -245,7 +245,7 @@ class TestProcessClassificationResult:
         mock_gmail_label_service.add_label.assert_called_once_with(
             user_id=user_id,
             message_id="msg_cv",
-            label_name="VroomHR/recruitment",
+            label_name="HRSpace/recruitment",
             access_token="test_token",
         )
 

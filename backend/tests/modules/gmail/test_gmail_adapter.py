@@ -374,7 +374,7 @@ class TestListLabels:
                 200,
                 json={
                     "labels": [
-                        {"id": "Label_1", "name": "VroomHR/processed", "type": "user"},
+                        {"id": "Label_1", "name": "HRSpace/processed", "type": "user"},
                         {"id": "INBOX", "name": "INBOX", "type": "system"},
                     ]
                 },
@@ -383,7 +383,7 @@ class TestListLabels:
             result = await adapter.list_labels("token")
             assert len(result) == 2
             assert result[0].id == "Label_1"
-            assert result[0].name == "VroomHR/processed"
+            assert result[0].name == "HRSpace/processed"
             assert result[1].type == "system"
 
 
@@ -394,10 +394,10 @@ class TestCreateLabel:
         """Should create label and return label ID."""
         with respx.mock:
             respx.post(f"{GMAIL_API_BASE}labels").respond(
-                200, json={"id": "Label_new", "name": "VroomHR/test"}
+                200, json={"id": "Label_new", "name": "HRSpace/test"}
             )
 
-            result = await adapter.create_label("token", "VroomHR/test")
+            result = await adapter.create_label("token", "HRSpace/test")
             assert result == "Label_new"
 
 

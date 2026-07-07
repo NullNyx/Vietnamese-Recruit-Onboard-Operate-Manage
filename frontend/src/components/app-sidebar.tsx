@@ -40,7 +40,7 @@ export function AppSidebar({ className }: AppSidebarProps) {
             <span className="text-xs font-bold text-white">V</span>
           </div>
           {!collapsed && (
-            <span className="text-sm font-semibold tracking-tight text-foreground">Vroom</span>
+            <span className="text-sm font-semibold tracking-tight text-foreground">HR Space</span>
           )}
         </div>
 

@@ -1,12 +1,12 @@
 services:
   postgres:
     image: postgres:15
-    container_name: vroom-postgres
+    container_name: hr_space-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: vroom_hr
+      POSTGRES_DB: hr_space
     ports:
       - "5432:5432"
     volumes:
@@ -19,7 +19,7 @@ services:
 
   redis:
     image: redis:7
-    container_name: vroom-redis
+    container_name: hr_space-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -33,16 +33,16 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.local
-    container_name: vroom-backend
+    container_name: hr_space-backend
     restart: unless-stopped
     ports:
       - "8000:8000"
     env_file:
       - ./backend/.env
     environment:
-      AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/hr_space
       AUTH_REDIS_URL: redis://redis:6379/0
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/hr_space
       EMPLOYEE_MINIO_ENDPOINT: minio:9000
       RECRUITMENT_MINIO_ENDPOINT: minio:9000
     dns:
@@ -60,7 +60,7 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: vroom-minio
+    container_name: hr_space-minio
     restart: unless-stopped
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -81,7 +81,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.local
-    container_name: vroom-frontend
+    container_name: hr_space-frontend
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -94,15 +94,15 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.local
-    container_name: vroom-gmail-worker
+    container_name: hr_space-gmail-worker
     restart: unless-stopped
     command: uv run arq src.modules.gmail.worker.WorkerSettings
     env_file:
       - ./backend/.env
     environment:
-      AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/hr_space
       AUTH_REDIS_URL: redis://redis:6379/0
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/hr_space
       EMPLOYEE_MINIO_ENDPOINT: minio:9000
       RECRUITMENT_MINIO_ENDPOINT: minio:9000
     dns:
@@ -120,15 +120,15 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.local
-    container_name: vroom-onboarding-worker
+    container_name: hr_space-onboarding-worker
     restart: unless-stopped
     command: uv run arq src.modules.onboarding.worker.OnboardingWorkerSettings
     env_file:
       - ./backend/.env
     environment:
-      AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/hr_space
       AUTH_REDIS_URL: redis://redis:6379/0
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/hr_space
       EMPLOYEE_MINIO_ENDPOINT: minio:9000
       RECRUITMENT_MINIO_ENDPOINT: minio:9000
     dns:

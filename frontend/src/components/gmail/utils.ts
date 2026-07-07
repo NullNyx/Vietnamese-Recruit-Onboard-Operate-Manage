@@ -187,12 +187,12 @@ LABEL_COLORS["processed"] = {
 // ---------------------------------------------------------------------------
 
 /**
- * Extract category from a VroomHR label ID.
- * E.g. "VroomHR/recruitment" → "recruitment"
- * Returns null if the label doesn't match the VroomHR pattern.
+ * Extract category from a HRSpace label ID.
+ * E.g. "HRSpace/recruitment" → "recruitment"
+ * Returns null if the label doesn't match the HRSpace pattern.
  */
 export function getLabelCategory(labelId: string): string | null {
-  const match = labelId.match(/^VroomHR\/(.+)$/);
+  const match = labelId.match(/^HRSpace\/(.+)$/);
   return match ? match[1] : null;
 }
 

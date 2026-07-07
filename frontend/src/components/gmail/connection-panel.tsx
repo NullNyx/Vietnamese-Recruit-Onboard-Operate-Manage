@@ -154,7 +154,7 @@ export function ConnectionPanel({
             Chưa kết nối Gmail
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Kết nối tài khoản Gmail để đọc và gửi email trực tiếp từ Vroom HR.
+            Kết nối tài khoản Gmail để đọc và gửi email trực tiếp từ HR Space.
           </p>
         </div>
         <button

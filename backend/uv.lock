@@ -2452,7 +2452,7 @@ wheels = [
 ]
 
 [[package]]
-name = "vroom-hr-backend"
+name = "hr-space-backend"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

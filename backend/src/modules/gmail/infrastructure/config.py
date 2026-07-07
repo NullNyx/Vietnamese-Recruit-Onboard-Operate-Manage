@@ -29,7 +29,7 @@ class GmailSettings(BaseSettings):
         max_attachment_size_bytes: Maximum allowed attachment size in bytes.
         max_attachments_per_email: Maximum attachments to process per email.
         allowed_mime_types: List of MIME types accepted for attachments.
-        label_prefix: Namespace prefix for VroomHR Gmail labels.
+        label_prefix: Namespace prefix for HRSpace Gmail labels.
         required_labels: Label names (without prefix) to create on connection.
         classification_batch_concurrency: Max simultaneous AI classification calls.
         classification_request_timeout_seconds: Overall endpoint time budget in seconds.
@@ -72,7 +72,7 @@ class GmailSettings(BaseSettings):
     )
 
     # Labels
-    label_prefix: str = Field(default="VroomHR/")
+    label_prefix: str = Field(default="HRSpace/")
     required_labels: list[str] = Field(
         default=[
             "processed",

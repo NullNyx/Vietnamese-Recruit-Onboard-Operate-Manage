@@ -428,7 +428,7 @@ class TestPasswordLoginEndpoint:
 
         user = MagicMock(spec=User)
         user.id = uuid4()
-        user.email = "admin@vroom.local"
+        user.email = "admin@hrspace.local"
         user.name = "Admin"
         user.role = UserRole.HR_ADMIN
         user.password_hash = PasswordService.hash_password("password123")
@@ -457,13 +457,13 @@ class TestPasswordLoginEndpoint:
 
         client = TestClient(app, follow_redirects=False)
         response = client.post("/api/auth/login", json={
-            "email": "admin@vroom.local",
+            "email": "admin@hrspace.local",
             "password": "password123",
         })
 
         assert response.status_code == 200
         data = response.json()
-        assert data["email"] == "admin@vroom.local"
+        assert data["email"] == "admin@hrspace.local"
 
     def test_returns_401_on_wrong_password(self, app, mock_session_with_user):
         """Should return 401 on wrong password."""
@@ -472,7 +472,7 @@ class TestPasswordLoginEndpoint:
 
         client = TestClient(app, follow_redirects=False)
         response = client.post("/api/auth/login", json={
-            "email": "admin@vroom.local",
+            "email": "admin@hrspace.local",
             "password": "wrongpassword",
         })
 
@@ -491,7 +491,7 @@ class TestPasswordLoginEndpoint:
 
         client = TestClient(app, follow_redirects=False)
         response = client.post("/api/auth/login", json={
-            "email": "unknown@vroom.local",
+            "email": "unknown@hrspace.local",
             "password": "anything",
         })
 

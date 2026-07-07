@@ -823,7 +823,7 @@ class GmailAdapter:
 
         Args:
             access_token: OAuth2 access token.
-            label_name: The display name for the label (e.g., "VroomHR/processed").
+            label_name: The display name for the label (e.g., "HRSpace/processed").
 
         Returns:
             The Gmail label ID of the created label.

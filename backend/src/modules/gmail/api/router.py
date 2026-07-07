@@ -373,9 +373,9 @@ async def remove_label(
     label_service: LabelServiceDep,
     connection_service: ConnectionServiceDep,
 ) -> dict[str, str]:
-    """Remove a VroomHR label from an email message.
+    """Remove a HRSpace label from an email message.
 
-    Only labels within the VroomHR/ namespace can be removed.
+    Only labels within the HRSpace/ namespace can be removed.
     Requires an active Gmail connection.
 
     Args:

@@ -1,4 +1,4 @@
-"""AI Assistant module for Vroom HR.
+"""AI Assistant module for HR Space.
 
 Standalone orchestration module (ADR-0004) providing a conversational
 AI Assistant for HR administrators. Uses tool-calling (ADR-0003) with

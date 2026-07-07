@@ -1,0 +1,5636 @@
+{
+  "version": "2.14",
+  "children": [
+    {
+      "type": "frame",
+      "id": "n0001",
+      "x": 0,
+      "y": 0,
+      "name": "03 Inbox — Unread",
+      "clip": true,
+      "width": 1440,
+      "height": 1024,
+      "fill": "$bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "R3XSCX",
+          "name": "Sidebar",
+          "width": 264,
+          "height": "fill_container",
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "right": 1
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            22,
+            18
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "yVWYI",
+              "name": "Brand",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "P5HALs",
+                  "name": "Brand Mark",
+                  "fill": "$border",
+                  "width": 34,
+                  "height": 34
+                },
+                {
+                  "type": "frame",
+                  "id": "vBMuW",
+                  "name": "Brand Copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "frOoa",
+                      "name": "Brand Title",
+                      "fill": "#0F1112",
+                      "content": "HR Space",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "bM957",
+                      "name": "Brand Subtitle",
+                      "fill": "#6F7478",
+                      "content": "Operations workspace",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "zxd3k",
+              "name": "Core Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "D0Zi7",
+                  "name": "Core Label",
+                  "fill": "#6F7478",
+                  "content": "WORK",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "eFeTs",
+                  "name": "Nav Today",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "LFJVO",
+                      "name": "Icon Today",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-dashboard",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "SoVj6",
+                      "name": "Label Today",
+                      "fill": "#0F1112",
+                      "content": "Today",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "WlkxF",
+                  "name": "Nav All Work",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "ZnGlU",
+                      "name": "Icon All Work",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "list",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ssRgt",
+                      "name": "Label All Work",
+                      "fill": "#0F1112",
+                      "content": "All Work",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "y7EsH",
+                  "name": "Nav Inbox",
+                  "width": "fill_container",
+                  "fill": "#E0F5EC",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "qQPj3",
+                      "name": "Icon Inbox",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "inbox",
+                      "library": "lucide",
+                      "fill": "#00A36C"
+                    },
+                    {
+                      "type": "text",
+                      "id": "c13un",
+                      "name": "Label Inbox",
+                      "fill": "#0F1112",
+                      "content": "Inbox",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wTug5",
+                  "name": "Nav Search",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "iqQkc",
+                      "name": "Icon Search",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "wNJhf",
+                      "name": "Label Search",
+                      "fill": "#0F1112",
+                      "content": "Search",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "AjMd7",
+              "name": "Divider",
+              "fill": "$border",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "zMaYJ",
+              "name": "Library Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "t7dVk",
+                  "name": "Library Label",
+                  "fill": "#6F7478",
+                  "content": "LIBRARIES",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "s4iEi",
+                  "name": "Lib People",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "VfKri",
+                      "name": "Lib Icon People",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "users",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "oP0zF",
+                      "name": "Lib Label People",
+                      "fill": "#0F1112",
+                      "content": "People",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "fe0JI",
+                  "name": "Lib Documents",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "cYmsj",
+                      "name": "Lib Icon Documents",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Db0wf",
+                      "name": "Lib Label Documents",
+                      "fill": "#0F1112",
+                      "content": "Documents",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "XpsvO",
+                  "name": "Lib Contracts",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "IMdG4",
+                      "name": "Lib Icon Contracts",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "folder",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "T4D4v",
+                      "name": "Lib Label Contracts",
+                      "fill": "#0F1112",
+                      "content": "Contracts",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "zXA3U",
+                  "name": "Lib Templates",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "uqoDU",
+                      "name": "Lib Icon Templates",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-template",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Q5Vrhu",
+                      "name": "Lib Label Templates",
+                      "fill": "#0F1112",
+                      "content": "Templates",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "LqNC5",
+                  "name": "Lib Reports",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "VQiI3",
+                      "name": "Lib Icon Reports",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "activity",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "itzKw",
+                      "name": "Lib Label Reports",
+                      "fill": "#0F1112",
+                      "content": "Reports",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ReNSt",
+                  "name": "Lib Admin",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "GVMO3",
+                      "name": "Lib Icon Admin",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "settings",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "bR2Pd",
+                      "name": "Lib Label Admin",
+                      "fill": "#0F1112",
+                      "content": "Admin",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "RPOXY",
+              "name": "Spacer",
+              "width": "fill_container",
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "xr4Sw",
+              "name": "User Chip",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                10,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "Bu7gq",
+                  "name": "Avatar",
+                  "fill": "#E0F5EC",
+                  "width": 28,
+                  "height": 28
+                },
+                {
+                  "type": "text",
+                  "id": "oXrzD",
+                  "name": "User Name",
+                  "fill": "#0F1112",
+                  "content": "HR Admin",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "inbx-main-unread",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 20,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "inbx-hdr-unread",
+              "name": "Header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "inbx-eb-unread",
+                  "name": "Eyebrow",
+                  "fill": "$text-secondary",
+                  "content": "INBOX / INTAKE",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "inbx-tit-unread",
+                  "name": "Title",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Inbox",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 30,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "inbx-sub-unread",
+                  "name": "Subtitle",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Raw intake awaiting triage — classify, link context, or convert to work items.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 15,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "inbx-unread-tabs",
+              "name": "View Tabs",
+              "fill": "$text-secondary",
+              "content": "View:  All  |  Untriaged  |  Triaged  |  Dismissed",
+              "fontFamily": "IBM Plex Mono",
+              "fontSize": 11,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "inbx-unread-row-1",
+              "name": "Row New Passport scan — Le Minh",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 14,
+              "padding": [
+                14,
+                18
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "inbx-unread-row-1-checkbox",
+                  "name": "Checkbox",
+                  "width": 18,
+                  "height": 18,
+                  "fill": "$surface",
+                  "stroke": "$text-secondary",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "inbx-unread-row-1-source-icon",
+                  "name": "Source Icon Onboarding Docs — Phạm Văn D",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "file",
+                  "library": "lucide",
+                  "fill": "$text-secondary"
+                },
+                {
+                  "type": "frame",
+                  "id": "inbx-unread-row-1-content",
+                  "name": "Content Onboarding Docs — Phạm Văn D",
+                  "width": 400,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "inbx-unread-row-1-title",
+                      "name": "Item Title New Passport scan — Le Minh",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Passport scan — Le Minh",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "inbx-unread-row-1-requester",
+                      "name": "Requester New Passport scan — Le Minh",
+                      "fill": "$text-secondary",
+                      "content": "From: HR inbox",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "inbx-unread-row-1-spacer",
+                  "name": "Spacer",
+                  "width": "fill_container",
+                  "height": "fit_content(0)"
+                },
+                {
+                  "type": "frame",
+                  "id": "inbx-unread-row-1-tag",
+                  "name": "Tag Document",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "inbx-unread-row-1-tag-icon",
+                      "name": "Tag Icon Document",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "n0240",
+                      "name": "Tag Label Document",
+                      "fill": "$text-secondary",
+                      "content": "Document",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "n0241",
+                  "name": "Time New Passport scan — Le Minh",
+                  "fill": "$text-secondary",
+                  "content": "2m ago",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "n0242",
+                  "name": "Status Onboarding Docs — Phạm Văn D",
+                  "fill": "$warning-soft",
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "n0243",
+                      "name": "Dot Onboarding Docs — Phạm Văn D",
+                      "fill": "$warning",
+                      "width": 6,
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "n0244",
+                      "name": "Status Label Onboarding Docs — Phạm Văn D",
+                      "fill": "#000000",
+                      "content": "New",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n0245",
+                  "name": "Actions Onboarding Docs — Phạm Văn D",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "n0246",
+                      "name": "Action Reclassify New Passport scan — Le Minh",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n0247",
+                          "name": "Action Label Reclassify New Passport scan — Le Minh",
+                          "fill": "$text-primary",
+                          "content": "Classify",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n0248",
+                      "name": "Action Link New Passport scan — Le Minh",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n0249",
+                          "name": "Action Label Link New Passport scan — Le Minh",
+                          "fill": "$text-primary",
+                          "content": "Link",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n0250",
+                      "name": "Action → Work New Passport scan — Le Minh",
+                      "fill": "$accent",
+                      "stroke": "$accent",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n0251",
+                          "name": "Action Label → Work New Passport scan — Le Minh",
+                          "fill": "$surface",
+                          "content": "→ Work",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n0252",
+                      "name": "Action Dismiss New Passport scan — Le Minh",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n0253",
+                          "name": "Action Label Dismiss New Passport scan — Le Minh",
+                          "fill": "$text-primary",
+                          "content": "Dismiss",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "inbx-unread-row-2",
+              "name": "Row New Contract addendum — Pham Lan",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 14,
+              "padding": [
+                14,
+                18
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "l7SgBX",
+                  "name": "Checkbox",
+                  "width": 18,
+                  "height": 18,
+                  "fill": "$surface",
+                  "stroke": "$text-secondary",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "h8j0Zn",
+                  "name": "Source Icon Onboarding Docs — Phạm Văn D",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "file",
+                  "library": "lucide",
+                  "fill": "$text-secondary"
+                },
+                {
+                  "type": "frame",
+                  "id": "KeuPI",
+                  "name": "Content Onboarding Docs — Phạm Văn D",
+                  "width": 400,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "H8T9PR",
+                      "name": "Item Title New Contract addendum — Pham Lan",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Contract addendum — Pham Lan",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "mWT8D",
+                      "name": "Requester New Contract addendum — Pham Lan",
+                      "fill": "$text-secondary",
+                      "content": "From: hr@hrspace.local",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "A6ZeW",
+                  "name": "Spacer",
+                  "width": "fill_container",
+                  "height": "fit_content(0)"
+                },
+                {
+                  "type": "frame",
+                  "id": "smkZv",
+                  "name": "Tag Document",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "mV3a3",
+                      "name": "Tag Icon Document",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "LEbm4",
+                      "name": "Tag Label Document",
+                      "fill": "$text-secondary",
+                      "content": "Document",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "DRDTc",
+                  "name": "Time New Contract addendum — Pham Lan",
+                  "fill": "$text-secondary",
+                  "content": "9m ago",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "NZqpu",
+                  "name": "Status Onboarding Docs — Phạm Văn D",
+                  "fill": "$warning-soft",
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "EZkOO",
+                      "name": "Dot Onboarding Docs — Phạm Văn D",
+                      "fill": "$warning",
+                      "width": 6,
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "k3qpQp",
+                      "name": "Status Label Onboarding Docs — Phạm Văn D",
+                      "fill": "#000000",
+                      "content": "New",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Pt3xk",
+                  "name": "Actions Onboarding Docs — Phạm Văn D",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "kd7fm",
+                      "name": "Action Reclassify New Contract addendum — Pham Lan",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "h3qjY",
+                          "name": "Action Label Reclassify New Contract addendum — Pham Lan",
+                          "fill": "$text-primary",
+                          "content": "Classify",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "EHZFU",
+                      "name": "Action Link New Contract addendum — Pham Lan",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "L5fCSO",
+                          "name": "Action Label Link New Contract addendum — Pham Lan",
+                          "fill": "$text-primary",
+                          "content": "Link",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "U6X1R",
+                      "name": "Action → Work New Contract addendum — Pham Lan",
+                      "fill": "$accent",
+                      "stroke": "$accent",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n7eoLQ",
+                          "name": "Action Label → Work New Contract addendum — Pham Lan",
+                          "fill": "$surface",
+                          "content": "→ Work",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JKQNG",
+                      "name": "Action Dismiss New Contract addendum — Pham Lan",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "E2XrE",
+                          "name": "Action Label Dismiss New Contract addendum — Pham Lan",
+                          "fill": "$text-primary",
+                          "content": "Dismiss",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "inbx-unread-row-3",
+              "name": "Row New ID scan — Tran Ha",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 14,
+              "padding": [
+                14,
+                18
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "KAFAA",
+                  "name": "Checkbox",
+                  "width": 18,
+                  "height": 18,
+                  "fill": "$surface",
+                  "stroke": "$text-secondary",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "Im7rm",
+                  "name": "Source Icon Onboarding Docs — Phạm Văn D",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "file",
+                  "library": "lucide",
+                  "fill": "$text-secondary"
+                },
+                {
+                  "type": "frame",
+                  "id": "DYXIn",
+                  "name": "Content Onboarding Docs — Phạm Văn D",
+                  "width": 400,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "f647ZN",
+                      "name": "Item Title New ID scan — Tran Ha",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "ID scan — Tran Ha",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "qIxkR",
+                      "name": "Requester New ID scan — Tran Ha",
+                      "fill": "$text-secondary",
+                      "content": "From: intake form",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "j8Kdtd",
+                  "name": "Spacer",
+                  "width": "fill_container",
+                  "height": "fit_content(0)"
+                },
+                {
+                  "type": "frame",
+                  "id": "tO0Kt",
+                  "name": "Tag Document",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "mRuF9",
+                      "name": "Tag Icon Document",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "bzIMd",
+                      "name": "Tag Label Document",
+                      "fill": "$text-secondary",
+                      "content": "Document",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "s12bNT",
+                  "name": "Time New ID scan — Tran Ha",
+                  "fill": "$text-secondary",
+                  "content": "18m ago",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "UCXBC",
+                  "name": "Status Onboarding Docs — Phạm Văn D",
+                  "fill": "$warning-soft",
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "koB0p",
+                      "name": "Dot Onboarding Docs — Phạm Văn D",
+                      "fill": "$warning",
+                      "width": 6,
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "q8Zaw",
+                      "name": "Status Label Onboarding Docs — Phạm Văn D",
+                      "fill": "#000000",
+                      "content": "New",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qQ5Ul",
+                  "name": "Actions Onboarding Docs — Phạm Văn D",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Fojub",
+                      "name": "Action Reclassify New ID scan — Tran Ha",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "o7Qzov",
+                          "name": "Action Label Reclassify New ID scan — Tran Ha",
+                          "fill": "$text-primary",
+                          "content": "Classify",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "iO7zu",
+                      "name": "Action Link New ID scan — Tran Ha",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tq1cv",
+                          "name": "Action Label Link New ID scan — Tran Ha",
+                          "fill": "$text-primary",
+                          "content": "Link",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "VJA5k",
+                      "name": "Action → Work New ID scan — Tran Ha",
+                      "fill": "$accent",
+                      "stroke": "$accent",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "PRX93",
+                          "name": "Action Label → Work New ID scan — Tran Ha",
+                          "fill": "$surface",
+                          "content": "→ Work",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "IfdBJ",
+                      "name": "Action Dismiss New ID scan — Tran Ha",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "iHi6n",
+                          "name": "Action Label Dismiss New ID scan — Tran Ha",
+                          "fill": "$text-primary",
+                          "content": "Dismiss",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "n0179",
+      "x": 1520,
+      "y": 0,
+      "name": "03 Inbox — Triaged",
+      "clip": true,
+      "width": 1440,
+      "height": 1024,
+      "fill": "$bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "SbFcj",
+          "name": "Sidebar",
+          "width": 264,
+          "height": "fill_container",
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "right": 1
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            22,
+            18
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "Da9LF",
+              "name": "Brand",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "C7aQc",
+                  "name": "Brand Mark",
+                  "fill": "$border",
+                  "width": 34,
+                  "height": 34
+                },
+                {
+                  "type": "frame",
+                  "id": "BB17q",
+                  "name": "Brand Copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "pRZaJ",
+                      "name": "Brand Title",
+                      "fill": "#0F1112",
+                      "content": "HR Space",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "p2UQww",
+                      "name": "Brand Subtitle",
+                      "fill": "#6F7478",
+                      "content": "Operations workspace",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "uz2hs",
+              "name": "Core Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "s9AIe",
+                  "name": "Core Label",
+                  "fill": "#6F7478",
+                  "content": "WORK",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "GmTIX",
+                  "name": "Nav Today",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "L6xwf",
+                      "name": "Icon Today",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-dashboard",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "bMPpx",
+                      "name": "Label Today",
+                      "fill": "#0F1112",
+                      "content": "Today",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "M0oP2Z",
+                  "name": "Nav All Work",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "O0HnXy",
+                      "name": "Icon All Work",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "list",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "QvIJ9",
+                      "name": "Label All Work",
+                      "fill": "#0F1112",
+                      "content": "All Work",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jhulM",
+                  "name": "Nav Inbox",
+                  "width": "fill_container",
+                  "fill": "#E0F5EC",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "wkjmL",
+                      "name": "Icon Inbox",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "inbox",
+                      "library": "lucide",
+                      "fill": "#00A36C"
+                    },
+                    {
+                      "type": "text",
+                      "id": "zoM9B",
+                      "name": "Label Inbox",
+                      "fill": "#0F1112",
+                      "content": "Inbox",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "LWcKh",
+                  "name": "Nav Search",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "o87MzW",
+                      "name": "Icon Search",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "rrU94",
+                      "name": "Label Search",
+                      "fill": "#0F1112",
+                      "content": "Search",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "v9JpNE",
+              "name": "Divider",
+              "fill": "$border",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "P5Ruq",
+              "name": "Library Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "PHIwN",
+                  "name": "Library Label",
+                  "fill": "#6F7478",
+                  "content": "LIBRARIES",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "j9qQd9",
+                  "name": "Lib People",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "m1kD5",
+                      "name": "Lib Icon People",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "users",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "bdASn",
+                      "name": "Lib Label People",
+                      "fill": "#0F1112",
+                      "content": "People",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jqqEA",
+                  "name": "Lib Documents",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "y3He7h",
+                      "name": "Lib Icon Documents",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "R5M3h",
+                      "name": "Lib Label Documents",
+                      "fill": "#0F1112",
+                      "content": "Documents",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "fZAE1",
+                  "name": "Lib Contracts",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "UYTZm",
+                      "name": "Lib Icon Contracts",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "folder",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "hrTAS",
+                      "name": "Lib Label Contracts",
+                      "fill": "#0F1112",
+                      "content": "Contracts",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "S64bx",
+                  "name": "Lib Templates",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "iK7J8",
+                      "name": "Lib Icon Templates",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-template",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "obwYO",
+                      "name": "Lib Label Templates",
+                      "fill": "#0F1112",
+                      "content": "Templates",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "FEo2o",
+                  "name": "Lib Reports",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "ZOVxn",
+                      "name": "Lib Icon Reports",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "activity",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "vVdhi",
+                      "name": "Lib Label Reports",
+                      "fill": "#0F1112",
+                      "content": "Reports",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pzqsQ",
+                  "name": "Lib Admin",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "l5qg3Z",
+                      "name": "Lib Icon Admin",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "settings",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "DRmAg",
+                      "name": "Lib Label Admin",
+                      "fill": "#0F1112",
+                      "content": "Admin",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "TXkc7",
+              "name": "Spacer",
+              "width": "fill_container",
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "bOMBX",
+              "name": "User Chip",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                10,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "Znrn7",
+                  "name": "Avatar",
+                  "fill": "#E0F5EC",
+                  "width": 28,
+                  "height": 28
+                },
+                {
+                  "type": "text",
+                  "id": "ZQEa3",
+                  "name": "User Name",
+                  "fill": "#0F1112",
+                  "content": "HR Admin",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "n0225",
+          "name": "Main",
+          "width": 1176,
+          "height": 1024,
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "n0226",
+              "name": "Header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "n0227",
+                  "name": "Eyebrow",
+                  "fill": "$text-secondary",
+                  "content": "INBOX / INTAKE",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "n0228",
+                  "name": "Title",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Inbox",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 30,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "n0229",
+                  "name": "Subtitle",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Items already processed — link, convert, or reopen.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 15,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "n0230",
+              "name": "View Tabs",
+              "fill": "$text-secondary",
+              "content": "View:  All  |  Untriaged  |  Triaged  |  Dismissed",
+              "fontFamily": "IBM Plex Mono",
+              "fontSize": 11,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "dXf4W",
+              "name": "Row Onboarding Docs — Phạm Văn D",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 14,
+              "padding": [
+                14,
+                18
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Eu3Li",
+                  "name": "Checkbox",
+                  "width": 18,
+                  "height": 18,
+                  "fill": "$surface",
+                  "stroke": "$text-secondary",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "Wpaj5",
+                  "name": "Source Icon Onboarding Docs — Phạm Văn D",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "file",
+                  "library": "lucide",
+                  "fill": "$text-secondary"
+                },
+                {
+                  "type": "frame",
+                  "id": "CKVhD",
+                  "name": "Content Onboarding Docs — Phạm Văn D",
+                  "width": 400,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "R83pGl",
+                      "name": "Item Title Onboarding Docs — Phạm Văn D",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Onboarding Docs — Phạm Văn D",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ucgh5",
+                      "name": "Requester Onboarding Docs — Phạm Văn D",
+                      "fill": "$text-secondary",
+                      "content": "From: HR Staff",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "E7nEq",
+                  "name": "Spacer",
+                  "width": "fill_container",
+                  "height": "fit_content(0)"
+                },
+                {
+                  "type": "frame",
+                  "id": "m6qcD",
+                  "name": "Tag Document",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "c1UVi",
+                      "name": "Tag Icon Document",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "wk9Kg",
+                      "name": "Tag Label Document",
+                      "fill": "$text-secondary",
+                      "content": "Document",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "uISJl",
+                  "name": "Time Onboarding Docs — Phạm Văn D",
+                  "fill": "$text-secondary",
+                  "content": "1d ago",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "xcS8C",
+                  "name": "Status Onboarding Docs — Phạm Văn D",
+                  "fill": "$accent-soft",
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "B1OrO",
+                      "name": "Dot Onboarding Docs — Phạm Văn D",
+                      "fill": "$accent",
+                      "width": 6,
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "lKCsm",
+                      "name": "Status Label Onboarding Docs — Phạm Văn D",
+                      "fill": "$accent-deep",
+                      "content": "Triaged",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qOkXN",
+                  "name": "Actions Onboarding Docs — Phạm Văn D",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "QzebG",
+                      "name": "Action Reclassify Onboarding Docs — Phạm Văn D",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "boDUH",
+                          "name": "Action Label Reclassify Onboarding Docs — Phạm Văn D",
+                          "fill": "$text-primary",
+                          "content": "Reclassify",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n9ED5",
+                      "name": "Action Link Onboarding Docs — Phạm Văn D",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "M0ssBF",
+                          "name": "Action Label Link Onboarding Docs — Phạm Văn D",
+                          "fill": "$text-primary",
+                          "content": "Link",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "T63U3",
+                      "name": "Action → Work Onboarding Docs — Phạm Văn D",
+                      "fill": "$accent",
+                      "stroke": "$accent",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "VxZz8",
+                          "name": "Action Label → Work Onboarding Docs — Phạm Văn D",
+                          "fill": "$surface",
+                          "content": "→ Work",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZqfCG",
+                      "name": "Action Dismiss Onboarding Docs — Phạm Văn D",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mXZWZ",
+                          "name": "Action Label Dismiss Onboarding Docs — Phạm Văn D",
+                          "fill": "$text-primary",
+                          "content": "Dismiss",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "n0254",
+              "name": "Row Request for Extension",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 14,
+              "padding": [
+                14,
+                18
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "n0255",
+                  "name": "Checkbox",
+                  "width": 18,
+                  "height": 18,
+                  "fill": "$surface",
+                  "stroke": "$text-secondary",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "n0256",
+                  "name": "Source Icon Request for Extension",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "mail",
+                  "library": "lucide",
+                  "fill": "$text-secondary"
+                },
+                {
+                  "type": "frame",
+                  "id": "n0257",
+                  "name": "Content Request for Extension",
+                  "width": 400,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "n0258",
+                      "name": "Item Title Request for Extension",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Request for Extension",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "n0259",
+                      "name": "Requester Request for Extension",
+                      "fill": "$text-secondary",
+                      "content": "From: employee@company.com",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n0260",
+                  "name": "Spacer",
+                  "width": "fill_container",
+                  "height": "fit_content(0)"
+                },
+                {
+                  "type": "frame",
+                  "id": "n0261",
+                  "name": "Tag Email",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "n0262",
+                      "name": "Tag Icon Email",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "mail",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "n0263",
+                      "name": "Tag Label Email",
+                      "fill": "$text-secondary",
+                      "content": "Email",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "n0264",
+                  "name": "Time Request for Extension",
+                  "fill": "$text-secondary",
+                  "content": "3d ago",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "n0265",
+                  "name": "Status Request for Extension",
+                  "fill": "$accent-soft",
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "n0266",
+                      "name": "Dot Request for Extension",
+                      "fill": "$accent",
+                      "width": 6,
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "n0267",
+                      "name": "Status Label Request for Extension",
+                      "fill": "$accent-deep",
+                      "content": "Triaged",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n0268",
+                  "name": "Actions Request for Extension",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "n0269",
+                      "name": "Action Reclassify Request for Extension",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n0270",
+                          "name": "Action Label Reclassify Request for Extension",
+                          "fill": "$text-primary",
+                          "content": "Reclassify",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n0271",
+                      "name": "Action Link Request for Extension",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n0272",
+                          "name": "Action Label Link Request for Extension",
+                          "fill": "$text-primary",
+                          "content": "Link",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n0273",
+                      "name": "Action → Work Request for Extension",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n0274",
+                          "name": "Action Label → Work Request for Extension",
+                          "fill": "$text-primary",
+                          "content": "→ Work",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n0275",
+                      "name": "Action Dismiss Request for Extension",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n0276",
+                          "name": "Action Label Dismiss Request for Extension",
+                          "fill": "$text-primary",
+                          "content": "Dismiss",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "n0277",
+              "name": "Row Signed NDA Returned",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 14,
+              "padding": [
+                14,
+                18
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "n0278",
+                  "name": "Checkbox",
+                  "width": 18,
+                  "height": 18,
+                  "fill": "$surface",
+                  "stroke": "$text-secondary",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "n0279",
+                  "name": "Source Icon Signed NDA Returned",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "file",
+                  "library": "lucide",
+                  "fill": "$text-secondary"
+                },
+                {
+                  "type": "frame",
+                  "id": "n0280",
+                  "name": "Content Signed NDA Returned",
+                  "width": 400,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "n0281",
+                      "name": "Item Title Signed NDA Returned",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Signed NDA Returned",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "n0282",
+                      "name": "Requester Signed NDA Returned",
+                      "fill": "$text-secondary",
+                      "content": "From: candidate@email.com",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n0283",
+                  "name": "Spacer",
+                  "width": "fill_container",
+                  "height": "fit_content(0)"
+                },
+                {
+                  "type": "frame",
+                  "id": "n0284",
+                  "name": "Tag Document",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "n0285",
+                      "name": "Tag Icon Document",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "n0286",
+                      "name": "Tag Label Document",
+                      "fill": "$text-secondary",
+                      "content": "Document",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "n0287",
+                  "name": "Time Signed NDA Returned",
+                  "fill": "$text-secondary",
+                  "content": "4d ago",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "n0288",
+                  "name": "Status Signed NDA Returned",
+                  "fill": "$accent-soft",
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "n0289",
+                      "name": "Dot Signed NDA Returned",
+                      "fill": "$accent",
+                      "width": 6,
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "n0290",
+                      "name": "Status Label Signed NDA Returned",
+                      "fill": "$accent-deep",
+                      "content": "Triaged",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n0291",
+                  "name": "Actions Signed NDA Returned",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "n0292",
+                      "name": "Action Reclassify Signed NDA Returned",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n0293",
+                          "name": "Action Label Reclassify Signed NDA Returned",
+                          "fill": "$text-primary",
+                          "content": "Reclassify",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n0294",
+                      "name": "Action Link Signed NDA Returned",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n0295",
+                          "name": "Action Label Link Signed NDA Returned",
+                          "fill": "$text-primary",
+                          "content": "Link",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n0296",
+                      "name": "Action → Work Signed NDA Returned",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n0297",
+                          "name": "Action Label → Work Signed NDA Returned",
+                          "fill": "$text-primary",
+                          "content": "→ Work",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n0298",
+                      "name": "Action Dismiss Signed NDA Returned",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n0299",
+                          "name": "Action Label Dismiss Signed NDA Returned",
+                          "fill": "$text-primary",
+                          "content": "Dismiss",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "n0300",
+              "name": "Row Resume Attached — Hoàng Thị E",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 14,
+              "padding": [
+                14,
+                18
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "n0301",
+                  "name": "Checkbox",
+                  "width": 18,
+                  "height": 18,
+                  "fill": "$surface",
+                  "stroke": "$text-secondary",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "n0302",
+                  "name": "Source Icon Resume Attached — Hoàng Thị E",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "mail",
+                  "library": "lucide",
+                  "fill": "$text-secondary"
+                },
+                {
+                  "type": "frame",
+                  "id": "n0303",
+                  "name": "Content Resume Attached — Hoàng Thị E",
+                  "width": 400,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "n0304",
+                      "name": "Item Title Resume Attached — Hoàng Thị E",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Resume Attached — Hoàng Thị E",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "n0305",
+                      "name": "Requester Resume Attached — Hoàng Thị E",
+                      "fill": "$text-secondary",
+                      "content": "From: agency@recruit.vn",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n0306",
+                  "name": "Spacer",
+                  "width": "fill_container",
+                  "height": "fit_content(0)"
+                },
+                {
+                  "type": "frame",
+                  "id": "n0307",
+                  "name": "Tag Email",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "n0308",
+                      "name": "Tag Icon Email",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "mail",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "n0309",
+                      "name": "Tag Label Email",
+                      "fill": "$text-secondary",
+                      "content": "Email",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "n0310",
+                  "name": "Time Resume Attached — Hoàng Thị E",
+                  "fill": "$text-secondary",
+                  "content": "5d ago",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "n0311",
+                  "name": "Status Resume Attached — Hoàng Thị E",
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "n0312",
+                      "name": "Dot Resume Attached — Hoàng Thị E",
+                      "fill": "$border",
+                      "width": 6,
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "n0313",
+                      "name": "Status Label Resume Attached — Hoàng Thị E",
+                      "fill": "$text-secondary",
+                      "content": "Dismissed",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n0314",
+                  "name": "Actions Resume Attached — Hoàng Thị E",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "n0315",
+                      "name": "Action Undo Resume Attached — Hoàng Thị E",
+                      "fill": "$surface",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n0316",
+                          "name": "Action Label Undo Resume Attached — Hoàng Thị E",
+                          "fill": "$text-primary",
+                          "content": "Undo",
+                          "fontFamily": "IBM Plex Sans",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "n0317",
+      "x": 3040,
+      "y": 0,
+      "name": "03 Inbox — Empty",
+      "clip": true,
+      "width": 1440,
+      "height": 1024,
+      "fill": "$bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "pkvIT",
+          "name": "Sidebar",
+          "width": 264,
+          "height": "fill_container",
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "right": 1
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            22,
+            18
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "U1LiK",
+              "name": "Brand",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "YtJSp",
+                  "name": "Brand Mark",
+                  "fill": "$border",
+                  "width": 34,
+                  "height": 34
+                },
+                {
+                  "type": "frame",
+                  "id": "i1pP9q",
+                  "name": "Brand Copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "AaZDT",
+                      "name": "Brand Title",
+                      "fill": "#0F1112",
+                      "content": "HR Space",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "sV3M8",
+                      "name": "Brand Subtitle",
+                      "fill": "#6F7478",
+                      "content": "Operations workspace",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "c8WnrP",
+              "name": "Core Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "t5evm",
+                  "name": "Core Label",
+                  "fill": "#6F7478",
+                  "content": "WORK",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "SWh8f",
+                  "name": "Nav Today",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "QpBg1",
+                      "name": "Icon Today",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-dashboard",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "c7wRGJ",
+                      "name": "Label Today",
+                      "fill": "#0F1112",
+                      "content": "Today",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "cgrgv",
+                  "name": "Nav All Work",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "E7ANH",
+                      "name": "Icon All Work",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "list",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "HEvH8",
+                      "name": "Label All Work",
+                      "fill": "#0F1112",
+                      "content": "All Work",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qd57F",
+                  "name": "Nav Inbox",
+                  "width": "fill_container",
+                  "fill": "#E0F5EC",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "VRG5S",
+                      "name": "Icon Inbox",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "inbox",
+                      "library": "lucide",
+                      "fill": "#00A36C"
+                    },
+                    {
+                      "type": "text",
+                      "id": "cAWjP",
+                      "name": "Label Inbox",
+                      "fill": "#0F1112",
+                      "content": "Inbox",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "rUsod",
+                  "name": "Nav Search",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "eN4q2",
+                      "name": "Icon Search",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "b3HGi",
+                      "name": "Label Search",
+                      "fill": "#0F1112",
+                      "content": "Search",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "fwFdN",
+              "name": "Divider",
+              "fill": "$border",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "M5s69G",
+              "name": "Library Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "SEuRg",
+                  "name": "Library Label",
+                  "fill": "#6F7478",
+                  "content": "LIBRARIES",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "MhTER",
+                  "name": "Lib People",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "SdM3M",
+                      "name": "Lib Icon People",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "users",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Nrv7b",
+                      "name": "Lib Label People",
+                      "fill": "#0F1112",
+                      "content": "People",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "iJ2hk",
+                  "name": "Lib Documents",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "o8yTad",
+                      "name": "Lib Icon Documents",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "GkmiH",
+                      "name": "Lib Label Documents",
+                      "fill": "#0F1112",
+                      "content": "Documents",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "e3PRN8",
+                  "name": "Lib Contracts",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "q5Q2K",
+                      "name": "Lib Icon Contracts",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "folder",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "whhWr",
+                      "name": "Lib Label Contracts",
+                      "fill": "#0F1112",
+                      "content": "Contracts",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Rbry8",
+                  "name": "Lib Templates",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "fyUlD",
+                      "name": "Lib Icon Templates",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-template",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "lL2D1",
+                      "name": "Lib Label Templates",
+                      "fill": "#0F1112",
+                      "content": "Templates",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "iE7yN",
+                  "name": "Lib Reports",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "lPxYP",
+                      "name": "Lib Icon Reports",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "activity",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "GsQCC",
+                      "name": "Lib Label Reports",
+                      "fill": "#0F1112",
+                      "content": "Reports",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "g2jCIh",
+                  "name": "Lib Admin",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "DErcg",
+                      "name": "Lib Icon Admin",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "settings",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "xO2YB",
+                      "name": "Lib Label Admin",
+                      "fill": "#0F1112",
+                      "content": "Admin",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "OGjza",
+              "name": "Spacer",
+              "width": "fill_container",
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "BkGHN",
+              "name": "User Chip",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                10,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "MIms8",
+                  "name": "Avatar",
+                  "fill": "#E0F5EC",
+                  "width": 28,
+                  "height": 28
+                },
+                {
+                  "type": "text",
+                  "id": "oDLR6",
+                  "name": "User Name",
+                  "fill": "#0F1112",
+                  "content": "HR Admin",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "n0363",
+          "name": "Main",
+          "width": 1176,
+          "height": 1024,
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 20,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "n0364",
+              "name": "Header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "n0365",
+                  "name": "Eyebrow",
+                  "fill": "$text-secondary",
+                  "content": "INBOX / INTAKE",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "n0366",
+                  "name": "Title",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Inbox",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 30,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "n0367",
+                  "name": "Subtitle",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "No items awaiting triage.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 15,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "n0371",
+              "name": "Empty Center",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": [
+                120,
+                0,
+                0,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "n0368",
+                  "name": "Empty Icon",
+                  "width": 64,
+                  "height": 64,
+                  "icon": "inbox",
+                  "library": "lucide",
+                  "fill": "$border"
+                },
+                {
+                  "type": "text",
+                  "id": "n0369",
+                  "name": "Empty Title",
+                  "fill": "$text-primary",
+                  "content": "Inbox is clear",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 22,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "n0370",
+                  "name": "Empty Copy",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": 400,
+                  "content": "All incoming items have been triaged. New items from email, file uploads, and system triggers will appear here.",
+                  "textAlign": "center",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "n0372",
+      "x": 4560,
+      "y": 0,
+      "name": "03 Inbox — Loading",
+      "clip": true,
+      "width": 1440,
+      "height": 1024,
+      "fill": "$bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "W0sZF",
+          "name": "Sidebar",
+          "width": 264,
+          "height": "fill_container",
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "right": 1
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            22,
+            18
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "bB3Se",
+              "name": "Brand",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "b7L8JV",
+                  "name": "Brand Mark",
+                  "fill": "$border",
+                  "width": 34,
+                  "height": 34
+                },
+                {
+                  "type": "frame",
+                  "id": "UN3ZX",
+                  "name": "Brand Copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "dWgdA",
+                      "name": "Brand Title",
+                      "fill": "#0F1112",
+                      "content": "HR Space",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "BV0A6",
+                      "name": "Brand Subtitle",
+                      "fill": "#6F7478",
+                      "content": "Operations workspace",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "W30fhj",
+              "name": "Core Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "EAwJi",
+                  "name": "Core Label",
+                  "fill": "#6F7478",
+                  "content": "WORK",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "xSPLr",
+                  "name": "Nav Today",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "uiY52",
+                      "name": "Icon Today",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-dashboard",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "X0JxaG",
+                      "name": "Label Today",
+                      "fill": "#0F1112",
+                      "content": "Today",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "h5iKcP",
+                  "name": "Nav All Work",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "avBO6",
+                      "name": "Icon All Work",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "list",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "zlfYd",
+                      "name": "Label All Work",
+                      "fill": "#0F1112",
+                      "content": "All Work",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "BB7Wn",
+                  "name": "Nav Inbox",
+                  "width": "fill_container",
+                  "fill": "#E0F5EC",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "AKyY8",
+                      "name": "Icon Inbox",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "inbox",
+                      "library": "lucide",
+                      "fill": "#00A36C"
+                    },
+                    {
+                      "type": "text",
+                      "id": "mCcOD",
+                      "name": "Label Inbox",
+                      "fill": "#0F1112",
+                      "content": "Inbox",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qs68w",
+                  "name": "Nav Search",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "W46oS",
+                      "name": "Icon Search",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "l9yhsc",
+                      "name": "Label Search",
+                      "fill": "#0F1112",
+                      "content": "Search",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "sNuj3",
+              "name": "Divider",
+              "fill": "$border",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "riWxy",
+              "name": "Library Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "V7CIT8",
+                  "name": "Library Label",
+                  "fill": "#6F7478",
+                  "content": "LIBRARIES",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "N1HiH",
+                  "name": "Lib People",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "t6aom",
+                      "name": "Lib Icon People",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "users",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "g2N0nR",
+                      "name": "Lib Label People",
+                      "fill": "#0F1112",
+                      "content": "People",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Qvzdk",
+                  "name": "Lib Documents",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "YonT1",
+                      "name": "Lib Icon Documents",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "PvIxm",
+                      "name": "Lib Label Documents",
+                      "fill": "#0F1112",
+                      "content": "Documents",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "FVwsO",
+                  "name": "Lib Contracts",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "arIkB",
+                      "name": "Lib Icon Contracts",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "folder",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "LLvMR",
+                      "name": "Lib Label Contracts",
+                      "fill": "#0F1112",
+                      "content": "Contracts",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "UoLqF",
+                  "name": "Lib Templates",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "g2Rbn",
+                      "name": "Lib Icon Templates",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-template",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "rlTrD",
+                      "name": "Lib Label Templates",
+                      "fill": "#0F1112",
+                      "content": "Templates",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dH3nl",
+                  "name": "Lib Reports",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "GmDm7",
+                      "name": "Lib Icon Reports",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "activity",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "L0mcOo",
+                      "name": "Lib Label Reports",
+                      "fill": "#0F1112",
+                      "content": "Reports",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gr0kT",
+                  "name": "Lib Admin",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "TY6kq",
+                      "name": "Lib Icon Admin",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "settings",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "I0G57t",
+                      "name": "Lib Label Admin",
+                      "fill": "#0F1112",
+                      "content": "Admin",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "JYx7E",
+              "name": "Spacer",
+              "width": "fill_container",
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "VHnfY",
+              "name": "User Chip",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                10,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "enUY0",
+                  "name": "Avatar",
+                  "fill": "#E0F5EC",
+                  "width": 28,
+                  "height": 28
+                },
+                {
+                  "type": "text",
+                  "id": "PQbx3",
+                  "name": "User Name",
+                  "fill": "#0F1112",
+                  "content": "HR Admin",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "n0418",
+          "name": "Main",
+          "width": 1176,
+          "height": 1024,
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "n0419",
+              "name": "Header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "n0420",
+                  "name": "Eyebrow",
+                  "fill": "$text-secondary",
+                  "content": "INBOX / INTAKE",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "n0421",
+                  "name": "Title",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Inbox",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 30,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "n0422",
+                  "name": "Subtitle",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Loading inbox queue...",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 15,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "n0435",
+              "name": "Loading Content",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "n0425",
+                  "name": "Skeleton Row 1",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "n0423",
+                      "name": "Sk Head 1",
+                      "fill": "$border",
+                      "width": 260,
+                      "height": 20
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "n0424",
+                      "name": "Sk Body 1",
+                      "fill": "$bg",
+                      "width": "fill_container",
+                      "height": 48,
+                      "stroke": "$border",
+                      "strokeWidth": 1
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n0428",
+                  "name": "Skeleton Row 2",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "n0426",
+                      "name": "Sk Head 2",
+                      "fill": "$border",
+                      "width": 220,
+                      "height": 20
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "n0427",
+                      "name": "Sk Body 2",
+                      "fill": "$bg",
+                      "width": "fill_container",
+                      "height": 48,
+                      "stroke": "$border",
+                      "strokeWidth": 1
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n0431",
+                  "name": "Skeleton Row 3",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "n0429",
+                      "name": "Sk Head 3",
+                      "fill": "$border",
+                      "width": 280,
+                      "height": 20
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "n0430",
+                      "name": "Sk Body 3",
+                      "fill": "$bg",
+                      "width": "fill_container",
+                      "height": 48,
+                      "stroke": "$border",
+                      "strokeWidth": 1
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n0434",
+                  "name": "Skeleton Row 4",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "n0432",
+                      "name": "Sk Head 4",
+                      "fill": "$border",
+                      "width": 240,
+                      "height": 20
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "n0433",
+                      "name": "Sk Body 4",
+                      "fill": "$bg",
+                      "width": "fill_container",
+                      "height": 48,
+                      "stroke": "$border",
+                      "strokeWidth": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "L8i5jz",
+      "x": 6080,
+      "y": 0,
+      "name": "03 Inbox — Dismissed",
+      "clip": true,
+      "width": 1440,
+      "height": 1024,
+      "fill": "$bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "hVhIl",
+          "name": "Sidebar",
+          "width": 264,
+          "height": "fill_container",
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "right": 1
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            22,
+            18
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "M5dXYo",
+              "name": "Brand",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "dvtHG",
+                  "name": "Brand Mark",
+                  "fill": "$border",
+                  "width": 34,
+                  "height": 34
+                },
+                {
+                  "type": "frame",
+                  "id": "JPf1G",
+                  "name": "Brand Copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ArSyz",
+                      "name": "Brand Title",
+                      "fill": "#0F1112",
+                      "content": "HR Space",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "H2XUH",
+                      "name": "Brand Subtitle",
+                      "fill": "#6F7478",
+                      "content": "Operations workspace",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "EvOCn",
+              "name": "Core Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "v6EI7",
+                  "name": "Core Label",
+                  "fill": "#6F7478",
+                  "content": "WORK",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "yTIMB",
+                  "name": "Nav Today",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "kLgd1",
+                      "name": "Icon Today",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-dashboard",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "pGqRQ",
+                      "name": "Label Today",
+                      "fill": "#0F1112",
+                      "content": "Today",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "m2zVMx",
+                  "name": "Nav All Work",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "XTIUJ",
+                      "name": "Icon All Work",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "list",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "M95zig",
+                      "name": "Label All Work",
+                      "fill": "#0F1112",
+                      "content": "All Work",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "eNcrI",
+                  "name": "Nav Inbox",
+                  "width": "fill_container",
+                  "fill": "#E0F5EC",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "wJ6yG",
+                      "name": "Icon Inbox",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "inbox",
+                      "library": "lucide",
+                      "fill": "#00A36C"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ADwQx",
+                      "name": "Label Inbox",
+                      "fill": "#0F1112",
+                      "content": "Inbox",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "p4hrc",
+                  "name": "Nav Search",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "Bwidu",
+                      "name": "Icon Search",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "qPD2P",
+                      "name": "Label Search",
+                      "fill": "#0F1112",
+                      "content": "Search",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "OfeGh",
+              "name": "Divider",
+              "fill": "$border",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "A95J5j",
+              "name": "Library Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "j3NGPU",
+                  "name": "Library Label",
+                  "fill": "#6F7478",
+                  "content": "LIBRARIES",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "lrTV3",
+                  "name": "Lib People",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "U2hAiQ",
+                      "name": "Lib Icon People",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "users",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "OjK9c",
+                      "name": "Lib Label People",
+                      "fill": "#0F1112",
+                      "content": "People",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "mempj",
+                  "name": "Lib Documents",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "LOzDi",
+                      "name": "Lib Icon Documents",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "knVqk",
+                      "name": "Lib Label Documents",
+                      "fill": "#0F1112",
+                      "content": "Documents",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "HLfbV",
+                  "name": "Lib Contracts",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "UdShA",
+                      "name": "Lib Icon Contracts",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "folder",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "BnXtI",
+                      "name": "Lib Label Contracts",
+                      "fill": "#0F1112",
+                      "content": "Contracts",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "y0hyCt",
+                  "name": "Lib Templates",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "vXL0A",
+                      "name": "Lib Icon Templates",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-template",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "gsARl",
+                      "name": "Lib Label Templates",
+                      "fill": "#0F1112",
+                      "content": "Templates",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "rPNxU",
+                  "name": "Lib Reports",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "VFO2z",
+                      "name": "Lib Icon Reports",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "activity",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Em8Ns",
+                      "name": "Lib Label Reports",
+                      "fill": "#0F1112",
+                      "content": "Reports",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "fKdJa",
+                  "name": "Lib Admin",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "bjHOF",
+                      "name": "Lib Icon Admin",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "settings",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "VB8mo",
+                      "name": "Lib Label Admin",
+                      "fill": "#0F1112",
+                      "content": "Admin",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "yhlVq",
+              "name": "Spacer",
+              "width": "fill_container",
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "Ka4Di",
+              "name": "User Chip",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                10,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "XQ9YQ",
+                  "name": "Avatar",
+                  "fill": "#E0F5EC",
+                  "width": 28,
+                  "height": 28
+                },
+                {
+                  "type": "text",
+                  "id": "Kfvbu",
+                  "name": "User Name",
+                  "fill": "#0F1112",
+                  "content": "HR Admin",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Om5s7",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "bqx41",
+              "name": "Header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "vpp5m",
+                  "name": "Eyebrow",
+                  "fill": "$text-secondary",
+                  "content": "INBOX / INTAKE",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "p7bUDM",
+                  "name": "Title",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Inbox",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 30,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "J7Tle",
+                  "name": "Subtitle",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Dismissed items — review closed intakes, reopen when new context arrives.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 15,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "F4KzXt",
+              "name": "View Tabs",
+              "fill": "$text-secondary",
+              "content": "View:  All  |  Untriaged  |  Triaged  |  Dismissed",
+              "fontFamily": "IBM Plex Mono",
+              "fontSize": 11,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "zowrM",
+              "name": "Dismissed Row 1",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 14,
+              "padding": [
+                14,
+                18
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "SGY6s",
+                  "name": "Checkbox",
+                  "width": 18,
+                  "height": 18,
+                  "fill": "$surface",
+                  "stroke": "$text-secondary",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "AHRdm",
+                  "name": "Source Icon",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "x-circle",
+                  "library": "lucide",
+                  "fill": "$text-secondary"
+                },
+                {
+                  "type": "frame",
+                  "id": "WTILM",
+                  "name": "Row Content",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 3,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "dZ5LG",
+                      "name": "Row Title",
+                      "fill": "$text-primary",
+                      "content": "Job Application — Nguyễn Thị A",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "z0Ktre",
+                      "name": "Row Meta",
+                      "fill": "$text-secondary",
+                      "content": "Dismissed · 5 days ago · From email",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "JY6NC",
+      "x": 7600,
+      "y": 0,
+      "name": "03 Inbox — Error",
+      "clip": true,
+      "width": 1440,
+      "height": 1024,
+      "fill": "$bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "hUscd",
+          "name": "Sidebar",
+          "width": 264,
+          "height": "fill_container",
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "right": 1
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            22,
+            18
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "q5rDvM",
+              "name": "Brand",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "KKrJb",
+                  "name": "Brand Mark",
+                  "fill": "$border",
+                  "width": 34,
+                  "height": 34
+                },
+                {
+                  "type": "frame",
+                  "id": "VCQ7Z",
+                  "name": "Brand Copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "j1uol",
+                      "name": "Brand Title",
+                      "fill": "#0F1112",
+                      "content": "HR Space",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "qy7ue",
+                      "name": "Brand Subtitle",
+                      "fill": "#6F7478",
+                      "content": "Operations workspace",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "uHC4O",
+              "name": "Core Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ioaOw",
+                  "name": "Core Label",
+                  "fill": "#6F7478",
+                  "content": "WORK",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "Ifjlu",
+                  "name": "Nav Today",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "O3Pcun",
+                      "name": "Icon Today",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-dashboard",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "jL9Nl",
+                      "name": "Label Today",
+                      "fill": "#0F1112",
+                      "content": "Today",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "YjwTq",
+                  "name": "Nav All Work",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "nY9cl",
+                      "name": "Icon All Work",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "list",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "XHmAc",
+                      "name": "Label All Work",
+                      "fill": "#0F1112",
+                      "content": "All Work",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qKq0w",
+                  "name": "Nav Inbox",
+                  "width": "fill_container",
+                  "fill": "#E0F5EC",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "Enu3E",
+                      "name": "Icon Inbox",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "inbox",
+                      "library": "lucide",
+                      "fill": "#00A36C"
+                    },
+                    {
+                      "type": "text",
+                      "id": "xEBA1",
+                      "name": "Label Inbox",
+                      "fill": "#0F1112",
+                      "content": "Inbox",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "zWcY6",
+                  "name": "Nav Search",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "SuaWK",
+                      "name": "Icon Search",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "VXLaq",
+                      "name": "Label Search",
+                      "fill": "#0F1112",
+                      "content": "Search",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "jhBCm",
+              "name": "Divider",
+              "fill": "$border",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "xA9Cf",
+              "name": "Library Nav",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "E6QT1Y",
+                  "name": "Library Label",
+                  "fill": "#6F7478",
+                  "content": "LIBRARIES",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "m0YGi8",
+                  "name": "Lib People",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "e1mbOQ",
+                      "name": "Lib Icon People",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "users",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "A2lq1B",
+                      "name": "Lib Label People",
+                      "fill": "#0F1112",
+                      "content": "People",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "srqNk",
+                  "name": "Lib Documents",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "Y3NcY9",
+                      "name": "Lib Icon Documents",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "file",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "mKWXX",
+                      "name": "Lib Label Documents",
+                      "fill": "#0F1112",
+                      "content": "Documents",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "o7SBC",
+                  "name": "Lib Contracts",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "Jrxjh",
+                      "name": "Lib Icon Contracts",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "folder",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "mswCE",
+                      "name": "Lib Label Contracts",
+                      "fill": "#0F1112",
+                      "content": "Contracts",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "X1U87b",
+                  "name": "Lib Templates",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "c1kZhw",
+                      "name": "Lib Icon Templates",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "layout-template",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "KsaSB",
+                      "name": "Lib Label Templates",
+                      "fill": "#0F1112",
+                      "content": "Templates",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yuviB",
+                  "name": "Lib Reports",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "X86vQ",
+                      "name": "Lib Icon Reports",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "activity",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "fAbij",
+                      "name": "Lib Label Reports",
+                      "fill": "#0F1112",
+                      "content": "Reports",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "sVpi2",
+                  "name": "Lib Admin",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "X0pD5",
+                      "name": "Lib Icon Admin",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "settings",
+                      "library": "lucide",
+                      "fill": "#6F7478"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Nkxi2",
+                      "name": "Lib Label Admin",
+                      "fill": "#0F1112",
+                      "content": "Admin",
+                      "fontFamily": "IBM Plex Sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "d7xZs",
+              "name": "Spacer",
+              "width": "fill_container",
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "BjC30",
+              "name": "User Chip",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                10,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "tcvHd",
+                  "name": "Avatar",
+                  "fill": "#E0F5EC",
+                  "width": 28,
+                  "height": 28
+                },
+                {
+                  "type": "text",
+                  "id": "K4u4ga",
+                  "name": "User Name",
+                  "fill": "#0F1112",
+                  "content": "HR Admin",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "y6ixP4",
+          "name": "Main",
+          "width": 1176,
+          "height": 1024,
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 20,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "xdeO2",
+              "name": "Header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "fwSou",
+                  "name": "Eyebrow",
+                  "fill": "$text-secondary",
+                  "content": "INBOX / INTAKE",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "cLrXr",
+                  "name": "Title",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Inbox",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 30,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "WatmE",
+                  "name": "Subtitle",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Unable to load inbox right now.",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 15,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "NpBOI",
+              "name": "Error Center",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": [
+                120,
+                0,
+                0,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "almj9",
+                  "name": "Empty Icon",
+                  "width": 64,
+                  "height": 64,
+                  "icon": "inbox",
+                  "library": "lucide",
+                  "fill": "$border"
+                },
+                {
+                  "type": "text",
+                  "id": "HTGDo",
+                  "name": "Empty Title",
+                  "fill": "$text-primary",
+                  "content": "Connection error",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 22,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "pQKFR",
+                  "name": "Empty Copy",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": 400,
+                  "content": "Something went wrong while loading inbox. Please try again.",
+                  "textAlign": "center",
+                  "fontFamily": "IBM Plex Sans",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "themes": {
+    "mode": [
+      "light",
+      "dark"
+    ]
+  },
+  "variables": {
+    "bg": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FAFAF8",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#1A1A1A",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "surface": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#18181B",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "border": {
+      "type": "color",
+      "value": "#E2E8F0"
+    },
+    "text-primary": {
+      "type": "color",
+      "value": "#0F1112"
+    },
+    "text-secondary": {
+      "type": "color",
+      "value": "#6F7478"
+    },
+    "accent": {
+      "type": "color",
+      "value": "#00A36C"
+    },
+    "accent-soft": {
+      "type": "color",
+      "value": "#E0F5EC"
+    },
+    "accent-deep": {
+      "type": "color",
+      "value": "#007F51"
+    },
+    "danger": {
+      "type": "color",
+      "value": "#D14343"
+    },
+    "danger-soft": {
+      "type": "color",
+      "value": "#FCE4E4"
+    },
+    "warning": {
+      "type": "color",
+      "value": "#C28A1B"
+    },
+    "warning-soft": {
+      "type": "color",
+      "value": "#FEF3C7"
+    },
+    "on-primary": {
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    "gray": {
+      "type": "color",
+      "value": "#9CA3AF"
+    },
+    "success": {
+      "type": "color",
+      "value": "#1D9A6C"
+    },
+    "success-soft": {
+      "type": "color",
+      "value": "#D1FAE5"
+    },
+    "status-active": {
+      "type": "color",
+      "value": "#D1FAE5"
+    },
+    "status-active-text": {
+      "type": "color",
+      "value": "#065F46"
+    },
+    "status-resigned": {
+      "type": "color",
+      "value": "#F3F4F6"
+    },
+    "status-resigned-text": {
+      "type": "color",
+      "value": "#4B5563"
+    },
+    "status-terminated": {
+      "type": "color",
+      "value": "#FEE2E2"
+    },
+    "status-terminated-text": {
+      "type": "color",
+      "value": "#991B1B"
+    },
+    "status-suspended": {
+      "type": "color",
+      "value": "#FEF3C7"
+    },
+    "status-suspended-text": {
+      "type": "color",
+      "value": "#92400E"
+    }
+  },
+  "fileToken": "cd87cfe3-69e6-42c8-9d3c-7a1f1962c668"
+}

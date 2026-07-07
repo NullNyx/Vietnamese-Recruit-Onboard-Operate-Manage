@@ -67,18 +67,18 @@ def label_service(
 class TestValidateNamespace:
     """Tests for LabelService.validate_namespace."""
 
-    def test_accepts_label_with_vroomhr_prefix(self, label_service: LabelService) -> None:
-        """Labels starting with VroomHR/ are valid."""
-        assert label_service.validate_namespace("VroomHR/processed") is True
+    def test_accepts_label_with_hrspace_prefix(self, label_service: LabelService) -> None:
+        """Labels starting with HRSpace/ are valid."""
+        assert label_service.validate_namespace("HRSpace/processed") is True
 
     def test_accepts_all_required_labels(self, label_service: LabelService) -> None:
-        """All required VroomHR labels pass validation."""
-        assert label_service.validate_namespace("VroomHR/recruitment") is True
-        assert label_service.validate_namespace("VroomHR/interview") is True
-        assert label_service.validate_namespace("VroomHR/onboarding") is True
+        """All required HRSpace labels pass validation."""
+        assert label_service.validate_namespace("HRSpace/recruitment") is True
+        assert label_service.validate_namespace("HRSpace/interview") is True
+        assert label_service.validate_namespace("HRSpace/onboarding") is True
 
     def test_rejects_label_without_prefix(self, label_service: LabelService) -> None:
-        """Labels without VroomHR/ prefix are invalid."""
+        """Labels without HRSpace/ prefix are invalid."""
         assert label_service.validate_namespace("INBOX") is False
 
     def test_rejects_empty_string(self, label_service: LabelService) -> None:
@@ -87,9 +87,9 @@ class TestValidateNamespace:
 
     def test_rejects_similar_prefix(self, label_service: LabelService) -> None:
         """Labels with similar but incorrect prefix are invalid."""
-        assert label_service.validate_namespace("VroomHR") is False
-        assert label_service.validate_namespace("vroomhr/processed") is False
-        assert label_service.validate_namespace("Vroom/processed") is False
+        assert label_service.validate_namespace("HRSpace") is False
+        assert label_service.validate_namespace("hrspace/processed") is False
+        assert label_service.validate_namespace("HR Space/processed") is False
 
     def test_rejects_system_labels(self, label_service: LabelService) -> None:
         """System Gmail labels are invalid."""
@@ -128,7 +128,7 @@ class TestInitializeLabels:
         mappings = call_args[0][1]
         assert len(mappings) == expected_count
         label_names = {m["label_name"] for m in mappings}
-        expected_names = {f"VroomHR/{name}" for name in settings.required_labels}
+        expected_names = {f"HRSpace/{name}" for name in settings.required_labels}
         assert label_names == expected_names
 
     @pytest.mark.asyncio
@@ -145,10 +145,10 @@ class TestInitializeLabels:
 
         # Simulate 2 labels already existing
         existing_label_1 = MagicMock()
-        existing_label_1.name = "VroomHR/processed"
+        existing_label_1.name = "HRSpace/processed"
         existing_label_1.id = "Label_existing_1"
         existing_label_2 = MagicMock()
-        existing_label_2.name = "VroomHR/recruitment"
+        existing_label_2.name = "HRSpace/recruitment"
         existing_label_2.id = "Label_existing_2"
 
         gmail_adapter.list_labels.return_value = [existing_label_1, existing_label_2]
@@ -165,7 +165,7 @@ class TestInitializeLabels:
         assert len(mappings) == expected_count
 
         # Check existing labels reuse their IDs
-        processed_mapping = next(m for m in mappings if m["label_name"] == "VroomHR/processed")
+        processed_mapping = next(m for m in mappings if m["label_name"] == "HRSpace/processed")
         assert processed_mapping["gmail_label_id"] == "Label_existing_1"
 
     @pytest.mark.asyncio
@@ -182,7 +182,7 @@ class TestInitializeLabels:
         existing_labels = []
         for i, name in enumerate(settings.required_labels):
             label = MagicMock()
-            label.name = f"VroomHR/{name}"
+            label.name = f"HRSpace/{name}"
             label.id = f"Label_{i}"
             existing_labels.append(label)
 
@@ -295,11 +295,11 @@ class TestAddLabel:
         gmail_adapter: AsyncMock,
         label_repo: AsyncMock,
     ) -> None:
-        """Adds a valid VroomHR label to a message."""
+        """Adds a valid HRSpace label to a message."""
         user_id = uuid4()
         label_repo.get_label_id_by_name.return_value = "Label_123"
 
-        await label_service.add_label(user_id, "msg_abc", "VroomHR/processed", "token_xyz")
+        await label_service.add_label(user_id, "msg_abc", "HRSpace/processed", "token_xyz")
 
         gmail_adapter.modify_labels.assert_called_once_with(
             access_token="token_xyz",
@@ -314,7 +314,7 @@ class TestAddLabel:
         label_service: LabelService,
         gmail_adapter: AsyncMock,
     ) -> None:
-        """Raises LabelNamespaceViolationException for non-VroomHR labels."""
+        """Raises LabelNamespaceViolationException for non-HRSpace labels."""
         user_id = uuid4()
 
         with pytest.raises(LabelNamespaceViolationException):
@@ -334,7 +334,7 @@ class TestAddLabel:
         label_repo.get_label_id_by_name.return_value = None
 
         with pytest.raises(GmailFetchError):
-            await label_service.add_label(user_id, "msg_abc", "VroomHR/processed", "token_xyz")
+            await label_service.add_label(user_id, "msg_abc", "HRSpace/processed", "token_xyz")
 
         gmail_adapter.modify_labels.assert_not_called()
 
@@ -347,7 +347,7 @@ class TestAddLabel:
         """Logs audit entry after successful label addition."""
         user_id = uuid4()
 
-        await label_service.add_label(user_id, "msg_abc", "VroomHR/processed", "token_xyz")
+        await label_service.add_label(user_id, "msg_abc", "HRSpace/processed", "token_xyz")
 
         audit_logger.log_operation.assert_called_once()
         call_kwargs = audit_logger.log_operation.call_args[1]
@@ -365,11 +365,11 @@ class TestRemoveLabel:
         gmail_adapter: AsyncMock,
         label_repo: AsyncMock,
     ) -> None:
-        """Removes a valid VroomHR label from a message."""
+        """Removes a valid HRSpace label from a message."""
         user_id = uuid4()
         label_repo.get_label_id_by_name.return_value = "Label_456"
 
-        await label_service.remove_label(user_id, "msg_abc", "VroomHR/recruitment", "token_xyz")
+        await label_service.remove_label(user_id, "msg_abc", "HRSpace/recruitment", "token_xyz")
 
         gmail_adapter.modify_labels.assert_called_once_with(
             access_token="token_xyz",
@@ -384,7 +384,7 @@ class TestRemoveLabel:
         label_service: LabelService,
         gmail_adapter: AsyncMock,
     ) -> None:
-        """Raises LabelNamespaceViolationException for non-VroomHR labels."""
+        """Raises LabelNamespaceViolationException for non-HRSpace labels."""
         user_id = uuid4()
 
         with pytest.raises(LabelNamespaceViolationException):
@@ -404,7 +404,7 @@ class TestRemoveLabel:
         label_repo.get_label_id_by_name.return_value = None
 
         with pytest.raises(GmailFetchError):
-            await label_service.remove_label(user_id, "msg_abc", "VroomHR/processed", "token_xyz")
+            await label_service.remove_label(user_id, "msg_abc", "HRSpace/processed", "token_xyz")
 
         gmail_adapter.modify_labels.assert_not_called()
 
@@ -417,7 +417,7 @@ class TestRemoveLabel:
         """Logs audit entry after successful label removal."""
         user_id = uuid4()
 
-        await label_service.remove_label(user_id, "msg_abc", "VroomHR/processed", "token_xyz")
+        await label_service.remove_label(user_id, "msg_abc", "HRSpace/processed", "token_xyz")
 
         audit_logger.log_operation.assert_called_once()
         call_kwargs = audit_logger.log_operation.call_args[1]
@@ -440,7 +440,7 @@ class TestBatchAddLabel:
         message_ids = ["msg_1", "msg_2", "msg_3"]
         label_repo.get_label_id_by_name.return_value = "Label_789"
 
-        await label_service.batch_add_label(user_id, message_ids, "VroomHR/processed", "token_xyz")
+        await label_service.batch_add_label(user_id, message_ids, "HRSpace/processed", "token_xyz")
 
         gmail_adapter.batch_modify_labels.assert_called_once_with(
             access_token="token_xyz",
@@ -458,7 +458,7 @@ class TestBatchAddLabel:
         """Returns early without API call for empty message list."""
         user_id = uuid4()
 
-        await label_service.batch_add_label(user_id, [], "VroomHR/processed", "token_xyz")
+        await label_service.batch_add_label(user_id, [], "HRSpace/processed", "token_xyz")
 
         gmail_adapter.batch_modify_labels.assert_not_called()
 
@@ -468,7 +468,7 @@ class TestBatchAddLabel:
         label_service: LabelService,
         gmail_adapter: AsyncMock,
     ) -> None:
-        """Raises LabelNamespaceViolationException for non-VroomHR labels."""
+        """Raises LabelNamespaceViolationException for non-HRSpace labels."""
         user_id = uuid4()
 
         with pytest.raises(LabelNamespaceViolationException):
@@ -489,7 +489,7 @@ class TestBatchAddLabel:
 
         with pytest.raises(GmailFetchError):
             await label_service.batch_add_label(
-                user_id, ["msg_1"], "VroomHR/processed", "token_xyz"
+                user_id, ["msg_1"], "HRSpace/processed", "token_xyz"
             )
 
         gmail_adapter.batch_modify_labels.assert_not_called()
@@ -504,7 +504,7 @@ class TestBatchAddLabel:
         user_id = uuid4()
         message_ids = [f"msg_{i}" for i in range(50)]
 
-        await label_service.batch_add_label(user_id, message_ids, "VroomHR/processed", "token_xyz")
+        await label_service.batch_add_label(user_id, message_ids, "HRSpace/processed", "token_xyz")
 
         audit_logger.log_operation.assert_called_once()
         call_kwargs = audit_logger.log_operation.call_args[1]

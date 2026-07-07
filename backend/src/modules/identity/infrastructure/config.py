@@ -36,7 +36,7 @@ class AuthSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="AUTH_")
 
     # Database
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/vroom_hr"
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/hr_space"
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"

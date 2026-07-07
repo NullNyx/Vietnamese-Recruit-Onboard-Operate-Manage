@@ -1,4 +1,4 @@
-# Email whitelist for Vroom HR
+# Email whitelist for HR Space
 # One email per line. Lines starting with # are comments.
 # Case-insensitive matching.
 #
@@ -6,5 +6,5 @@
 # whitelist.txt is gitignored — real emails must not be committed.
 
 # Add authorized HR emails below:
-admin@vroom.local
+admin@hrspace.local
 

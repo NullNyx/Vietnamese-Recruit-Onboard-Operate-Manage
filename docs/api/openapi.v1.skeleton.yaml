@@ -1,0 +1,2786 @@
+openapi: 3.1.0
+info:
+  title: HR Space API v1
+  version: 1.0.0
+  description: >
+    API v1 contract skeleton for HR Space – AI-powered HR Toolbox.
+
+    operationId maps to service_command.
+    All write/action endpoints require Idempotency-Key header.
+    Entities with optimistic concurrency accept If-Unmodified-Since header.
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: Auth
+  - name: Work
+  - name: Inbox
+  - name: People
+  - name: Documents
+  - name: Contracts
+  - name: Templates
+  - name: AI
+  - name: Notifications
+  - name: Notes
+  - name: Audit
+  - name: Reports
+  - name: Search
+  - name: Admin
+  - name: Jobs
+
+security:
+  - cookieAuth: []
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: httpOnly JWT cookie, set via /auth/login
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Required for write/action endpoints. Same key + same user + same route + same payload hash = idempotent. Different payload = 409.
+    IfUnmodifiedSince:
+      name: If-Unmodified-Since
+      in: header
+      required: false
+      schema:
+        type: string
+        format: date-time
+      description: Optimistic concurrency guard. 409 if entity updated after this timestamp.
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Size:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Sort:
+      name: sort
+      in: query
+      schema:
+        type: string
+      description: Comma-separated sort fields. Prefix - for DESC. e.g. "-updated_at,created_at"
+    StatusFilter:
+      name: status
+      in: query
+      schema:
+        type: string
+      description: Comma-separated status values.
+    OwnerId:
+      name: owner_id
+      in: query
+      schema:
+        type: string
+        format: uuid
+    TypeFilter:
+      name: type
+      in: query
+      schema:
+        type: string
+      description: Comma-separated type values.
+    SourceFilter:
+      name: source
+      in: query
+      schema:
+        type: string
+    CreatedFrom:
+      name: created_from
+      in: query
+      schema:
+        type: string
+        format: date-time
+    CreatedTo:
+      name: created_to
+      in: query
+      schema:
+        type: string
+        format: date-time
+    DueBefore:
+      name: due_before
+      in: query
+      schema:
+        type: string
+        format: date-time
+    DueAfter:
+      name: due_after
+      in: query
+      schema:
+        type: string
+        format: date-time
+    SearchQuery:
+      name: q
+      in: query
+      schema:
+        type: string
+    WorkId:
+      name: workId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    InboxId:
+      name: inboxId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PeopleId:
+      name: peopleId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ContractId:
+      name: contractId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TemplateId:
+      name: templateId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    NotificationId:
+      name: notificationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    NoteId:
+      name: noteId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SuggestionId:
+      name: suggestionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    LinkType:
+      name: link_type
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [parent_child, dependency, blocker, related]
+
+  schemas:
+    # ============================================================
+    # ENUMS
+    # ============================================================
+    WorkItemStatus:
+      type: string
+      enum: [active, in_progress, waiting, completed, reopened, archived]
+    WorkItemSource:
+      type: string
+      enum: [inbox, system, manual, dependent]
+    WorkLinkType:
+      type: string
+      enum: [parent_child, dependency, blocker, related]
+    DecisionLabel:
+      type: string
+      enum: [Critical, Attention, Planned, Waiting]
+    InboxItemSource:
+      type: string
+      enum: [email, file_upload, manual, api, system]
+    InboxItemStatus:
+      type: string
+      enum: [new, triaged, dismissed]
+    PeopleType:
+      type: string
+      enum: [employee, candidate, contact]
+    PeopleStatus:
+      type: string
+      enum: [active, inactive, archived]
+    PeopleSource:
+      type: string
+      enum: [manual, import, sync, recruitment, system]
+    EmploymentStatus:
+      type: string
+      enum: [active, resigned, terminated, suspended]
+    DocumentType:
+      type: string
+      enum: [id_card, diploma, certificate, photo, contract_related, other]
+    DocumentStatus:
+      type: string
+      enum: [uploaded, verified, rejected, expired]
+    ContractType:
+      type: string
+      enum: [offer, labor_contract, nda, amendment, termination, other]
+    ContractStatus:
+      type: string
+      enum: [draft, ready, sent, signed, expired, terminated, cancelled]
+    TemplateType:
+      type: string
+      enum: [contract, document, checklist, task]
+    TemplateScope:
+      type: string
+      enum: [org_default, position, department]
+    SuggestionType:
+      type: string
+      enum: [extraction, draft, classification, fill, summary]
+    SuggestionStatus:
+      type: string
+      enum: [pending, accepted, rejected, superseded]
+    ConfidenceLabel:
+      type: string
+      enum: [high, medium, low]
+    EntityType:
+      type: string
+      enum: [work_item, inbox_item, people, document, contract]
+    AIEntityType:
+      type: string
+      enum: [work_item, inbox_item, document, contract, people]
+    NotificationType:
+      type: string
+      enum: [reminder, alert, daily_brief, system]
+    NotificationStatus:
+      type: string
+      enum: [pending, sent, read, dismissed, snoozed]
+    AuditSource:
+      type: string
+      enum: [manual, ai_suggestion, system]
+    UserRole:
+      type: string
+      enum: [super_admin, hr_admin, hr_staff]
+    JobStatus:
+      type: string
+      enum: [queued, running, completed, failed]
+    ErrorCode:
+      type: string
+      enum: [VALIDATION_ERROR, PERMISSION_DENIED, RESOURCE_NOT_FOUND,
+             INVALID_STATUS_TRANSITION, DUPLICATE_RESOURCE, CONFLICT,
+             AI_SUGGESTION_MISMATCH, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+
+    # ============================================================
+    # DOMAIN DTOs
+    # ============================================================
+    WorkItemDTO:
+      type: object
+      required: [id, organization_id, title, status, source, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        organization_id: { type: string, format: uuid }
+        title: { type: string }
+        status: { $ref: '#/components/schemas/WorkItemStatus' }
+        source: { $ref: '#/components/schemas/WorkItemSource' }
+        owner_id: { type: [string, 'null'], format: uuid }
+        due_at: { type: [string, 'null'], format: date-time }
+        blocking: { type: boolean }
+        waiting_for_external: { type: boolean }
+        priority_score: { type: [integer, 'null'], description: 'derived/cache' }
+        decision_label: 
+          anyOf:
+            - $ref: '#/components/schemas/DecisionLabel'
+            - type: "null"
+        priority_reason: { type: string, nullable: true, description: derived/cache }
+        source_inbox_item_id: { type: [string, 'null'], format: uuid }
+        completed_at: { type: [string, 'null'], format: date-time }
+        archived_at: { type: [string, 'null'], format: date-time }
+        reopened_at: { type: [string, 'null'], format: date-time }
+        version: { type: [integer, 'null'] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    InboxItemDTO:
+      type: object
+      required: [id, organization_id, source, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        organization_id: { type: string, format: uuid }
+        source: { $ref: '#/components/schemas/InboxItemSource' }
+        raw_content: { type: [string, 'null'] }
+        status: { $ref: '#/components/schemas/InboxItemStatus' }
+        classification: { type: [string, 'null'] }
+        suggested_context_json: { type: [object, 'null'] }
+        converted_work_item_id: { type: [string, 'null'], format: uuid }
+        created_at: { type: string, format: date-time }
+        triaged_at: { type: [string, 'null'], format: date-time }
+        dismissed_at: { type: [string, 'null'], format: date-time }
+
+    PeopleDTO:
+      type: object
+      required: [id, organization_id, type, full_name, status, source, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        organization_id: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/PeopleType' }
+        full_name: { type: string }
+        work_email: { type: [string, 'null'], format: email }
+        phone: { type: [string, 'null'] }
+        status: { $ref: '#/components/schemas/PeopleStatus' }
+        source: { $ref: '#/components/schemas/PeopleSource' }
+        notes: { type: [string, 'null'] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    EmployeeProfileDTO:
+      type: object
+      required: [people_id, employment_status]
+      properties:
+        people_id: { type: string, format: uuid }
+        department: { type: [string, 'null'] }
+        position: { type: [string, 'null'] }
+        manager_people_id: { type: [string, 'null'], format: uuid }
+        employment_status: { $ref: '#/components/schemas/EmploymentStatus' }
+        started_at: { type: [string, 'null'], format: date }
+        termination_date: { type: [string, 'null'], format: date }
+
+    CandidateProfileDTO:
+      type: object
+      required: [people_id]
+      properties:
+        people_id: { type: string, format: uuid }
+        pipeline_status: { type: [string, 'null'] }
+        source_email_id: { type: [string, 'null'] }
+        summary: { type: [string, 'null'] }
+        job_opening_ref: { type: [string, 'null'] }
+
+    DocumentDTO:
+      type: object
+      required: [id, organization_id, file_name, file_path, document_type, status, uploaded_by_user_id, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        organization_id: { type: string, format: uuid }
+        file_name: { type: string }
+        file_path: { type: string }
+        document_type: { $ref: '#/components/schemas/DocumentType' }
+        status: { $ref: '#/components/schemas/DocumentStatus' }
+        expires_at: { type: [string, 'null'], format: date }
+        uploaded_by_user_id: { type: string, format: uuid }
+        verified_by_user_id: { type: [string, 'null'], format: uuid }
+        applied_extracted_data_json: { type: [object, 'null'] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ContractDTO:
+      type: object
+      required: [id, organization_id, contract_type, status, person_id, content, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        organization_id: { type: string, format: uuid }
+        contract_type: { $ref: '#/components/schemas/ContractType' }
+        status: { $ref: '#/components/schemas/ContractStatus' }
+        person_id: { type: string, format: uuid }
+        template_id: { type: [string, 'null'], format: uuid }
+        content: { type: string }
+        signed_document_id: { type: [string, 'null'], format: uuid }
+        started_on: { type: [string, 'null'], format: date }
+        ended_on: { type: [string, 'null'], format: date }
+        signed_on: { type: [string, 'null'], format: date }
+        parent_contract_id: { type: [string, 'null'], format: uuid }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    TemplateDTO:
+      type: object
+      required: [id, organization_id, name, type, content, version, is_active, scope, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        organization_id: { type: string, format: uuid }
+        name: { type: string }
+        type: { $ref: '#/components/schemas/TemplateType' }
+        content: { type: string }
+        placeholder_schema_json: { type: [object, 'null'] }
+        version: { type: integer }
+        is_active: { type: boolean }
+        scope: { $ref: '#/components/schemas/TemplateScope' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    AISuggestionDTO:
+      type: object
+      required: [id, organization_id, source_entity_type, source_entity_id, suggestion_type, status, confidence_label, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        organization_id: { type: string, format: uuid }
+        source_entity_type: { $ref: '#/components/schemas/AIEntityType' }
+        source_entity_id: { type: string, format: uuid }
+        suggestion_type: { $ref: '#/components/schemas/SuggestionType' }
+        suggested_data_json: { type: [object, 'null'] }
+        confidence_label: { $ref: '#/components/schemas/ConfidenceLabel' }
+        status: { $ref: '#/components/schemas/SuggestionStatus' }
+        applied_at: { type: [string, 'null'], format: date-time }
+        applied_by_user_id: { type: [string, 'null'], format: uuid }
+        rejected_at: { type: [string, 'null'], format: date-time }
+        rejected_by_user_id: { type: [string, 'null'], format: uuid }
+        rejection_reason: { type: [string, 'null'] }
+        prompt_run_id: { type: [string, 'null'], format: uuid }
+        created_at: { type: string, format: date-time }
+
+    NoteDTO:
+      type: object
+      required: [id, organization_id, linked_entity_type, linked_entity_id, content, author_id, is_internal, is_pinned, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        organization_id: { type: string, format: uuid }
+        linked_entity_type: { $ref: '#/components/schemas/EntityType' }
+        linked_entity_id: { type: string, format: uuid }
+        content: { type: string }
+        author_id: { type: string, format: uuid }
+        is_internal: { type: boolean }
+        is_pinned: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    NotificationDTO:
+      type: object
+      required: [id, organization_id, type, title, linked_entity_type, linked_entity_id, status, recipient_id, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        organization_id: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/NotificationType' }
+        title: { type: string }
+        message: { type: [string, 'null'] }
+        linked_entity_type: { $ref: '#/components/schemas/EntityType' }
+        linked_entity_id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/NotificationStatus' }
+        due_at: { type: [string, 'null'], format: date-time }
+        recipient_id: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+        read_at: { type: [string, 'null'], format: date-time }
+
+    AuditEventDTO:
+      type: object
+      required: [id, organization_id, actor_id, action, entity_type, entity_id, source, timestamp]
+      properties:
+        id: { type: string, format: uuid }
+        organization_id: { type: string, format: uuid }
+        actor_id: { type: string, format: uuid }
+        action: { type: string }
+        entity_type: { $ref: '#/components/schemas/EntityType' }
+        entity_id: { type: string, format: uuid }
+        before_json: { type: [object, 'null'] }
+        after_json: { type: [object, 'null'] }
+        reason: { type: [string, 'null'] }
+        context_summary: { type: [string, 'null'] }
+        source: { $ref: '#/components/schemas/AuditSource' }
+        correlation_id: { type: [string, 'null'] }
+        timestamp: { type: string, format: date-time }
+
+    # ============================================================
+    # REQUEST DTOs
+    # ============================================================
+    CreateWorkItemRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        owner_id: { type: [string, 'null'], format: uuid }
+        due_at: { type: [string, 'null'], format: date-time }
+        source: 
+          anyOf:
+            - $ref: '#/components/schemas/WorkItemSource'
+            - type: "null"
+
+    UpdateWorkItemRequest:
+      type: object
+      properties:
+        title: { type: [string, 'null'] }
+        owner_id: { type: [string, 'null'], format: uuid }
+        due_at: { type: [string, 'null'], format: date-time }
+        status: 
+          anyOf:
+            - $ref: '#/components/schemas/WorkItemStatus'
+            - type: "null"
+        blocking: { type: [boolean, 'null'] }
+        waiting_for_external: { type: [boolean, 'null'] }
+
+    CompleteWorkItemRequest:
+      type: object
+      properties:
+        completion_note: { type: [string, 'null'] }
+        outcome: { type: [string, 'null'] }
+        follow_up_required: { type: [boolean, 'null'] }
+
+    AssignWorkItemRequest:
+      type: object
+      required: [owner_id]
+      properties:
+        owner_id: { type: string, format: uuid }
+
+    SnoozeWorkItemRequest:
+      type: object
+      required: [until]
+      properties:
+        until: { type: string, format: date-time }
+
+    ConvertInboxToWorkRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        owner_id: { type: [string, 'null'], format: uuid }
+        due_at: { type: [string, 'null'], format: date-time }
+        classification: { type: [string, 'null'] }
+
+    UploadDocumentRequest:
+      type: object
+      required: [file, document_type]
+      properties:
+        file: { type: string, format: binary }
+        document_type: { $ref: '#/components/schemas/DocumentType' }
+        metadata_json: { type: [object, 'null'] }
+        linked_entity_type: 
+          anyOf:
+            - $ref: '#/components/schemas/EntityType'
+            - type: "null"
+        linked_entity_id: { type: [string, 'null'], format: uuid }
+
+    CreateContractRequest:
+      type: object
+      required: [person_id, contract_type, content]
+      properties:
+        person_id: { type: string, format: uuid }
+        contract_type: { $ref: '#/components/schemas/ContractType' }
+        template_id: { type: [string, 'null'], format: uuid }
+        content: { type: string }
+        started_on: { type: [string, 'null'], format: date }
+        ended_on: { type: [string, 'null'], format: date }
+
+    AcceptSuggestionRequest:
+      type: object
+      required: [suggestion_id, expected_type]
+      properties:
+        suggestion_id: { type: string, format: uuid }
+        expected_type:
+          type: string
+          enum: [classification, summary, priority, draft, extraction]
+        apply_payload: { type: [object, 'null'] }
+
+    CreateNoteRequest:
+      type: object
+      required: [linked_entity_type, linked_entity_id, content]
+      properties:
+        linked_entity_type: { $ref: '#/components/schemas/EntityType' }
+        linked_entity_id: { type: string, format: uuid }
+        content: { type: string }
+        is_internal: { type: boolean, default: true }
+
+    RejectDocumentRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string }
+
+    LinkEntityRequest:
+      type: object
+      required: [entity_id]
+      properties:
+        entity_id: { type: string, format: uuid }
+        role: { type: [string, 'null'] }
+
+    LinkWorkRequest:
+      type: object
+      required: [target_work_item_id, link_type]
+      properties:
+        target_work_item_id: { type: string, format: uuid }
+        link_type: { $ref: '#/components/schemas/WorkLinkType' }
+
+    BulkActionRequest:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items: { type: string, format: uuid }
+        payload: { type: [object, 'null'] }
+
+    # ============================================================
+    # PAGINATION & JOB
+    # ============================================================
+    PaginationMeta:
+      type: object
+      required: [page, size, total]
+      properties:
+        page: { type: integer }
+        size: { type: integer }
+        total: { type: integer }
+
+    Job:
+      type: object
+      required: [job_id, status]
+      properties:
+        job_id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/JobStatus' }
+        result_url: { type: [string, 'null'] }
+        created_at: { type: [string, 'null'], format: date-time }
+        completed_at: { type: [string, 'null'], format: date-time }
+        error_log: { type: [string, 'null'] }
+
+    # ============================================================
+    # ENVELOPES
+    # ============================================================
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { $ref: '#/components/schemas/ErrorCode' }
+            message: { type: string }
+            details: { type: [object, 'null'] }
+
+    SuccessEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data: {}
+        meta: { type: [object, 'null'] }
+
+    PaginatedEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { type: array, items: {} }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
+
+    # response alias schemas – each wraps SuccessEnvelope with a semantic name
+    SuccessEnvelope_Empty:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+    SuccessEnvelope_WorkItemDetail:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/WorkItemDTO'
+    SuccessEnvelope_InboxItemDetail:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/InboxItemDTO'
+    SuccessEnvelope_PeopleDetail:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PeopleDTO'
+    SuccessEnvelope_DocumentDetail:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DocumentDTO'
+    SuccessEnvelope_ContractDetail:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ContractDTO'
+    SuccessEnvelope_TemplateDetail:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/TemplateDTO'
+    SuccessEnvelope_AISuggestionDetail:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AISuggestionDTO'
+    SuccessEnvelope_NoteDetail:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/NoteDTO'
+    SuccessEnvelope_NotificationDetail:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/NotificationDTO'
+    SuccessEnvelope_AuditEventDetail:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AuditEventDTO'
+    SuccessEnvelope_TodayView:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+    SuccessEnvelope_JobAccepted:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Job'
+    SuccessEnvelope_ReportSummary:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+    SuccessEnvelope_CurrentUser:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+    SuccessEnvelope_UserSession:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+    PaginatedEnvelope_WorkItemSummary:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/WorkItemDTO'
+    PaginatedEnvelope_InboxItemSummary:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/InboxItemDTO'
+    PaginatedEnvelope_PeopleSummary:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/PeopleDTO'
+    PaginatedEnvelope_DocumentSummary:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/DocumentDTO'
+    PaginatedEnvelope_ContractSummary:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/ContractDTO'
+    PaginatedEnvelope_TemplateSummary:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/TemplateDTO'
+    PaginatedEnvelope_AISuggestionSummary:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/AISuggestionDTO'
+    PaginatedEnvelope_NotificationSummary:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/NotificationDTO'
+    PaginatedEnvelope_NoteSummary:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/NoteDTO'
+    PaginatedEnvelope_AuditEventSummary:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuditEventDTO'
+    PaginatedEnvelope_UserSummary:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+    PaginatedEnvelope_SearchResult:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+
+  # ============================================================
+  # RESPONSE ALIASES
+  # ============================================================
+  responses:
+    ErrorEnvelope:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+paths:
+  # ─── AUTH ────────────────────────────────────────────
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: AuthService_login
+      summary: AuthService_login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: Login ok – session cookie set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_UserSession'
+        '401':
+          $ref: '#/components/responses/ErrorEnvelope'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: AuthService_logout
+      summary: AuthService_logout
+      responses:
+        '200':
+          description: Logout ok – cookie cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: AuthService_refresh
+      summary: AuthService_refresh
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_UserSession'
+        '401':
+          $ref: '#/components/responses/ErrorEnvelope'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      operationId: AuthService_me
+      summary: AuthService_me
+      responses:
+        '200':
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CurrentUser'
+
+  # ─── WORK ────────────────────────────────────────────
+  /work:
+    get:
+      tags: [Work]
+      operationId: WorkService_listAllWork
+      summary: WorkService_listAllWork
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/OwnerId'
+        - $ref: '#/components/parameters/DueBefore'
+        - $ref: '#/components/parameters/DueAfter'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200':
+          description: Paginated work list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_WorkItemSummary'
+    post:
+      tags: [Work]
+      operationId: WorkService_createWorkItem
+      summary: WorkService_createWorkItem
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkItemRequest'
+      responses:
+        '200':
+          description: Work item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_WorkItemDetail'
+        '400':
+          $ref: '#/components/responses/ErrorEnvelope'
+
+  /work/today:
+    get:
+      tags: [Work]
+      operationId: WorkService_listToday
+      summary: WorkService_listToday
+      responses:
+        '200':
+          description: Today command center view
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TodayView'
+
+  /work/{workId}:
+    get:
+      tags: [Work]
+      operationId: WorkService_getWorkDetail
+      summary: WorkService_getWorkDetail
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+      responses:
+        '200':
+          description: Work item detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_WorkItemDetail'
+        '404':
+          $ref: '#/components/responses/ErrorEnvelope'
+    patch:
+      tags: [Work]
+      operationId: WorkService_updateWorkItem
+      summary: WorkService_updateWorkItem
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfUnmodifiedSince'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkItemRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_WorkItemDetail'
+        '404':
+          $ref: '#/components/responses/ErrorEnvelope'
+        '409':
+          $ref: '#/components/responses/ErrorEnvelope'
+
+  /work/{workId}/complete:
+    post:
+      tags: [Work]
+      operationId: WorkService_completeWorkItem
+      summary: WorkService_completeWorkItem
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfUnmodifiedSince'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteWorkItemRequest'
+      responses:
+        '200':
+          description: Completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_WorkItemDetail'
+        '409':
+          $ref: '#/components/responses/ErrorEnvelope'
+
+  /work/{workId}/assign:
+    post:
+      tags: [Work]
+      operationId: WorkService_assignWorkItem
+      summary: WorkService_assignWorkItem
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignWorkItemRequest'
+      responses:
+        '200':
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_WorkItemDetail'
+
+  /work/{workId}/reopen:
+    post:
+      tags: [Work]
+      operationId: WorkService_reopenWorkItem
+      summary: WorkService_reopenWorkItem
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Reopened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_WorkItemDetail'
+
+  /work/{workId}/archive:
+    post:
+      tags: [Work]
+      operationId: WorkService_archiveWorkItem
+      summary: WorkService_archiveWorkItem
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Archived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_WorkItemDetail'
+
+  /work/{workId}/snooze:
+    post:
+      tags: [Work]
+      operationId: WorkService_snoozeWorkItem
+      summary: WorkService_snoozeWorkItem
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnoozeWorkItemRequest'
+      responses:
+        '200':
+          description: Snoozed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_WorkItemDetail'
+
+  /work/{workId}/accept-suggestion:
+    post:
+      tags: [Work]
+      operationId: WorkService_acceptSuggestion
+      summary: WorkService_acceptSuggestion
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptSuggestionRequest'
+      responses:
+        '200':
+          description: Suggestion accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_WorkItemDetail'
+        '400':
+          $ref: '#/components/responses/ErrorEnvelope'
+
+  # Work links
+  /work/{workId}/links/people:
+    post:
+      tags: [Work]
+      operationId: WorkService_linkPeople
+      summary: WorkService_linkPeople
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkEntityRequest'
+      responses:
+        '200':
+          description: Linked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+  /work/{workId}/links/people/{peopleId}:
+    delete:
+      tags: [Work]
+      operationId: WorkService_unlinkPeople
+      summary: WorkService_unlinkPeople
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/PeopleId'
+      responses:
+        '200':
+          description: Unlinked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+
+  /work/{workId}/links/documents:
+    post:
+      tags: [Work]
+      operationId: WorkService_linkDocument
+      summary: WorkService_linkDocument
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkEntityRequest'
+      responses:
+        '200':
+          description: Linked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+  /work/{workId}/links/documents/{documentId}:
+    delete:
+      tags: [Work]
+      operationId: WorkService_unlinkDocument
+      summary: WorkService_unlinkDocument
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Unlinked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+
+  /work/{workId}/links/contracts:
+    post:
+      tags: [Work]
+      operationId: WorkService_linkContract
+      summary: WorkService_linkContract
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkEntityRequest'
+      responses:
+        '200':
+          description: Linked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+  /work/{workId}/links/contracts/{contractId}:
+    delete:
+      tags: [Work]
+      operationId: WorkService_unlinkContract
+      summary: WorkService_unlinkContract
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/ContractId'
+      responses:
+        '200':
+          description: Unlinked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+
+  /work/{workId}/links/work:
+    post:
+      tags: [Work]
+      operationId: WorkService_linkWork
+      summary: WorkService_linkWork
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkWorkRequest'
+      responses:
+        '200':
+          description: Linked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+  /work/{workId}/links/work/{targetId}:
+    delete:
+      tags: [Work]
+      operationId: WorkService_unlinkWork
+      summary: WorkService_unlinkWork
+      parameters:
+        - $ref: '#/components/parameters/WorkId'
+        - { name: targetId, in: path, required: true, schema: { type: string, format: uuid } }
+        - $ref: '#/components/parameters/LinkType'
+      responses:
+        '200':
+          description: Unlinked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+
+  /work/bulk/archive:
+    post:
+      tags: [Work, Bulk]
+      operationId: WorkService_bulkArchive
+      summary: WorkService_bulkArchive
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkActionRequest'
+      responses:
+        '200':
+          description: Bulk archive result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      succeeded: { type: array, items: { type: string, format: uuid } }
+                      failed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            error: { type: string }
+
+  /work/bulk/assign:
+    post:
+      tags: [Work, Bulk]
+      operationId: WorkService_bulkAssign
+      summary: WorkService_bulkAssign
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkActionRequest'
+      responses:
+        '200':
+          description: Bulk assign result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      succeeded: { type: array, items: { type: string, format: uuid } }
+                      failed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            error: { type: string }
+
+  # ─── INBOX ───────────────────────────────────────────
+  /inbox:
+    get:
+      tags: [Inbox]
+      operationId: InboxService_listInbox
+      summary: InboxService_listInbox
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/SourceFilter'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200':
+          description: Paginated inbox list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_InboxItemSummary'
+    post:
+      tags: [Inbox]
+      operationId: InboxService_ingestInboxItem
+      summary: InboxService_ingestInboxItem
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [source]
+              properties:
+                source: { $ref: '#/components/schemas/InboxItemSource' }
+                raw_content: { type: [string, 'null'] }
+      responses:
+        '200':
+          description: Ingested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_InboxItemDetail'
+
+  /inbox/{inboxId}:
+    get:
+      tags: [Inbox]
+      operationId: InboxService_getInboxDetail
+      summary: InboxService_getInboxDetail
+      parameters:
+        - $ref: '#/components/parameters/InboxId'
+      responses:
+        '200':
+          description: Inbox item detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_InboxItemDetail'
+        '404':
+          $ref: '#/components/responses/ErrorEnvelope'
+
+  /inbox/{inboxId}/classify:
+    post:
+      tags: [Inbox]
+      operationId: InboxService_classifyInboxItem
+      summary: InboxService_classifyInboxItem
+      parameters:
+        - $ref: '#/components/parameters/InboxId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [classification]
+              properties:
+                classification: { type: string }
+      responses:
+        '200':
+          description: Classified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_InboxItemDetail'
+
+  /inbox/{inboxId}/triage:
+    post:
+      tags: [Inbox]
+      operationId: InboxService_convertInboxToWork
+      summary: InboxService_convertInboxToWork
+      parameters:
+        - $ref: '#/components/parameters/InboxId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConvertInboxToWorkRequest'
+      responses:
+        '201':
+          description: Work item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_WorkItemDetail'
+        '400':
+          $ref: '#/components/responses/ErrorEnvelope'
+
+  /inbox/{inboxId}/dismiss:
+    post:
+      tags: [Inbox]
+      operationId: InboxService_dismissInboxItem
+      summary: InboxService_dismissInboxItem
+      parameters:
+        - $ref: '#/components/parameters/InboxId'
+      responses:
+        '200':
+          description: Dismissed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+
+  # ─── PEOPLE ──────────────────────────────────────────
+  /people:
+    get:
+      tags: [People]
+      operationId: PeopleService_listPeople
+      summary: PeopleService_listPeople
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/TypeFilter'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200':
+          description: Paginated people list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_PeopleSummary'
+    post:
+      tags: [People]
+      operationId: PeopleService_createPeople
+      summary: PeopleService_createPeople
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, full_name]
+              properties:
+                type: { $ref: '#/components/schemas/PeopleType' }
+                full_name: { type: string }
+                work_email: { type: [string, 'null'], format: email }
+                phone: { type: [string, 'null'] }
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PeopleDetail'
+
+  /people/{peopleId}:
+    get:
+      tags: [People]
+      operationId: PeopleService_getPeopleDetail
+      summary: PeopleService_getPeopleDetail
+      parameters:
+        - $ref: '#/components/parameters/PeopleId'
+      responses:
+        '200':
+          description: People detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PeopleDetail'
+        '404':
+          $ref: '#/components/responses/ErrorEnvelope'
+    patch:
+      tags: [People]
+      operationId: PeopleService_updatePeople
+      summary: PeopleService_updatePeople
+      parameters:
+        - $ref: '#/components/parameters/PeopleId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfUnmodifiedSince'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PeopleDetail'
+
+  /people/{peopleId}/archive:
+    post:
+      tags: [People]
+      operationId: PeopleService_archivePeople
+      summary: PeopleService_archivePeople
+      parameters:
+        - $ref: '#/components/parameters/PeopleId'
+      responses:
+        '200':
+          description: Archived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PeopleDetail'
+
+  /people/{peopleId}/employee-profile:
+    get:
+      tags: [People]
+      operationId: PeopleService_getEmployeeProfile
+      summary: PeopleService_getEmployeeProfile
+      parameters:
+        - $ref: '#/components/parameters/PeopleId'
+      responses:
+        '200':
+          description: Employee profile detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PeopleDetail'
+    put:
+      tags: [People]
+      operationId: PeopleService_createOrUpdateEmployeeProfile
+      summary: PeopleService_createOrUpdateEmployeeProfile
+      parameters:
+        - $ref: '#/components/parameters/PeopleId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Profile saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PeopleDetail'
+
+  /people/{peopleId}/candidate-profile:
+    get:
+      tags: [People]
+      operationId: PeopleService_getCandidateProfile
+      summary: PeopleService_getCandidateProfile
+      parameters:
+        - $ref: '#/components/parameters/PeopleId'
+      responses:
+        '200':
+          description: Candidate profile detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PeopleDetail'
+    put:
+      tags: [People]
+      operationId: PeopleService_createOrUpdateCandidateProfile
+      summary: PeopleService_createOrUpdateCandidateProfile
+      parameters:
+        - $ref: '#/components/parameters/PeopleId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Profile saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PeopleDetail'
+
+  # ─── DOCUMENTS ────────────────────────────────────────
+  /documents:
+    get:
+      tags: [Documents]
+      operationId: DocumentService_listDocuments
+      summary: DocumentService_listDocuments
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/TypeFilter'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200':
+          description: Paginated document list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_DocumentSummary'
+    post:
+      tags: [Documents]
+      operationId: DocumentService_uploadDocument
+      summary: DocumentService_uploadDocument
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadDocumentRequest'
+      responses:
+        '200':
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_DocumentDetail'
+
+  /documents/{documentId}:
+    get:
+      tags: [Documents]
+      operationId: DocumentService_getDocumentDetail
+      summary: DocumentService_getDocumentDetail
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Document detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_DocumentDetail'
+        '404':
+          $ref: '#/components/responses/ErrorEnvelope'
+
+  /documents/{documentId}/verify:
+    post:
+      tags: [Documents]
+      operationId: DocumentService_verifyDocument
+      summary: DocumentService_verifyDocument
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_DocumentDetail'
+
+  /documents/{documentId}/reject:
+    post:
+      tags: [Documents]
+      operationId: DocumentService_rejectDocument
+      summary: DocumentService_rejectDocument
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectDocumentRequest'
+      responses:
+        '200':
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_DocumentDetail'
+
+  /documents/{documentId}/expire:
+    post:
+      tags: [Documents]
+      operationId: DocumentService_expireDocument
+      summary: DocumentService_expireDocument
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_DocumentDetail'
+
+  /documents/{documentId}/accept-extraction:
+    post:
+      tags: [Documents]
+      operationId: DocumentService_acceptExtraction
+      summary: DocumentService_acceptExtraction
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptSuggestionRequest'
+      responses:
+        '200':
+          description: Extraction accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_DocumentDetail'
+
+  /documents/{documentId}/links/people:
+    post:
+      tags: [Documents]
+      operationId: DocumentService_linkDocumentToPeople
+      summary: DocumentService_linkDocumentToPeople
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkEntityRequest'
+      responses:
+        '200':
+          description: Linked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+  /documents/{documentId}/links/people/{peopleId}:
+    delete:
+      tags: [Documents]
+      operationId: DocumentService_unlinkDocumentFromPeople
+      summary: DocumentService_unlinkDocumentFromPeople
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/PeopleId'
+      responses:
+        '200':
+          description: Unlinked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+
+  /documents/bulk/verify:
+    post:
+      tags: [Documents, Bulk]
+      operationId: DocumentService_bulkVerify
+      summary: DocumentService_bulkVerify
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkActionRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      succeeded: { type: array, items: { type: string, format: uuid } }
+                      failed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            error: { type: string }
+
+
+  # ─── CONTRACTS ──────────────────────────────────────
+  /contracts:
+    get:
+      tags: [Contracts]
+      operationId: ContractService_listContracts
+      summary: ContractService_listContracts
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/TypeFilter'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200':
+          description: Paginated contract list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_ContractSummary'
+    post:
+      tags: [Contracts]
+      operationId: ContractService_createContract
+      summary: ContractService_createContract
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContractRequest'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ContractDetail'
+
+  /contracts/{contractId}:
+    get:
+      tags: [Contracts]
+      operationId: ContractService_getContractDetail
+      summary: ContractService_getContractDetail
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+      responses:
+        '200':
+          description: Contract detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ContractDetail'
+        '404':
+          $ref: '#/components/responses/ErrorEnvelope'
+    patch:
+      tags: [Contracts]
+      operationId: ContractService_updateContractDraft
+      summary: ContractService_updateContractDraft
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfUnmodifiedSince'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ContractDetail'
+
+  /contracts/{contractId}/send:
+    post:
+      tags: [Contracts]
+      operationId: ContractService_sendContract
+      summary: ContractService_sendContract
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ContractDetail'
+
+  /contracts/{contractId}/sign:
+    post:
+      tags: [Contracts]
+      operationId: ContractService_signContract
+      summary: ContractService_signContract
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Signed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ContractDetail'
+
+  /contracts/{contractId}/terminate:
+    post:
+      tags: [Contracts]
+      operationId: ContractService_terminateContract
+      summary: ContractService_terminateContract
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Terminated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ContractDetail'
+
+  /contracts/{contractId}/expire:
+    post:
+      tags: [Contracts]
+      operationId: ContractService_expireContract
+      summary: ContractService_expireContract
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+      responses:
+        '200':
+          description: Expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ContractDetail'
+
+  /contracts/{contractId}/accept-draft:
+    post:
+      tags: [Contracts]
+      operationId: ContractService_acceptDraft
+      summary: ContractService_acceptDraft
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptSuggestionRequest'
+      responses:
+        '200':
+          description: Draft accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ContractDetail'
+
+  /contracts/{contractId}/amendments:
+    post:
+      tags: [Contracts]
+      operationId: ContractService_createAmendment
+      summary: ContractService_createAmendment
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Amendment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ContractDetail'
+
+  /contracts/{contractId}/links/documents:
+    post:
+      tags: [Contracts]
+      operationId: ContractService_linkContractToDocument
+      summary: ContractService_linkContractToDocument
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkEntityRequest'
+      responses:
+        '200':
+          description: Linked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+  /contracts/{contractId}/links/documents/{documentId}:
+    delete:
+      tags: [Contracts]
+      operationId: ContractService_unlinkContractFromDocument
+      summary: ContractService_unlinkContractFromDocument
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Unlinked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+
+  # ─── TEMPLATES ──────────────────────────────────────
+  /templates:
+    get:
+      tags: [Templates]
+      operationId: TemplateService_listTemplates
+      summary: TemplateService_listTemplates
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/TypeFilter'
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200':
+          description: Paginated template list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_TemplateSummary'
+    post:
+      tags: [Templates]
+      operationId: TemplateService_createTemplate
+      summary: TemplateService_createTemplate
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type, content]
+              properties:
+                name: { type: string }
+                type: { $ref: '#/components/schemas/TemplateType' }
+                content: { type: string }
+                placeholder_schema_json: { type: [object, 'null'] }
+                scope: 
+          anyOf:
+            - $ref: '#/components/schemas/TemplateScope'
+            - type: "null"
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TemplateDetail'
+
+  /templates/{templateId}:
+    get:
+      tags: [Templates]
+      operationId: TemplateService_getTemplateDetail
+      summary: TemplateService_getTemplateDetail
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '200':
+          description: Template detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TemplateDetail'
+        '404':
+          $ref: '#/components/responses/ErrorEnvelope'
+    patch:
+      tags: [Templates]
+      operationId: TemplateService_updateTemplate
+      summary: TemplateService_updateTemplate
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfUnmodifiedSince'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TemplateDetail'
+
+  /templates/{templateId}/version:
+    post:
+      tags: [Templates]
+      operationId: TemplateService_versionTemplate
+      summary: TemplateService_versionTemplate
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '200':
+          description: Version bumped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TemplateDetail'
+
+  /templates/{templateId}/archive:
+    post:
+      tags: [Templates]
+      operationId: TemplateService_archiveTemplate
+      summary: TemplateService_archiveTemplate
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '200':
+          description: Archived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TemplateDetail'
+
+  /templates/{templateId}/activate:
+    post:
+      tags: [Templates]
+      operationId: TemplateService_activateTemplate
+      summary: TemplateService_activateTemplate
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '200':
+          description: Activated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TemplateDetail'
+
+  # ─── AI ─────────────────────────────────────────────
+  /ai/suggestions:
+    get:
+      tags: [AI]
+      operationId: AIService_listSuggestions
+      summary: AIService_listSuggestions
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - { $ref: '#/components/parameters/StatusFilter' }
+        - { name: source_entity_type, in: query, schema: { $ref: '#/components/schemas/AIEntityType' } }
+        - { name: source_entity_id, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Paginated suggestion list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_AISuggestionSummary'
+    post:
+      tags: [AI]
+      operationId: AIService_createSuggestion
+      summary: AIService_createSuggestion
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [source_entity_type, source_entity_id, suggestion_type, suggested_data_json]
+              properties:
+                source_entity_type: { $ref: '#/components/schemas/AIEntityType' }
+                source_entity_id: { type: string, format: uuid }
+                suggestion_type: { $ref: '#/components/schemas/SuggestionType' }
+                suggested_data_json: { type: object }
+                confidence_label: 
+          anyOf:
+            - $ref: '#/components/schemas/ConfidenceLabel'
+            - type: "null"
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_AISuggestionDetail'
+
+  /ai/suggestions/{suggestionId}:
+    get:
+      tags: [AI]
+      operationId: AIService_getSuggestionDetail
+      summary: AIService_getSuggestionDetail
+      parameters:
+        - $ref: '#/components/parameters/SuggestionId'
+      responses:
+        '200':
+          description: Suggestion detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_AISuggestionDetail'
+        '404':
+          $ref: '#/components/responses/ErrorEnvelope'
+  /ai/suggestions/{suggestionId}/reject:
+    post:
+      tags: [AI]
+      operationId: AIService_rejectSuggestion
+      summary: AIService_rejectSuggestion
+      parameters:
+        - $ref: '#/components/parameters/SuggestionId'
+      responses:
+        '200':
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_AISuggestionDetail'
+  /ai/suggestions/{suggestionId}/supersede:
+    post:
+      tags: [AI]
+      operationId: AIService_supersedeSuggestion
+      summary: AIService_supersedeSuggestion
+      parameters:
+        - $ref: '#/components/parameters/SuggestionId'
+      responses:
+        '200':
+          description: Superseded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_AISuggestionDetail'
+
+  /ai/run-prompt:
+    post:
+      tags: [AI]
+      operationId: AIService_runPrompt
+      summary: AIService_runPrompt
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prompt]
+              properties:
+                prompt: { type: string }
+                model: { type: [string, 'null'] }
+      responses:
+        '202':
+          description: Job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_JobAccepted'
+
+  /ai/jobs:
+    get:
+      tags: [AI, Jobs]
+      operationId: AIService_listJobs
+      summary: AIService_listJobs
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/StatusFilter'
+      responses:
+        '200':
+          description: Paginated job list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_AISuggestionSummary'
+  /ai/jobs/{jobId}:
+    get:
+      tags: [AI, Jobs]
+      operationId: AIService_getJobDetail
+      summary: AIService_getJobDetail
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Job detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_JobAccepted'
+        '404':
+          $ref: '#/components/responses/ErrorEnvelope'
+
+  # ─── NOTIFICATIONS ──────────────────────────────────
+  /notifications:
+    get:
+      tags: [Notifications]
+      operationId: NotificationService_listNotifications
+      summary: NotificationService_listNotifications
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/StatusFilter'
+        - { name: type, in: query, schema: { $ref: '#/components/schemas/NotificationType' } }
+      responses:
+        '200':
+          description: Paginated notification list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_NotificationSummary'
+  /notifications/unread-count:
+    get:
+      tags: [Notifications]
+      operationId: NotificationService_unreadCount
+      summary: NotificationService_unreadCount
+      responses:
+        '200':
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count]
+                properties:
+                  count: { type: integer }
+
+  /notifications/{notificationId}/read:
+    post:
+      tags: [Notifications]
+      operationId: NotificationService_markRead
+      summary: NotificationService_markRead
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+      responses:
+        '200':
+          description: Marked read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+  /notifications/{notificationId}/dismiss:
+    post:
+      tags: [Notifications]
+      operationId: NotificationService_dismissNotification
+      summary: NotificationService_dismissNotification
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+      responses:
+        '200':
+          description: Dismissed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+  /notifications/{notificationId}/snooze:
+    post:
+      tags: [Notifications]
+      operationId: NotificationService_snoozeNotification
+      summary: NotificationService_snoozeNotification
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+      responses:
+        '200':
+          description: Snoozed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+
+  /notifications/bulk/read:
+    post:
+      tags: [Notifications, Bulk]
+      operationId: NotificationService_bulkRead
+      summary: NotificationService_bulkRead
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkActionRequest'
+      responses:
+        '200':
+          description: Bulk read result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      succeeded: { type: array, items: { type: string, format: uuid } }
+                      failed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            error: { type: string }
+
+
+  # ─── NOTES ──────────────────────────────────────────
+  /notes:
+    get:
+      tags: [Notes]
+      operationId: NoteService_listNotes
+      summary: NoteService_listNotes
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - { name: linked_entity_type, in: query, required: true, schema: { $ref: '#/components/schemas/EntityType' } }
+        - { name: linked_entity_id, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Paginated note list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_NoteSummary'
+    post:
+      tags: [Notes]
+      operationId: NoteService_createNote
+      summary: NoteService_createNote
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNoteRequest'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_NoteDetail'
+
+  /notes/{noteId}:
+    patch:
+      tags: [Notes]
+      operationId: NoteService_updateNote
+      summary: NoteService_updateNote
+      parameters:
+        - $ref: '#/components/parameters/NoteId'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_NoteDetail'
+    delete:
+      tags: [Notes]
+      operationId: NoteService_deleteNote
+      summary: NoteService_deleteNote
+      parameters:
+        - $ref: '#/components/parameters/NoteId'
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+
+  # ─── AUDIT ──────────────────────────────────────────
+  /audit:
+    get:
+      tags: [Audit]
+      operationId: AuditService_listAuditEvents
+      summary: AuditService_listAuditEvents
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+        - { name: entity_type, in: query, schema: { $ref: '#/components/schemas/EntityType' } }
+        - { name: entity_id, in: query, schema: { type: string, format: uuid } }
+        - { name: actor_id, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Paginated audit log
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_AuditEventSummary'
+
+  /audit/by-entity:
+    get:
+      tags: [Audit]
+      operationId: AuditService_auditByEntity
+      summary: AuditService_auditByEntity
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - { name: entity_type, in: query, required: true, schema: { $ref: '#/components/schemas/EntityType' } }
+        - { name: entity_id, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Entity audit log
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_AuditEventSummary'
+
+  /audit/by-actor/{actorId}:
+    get:
+      tags: [Audit]
+      operationId: AuditService_auditByActor
+      summary: AuditService_auditByActor
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Actor audit log
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_AuditEventSummary'
+
+  # ─── SEARCH ─────────────────────────────────────────
+  /search:
+    get:
+      tags: [Search]
+      operationId: SearchQueryHandler_search
+      summary: SearchQueryHandler_search
+      parameters:
+        - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/TypeFilter'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Search result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_SearchResult'
+
+  # ─── REPORTS ────────────────────────────────────────
+  /reports/daily-summary:
+    get:
+      tags: [Reports]
+      operationId: ReportingService_dailySummary
+      summary: ReportingService_dailySummary
+      responses:
+        '200':
+          description: Daily summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ReportSummary'
+  /reports/status-snapshot:
+    get:
+      tags: [Reports]
+      operationId: ReportingService_statusSnapshot
+      summary: ReportingService_statusSnapshot
+      responses:
+        '200':
+          description: Status snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ReportSummary'
+
+  # ─── ADMIN ──────────────────────────────────────────
+  /admin/users:
+    get:
+      tags: [Admin]
+      operationId: AdminService_listUsers
+      summary: AdminService_listUsers
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Paginated user list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEnvelope_UserSummary'
+    post:
+      tags: [Admin]
+      operationId: AdminService_createUser
+      summary: AdminService_createUser
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, role]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string }
+                role: { $ref: '#/components/schemas/UserRole' }
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CurrentUser'
+
+  /admin/users/{userId}:
+    get:
+      tags: [Admin]
+      operationId: AdminService_getUserDetail
+      summary: AdminService_getUserDetail
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CurrentUser'
+    patch:
+      tags: [Admin]
+      operationId: AdminService_updateUser
+      summary: AdminService_updateUser
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CurrentUser'
+
+  /admin/users/{userId}/deactivate:
+    post:
+      tags: [Admin]
+      operationId: AdminService_deactivateUser
+      summary: AdminService_deactivateUser
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Deactivated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CurrentUser'
+
+  /admin/settings:
+    get:
+      tags: [Admin]
+      operationId: AdminService_getSettings
+      summary: AdminService_getSettings
+      responses:
+        '200':
+          description: Organization settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+    patch:
+      tags: [Admin]
+      operationId: AdminService_updateSettings
+      summary: AdminService_updateSettings
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+
+  /admin/settings/integrations:
+    post:
+      tags: [Admin]
+      operationId: AdminService_configureIntegration
+      summary: AdminService_configureIntegration
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Integration configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Empty'
+
+  # ─── JOB STATUS (long-running) ─────────────────────
+  /jobs/{jobId}:
+    get:
+      tags: [Jobs]
+      operationId: JobStatus_getJob
+      summary: JobStatus_getJob
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_JobAccepted'
+        '404':
+          $ref: '#/components/responses/ErrorEnvelope'

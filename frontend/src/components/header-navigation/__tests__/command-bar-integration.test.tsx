@@ -58,7 +58,7 @@ vi.mock("@/hooks/use-current-user", () => ({
   useCurrentUser: () => ({
     user: {
       id: "1",
-      email: "admin@vroom.hr",
+      email: "admin@hrspace.local",
       name: "Admin User",
       avatar_url: null,
       role: "admin" as const,
