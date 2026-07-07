@@ -12,6 +12,64 @@ Dùng Atlassian MCP (`atlassian` server) cho mọi thao tác Jira.
 - Phụ thuộc: Jira issue links; directional dùng `Blocks`.
 - Đóng / chuyển status: chỉ khi được yêu cầu rõ ràng. Agent không tự chuyển.
 
+### Phân cấp task: PRD (cha) → Slice (con)
+
+Quy ước cứng cho mọi surface trong dự án:
+
+| Vai trò | Skill | Issue type | Jira typeId | Mô tả |
+|---------|-------|------------|-------------|-------|
+| PRD (cha) | `to-prd` | **Task** | `10003` | Problem statement, user stories, implementation decisions, test decisions. KHÔNG implement từ PRD. |
+| Slice (con) | `to-issues` | **Subtask** | `10002` | Lát cắt dọc hẹp, implement độc lập. Gắn `parent` = key của PRD cha. |
+
+Nguyên tắc:
+- 1 surface = 1 PRD (Task) → N slice (Subtask).
+- Subtask KHÔNG tự tồn tại nếu không có PRD cha.
+- Agent implement chỉ nhặt Subtask, không chạm PRD.
+- Khi subtask done → PRD done → surface done.
+
+Ví dụ cây task:
+```text
+to-prd "Auth/Setup" → KAN-76 (Task)
+  └─ to-issues → KAN-77 (Subtask, parent=KAN-76): Setup Wizard
+  └─ to-issues → KAN-78 (Subtask, parent=KAN-76): Login
+  └─ to-issues → KAN-79 (Subtask, parent=KAN-76): App Shell Guard
+```
+
+### Lệnh MCP Jira
+
+#### Tạo PRD (Task cha)
+
+```json
+{
+  "tool": "createJiraIssue",
+  "cloudId": "https://nullnyx.atlassian.net/",
+  "projectKey": "KAN",
+  "issueTypeName": "Task",
+  "summary": "[PRD] Contracts surface",
+  "description": "... (body theo template to-prd) ...",
+  "contentFormat": "markdown",
+  "responseContentFormat": "markdown"
+}
+```
+
+#### Tạo Slice (Subtask con)
+
+```json
+{
+  "tool": "createJiraIssue",
+  "cloudId": "https://nullnyx.atlassian.net/",
+  "projectKey": "KAN",
+  "issueTypeName": "Subtask",
+  "parent": "KAN-97",
+  "summary": "Contracts Core — list, detail, draft create",
+  "description": "## Parent\nKAN-97\n\n## What to build\n...",
+  "contentFormat": "markdown",
+  "responseContentFormat": "markdown"
+}
+```
+
+Body Subtask luôn bắt đầu bằng `## Parent\n<PRD key>\n\n` rồi đến template `to-issues` (`## What to build` / `## Acceptance criteria` / `## Blocked by`).
+
 ## Đường nhanh kiểm tra task
 
 Khi user nói "check task", "xem task", hoặc tương tự mà không có key,
