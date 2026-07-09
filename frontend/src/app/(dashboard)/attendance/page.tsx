@@ -124,7 +124,7 @@ export default function AttendanceListPage() {
       const res = await fetch("/api/employees", { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
-        setEmployees(data);
+        setEmployees(data.items ?? []);
       }
     } catch {
       // Silently fail - employee filter is optional
