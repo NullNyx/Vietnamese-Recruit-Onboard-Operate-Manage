@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, FileEdit, Loader2 } from "lucide-react";
+import { Check, X, Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -10,12 +10,10 @@ import { confirmDraftAction } from "@/lib/api/assistant";
 
 interface DraftActionCardProps {
   draft: DraftAction;
-  onConfirmed?: () => void | Promise<void>;
+  onConfirmed?: () => void;
   onDismissed?: () => void;
   /** Optional custom confirm function. Defaults to HR confirm endpoint. */
   confirmAction?: (draft: DraftAction) => Promise<unknown>;
-  /** Custom confirm button label (defaults to "Xác nhận") */
-  confirmLabel?: string;
 }
 
 export function DraftActionCard({
@@ -23,30 +21,18 @@ export function DraftActionCard({
   onConfirmed,
   onDismissed,
   confirmAction,
-  confirmLabel = "Xác nhận",
 }: DraftActionCardProps) {
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
   const handleConfirm = async () => {
-    if (onConfirmed) {
-      // Prefill/redirect mode — no direct API call
-      setConfirming(true);
-      try {
-        await onConfirmed();
-        setConfirmed(true);
-      } finally {
-        setConfirming(false);
-      }
-      return;
-    }
     setConfirming(true);
     try {
-      const fn: (draft: DraftAction) => Promise<unknown> = confirmAction ?? confirmDraftAction;
+      const fn = confirmAction || confirmDraftAction;
       await fn(draft);
       setConfirmed(true);
       toast.success("Đã gửi thành công!");
-      
+      onConfirmed?.();
     } catch (err) {
       toast.error(
         `Gửi thất bại: ${
@@ -73,19 +59,12 @@ export function DraftActionCard({
     );
   }
 
-  const isLeaveDraft = draft.action_type === "submit_leave_request";
-  const isOvertimeDraft = draft.action_type === "submit_overtime_request";
-
   return (
     <Card className="border-blue-200">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <FileEdit className="h-4 w-4" />
-          {isLeaveDraft
-            ? "Draft — Đơn nghỉ phép"
-            : isOvertimeDraft
-              ? "Draft — Đơn tăng ca"
-              : `Draft Action — ${draft.action_type}`}
+          <Mail className="h-4 w-4" />
+          Draft Action — {draft.action_type}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -96,9 +75,9 @@ export function DraftActionCard({
           {confirming ? (
             <Loader2 className="mr-1 h-3 w-3 animate-spin" />
           ) : (
-            <FileEdit className="mr-1 h-3 w-3" />
+            <Check className="mr-1 h-3 w-3" />
           )}
-          {confirmLabel}
+          Xác nhận
         </Button>
         <Button
           size="sm"

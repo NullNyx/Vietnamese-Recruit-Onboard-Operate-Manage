@@ -40,18 +40,6 @@ describe("DraftActionCard", () => {
     expect(screen.getByText("Gửi thư báo trúng tuyển đến test@example.com")).toBeInTheDocument();
   });
 
-  it("renders leave draft with correct title", () => {
-    const leaveDraft = { ...mockDraft, action_type: "submit_leave_request" };
-    render(<DraftActionCard draft={leaveDraft} />);
-    expect(screen.getByText(/Draft — Đơn nghỉ phép/)).toBeInTheDocument();
-  });
-
-  it("renders overtime draft with correct title", () => {
-    const otDraft = { ...mockDraft, action_type: "submit_overtime_request" };
-    render(<DraftActionCard draft={otDraft} />);
-    expect(screen.getByText(/Draft — Đơn tăng ca/)).toBeInTheDocument();
-  });
-
   it("calls onDismissed when Cancel is clicked", () => {
     const handleDismiss = vi.fn();
     render(<DraftActionCard draft={mockDraft} onDismissed={handleDismiss} />);
@@ -60,21 +48,11 @@ describe("DraftActionCard", () => {
     expect(handleDismiss).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onConfirmed directly when provided (prefill mode)", () => {
+  it("calls confirmDraftAction and shows success on confirm", async () => {
     const handleConfirmed = vi.fn();
-    render(<DraftActionCard draft={mockDraft} onConfirmed={handleConfirmed} />);
-    
-    fireEvent.click(screen.getByText("Xác nhận"));
-    
-    // Prefill mode: onConfirmed is called directly, never confirmDraftAction
-    expect(handleConfirmed).toHaveBeenCalledTimes(1);
-    expect(confirmDraftAction).not.toHaveBeenCalled();
-  });
-
-  it("falls through to confirmDraftAction when onConfirmed is not provided", async () => {
     vi.mocked(confirmDraftAction).mockResolvedValueOnce({ status: "ok" });
 
-    render(<DraftActionCard draft={mockDraft} />);
+    render(<DraftActionCard draft={mockDraft} onConfirmed={handleConfirmed} />);
     
     fireEvent.click(screen.getByText("Xác nhận"));
     
@@ -82,23 +60,23 @@ describe("DraftActionCard", () => {
     
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith("Đã gửi thành công!");
+      expect(handleConfirmed).toHaveBeenCalledTimes(1);
+      expect(screen.getByText("Đã xác nhận và gửi thành công.")).toBeInTheDocument();
     });
   });
 
-  it("shows custom confirm label", () => {
-    render(<DraftActionCard draft={mockDraft} confirmLabel="Mở form" />);
-    expect(screen.getByText("Mở form")).toBeInTheDocument();
-  });
-
   it("shows error toast if confirmation fails", async () => {
+    const handleConfirmed = vi.fn();
     vi.mocked(confirmDraftAction).mockRejectedValueOnce(new Error("API Error"));
 
-    render(<DraftActionCard draft={mockDraft} />);
+    render(<DraftActionCard draft={mockDraft} onConfirmed={handleConfirmed} />);
     
     fireEvent.click(screen.getByText("Xác nhận"));
     
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Gửi thất bại: API Error");
+      expect(handleConfirmed).not.toHaveBeenCalled();
+      // Should still show confirm button, not success state
       expect(screen.getByText("Xác nhận")).toBeInTheDocument();
     });
   });
