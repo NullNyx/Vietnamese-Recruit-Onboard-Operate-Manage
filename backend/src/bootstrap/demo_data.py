@@ -40,6 +40,7 @@ async def _has_existing_data(session: AsyncSession) -> bool:
 async def seed_demo_data(session: AsyncSession) -> bool:
     """Seed minimal data: departments, positions, and one demo employee."""
     from src.modules.identity.infrastructure.config import AuthSettings
+    from src.modules.identity.domain.entities import User, UserRole
 
     settings = AuthSettings()  # type: ignore[call-arg]
     if not settings.auto_seed_sample_data:
@@ -82,6 +83,11 @@ async def seed_demo_data(session: AsyncSession) -> bool:
     session.add(employee)
     await session.flush()
 
+    uploader_result = await session.execute(
+        select(User.id).where(User.email == DEFAULT_DEMO_SUPER_ADMIN_EMAIL)
+    )
+    uploader_id = uploader_result.scalar_one_or_none()
+
     # --- Seed demo documents with placeholder files in MinIO ------------------
     employee_settings = EmployeeSettings()
     minio = MinIOClient(employee_settings)
@@ -103,7 +109,11 @@ async def seed_demo_data(session: AsyncSession) -> bool:
     ]
 
     docs = []
+    if uploader_id is None:
+        logger.info("Demo super admin user missing; skip document seed.")
     for doc_type, file_name, description in doc_specs:
+        if uploader_id is None:
+            continue
         storage_path = f"employees/{employee.id}/{doc_type}/{file_name}"
 
         # Upload placeholder blob to MinIO first; only persist DB row on success.
@@ -124,6 +134,7 @@ async def seed_demo_data(session: AsyncSession) -> bool:
             file_size=len(placeholder_pdf),
             mime_type="application/pdf",
             description=description,
+            uploaded_by_hr_id=uploader_id,
         )
         docs.append(doc)
 
