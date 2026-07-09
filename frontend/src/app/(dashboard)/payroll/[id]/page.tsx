@@ -64,7 +64,7 @@ export default function PayslipDetailPage() {
       setTaxableIncome(data.taxable_income);
       setPitAmount(data.pit_amount);
       setNetSalary(data.net_salary);
-    } catch (err) {
+    } catch {
       toast.error("Không tìm thấy phiếu lương");
       router.push("/payroll");
     } finally {
