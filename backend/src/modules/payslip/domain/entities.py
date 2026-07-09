@@ -12,7 +12,7 @@ from decimal import Decimal
 from enum import Enum
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, Column, DateTime, UniqueConstraint
+from sqlalchemy import CheckConstraint, Column, DateTime, String, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -80,7 +80,7 @@ class Payslip(SQLModel, table=True):
     # Publication state
     status: PayslipStatus = Field(
         default=PayslipStatus.DRAFT,
-        nullable=False,
+        sa_column=Column(String(10), nullable=False),
     )
     published_at: datetime | None = Field(
         default=None,
