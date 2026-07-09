@@ -32,10 +32,6 @@ function formatPeriod(periodMonth: string): string {
   return new Date(y, m-1).toLocaleDateString("vi-VN", { month: "long", year: "numeric" });
 }
 
-function toInputMonth(periodMonth: string): string {
-  return periodMonth.substring(0, 7);
-}
-
 export default function PayslipDetailPage() {
   const params = useParams();
   const router = useRouter();
