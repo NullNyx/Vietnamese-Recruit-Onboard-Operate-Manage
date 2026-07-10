@@ -63,6 +63,7 @@ class LocalAuthResult:
     user: object
     must_change_password: bool
 
+
 # Google OAuth2 authorization endpoint.
 _GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 
