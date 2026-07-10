@@ -16,9 +16,6 @@ import redis.asyncio as redis
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.modules.employee.infrastructure.employee_repository import (
-    EmployeeRepository as EmployeeRepo,
-)
 from src.modules.identity.application.audit_service import AuditService
 from src.modules.identity.application.auth_service import AuthService
 from src.modules.identity.application.domain_gate_service import DomainGateService
@@ -247,40 +244,16 @@ async def get_oauth_service(
 
 async def get_auth_service(
     user_repo: UserRepository = Depends(get_user_repository),
-    oauth_grant_repo: OAuthGrantRepository = Depends(get_oauth_grant_repository),
     refresh_token_repo: RefreshTokenRepository = Depends(get_refresh_token_repository),
-    oauth_service: OAuthService = Depends(get_oauth_service),
     token_service: TokenService = Depends(get_token_service),
-    domain_gate_service: DomainGateService = Depends(get_domain_gate_service),
     session: AsyncSession = Depends(get_db_session),
 ) -> AuthService:
-    """Provide an AuthService instance with all dependencies.
-
-    Args:
-        user_repo: The user repository from DI.
-        oauth_grant_repo: The OAuth grant repository from DI.
-        refresh_token_repo: The refresh token repository from DI.
-        oauth_service: The OAuth service from DI.
-        token_service: The token service from DI.
-        domain_gate_service: The domain gate service from DI.
-        session: The async database session for employee lookup.
-
-    Returns:
-        A fully configured AuthService orchestrator.
-    """
-    employee_repo = EmployeeRepo(session)
+    """Provide local AuthService instance."""
     return AuthService(
         settings=get_settings(),
-        jwt_utils=get_jwt_utils(),
-        crypto=get_crypto_utils(),
-        whitelist_service=get_whitelist_service(),
-        oauth_service=oauth_service,
         token_service=token_service,
         user_repository=user_repo,
-        oauth_grant_repository=oauth_grant_repo,
         refresh_token_repository=refresh_token_repo,
-        employee_repository=employee_repo,
-        domain_gate_service=domain_gate_service,
         organization_repository=OrganizationSettingsRepository(session),
         session=session,
     )

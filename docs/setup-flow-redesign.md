@@ -47,7 +47,7 @@ Ngoài phạm vi:
 - Cấu hình recruitment
 - Checklist onboarding Employee
 - Tích hợp email/calendar
-- Google OAuth login; đăng nhập dùng email và mật khẩu local sau First-Run Setup
+- Google OAuth cho Identity login; đăng nhập dùng email và mật khẩu local sau First-Run Setup. OAuth Google cho Gmail/Calendar vẫn nằm ngoài flow này
 
 ## Contract backend
 

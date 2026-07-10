@@ -398,7 +398,7 @@ pytest tests/modules/payroll/ -q  # specific module
 
 | Module       | Prefix                                           | Description                                 |
 | ------------ | ------------------------------------------------ | ------------------------------------------- |
-| identity     | /api/auth                                        | Google OAuth2, JWT, roles, whitelist, audit |
+| identity     | /api/auth                                        | Local auth, JWT, roles, whitelist, audit    |
 | employee     | /api/employees, /api/departments, /api/positions | CRUD, import, documents                     |
 | gmail        | /api/gmail                                       | Gmail API integration                       |
 | recruitment  | /api/recruitment                                 | Candidate pipeline, CV parsing              |

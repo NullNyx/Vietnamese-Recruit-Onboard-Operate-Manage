@@ -57,24 +57,6 @@ class GoogleTokens(BaseModel):
     scope: str
 
 
-class GoogleUserInfo(BaseModel):
-    """User profile extracted from a Google ID token.
-
-    Contains the essential identity fields needed for user
-    provisioning and profile display.
-
-    Attributes:
-        sub: Google's unique subject identifier for the user.
-        email: The user's primary email address.
-        name: The user's display name.
-        picture: URL to the user's profile picture, if available.
-    """
-
-    sub: str
-    email: str
-    name: str
-    picture: str | None = None
-
 
 class GrantStatus(BaseModel):
     """OAuth grant validity status.
@@ -207,22 +189,6 @@ class GrantStatusResponse(BaseModel):
     gmail_grant_valid: bool
     calendar_grant_valid: bool
 
-
-class LoginRedirect(BaseModel):
-    """Internal model for OAuth2 redirect data.
-
-    Used by AuthService to pass redirect information back to the
-    router for constructing the HTTP 302 response.
-
-    Attributes:
-        redirect_url: The full Google OAuth2 authorization URL.
-        state_token: Signed CSRF state token for callback validation.
-        code_verifier: PKCE code verifier to store for token exchange.
-    """
-
-    redirect_url: str
-    state_token: str
-    code_verifier: str
 
 
 # --- Admin Whitelist Schemas ---

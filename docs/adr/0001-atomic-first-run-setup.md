@@ -13,4 +13,4 @@ accepted
 
 ## Hệ quả
 
-Endpoint setup phải nhận danh tính tối thiểu của Organization cùng thông tin xác thực của tài khoản HR, validate ở server và chỉ trả về authenticated session sau khi cả hai record đã commit thành công. Sau First-Run Setup, tài khoản HR đăng nhập bằng email và mật khẩu local; Google OAuth không còn là login flow.
+Endpoint setup phải nhận danh tính tối thiểu của Organization cùng thông tin xác thực của tài khoản HR, validate ở server và chỉ trả về authenticated session sau khi cả hai record đã commit thành công. Sau First-Run Setup, tài khoản HR đăng nhập bằng email và mật khẩu local; Google OAuth bị loại khỏi Identity. OAuth Google cho Gmail và Calendar vẫn là integration riêng, không dùng làm login flow.

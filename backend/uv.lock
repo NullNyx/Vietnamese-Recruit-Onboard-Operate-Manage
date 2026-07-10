@@ -2477,6 +2477,7 @@ dependencies = [
     { name = "redis" },
     { name = "reportlab" },
     { name = "sqlmodel" },
+    { name = "typing-extensions" },
     { name = "uvicorn" },
 ]
 
@@ -2521,6 +2522,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
     { name = "sqlmodel", specifier = ">=0.0.22" },
     { name = "testcontainers", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "typing-extensions", specifier = ">=4.15.0" },
     { name = "uvicorn", specifier = ">=0.30.0" },
 ]
 provides-extras = ["dev"]
