@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from sqlmodel import Session, select
 
 from src.database import get_session
@@ -31,13 +31,16 @@ from src.modules.identity.container import (
     get_current_user,
     get_oauth_service,
     get_rate_limiter,
+    get_settings,
     get_token_service,
 )
 from src.modules.identity.domain.entities import User
 from src.modules.identity.domain.exceptions import (
+    DomainAccessDeniedError,
     InvalidTokenError,
     RateLimitExceededError,
 )
+from src.modules.identity.infrastructure.config import AuthSettings
 from src.modules.identity.infrastructure.rate_limiter import RateLimiter
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -46,6 +49,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 _ACCESS_TOKEN_MAX_AGE = 15 * 60  # 15 minutes
 _REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60  # 7 days
 _PASSWORD_CHANGE_MAX_AGE = _ACCESS_TOKEN_MAX_AGE
+_CODE_VERIFIER_MAX_AGE = 10 * 60
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +60,7 @@ AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 TokenServiceDep = Annotated[TokenService, Depends(get_token_service)]
 OAuthServiceDep = Annotated[OAuthService, Depends(get_oauth_service)]
 RateLimiterDep = Annotated[RateLimiter, Depends(get_rate_limiter)]
+SettingsDep = Annotated[AuthSettings, Depends(get_settings)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 
 
@@ -64,8 +69,68 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 # ---------------------------------------------------------------------------
 
 
+@router.get("/login")
+async def oauth_login(
+    request: Request,
+    auth_service: AuthServiceDep,
+    rate_limiter: RateLimiterDep,
+) -> RedirectResponse:
+    """Initiate the existing Google OAuth2 login flow."""
+    client_ip = request.client.host if request.client else "unknown"
+    if not await rate_limiter.check_rate_limit(client_ip):
+        raise RateLimitExceededError()
+
+    login_redirect = await auth_service.initiate_login()
+    response = RedirectResponse(url=login_redirect.redirect_url, status_code=302)
+    response.set_cookie(
+        key="code_verifier",
+        value=login_redirect.code_verifier,
+        max_age=_CODE_VERIFIER_MAX_AGE,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+    )
+    return response
+
+
+@router.get("/callback")
+async def oauth_callback(
+    request: Request,
+    code: str,
+    state: str,
+    auth_service: AuthServiceDep,
+    rate_limiter: RateLimiterDep,
+    settings: SettingsDep,
+) -> RedirectResponse:
+    """Complete Google OAuth2 login without changing the session contract."""
+    client_ip = request.client.host if request.client else "unknown"
+    if not await rate_limiter.check_rate_limit(client_ip):
+        raise RateLimitExceededError()
+
+    try:
+        auth_result = await auth_service.handle_callback(
+            code=code,
+            state=state,
+            code_verifier=request.cookies.get("code_verifier", ""),
+        )
+    except DomainAccessDeniedError as exc:
+        return RedirectResponse(
+            url=f"{settings.frontend_url}/login?error={exc.error_code}", status_code=302
+        )
+
+    response = RedirectResponse(url=settings.frontend_url, status_code=302)
+    _set_session_cookies(
+        response,
+        access_token=auth_result.access_token,
+        refresh_token=auth_result.refresh_token,
+        must_change_password=False,
+    )
+    response.delete_cookie(key="code_verifier")
+    return response
+
+
 def _set_session_cookies(
-    response: JSONResponse,
+    response: Response,
     *,
     access_token: str,
     refresh_token: str,
@@ -100,7 +165,7 @@ def _set_session_cookies(
         response.delete_cookie(key="must_change_password")
 
 
-def _clear_auth_cookies(response: JSONResponse) -> None:
+def _clear_auth_cookies(response: Response) -> None:
     response.delete_cookie(key="access_token")
     response.delete_cookie(key="refresh_token")
     response.delete_cookie(key="must_change_password")
