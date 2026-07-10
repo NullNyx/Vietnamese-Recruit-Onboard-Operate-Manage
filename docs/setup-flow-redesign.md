@@ -47,7 +47,7 @@ Ngoài phạm vi:
 - Cấu hình recruitment
 - Checklist onboarding Employee
 - Tích hợp email/calendar
-- Thiết kế lại login ngoài các redirect cần tương thích
+- Google OAuth login; đăng nhập dùng email và mật khẩu local sau First-Run Setup
 
 ## Contract backend
 
