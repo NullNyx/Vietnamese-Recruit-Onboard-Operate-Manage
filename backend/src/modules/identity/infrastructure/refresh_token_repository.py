@@ -113,7 +113,12 @@ class RefreshTokenRepository:
         if row is None:
             return None
 
-        token, email, employee_id, must_change_password = row
+        if len(row) == 2:
+            token, email = row
+            employee_id = None
+            must_change_password = False
+        else:
+            token, email, employee_id, must_change_password = row
         return RefreshTokenWithEmail(
             user_id=token.user_id,
             token_hash=token.token_hash,
