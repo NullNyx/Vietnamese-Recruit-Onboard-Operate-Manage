@@ -101,9 +101,16 @@ export default function SetupPage() {
           replace("/login?setup=completed");
           return;
         }
+        const fieldNames: Record<string, keyof SetupValues> = {
+          organization_name: "organizationName",
+          name: "name",
+          email: "email",
+          password: "password",
+          password_confirmation: "passwordConfirmation",
+        };
         for (const [field, message] of Object.entries(err.fields)) {
-          const name = field as keyof SetupValues;
-          if (name in getValues()) setError(name, { message });
+          const name = fieldNames[field];
+          if (name) setError(name, { message });
         }
         setFormError(err.message || "Thiết lập chưa hoàn tất. Vui lòng thử lại.");
       } else {
