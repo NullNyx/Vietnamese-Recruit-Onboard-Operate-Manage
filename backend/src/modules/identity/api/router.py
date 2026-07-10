@@ -1,7 +1,7 @@
 """FastAPI router for the Identity & Auth module.
 
-Defines the /api/auth/* endpoints for Google OAuth2 login, callback,
-token refresh, logout, and user profile retrieval.
+Defines the /api/auth/* endpoints for first-run setup, local login,
+password change, token refresh, logout, and user profile retrieval.
 """
 
 from __future__ import annotations
@@ -9,12 +9,20 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 
 from src.database import get_session
 from src.modules.employee.domain.entities import Employee
-from src.modules.identity.api.schemas import GrantStatusResponse, UserResponse
+from src.modules.identity.api.schemas import (
+    AuthLoginRequest,
+    AuthSessionResponse,
+    ChangePasswordRequest,
+    FirstRunSetupRequest,
+    GrantStatusResponse,
+    SetupStatusResponse,
+    UserResponse,
+)
 from src.modules.identity.application.auth_service import AuthService
 from src.modules.identity.application.oauth_service import OAuthService
 from src.modules.identity.application.token_service import TokenService
@@ -23,16 +31,13 @@ from src.modules.identity.container import (
     get_current_user,
     get_oauth_service,
     get_rate_limiter,
-    get_settings,
     get_token_service,
 )
 from src.modules.identity.domain.entities import User
 from src.modules.identity.domain.exceptions import (
-    DomainAccessDeniedError,
     InvalidTokenError,
     RateLimitExceededError,
 )
-from src.modules.identity.infrastructure.config import AuthSettings
 from src.modules.identity.infrastructure.rate_limiter import RateLimiter
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -40,7 +45,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 # Cookie configuration constants.
 _ACCESS_TOKEN_MAX_AGE = 15 * 60  # 15 minutes
 _REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60  # 7 days
-_CODE_VERIFIER_MAX_AGE = 10 * 60  # 10 minutes
+_PASSWORD_CHANGE_MAX_AGE = _ACCESS_TOKEN_MAX_AGE
 
 
 # ---------------------------------------------------------------------------
@@ -51,7 +56,6 @@ AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 TokenServiceDep = Annotated[TokenService, Depends(get_token_service)]
 OAuthServiceDep = Annotated[OAuthService, Depends(get_oauth_service)]
 RateLimiterDep = Annotated[RateLimiter, Depends(get_rate_limiter)]
-SettingsDep = Annotated[AuthSettings, Depends(get_settings)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 
 
@@ -60,131 +64,175 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 # ---------------------------------------------------------------------------
 
 
-@router.get("/login")
-async def login(
-    request: Request,
-    auth_service: AuthServiceDep,
-    rate_limiter: RateLimiterDep,
-    settings: SettingsDep,
-) -> RedirectResponse:
-    """Initiate the Google OAuth2 login flow.
-
-    Generates a PKCE code verifier and challenge, creates a signed CSRF
-    state token, and redirects the user to Google's consent screen. The
-    code_verifier is stored in a short-lived httpOnly cookie for retrieval
-    during the callback.
-
-    Args:
-        request: The incoming FastAPI request object.
-        auth_service: The AuthService for login initiation.
-        rate_limiter: The RateLimiter to check request rate.
-        settings: Application auth settings.
-
-    Returns:
-        A 302 redirect response to Google's OAuth2 authorization URL.
-
-    Raises:
-        RateLimitExceededError: If the client IP has exceeded the login
-            rate limit.
-    """
-    client_ip = request.client.host if request.client else "unknown"
-    allowed = await rate_limiter.check_rate_limit(client_ip)
-    if not allowed:
-        raise RateLimitExceededError()
-
-    login_redirect = await auth_service.initiate_login()
-
-    response = RedirectResponse(url=login_redirect.redirect_url, status_code=302)
-
-    # Store code_verifier in a short-lived httpOnly cookie.
-    response.set_cookie(
-        key="code_verifier",
-        value=login_redirect.code_verifier,
-        max_age=_CODE_VERIFIER_MAX_AGE,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-    )
-
-    return response
-
-
-@router.get("/callback")
-async def callback(
-    request: Request,
-    code: str,
-    state: str,
-    auth_service: AuthServiceDep,
-    rate_limiter: RateLimiterDep,
-    settings: SettingsDep,
-) -> RedirectResponse:
-    """Handle the Google OAuth2 callback after user consent.
-
-    Validates the CSRF state token, exchanges the authorization code for
-    tokens using the stored PKCE code_verifier, sets session cookies, and
-    redirects to the frontend application.
-
-    Args:
-        request: The incoming FastAPI request object.
-        code: The authorization code from Google.
-        state: The CSRF state token to validate.
-        auth_service: The AuthService for callback handling.
-        rate_limiter: The RateLimiter to check request rate.
-        settings: Application auth settings.
-
-    Returns:
-        A 302 redirect response to the frontend with session cookies set.
-
-    Raises:
-        RateLimitExceededError: If the client IP has exceeded the login
-            rate limit.
-        InvalidStateError: If the CSRF state token is invalid or expired.
-        GoogleAuthError: If the token exchange with Google fails.
-        AccessDeniedError: If the user's email is not whitelisted.
-    """
-    client_ip = request.client.host if request.client else "unknown"
-    allowed = await rate_limiter.check_rate_limit(client_ip)
-    if not allowed:
-        raise RateLimitExceededError()
-
-    # Retrieve the PKCE code_verifier from the cookie set during login.
-    code_verifier = request.cookies.get("code_verifier", "")
-
-    try:
-        auth_result = await auth_service.handle_callback(
-            code=code, state=state, code_verifier=code_verifier
-        )
-    except DomainAccessDeniedError as exc:
-        return RedirectResponse(
-            url=f"{settings.frontend_url}/login?error={exc.error_code}",
-            status_code=302,
-        )
-
-    response = RedirectResponse(url=settings.frontend_url, status_code=302)
-
-    # Set access_token cookie.
+def _set_session_cookies(
+    response: JSONResponse,
+    *,
+    access_token: str,
+    refresh_token: str,
+    must_change_password: bool,
+) -> None:
     response.set_cookie(
         key="access_token",
-        value=auth_result.access_token,
+        value=access_token,
         max_age=_ACCESS_TOKEN_MAX_AGE,
         httponly=True,
         secure=True,
         samesite="lax",
     )
-
-    # Set refresh_token cookie.
     response.set_cookie(
         key="refresh_token",
-        value=auth_result.refresh_token,
+        value=refresh_token,
         max_age=_REFRESH_TOKEN_MAX_AGE,
         httponly=True,
         secure=True,
         samesite="lax",
     )
+    if must_change_password:
+        response.set_cookie(
+            key="must_change_password",
+            value="true",
+            max_age=_PASSWORD_CHANGE_MAX_AGE,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+        )
+    else:
+        response.delete_cookie(key="must_change_password")
 
-    # Clear the code_verifier cookie as it's no longer needed.
-    response.delete_cookie(key="code_verifier")
 
+def _clear_auth_cookies(response: JSONResponse) -> None:
+    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="refresh_token")
+    response.delete_cookie(key="must_change_password")
+
+
+@router.get("/setup-status")
+async def setup_status(auth_service: AuthServiceDep) -> SetupStatusResponse:
+    """Check whether first-run setup already happened."""
+    return SetupStatusResponse(setup_complete=await auth_service.get_setup_status())
+
+
+@router.post("/setup", response_model=AuthSessionResponse)
+async def setup(
+    request: Request,
+    body: FirstRunSetupRequest,
+    auth_service: AuthServiceDep,
+    rate_limiter: RateLimiterDep,
+) -> JSONResponse:
+    """Create first HR account during fresh deploy."""
+    client_ip = request.client.host if request.client else "unknown"
+    allowed = await rate_limiter.check_rate_limit(client_ip)
+    if not allowed:
+        raise RateLimitExceededError()
+
+    result = await auth_service.setup_first_run(
+        body.organization_name, body.name, body.email, body.password
+    )
+    response = JSONResponse(
+        content={
+            "user": UserResponse(
+                id=result.user.id,
+                email=result.user.email,
+                name=result.user.name,
+                avatar_url=result.user.avatar_url,
+                employee_id=getattr(result.user, "employee_id", None),
+                role=result.user.role,
+                must_change_password=result.must_change_password,
+                gmail_grant_valid=False,
+                calendar_grant_valid=False,
+                created_at=result.user.created_at,
+                last_login=result.user.last_login,
+            ).model_dump(mode="json"),
+            "must_change_password": result.must_change_password,
+            "setup_complete": True,
+        }
+    )
+    _set_session_cookies(
+        response,
+        access_token=result.access_token,
+        refresh_token=result.refresh_token,
+        must_change_password=result.must_change_password,
+    )
+    return response
+
+
+@router.post("/login", response_model=AuthSessionResponse)
+async def local_login(
+    request: Request,
+    body: AuthLoginRequest,
+    auth_service: AuthServiceDep,
+    rate_limiter: RateLimiterDep,
+) -> JSONResponse:
+    """Local email/password login."""
+    client_ip = request.client.host if request.client else "unknown"
+    allowed = await rate_limiter.check_rate_limit(client_ip)
+    if not allowed:
+        raise RateLimitExceededError()
+
+    result = await auth_service.login(body.email, body.password)
+    response = JSONResponse(
+        content={
+            "user": UserResponse(
+                id=result.user.id,
+                email=result.user.email,
+                name=result.user.name,
+                avatar_url=result.user.avatar_url,
+                employee_id=getattr(result.user, "employee_id", None),
+                role=result.user.role,
+                must_change_password=result.must_change_password,
+                gmail_grant_valid=False,
+                calendar_grant_valid=False,
+                created_at=result.user.created_at,
+                last_login=result.user.last_login,
+            ).model_dump(mode="json"),
+            "must_change_password": result.must_change_password,
+            "setup_complete": True,
+        }
+    )
+    _set_session_cookies(
+        response,
+        access_token=result.access_token,
+        refresh_token=result.refresh_token,
+        must_change_password=result.must_change_password,
+    )
+    return response
+
+
+@router.post("/change-password", response_model=AuthSessionResponse)
+async def change_password(
+    body: ChangePasswordRequest,
+    current_user: CurrentUserDep,
+    auth_service: AuthServiceDep,
+) -> JSONResponse:
+    """Change current password and refresh session."""
+    result = await auth_service.change_password(
+        current_user, body.current_password, body.new_password
+    )
+    response = JSONResponse(
+        content={
+            "user": UserResponse(
+                id=result.user.id,
+                email=result.user.email,
+                name=result.user.name,
+                avatar_url=result.user.avatar_url,
+                employee_id=getattr(result.user, "employee_id", None),
+                role=result.user.role,
+                must_change_password=result.must_change_password,
+                gmail_grant_valid=False,
+                calendar_grant_valid=False,
+                created_at=result.user.created_at,
+                last_login=result.user.last_login,
+            ).model_dump(mode="json"),
+            "must_change_password": result.must_change_password,
+            "setup_complete": True,
+        }
+    )
+    _set_session_cookies(
+        response,
+        access_token=result.access_token,
+        refresh_token=result.refresh_token,
+        must_change_password=result.must_change_password,
+    )
     return response
 
 
@@ -235,11 +283,11 @@ async def logout(
     request: Request,
     auth_service: AuthServiceDep,
 ) -> JSONResponse:
-    """Revoke the refresh token and clear session cookies.
+    """Revoke the refresh token and clear all session cookies.
 
     Extracts the refresh_token from the request cookies, revokes it
-    in the database, and clears both the access_token and refresh_token
-    cookies.
+    in the database, and clears the access_token, refresh_token, and
+    forced password-change cookies.
 
     Args:
         request: The incoming FastAPI request object.
@@ -254,8 +302,7 @@ async def logout(
 
     response = JSONResponse(content={"message": "Logged out"})
 
-    response.delete_cookie(key="access_token")
-    response.delete_cookie(key="refresh_token")
+    _clear_auth_cookies(response)
 
     return response
 
@@ -281,14 +328,16 @@ async def me(
     """
     grant_status = await _get_user_grant_status(current_user, oauth_service)
     employee = session.exec(select(Employee).where(Employee.email == current_user.email)).first()
+    employee_id = current_user.employee_id or (employee.id if employee else None)
 
     return UserResponse(
         id=current_user.id,
         email=current_user.email,
         name=current_user.name,
         avatar_url=current_user.avatar_url,
-        employee_id=employee.id if employee else None,
+        employee_id=employee_id,
         role=current_user.role,
+        must_change_password=current_user.must_change_password,
         gmail_grant_valid=grant_status.gmail_grant_valid,
         calendar_grant_valid=grant_status.calendar_grant_valid,
         created_at=current_user.created_at,

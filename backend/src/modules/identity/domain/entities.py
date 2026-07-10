@@ -24,9 +24,8 @@ class UserRole(str, Enum):
 class User(SQLModel, table=True):
     """Represents an authenticated HR user in the system.
 
-    Users are auto-provisioned on first Google OAuth2 login when their
-    email is present in the whitelist. Each user has a unique Google
-    subject identifier and email address.
+    Users are system accounts for HR and active Employees. Each user is
+    tied to one email address and may optionally be linked to one Employee.
     """
 
     __tablename__ = "users"
@@ -35,7 +34,12 @@ class User(SQLModel, table=True):
     email: str = Field(max_length=255, unique=True, nullable=False, index=True)
     name: str = Field(max_length=255, nullable=False)
     avatar_url: str | None = Field(default=None)
-    google_sub: str = Field(max_length=255, unique=True, nullable=False, index=True)
+    employee_id: UUID | None = Field(
+        default=None, foreign_key="employees.id", unique=True, index=True
+    )
+    password_hash: str = Field(default="", max_length=255, nullable=False)
+    must_change_password: bool = Field(default=False, nullable=False)
+    google_sub: str | None = Field(default=None, max_length=255, unique=True, index=True)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

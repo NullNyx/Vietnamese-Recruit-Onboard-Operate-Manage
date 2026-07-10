@@ -276,6 +276,8 @@ class TestRefreshAccessToken:
         record = AsyncMock()
         record.user_id = uuid4()
         record.email = "hr@example.com"
+        record.employee_id = None
+        record.must_change_password = False
         record.token_hash = "somehash"
         record.expires_at = datetime.now(UTC) + timedelta(days=7)
         record.revoked_at = None

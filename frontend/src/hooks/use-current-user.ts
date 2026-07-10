@@ -2,20 +2,9 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-export type UserRole = "admin" | "user";
+import type { CurrentUser } from "@/lib/api/auth";
 
-export interface CurrentUser {
-  id: string;
-  email: string;
-  name: string;
-  avatar_url: string | null;
-  employee_id?: string | null;
-  role: UserRole;
-  gmail_grant_valid: boolean;
-  calendar_grant_valid: boolean;
-  created_at: string;
-  last_login: string;
-}
+export type { CurrentUser } from "@/lib/api/auth";
 
 export const currentUserQueryKey = ["current-user"] as const;
 
@@ -39,6 +28,7 @@ export function useCurrentUser() {
     data: user,
     isLoading: loading,
     error,
+    refetch: refetchCurrentUser,
   } = useQuery({
     queryKey: currentUserQueryKey,
     queryFn: fetchCurrentUser,
@@ -51,7 +41,11 @@ export function useCurrentUser() {
   });
 
   const refetch = async () => {
-    await queryClient.invalidateQueries({ queryKey: currentUserQueryKey });
+    await queryClient.invalidateQueries({
+      queryKey: currentUserQueryKey,
+      refetchType: "none",
+    });
+    await refetchCurrentUser();
   };
 
   return {

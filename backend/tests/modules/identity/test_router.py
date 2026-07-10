@@ -1,13 +1,14 @@
 """Unit tests for the Identity & Auth router endpoints.
 
-Tests the FastAPI router endpoints for login, callback, refresh,
+Tests the FastAPI router endpoints for setup, local login, refresh,
 logout, me, and grant-status using mocked dependencies.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -19,40 +20,20 @@ from src.modules.identity.api.router import (
     get_current_user,
     get_oauth_service,
     get_rate_limiter,
-    get_settings,
     get_token_service,
     router,
 )
-from src.modules.identity.api.schemas import GrantStatus, LoginRedirect
-from src.modules.identity.application.auth_service import AuthResult
-from src.modules.identity.domain.exceptions import (
-    AccessDeniedError,
-    InvalidStateError,
-    InvalidTokenError,
-    RateLimitExceededError,
-)
+from src.modules.identity.api.schemas import GrantStatus
+from src.modules.identity.domain.exceptions import InvalidTokenError
 
 
 @pytest.fixture
 def mock_auth_service():
     """Create a mock AuthService."""
     service = AsyncMock()
-    service.initiate_login = AsyncMock(
-        return_value=LoginRedirect(
-            redirect_url="https://accounts.google.com/o/oauth2/v2/auth?client_id=test",
-            state_token="signed-state-token",
-            code_verifier="test-code-verifier-43chars-long-enough-here",
-        )
-    )
-    service.handle_callback = AsyncMock(
-        return_value=AuthResult(
-            access_token="new-access-token",
-            refresh_token="new-refresh-token",
-            user=MagicMock(),
-            grant_status=GrantStatus(gmail_grant_valid=True, calendar_grant_valid=True),
-        )
-    )
     service.logout = AsyncMock()
+    service.get_setup_status = AsyncMock(return_value=False)
+    service.setup_first_run = AsyncMock()
     return service
 
 
@@ -85,22 +66,6 @@ def mock_oauth_service():
 
 
 @pytest.fixture
-def mock_rate_limiter():
-    """Create a mock RateLimiter that allows all requests."""
-    limiter = AsyncMock()
-    limiter.check_rate_limit = AsyncMock(return_value=True)
-    return limiter
-
-
-@pytest.fixture
-def mock_settings():
-    """Create a mock AuthSettings."""
-    settings = MagicMock()
-    settings.frontend_url = "http://localhost:3000"
-    return settings
-
-
-@pytest.fixture
 def mock_current_user():
     """Create a mock authenticated User."""
     user = MagicMock()
@@ -108,7 +73,9 @@ def mock_current_user():
     user.email = "hr@example.com"
     user.name = "HR User"
     user.avatar_url = "https://example.com/avatar.png"
+    user.employee_id = None
     user.role = "user"
+    user.must_change_password = False
     user.created_at = datetime(2024, 1, 1, tzinfo=UTC)
     user.last_login = datetime(2024, 6, 15, tzinfo=UTC)
     return user
@@ -119,8 +86,6 @@ def app(
     mock_auth_service,
     mock_token_service,
     mock_oauth_service,
-    mock_rate_limiter,
-    mock_settings,
     mock_current_user,
 ):
     """Create a FastAPI app with overridden dependencies for testing."""
@@ -144,9 +109,10 @@ def app(
     app.dependency_overrides[get_auth_service] = lambda: mock_auth_service
     app.dependency_overrides[get_token_service] = lambda: mock_token_service
     app.dependency_overrides[get_oauth_service] = lambda: mock_oauth_service
-    app.dependency_overrides[get_rate_limiter] = lambda: mock_rate_limiter
-    app.dependency_overrides[get_settings] = lambda: mock_settings
     app.dependency_overrides[get_current_user] = lambda: mock_current_user
+    rate_limiter = MagicMock()
+    rate_limiter.check_rate_limit = AsyncMock(return_value=True)
+    app.dependency_overrides[get_rate_limiter] = lambda: rate_limiter
 
     return app
 
@@ -157,83 +123,50 @@ def client(app):
     return TestClient(app, follow_redirects=False)
 
 
-class TestLoginEndpoint:
-    """Tests for GET /api/auth/login."""
+class TestSetupEndpoint:
+    """Tests for anonymous First-Run Setup endpoints."""
 
-    def test_returns_302_redirect(self, client):
-        """Should return a 302 redirect to Google OAuth2."""
-        response = client.get("/api/auth/login")
+    def test_setup_status_is_minimal(self, client, mock_auth_service):
+        response = client.get("/api/auth/setup-status")
 
-        assert response.status_code == 302
+        assert response.status_code == 200
+        assert response.json() == {"setup_complete": False}
+        mock_auth_service.get_setup_status.assert_awaited_once_with()
 
-    def test_redirects_to_google_auth_url(self, client):
-        """Should redirect to the URL returned by AuthService."""
-        response = client.get("/api/auth/login")
-
-        assert response.headers["location"].startswith(
-            "https://accounts.google.com/o/oauth2/v2/auth"
+    def test_setup_creates_session(self, client, mock_auth_service):
+        user = SimpleNamespace(
+            id=uuid4(),
+            email="hr@example.com",
+            name="HR Admin",
+            avatar_url=None,
+            employee_id=None,
+            role="admin",
+            created_at=datetime(2024, 1, 1, tzinfo=UTC),
+            last_login=datetime(2024, 1, 1, tzinfo=UTC),
+        )
+        mock_auth_service.setup_first_run.return_value = SimpleNamespace(
+            user=user,
+            access_token="access",
+            refresh_token="refresh",
+            must_change_password=False,
         )
 
-    def test_sets_code_verifier_cookie(self, client):
-        """Should set a code_verifier httpOnly cookie."""
-        response = client.get("/api/auth/login")
+        response = client.post(
+            "/api/auth/setup",
+            json={
+                "organization_name": "Acme Vietnam",
+                "name": "HR Admin",
+                "email": "HR@Example.COM",
+                "password": "a" * 12,
+                "password_confirmation": "a" * 12,
+            },
+        )
 
-        cookies = response.cookies
-        assert "code_verifier" in cookies
-
-    def test_rate_limit_exceeded_raises_429(self, app, mock_rate_limiter):
-        """Should raise RateLimitExceededError when rate limit is exceeded."""
-        mock_rate_limiter.check_rate_limit = AsyncMock(return_value=False)
-        client = TestClient(app, follow_redirects=False)
-
-        response = client.get("/api/auth/login")
-
-        assert response.status_code == 429
-
-    def test_calls_rate_limiter_with_client_ip(self, client, mock_rate_limiter):
-        """Should check rate limit using the client's IP address."""
-        client.get("/api/auth/login")
-
-        mock_rate_limiter.check_rate_limit.assert_called_once()
-
-
-class TestCallbackEndpoint:
-    """Tests for GET /api/auth/callback."""
-
-    def test_returns_302_redirect_to_frontend(self, client):
-        """Should redirect to the frontend URL after successful callback."""
-        response = client.get("/api/auth/callback?code=auth-code&state=state-token")
-
-        assert response.status_code == 302
-        assert response.headers["location"] == "http://localhost:3000"
-
-    def test_sets_access_token_cookie(self, client):
-        """Should set an access_token httpOnly cookie."""
-        response = client.get("/api/auth/callback?code=auth-code&state=state-token")
-
+        assert response.status_code == 200
+        assert response.json()["user"]["email"] == "hr@example.com"
         assert "access_token" in response.cookies
-
-    def test_sets_refresh_token_cookie(self, client):
-        """Should set a refresh_token httpOnly cookie."""
-        response = client.get("/api/auth/callback?code=auth-code&state=state-token")
-
-        assert "refresh_token" in response.cookies
-
-    def test_rate_limit_exceeded_raises_429(self, app, mock_rate_limiter):
-        """Should raise RateLimitExceededError when rate limit is exceeded."""
-        mock_rate_limiter.check_rate_limit = AsyncMock(return_value=False)
-        client = TestClient(app, follow_redirects=False)
-
-        response = client.get("/api/auth/callback?code=auth-code&state=state-token")
-
-        assert response.status_code == 429
-
-    def test_calls_handle_callback_with_code_and_state(self, client, mock_auth_service):
-        """Should pass code and state to AuthService.handle_callback."""
-        client.get("/api/auth/callback?code=my-code&state=my-state")
-
-        mock_auth_service.handle_callback.assert_called_once_with(
-            code="my-code", state="my-state", code_verifier=""
+        mock_auth_service.setup_first_run.assert_awaited_once_with(
+            "Acme Vietnam", "HR Admin", "hr@example.com", "a" * 12
         )
 
 
@@ -313,6 +246,18 @@ class TestLogoutEndpoint:
             'refresh_token=""' in h or "refresh_token=;" in h for h in set_cookie_headers
         )
         assert refresh_cookie_cleared
+
+    def test_clears_must_change_password_cookie(self, client):
+        """Should delete the forced password-change cookie."""
+        client.cookies.set("must_change_password", "true")
+        response = client.post("/api/auth/logout")
+
+        set_cookie_headers = response.headers.get_list("set-cookie")
+        must_change_cookie_cleared = any(
+            'must_change_password=""' in h or "must_change_password=;" in h
+            for h in set_cookie_headers
+        )
+        assert must_change_cookie_cleared
 
     def test_succeeds_without_refresh_token(self, client, mock_auth_service):
         """Should succeed even if no refresh_token cookie is present."""

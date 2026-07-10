@@ -11,7 +11,7 @@ import hashlib
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlencode
 
 from jose import jwt as jose_jwt
@@ -21,10 +21,16 @@ from src.modules.identity.domain.entities import UserRole
 from src.modules.identity.domain.exceptions import (
     AccessDeniedError,
     DomainAccessDeniedError,
+    InvalidTokenError,
 )
 from src.modules.identity.infrastructure.config import AuthSettings
 from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
 from src.modules.identity.infrastructure.jwt_utils import JWTUtils
+from src.modules.identity.infrastructure.password_utils import (
+    generate_temporary_password,
+    hash_password,
+    verify_password,
+)
 
 if TYPE_CHECKING:
     from src.modules.employee.infrastructure.employee_repository import (
@@ -43,6 +49,19 @@ if TYPE_CHECKING:
         OAuthGrantRepository,
     )
     from src.modules.identity.infrastructure.user_repository import UserRepository
+    from src.modules.recruitment.infrastructure.org_settings_repository import (
+        OrganizationSettingsRepository,
+    )
+
+
+@dataclass
+class LocalAuthResult:
+    """Result of a successful local auth action."""
+
+    access_token: str
+    refresh_token: str
+    user: object
+    must_change_password: bool
 
 # Google OAuth2 authorization endpoint.
 _GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -139,6 +158,8 @@ class AuthService:
         refresh_token_repository: RefreshTokenRepository,
         employee_repository: EmployeeRepository | None = None,
         domain_gate_service: DomainGateService | None = None,
+        organization_repository: OrganizationSettingsRepository | None = None,
+        session: Any | None = None,
     ) -> None:
         """Initialize AuthService with all required dependencies.
 
@@ -169,6 +190,117 @@ class AuthService:
         self._refresh_token_repository = refresh_token_repository
         self._employee_repository = employee_repository
         self._domain_gate_service = domain_gate_service
+        self._organization_repository = organization_repository
+        self._session = session
+
+    async def get_setup_status(self) -> bool:
+        """Return True when the Organization singleton has been initialized."""
+        if self._organization_repository is None:
+            return (await self._user_repository.count_users()) > 0
+        return (
+            await self._organization_repository.get_setup_status()
+            and (await self._user_repository.count_admins()) > 0
+        )
+
+    async def setup_first_run(
+        self, organization_name: str, name: str, email: str, password: str
+    ) -> LocalAuthResult:
+        """Create the Organization and first HR account atomically."""
+        if self._organization_repository is None:
+            raise RuntimeError("Organization repository is not configured")
+        if await self.get_setup_status():
+            raise AccessDeniedError("First-run setup already completed")
+
+        # Both records and the session token are flushed in this transaction.
+        await self._organization_repository.create_for_setup(organization_name)
+        user = await self._user_repository.create_local_account(
+            email=email,
+            name=name,
+            password_hash=hash_password(password),
+            role=UserRole.ADMIN,
+            must_change_password=False,
+        )
+        result = await self._issue_session(user)
+        if self._session is not None:
+            await self._session.commit()
+        return result
+
+    async def login(self, email: str, password: str) -> LocalAuthResult:
+        """Authenticate local account with email/password."""
+        user = await self._user_repository.get_by_email(email)
+        if (
+            user is None
+            or not user.password_hash
+            or not verify_password(password, user.password_hash)
+        ):
+            raise InvalidTokenError()
+        if not user.is_active:
+            raise AccessDeniedError("Account is inactive")
+        user.last_login = datetime.now(UTC)
+        self._user_repository.session.add(user)
+        await self._user_repository.session.flush()
+        return await self._issue_session(user)
+
+    async def change_password(
+        self,
+        user: Any,
+        current_password: str,
+        new_password: str,
+    ) -> LocalAuthResult:
+        """Update password for current user and issue fresh session."""
+        current = user  # runtime type is User
+        if not verify_password(current_password, current.password_hash):
+            raise InvalidTokenError()
+        updated = await self._user_repository.update_password(
+            current.id,
+            hash_password(new_password),
+            must_change_password=False,
+        )
+        await self._token_service.revoke_user_tokens(updated.id)
+        return await self._issue_session(updated)
+
+    async def create_employee_account(
+        self,
+        employee: Any,
+    ) -> tuple[Any, str]:
+        """Create Employee Account with temp password."""
+        existing = await self._user_repository.get_by_employee_id(employee.id)
+        if existing is not None:
+            raise AccessDeniedError("Employee account already exists")
+        temp_password = generate_temporary_password()
+        user = await self._user_repository.create_local_account(
+            email=employee.email.lower(),
+            name=employee.full_name,
+            password_hash=hash_password(temp_password),
+            role=UserRole.USER,
+            employee_id=employee.id,
+            must_change_password=True,
+        )
+        return user, temp_password
+
+    async def _issue_session(self, user: Any) -> LocalAuthResult:
+        """Build JWT + refresh token pair for local auth."""
+        employee_id = getattr(user, "employee_id", None)
+        await self._token_service.revoke_user_tokens(user.id)
+        access_token = self._token_service.create_access_token(
+            user.id,
+            user.email,
+            employee_id=employee_id,
+            must_change_password=bool(getattr(user, "must_change_password", False)),
+        )
+        raw_refresh_token, token_hash = self._token_service.create_refresh_token(user.id)
+        expires_at = datetime.now(UTC) + timedelta(days=self._settings.refresh_token_expire_days)
+        await self._refresh_token_repository.store(
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+        )
+        return LocalAuthResult(
+            access_token=access_token,
+            refresh_token=raw_refresh_token,
+            user=user,
+            must_change_password=bool(getattr(user, "must_change_password", False)),
+        )
 
     async def initiate_login(self) -> LoginRedirect:
         """Generate an OAuth2 redirect URL with PKCE and CSRF state.

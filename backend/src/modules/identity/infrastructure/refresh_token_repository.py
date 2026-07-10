@@ -35,6 +35,8 @@ class RefreshTokenWithEmail:
     expires_at: datetime
     revoked_at: datetime | None
     email: str
+    employee_id: UUID | None
+    must_change_password: bool
 
 
 class RefreshTokenRepository:
@@ -101,7 +103,7 @@ class RefreshTokenRepository:
             if found, None otherwise.
         """
         statement = (
-            select(RefreshToken, User.email)
+            select(RefreshToken, User.email, User.employee_id, User.must_change_password)
             .join(User, RefreshToken.user_id == User.id)  # type: ignore[arg-type]
             .where(RefreshToken.token_hash == token_hash)
         )
@@ -111,13 +113,15 @@ class RefreshTokenRepository:
         if row is None:
             return None
 
-        token, email = row
+        token, email, employee_id, must_change_password = row
         return RefreshTokenWithEmail(
             user_id=token.user_id,
             token_hash=token.token_hash,
             expires_at=token.expires_at,
             revoked_at=token.revoked_at,
             email=email,
+            employee_id=employee_id,
+            must_change_password=must_change_password,
         )
 
     async def revoke_all_for_user(self, user_id: UUID) -> None:

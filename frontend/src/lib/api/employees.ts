@@ -6,6 +6,10 @@ import type {
   EmployeeDocument,
   ImportResult,
 } from "./types";
+import type {
+  EmployeeAccountCreateResponse,
+  EmployeeAccountStatusResponse,
+} from "./auth";
 
 const BASE = "/api/employees";
 
@@ -110,4 +114,20 @@ export async function deleteDocument(documentId: string): Promise<void> {
     const error = await res.json().catch(() => ({ error: { message: "Delete failed" } }));
     throw new Error(error.error?.message || "Delete failed");
   }
+}
+
+export async function getEmployeeAccountStatus(
+  employeeId: string,
+): Promise<EmployeeAccountStatusResponse> {
+  const res = await fetch(`${BASE}/${employeeId}/account`);
+  return handleResponse<EmployeeAccountStatusResponse>(res);
+}
+
+export async function createEmployeeAccount(
+  employeeId: string,
+): Promise<EmployeeAccountCreateResponse> {
+  const res = await fetch(`${BASE}/${employeeId}/account`, {
+    method: "POST",
+  });
+  return handleResponse<EmployeeAccountCreateResponse>(res);
 }
