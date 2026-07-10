@@ -4,8 +4,10 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from src.modules.identity.application.auth_service import AuthService
+from src.modules.identity.domain.exceptions import SetupAlreadyCompletedError
 
 
 @pytest.fixture
@@ -64,3 +66,33 @@ async def test_logout_revokes_local_refresh_token(service: AuthService) -> None:
     await service.logout("refresh")
 
     service._refresh_token_repository.revoke.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_setup_race_rolls_back_and_returns_stable_error() -> None:
+    session = MagicMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    organization = MagicMock()
+    organization.get_setup_status = AsyncMock(return_value=False)
+    organization.create_for_setup = AsyncMock(
+        side_effect=IntegrityError("insert", {}, Exception("singleton conflict"))
+    )
+    users = MagicMock()
+    users.count_admins = AsyncMock(return_value=0)
+    users.count_users = AsyncMock(return_value=0)
+    service = AuthService(
+        settings=MagicMock(refresh_token_expire_days=7),
+        token_service=MagicMock(),
+        user_repository=users,
+        refresh_token_repository=MagicMock(),
+        organization_repository=organization,
+        session=session,
+    )
+
+    with pytest.raises(SetupAlreadyCompletedError) as error:
+        await service.setup_first_run("Acme", "HR", "hr@example.com", "a" * 12)
+
+    assert error.value.error_code == "AUTH_SETUP_ALREADY_COMPLETED"
+    session.rollback.assert_awaited_once_with()
+    users.create_local_account.assert_not_called()

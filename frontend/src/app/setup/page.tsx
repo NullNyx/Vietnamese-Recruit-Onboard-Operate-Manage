@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2 } from "lucide-react";
 
-import { getSetupStatus, setupFirstRun } from "@/lib/api/auth";
+import { AuthApiError, getSetupStatus, setupFirstRun } from "@/lib/api/auth";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 export default function SetupPage() {
@@ -17,7 +17,9 @@ export default function SetupPage() {
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [statusUnavailable, setStatusUnavailable] = useState(false);
 
   useEffect(() => {
     if (userLoading) return;
@@ -42,7 +44,8 @@ export default function SetupPage() {
         }
       } catch {
         if (!active) return;
-        setError("Không thể kiểm tra trạng thái khởi tạo");
+          setStatusUnavailable(true);
+          setError("Không thể kiểm tra trạng thái khởi tạo");
       } finally {
         if (active) setCheckingSetup(false);
       }
@@ -53,10 +56,23 @@ export default function SetupPage() {
     };
   }, [router]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
+    async function handleSubmit(e: React.FormEvent) {
+      e.preventDefault();
+      if (submitting) return;
+      const nextErrors: Record<string, string> = {};
+      if (!organizationName.trim()) nextErrors.organization_name = "Vui lòng nhập tên Organization";
+      if (!name.trim()) nextErrors.name = "Vui lòng nhập họ tên";
+      if (!/^\S+@\S+\.\S+$/.test(email.trim())) nextErrors.email = "Email không hợp lệ";
+      if (password.length < 12) nextErrors.password = "Mật khẩu phải có ít nhất 12 ký tự";
+      if (password !== passwordConfirmation) nextErrors.password_confirmation = "Mật khẩu xác nhận không khớp";
+      if (Object.keys(nextErrors).length) {
+        setFieldErrors(nextErrors);
+        setError("Vui lòng kiểm tra lại thông tin");
+        return;
+      }
+      setSubmitting(true);
+      setError(null);
+      setFieldErrors({});
     try {
       const result = await setupFirstRun(
         organizationName,
@@ -67,14 +83,33 @@ export default function SetupPage() {
       );
       await refetch();
       router.replace(result.user.role === "admin" ? "/" : "/employee/dashboard");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Khởi tạo thất bại");
+      } catch (err) {
+        if (err instanceof AuthApiError) {
+          if (err.code === "AUTH_SETUP_ALREADY_COMPLETED") {
+            router.replace("/login?setup=completed");
+            return;
+          }
+          setFieldErrors(err.fields);
+          setError(err.message);
+        } else {
+          setError(err instanceof Error ? err.message : "Khởi tạo thất bại");
+        }
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (checkingSetup || userLoading) {
+    if (statusUnavailable) {
+      return (
+        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-center">
+          <AlertCircle className="h-8 w-8 text-destructive" />
+          <p role="alert" className="text-sm text-muted-foreground">{error}</p>
+          <button type="button" onClick={() => window.location.reload()} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">Thử lại</button>
+        </div>
+      );
+    }
+
+    if (checkingSetup || userLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -93,12 +128,17 @@ export default function SetupPage() {
           <p className="text-sm text-muted-foreground">Tạo HR account đầu tiên</p>
         </div>
 
-        {error && (
-          <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
+          {error && (
+            <div role="alert" className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p>{error}</p>
+                {Object.entries(fieldErrors).map(([field, message]) => (
+                  <p key={field} className="mt-1">{message}</p>
+                ))}
+              </div>
+            </div>
+          )}
 
         <form className="space-y-4 rounded-lg border border-border bg-card p-6" onSubmit={handleSubmit}>
           <div className="space-y-2">
