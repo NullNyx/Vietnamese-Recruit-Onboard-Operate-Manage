@@ -50,6 +50,28 @@ class OrganizationSettingsRepository:
         """Return the configured default IANA timezone for the Organization."""
         return self._settings.default_organization_timezone
 
+    async def get_setup_status(self) -> bool:
+        """Return whether the Organization has been initialized."""
+        return (await self._get_row()) is not None
+
+    async def create_for_setup(self, name: str) -> OrganizationSettings:
+        """Create or initialize the singleton Organization during setup."""
+        settings_row = await self._get_row()
+        if settings_row is None:
+            settings_row = OrganizationSettings(
+                singleton_key="default",
+                name=name,
+                timezone="Asia/Ho_Chi_Minh",
+            )
+        elif settings_row.name:
+            raise ValueError("Organization setup already completed")
+        else:
+            settings_row.name = name
+            settings_row.timezone = "Asia/Ho_Chi_Minh"
+        self.session.add(settings_row)
+        await self.session.flush()
+        return settings_row
+
     async def get_timezone(self) -> str:
         """Return the Organization's configured IANA timezone.
 

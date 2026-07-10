@@ -33,6 +33,7 @@ def mock_token_service():
     service.verify_access_token.return_value = TokenPayload(
         sub=user_id,
         email="test@example.com",
+        must_change_password=False,
         exp=1700000000,
         iat=1699999000,
     )

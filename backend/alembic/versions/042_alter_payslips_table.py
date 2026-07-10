@@ -110,6 +110,20 @@ def upgrade() -> None:
             WHERE period_month IS NULL OR status IS NULL
         """)
 
+    # --- Backfill fields without a direct legacy equivalent before enforcing NOT NULL ---
+    # Server defaults only apply to future inserts; existing payslips need explicit values.
+    op.execute(
+        """
+        UPDATE payslips
+        SET insurance_employee = COALESCE(insurance_employee, 0),
+            taxable_income = COALESCE(taxable_income, 0),
+            pit_amount = COALESCE(pit_amount, 0)
+        WHERE insurance_employee IS NULL
+           OR taxable_income IS NULL
+           OR pit_amount IS NULL
+        """
+    )
+
     # --- Set NOT NULL and defaults on new columns (temporary defaults for backfill) ---
     op.alter_column(
         "payslips", "period_month", nullable=False, server_default=sa.text("'2026-01-01'::date")

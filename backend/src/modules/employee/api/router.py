@@ -42,8 +42,14 @@ from src.modules.employee.container import (
     get_position_service,
 )
 from src.modules.identity.api.admin_router import require_admin
-from src.modules.identity.container import get_current_user
+from src.modules.identity.api.schemas import (
+    EmployeeAccountCreateResponse,
+    EmployeeAccountStatusResponse,
+)
+from src.modules.identity.application.auth_service import AuthService
+from src.modules.identity.container import get_auth_service, get_current_user, get_user_repository
 from src.modules.identity.domain.entities import User
+from src.modules.identity.infrastructure.user_repository import UserRepository
 
 # ---------------------------------------------------------------------------
 # Type aliases for injected dependencies
@@ -52,10 +58,12 @@ from src.modules.identity.domain.entities import User
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 AdminUserDep = Annotated[User, Depends(require_admin)]
 EmployeeServiceDep = Annotated[EmployeeService, Depends(get_employee_service)]
+AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 DepartmentServiceDep = Annotated[DepartmentService, Depends(get_department_service)]
 PositionServiceDep = Annotated[PositionService, Depends(get_position_service)]
 ImportServiceDep = Annotated[ImportService, Depends(get_import_service)]
 DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]
+UserRepositoryDep = Annotated[UserRepository, Depends(get_user_repository)]
 
 # ---------------------------------------------------------------------------
 # Routers
@@ -134,6 +142,54 @@ async def get_employee(
                 detail="Access denied: cannot view another employee's profile",
             )
     return EmployeeResponse.model_validate(employee)
+
+
+@employee_router.get("/{employee_id}/account", response_model=EmployeeAccountStatusResponse)
+async def get_employee_account(
+    employee_id: UUID,
+    current_user: AdminUserDep,
+    employee_service: EmployeeServiceDep,
+    user_repository: UserRepositoryDep,
+) -> EmployeeAccountStatusResponse:
+    """Inspect Employee Account status."""
+    employee = await employee_service.get_employee(employee_id)
+    user = await user_repository.get_by_employee_id(employee.id)
+    if user is None:
+        return EmployeeAccountStatusResponse(exists=False)
+    return EmployeeAccountStatusResponse(
+        exists=True,
+        user_id=user.id,
+        email=user.email,
+        role=user.role,
+        must_change_password=user.must_change_password,
+    )
+
+
+@employee_router.post("/{employee_id}/account", response_model=EmployeeAccountCreateResponse)
+async def create_employee_account(
+    employee_id: UUID,
+    current_user: AdminUserDep,
+    employee_service: EmployeeServiceDep,
+    auth_service: AuthServiceDep,
+) -> EmployeeAccountCreateResponse:
+    """Create Employee Account with temporary password."""
+    employee = await employee_service.get_employee(employee_id)
+    if not employee.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="Employee must be active before creating account",
+        )
+    user, temporary_password = await auth_service.create_employee_account(employee)
+    return EmployeeAccountCreateResponse(
+        user=EmployeeAccountStatusResponse(
+            exists=True,
+            user_id=user.id,
+            email=user.email,
+            role=user.role,
+            must_change_password=user.must_change_password,
+        ),
+        temporary_password=temporary_password,
+    )
 
 
 @employee_router.post("", response_model=EmployeeResponse, status_code=201)

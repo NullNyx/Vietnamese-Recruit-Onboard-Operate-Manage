@@ -1,0 +1,100 @@
+export type UserRole = "admin" | "user";
+
+export interface CurrentUser {
+  id: string;
+  email: string;
+  name: string;
+  avatar_url: string | null;
+  employee_id?: string | null;
+  role: UserRole;
+  must_change_password: boolean;
+  gmail_grant_valid: boolean;
+  calendar_grant_valid: boolean;
+  created_at: string;
+  last_login: string;
+}
+
+export interface AuthSessionResponse {
+  user: CurrentUser;
+  must_change_password: boolean;
+  setup_complete: boolean;
+}
+
+export interface SetupStatusResponse {
+  setup_complete: boolean;
+}
+
+export interface EmployeeAccountStatusResponse {
+  exists: boolean;
+  user_id: string | null;
+  email: string | null;
+  role: UserRole | null;
+  must_change_password: boolean | null;
+}
+
+export interface EmployeeAccountCreateResponse {
+  user: EmployeeAccountStatusResponse;
+  temporary_password: string;
+}
+
+const BASE = "/api/auth";
+
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null);
+    const message =
+      payload?.error?.message ??
+      payload?.detail ??
+      payload?.message ??
+      res.statusText;
+    throw new Error(typeof message === "string" ? message : JSON.stringify(message));
+  }
+  return res.json() as Promise<T>;
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    credentials: "include",
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers || {}),
+    },
+  });
+  return handleResponse<T>(res);
+}
+
+export async function getSetupStatus(): Promise<SetupStatusResponse> {
+  const res = await fetch(`${BASE}/setup-status`, { credentials: "include" });
+  return handleResponse<SetupStatusResponse>(res);
+}
+
+export async function login(email: string, password: string): Promise<AuthSessionResponse> {
+  return request<AuthSessionResponse>("/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function setupFirstRun(
+  organization_name: string,
+  name: string,
+  email: string,
+  password: string,
+  password_confirmation: string,
+): Promise<AuthSessionResponse> {
+  return request<AuthSessionResponse>("/setup", {
+    method: "POST",
+    body: JSON.stringify({ organization_name, name, email, password, password_confirmation }),
+  });
+}
+
+export async function changePassword(
+  current_password: string,
+  new_password: string,
+): Promise<AuthSessionResponse> {
+  return request<AuthSessionResponse>("/change-password", {
+    method: "POST",
+    body: JSON.stringify({ current_password, new_password }),
+  });
+}

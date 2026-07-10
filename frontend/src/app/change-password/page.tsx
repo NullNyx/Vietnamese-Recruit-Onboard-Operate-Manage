@@ -4,72 +4,49 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2 } from "lucide-react";
 
-import { login, getSetupStatus } from "@/lib/api/auth";
+import { changePassword } from "@/lib/api/auth";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
-export default function LoginPage() {
+export default function ChangePasswordPage() {
   const router = useRouter();
-  const { user, loading: userLoading, refetch } = useCurrentUser();
-  const [checkingSetup, setCheckingSetup] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { user, loading, refetch } = useCurrentUser();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (userLoading) return;
-    if (user) {
-      if (user.must_change_password) {
-        router.replace("/change-password");
-        return;
-      }
+    if (loading) return;
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+    if (!user.must_change_password) {
       router.replace(user.role === "admin" ? "/" : "/employee/dashboard");
     }
-  }, [router, user, userLoading]);
-
-  useEffect(() => {
-    let active = true;
-    async function checkSetup() {
-      try {
-        const result = await getSetupStatus();
-        if (!active) return;
-        if (!result.setup_complete) {
-          router.replace("/setup");
-          return;
-        }
-      } catch {
-        if (!active) return;
-        setError("Không thể kiểm tra trạng thái khởi tạo");
-      } finally {
-        if (active) setCheckingSetup(false);
-      }
-    }
-    checkSetup();
-    return () => {
-      active = false;
-    };
-  }, [router]);
+  }, [router, user, loading]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSubmitting(true);
     setError(null);
+    if (newPassword !== confirmPassword) {
+      setError("Mật khẩu mới không khớp");
+      return;
+    }
+    setSubmitting(true);
     try {
-      const result = await login(email, password);
+      const result = await changePassword(currentPassword, newPassword);
       await refetch();
-      if (result.must_change_password) {
-        router.replace("/change-password");
-        return;
-      }
       router.replace(result.user.role === "admin" ? "/" : "/employee/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
+      setError(err instanceof Error ? err.message : "Đổi mật khẩu thất bại");
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (checkingSetup || userLoading) {
+  if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -84,8 +61,8 @@ export default function LoginPage() {
           <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
             <span className="text-sm font-bold text-white">V</span>
           </div>
-          <h1 className="text-2xl font-semibold text-foreground">Vroom HR</h1>
-          <p className="text-sm text-muted-foreground">Đăng nhập vào hệ thống</p>
+          <h1 className="text-2xl font-semibold text-foreground">Đổi mật khẩu</h1>
+          <p className="text-sm text-muted-foreground">Bắt buộc đổi mật khẩu trước khi vào hệ thống</p>
         </div>
 
         {error && (
@@ -97,42 +74,53 @@ export default function LoginPage() {
 
         <form className="space-y-4 rounded-lg border border-border bg-card p-6" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <label htmlFor="email" className="text-xs font-medium text-muted-foreground">
-              Email
+            <label htmlFor="current" className="text-xs font-medium text-muted-foreground">
+              Mật khẩu hiện tại
             </label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-              placeholder="name@company.com"
-              autoComplete="email"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="password" className="text-xs font-medium text-muted-foreground">
-              Mật khẩu
-            </label>
-            <input
-              id="password"
+              id="current"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
               className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
               autoComplete="current-password"
               required
             />
           </div>
-
+          <div className="space-y-2">
+            <label htmlFor="new" className="text-xs font-medium text-muted-foreground">
+              Mật khẩu mới
+            </label>
+            <input
+              id="new"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+              autoComplete="new-password"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="confirm" className="text-xs font-medium text-muted-foreground">
+              Xác nhận mật khẩu mới
+            </label>
+            <input
+              id="confirm"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+              autoComplete="new-password"
+              required
+            />
+          </div>
           <button
             type="submit"
             disabled={submitting}
             className="flex w-full items-center justify-center rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Đăng nhập"}
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Lưu mật khẩu mới"}
           </button>
         </form>
       </div>

@@ -4,7 +4,16 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trash2, Download, FileText, Upload } from "lucide-react";
+import {
+  ArrowLeft,
+  Trash2,
+  Download,
+  FileText,
+  Upload,
+  KeyRound,
+  Copy,
+  Loader2,
+} from "lucide-react";
 import type {
   Employee,
   EmployeeDocument,
@@ -17,6 +26,8 @@ import {
   uploadDocument,
   downloadDocument,
   deleteDocument,
+  getEmployeeAccountStatus,
+  createEmployeeAccount,
 } from "@/lib/api/employees";
 import { listDepartments } from "@/lib/api/departments";
 import { listPositions } from "@/lib/api/positions";
@@ -39,20 +50,27 @@ export default function EmployeeDetailPage() {
   const [uploadDescription, setUploadDescription] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [accountExists, setAccountExists] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [creatingAccount, setCreatingAccount] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [emp, docs, depts, pos] = await Promise.all([
+        const [emp, docs, depts, pos, account] = await Promise.all([
           getEmployee(id),
           listDocuments(id),
           listDepartments(),
           listPositions(),
+          getEmployeeAccountStatus(id),
         ]);
         setEmployee(emp);
         setDocuments(docs);
         setDepartments(depts);
         setPositions(pos);
+        setAccountExists(account.exists);
+        setMustChangePassword(account.must_change_password ?? false);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Failed to load employee",
@@ -127,6 +145,25 @@ export default function EmployeeDetailPage() {
     } catch {
       alert("Failed to delete document");
     }
+  };
+
+  const handleCreateAccount = async () => {
+    setCreatingAccount(true);
+    try {
+      const result = await createEmployeeAccount(id);
+      setAccountExists(true);
+      setMustChangePassword(result.user.must_change_password ?? true);
+      setTempPassword(result.temporary_password);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to create account");
+    } finally {
+      setCreatingAccount(false);
+    }
+  };
+
+  const copyTempPassword = async () => {
+    if (!tempPassword) return;
+    await navigator.clipboard.writeText(tempPassword);
   };
 
   if (loading) {
@@ -238,12 +275,73 @@ export default function EmployeeDetailPage() {
             />
           </dl>
         </div>
-      </div>
+        </div>
 
-      {/* Documents Section */}
-      <div className="rounded-md border border-border bg-card p-6">
-        <h2 className="mb-4 text-lg font-semibold text-foreground">
-          Documents
+        {/* Account */}
+        <div className="mb-6 rounded-md border border-border bg-card p-6">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Employee Account</h2>
+              <p className="text-sm text-muted-foreground">
+                Tài khoản đăng nhập cho Employee Self-Service
+              </p>
+            </div>
+            {accountExists ? (
+              <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                Đã tạo
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={handleCreateAccount}
+                disabled={creatingAccount || !employee.is_active}
+                className="inline-flex items-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {creatingAccount ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <KeyRound className="mr-2 h-4 w-4" />
+                )}
+                Tạo account
+              </button>
+            )}
+          </div>
+
+          {!employee.is_active && (
+            <p className="text-sm text-muted-foreground">
+              Chỉ Employee active mới nhận account.
+            </p>
+          )}
+
+          {accountExists && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Mật khẩu phải đổi ở lần đăng nhập đầu.
+              </p>
+              {tempPassword && (
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-background p-3">
+                  <code className="flex-1 text-sm font-medium text-foreground">{tempPassword}</code>
+                  <button
+                    type="button"
+                    onClick={copyTempPassword}
+                    className="inline-flex items-center rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <Copy className="mr-1 h-3.5 w-3.5" />
+                    Copy
+                  </button>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {mustChangePassword ? "Chế độ bắt đổi mật khẩu đang bật." : "Account đã sẵn sàng."}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Documents Section */}
+        <div className="rounded-md border border-border bg-card p-6">
+          <h2 className="mb-4 text-lg font-semibold text-foreground">
+            Documents
         </h2>
 
         {/* Document List */}

@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from src.modules.identity.domain.entities import UserRole, WhitelistEntryType
 
@@ -30,6 +30,7 @@ class TokenPayload(BaseModel):
     sub: UUID
     email: str
     employee_id: UUID | None = None
+    must_change_password: bool = False
     exp: datetime
     iat: datetime
 
@@ -117,10 +118,77 @@ class UserResponse(BaseModel):
     avatar_url: str | None = None
     employee_id: UUID | None = None
     role: UserRole
+    must_change_password: bool
     gmail_grant_valid: bool
     calendar_grant_valid: bool
     created_at: datetime
     last_login: datetime
+
+
+class AuthLoginRequest(BaseModel):
+    """Request schema for local login."""
+
+    email: str
+    password: str
+
+
+class FirstRunSetupRequest(BaseModel):
+    """Validated request schema for first-run setup."""
+
+    organization_name: str = Field(..., min_length=1, max_length=255)
+    name: str = Field(..., min_length=1, max_length=255)
+    email: EmailStr
+    password: str = Field(..., min_length=12, max_length=255)
+    password_confirmation: str = Field(..., min_length=12, max_length=255)
+
+    @model_validator(mode="after")
+    def passwords_match(self) -> "FirstRunSetupRequest":
+        if self.password != self.password_confirmation:
+            raise ValueError("Passwords do not match")
+        self.organization_name = self.organization_name.strip()
+        self.name = self.name.strip()
+        if not self.organization_name or not self.name:
+            raise ValueError("Organization name and name are required")
+        self.email = self.email.lower()
+        return self
+
+
+class ChangePasswordRequest(BaseModel):
+    """Request schema for password change."""
+
+    current_password: str
+    new_password: str = Field(..., min_length=12, max_length=255)
+
+
+class AuthSessionResponse(BaseModel):
+    """Response schema for login/setup flows."""
+
+    user: UserResponse
+    must_change_password: bool
+    setup_complete: bool
+
+
+class SetupStatusResponse(BaseModel):
+    """Response schema for setup status check."""
+
+    setup_complete: bool
+
+
+class EmployeeAccountStatusResponse(BaseModel):
+    """Response schema for employee account status."""
+
+    exists: bool
+    user_id: UUID | None = None
+    email: str | None = None
+    role: UserRole | None = None
+    must_change_password: bool | None = None
+
+
+class EmployeeAccountCreateResponse(BaseModel):
+    """Response schema for newly created employee account."""
+
+    user: EmployeeAccountStatusResponse
+    temporary_password: str
 
 
 class GrantStatusResponse(BaseModel):

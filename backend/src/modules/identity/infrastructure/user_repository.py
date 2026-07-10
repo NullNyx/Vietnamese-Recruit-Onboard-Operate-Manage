@@ -56,6 +56,86 @@ class UserRepository:
         result = await self.session.execute(statement)
         return result.scalars().first()
 
+    async def get_by_employee_id(self, employee_id: UUID) -> User | None:
+        """Retrieve a user by linked employee ID."""
+        statement = select(User).where(User.employee_id == employee_id)
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
+    async def count_users(self) -> int:
+        """Count total users in system."""
+        statement = select(func.count()).select_from(User)
+        result = await self.session.execute(statement)
+        return int(result.scalar_one())
+
+    async def count_admins(self) -> int:
+        """Count HR accounts in the system."""
+        statement = select(func.count()).select_from(User).where(User.role == UserRole.ADMIN)
+        result = await self.session.execute(statement)
+        return int(result.scalar_one())
+
+    async def create_local_account(
+        self,
+        *,
+        email: str,
+        name: str,
+        password_hash: str,
+        role: UserRole,
+        employee_id: UUID | None = None,
+        must_change_password: bool = False,
+    ) -> User:
+        """Create local auth account."""
+        user = User(
+            email=email,
+            name=name,
+            password_hash=password_hash,
+            role=role,
+            employee_id=employee_id,
+            must_change_password=must_change_password,
+        )
+        self.session.add(user)
+        await self.session.flush()
+        return user
+
+    async def update_password(
+        self,
+        user_id: UUID,
+        password_hash: str,
+        must_change_password: bool = False,
+    ) -> User:
+        """Update password hash and password-change flag."""
+        user = await self.get_by_id(user_id)
+        if user is None:
+            raise ValueError("User not found")
+        user.password_hash = password_hash
+        user.must_change_password = must_change_password
+        user.last_login = datetime.now(UTC)
+        self.session.add(user)
+        await self.session.flush()
+        return user
+
+    async def sync_profile(
+        self,
+        user_id: UUID,
+        *,
+        email: str | None = None,
+        name: str | None = None,
+        employee_id: UUID | None = None,
+    ) -> User:
+        """Sync auth profile fields from domain entities."""
+        user = await self.get_by_id(user_id)
+        if user is None:
+            raise ValueError("User not found")
+        if email is not None:
+            user.email = email
+        if name is not None:
+            user.name = name
+        if employee_id is not None:
+            user.employee_id = employee_id
+        self.session.add(user)
+        await self.session.flush()
+        return user
+
     async def upsert(self, google_user_info: GoogleUserInfo, role: UserRole | None = None) -> User:
         """Create a new user or update an existing one from Google profile data.
 

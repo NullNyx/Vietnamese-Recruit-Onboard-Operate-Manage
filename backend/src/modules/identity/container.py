@@ -41,6 +41,9 @@ from src.modules.identity.infrastructure.refresh_token_repository import Refresh
 from src.modules.identity.infrastructure.user_repository import UserRepository
 from src.modules.identity.infrastructure.whitelist_loader import WhitelistLoader
 from src.modules.identity.infrastructure.whitelist_repository import WhitelistRepository
+from src.modules.recruitment.infrastructure.org_settings_repository import (
+    OrganizationSettingsRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -278,6 +281,8 @@ async def get_auth_service(
         refresh_token_repository=refresh_token_repo,
         employee_repository=employee_repo,
         domain_gate_service=domain_gate_service,
+        organization_repository=OrganizationSettingsRepository(session),
+        session=session,
     )
 
 

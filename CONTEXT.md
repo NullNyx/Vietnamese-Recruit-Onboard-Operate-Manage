@@ -1,163 +1,109 @@
 # Vroom HR
 
-Vroom HR (Vietnamese Recruit-Onboard-Operate-Manage) is an open-source,
-self-hosted HR management platform for Vietnamese enterprises. Each company
-runs its own deployment (its own database and server). One deployment serves
-exactly one company. This glossary fixes the canonical meaning of domain terms
-so the team uses one word per concept across specs, code, and docs.
+Vroom HR (Vietnamese Recruit-Onboard-Operate-Manage) là nền tảng quản lý nhân sự mã nguồn mở, tự host dành cho doanh nghiệp Việt Nam. Mỗi công ty chạy một deployment riêng (database và server riêng). Một deployment chỉ phục vụ đúng một công ty. Glossary này quy định nghĩa chuẩn của các thuật ngữ domain để team dùng một từ cho một khái niệm trong spec, code và docs.
 
-## Language
+## Ngôn ngữ domain
 
 **Organization**:
-The single company that owns a given deployment. It is a singleton — there is
-exactly one Organization per running instance. Holds company-level settings
-(name, tax code, timezone, holidays, allowed email domains). It is NOT a
-data-isolation boundary, because a deployment never contains more than one
-company.
+Công ty duy nhất sở hữu một deployment. Đây là singleton — mỗi instance đang chạy chỉ có đúng một Organization. Organization lưu các cài đặt cấp công ty (tên, mã số thuế, timezone, ngày nghỉ, allowed email domains). Organization KHÔNG phải boundary để cách ly dữ liệu vì một deployment không chứa nhiều công ty.
 _Avoid_: Company, Tenant, Account, Client
 
 **Tenant**:
-A legacy term from the Policy Engine, where `tenant_id` was designed as a
-multi-company isolation key. In the self-hosted model there is only one
-company per deployment, so `tenant_id` is effectively a constant. Treat any
-existing `tenant_id` as an implementation detail to be frozen or removed, not
-as a live multi-tenancy concept.
-_Avoid_: using Tenant as if multiple companies share one deployment
+Thuật ngữ legacy từ Policy Engine, nơi `tenant_id` được thiết kế làm khóa cách ly nhiều công ty. Trong mô hình self-hosted, mỗi deployment chỉ có một công ty nên `tenant_id` thực tế là hằng số. Xem mọi `tenant_id` hiện có là implementation detail cần đóng băng hoặc loại bỏ, không phải khái niệm multi-tenancy đang hoạt động.
+_Avoid_: dùng Tenant như thể nhiều công ty cùng chia sẻ một deployment
 
 **HR**:
-An administrator role. Manages employees, policies, schedules, and approvals
-for the Organization. Maps to the existing `admin` role.
-_Avoid_: Manager (a manager is a separate approval concept), Administrator
+Vai trò quản trị viên. Quản lý Employee, policy, lịch làm việc và phê duyệt cho Organization. Ánh xạ với role `admin` hiện có.
+_Avoid_: Manager (Manager là khái niệm quan hệ phê duyệt riêng), Administrator
 
 **Employee**:
-A person with an employment record in the system. An Employee is created at the
-moment a Candidate is accepted, starting **inactive** (`is_active = false`,
-onboarding in progress). When onboarding completes, the Employee becomes
-**active** (`is_active = true`). Boundary: Candidate = not yet accepted;
-inactive Employee = accepted, onboarding; active Employee = onboarding done.
-Active Employees use the self-service side of the system.
-_Avoid_: User (User is the auth-account concept; an Employee is the HR concept)
+Một người có hồ sơ việc làm trong hệ thống. Employee được tạo ngay khi Candidate được accepted, bắt đầu ở trạng thái **inactive** (`is_active = false`, đang onboarding). Khi onboarding hoàn tất, Employee trở thành **active** (`is_active = true`). Ranh giới: Candidate = chưa được accepted; Employee inactive = đã accepted, đang onboarding; Employee active = đã hoàn tất onboarding. Employee active sử dụng phần Employee Self-Service.
+_Avoid_: User (User là khái niệm tài khoản xác thực; Employee là khái niệm HR)
+
+**Employee Account**:
+Tài khoản xác thực gắn với một Employee. HR tạo và quản lý tài khoản này; Employee dùng nó để đăng nhập Employee Self-Service. Ở phiên bản đầu, tài khoản có thể được cấp mật khẩu tạm thời và bắt buộc đổi mật khẩu trong lần đăng nhập đầu tiên. Chỉ Employee active mới được nhận Employee Account.
+_Avoid_: User, Login account, Profile
 
 **Manager**:
-The direct reporting relationship of an Employee to another Employee. It is not
-an HR synonym, not a system role, and does not imply a separate permission
-model by itself.
-_Avoid_: using Manager to mean HR, Administrator, or approver-by-default
+Quan hệ báo cáo trực tiếp của một Employee với một Employee khác. Manager không đồng nghĩa với HR, không phải system role và tự nó không ngụ ý một permission model riêng.
+_Avoid_: dùng Manager để chỉ HR, Administrator hoặc người mặc định có quyền phê duyệt
 
 **Employee Self-Service**:
-The employee-facing side of the system for active Employees. It is distinct
-from the HR admin side and is used for employee-owned views and actions.
+Phần giao diện dành cho Employee active. Đây là phần riêng với giao diện quản trị HR, phục vụ các view và action do Employee sở hữu.
 _Avoid_: Portal, Employee dashboard, User area
 
 **Employee Assistant**:
-A conversational assistant for active Employees. It can read only the Employee's
-own data and draft Employee-owned actions such as leave or overtime requests,
-but it never writes on its own.
+Trợ lý hội thoại dành cho Employee active. Chỉ được đọc dữ liệu của chính Employee đó và có thể draft các action do Employee sở hữu như request nghỉ phép hoặc làm thêm giờ, nhưng không bao giờ tự ghi dữ liệu.
 _Avoid_: Employee AI Agent, Employee Chatbot, Self-service bot
 
+**First-Run Setup**:
+Flow thiết lập ban đầu, chỉ hiển thị trên deployment mới trước khi có tài khoản HR. Flow xác lập danh tính tối thiểu của Organization và tạo tài khoản HR đầu tiên; các cài đặt Organization khác được cấu hình sau.
+_Avoid_: Signup, onboarding wizard, install flow, login screen
+
 **Attendance Record**:
-A daily timekeeping record for one Employee on one work date. It captures the
-Employee's presence for that day, distinct from leave, overtime, and payroll.
+Bản ghi chấm công hằng ngày cho một Employee trong một ngày làm việc. Ghi nhận việc Employee có mặt trong ngày đó, tách biệt với nghỉ phép, làm thêm giờ và payroll.
 _Avoid_: Presence status, Shift, Timesheet
 
 **Employee Request**:
-An Employee-submitted request that requires HR review before it takes effect,
-such as leave or overtime. It is owned by the submitting Employee and decided by
-HR.
+Request do Employee gửi và cần HR review trước khi có hiệu lực, chẳng hạn request nghỉ phép hoặc làm thêm giờ. Request thuộc về Employee gửi request và do HR quyết định.
 _Avoid_: Ticket, Approval item, Form submission
 
 **Payslip**:
-A payroll statement for one Employee and one pay period. It presents payroll
-amounts for Employee review and is distinct from the payroll calculation engine.
+Bảng kê payroll cho một Employee trong một kỳ trả lương. Payslip trình bày các khoản payroll để Employee xem, tách biệt với payroll calculation engine.
 _Avoid_: Salary record, Payroll run, Payment
 
-## AI Capabilities
+## Khả năng AI
 
-The system has three distinct AI concepts. They are NOT the same thing and must
-not be collapsed under the umbrella term "AI Agent".
+Hệ thống có ba khái niệm AI riêng biệt. KHÔNG được gộp chúng dưới tên gọi chung “AI Agent”.
 
 **AI Automation**:
-Background AI tasks that run on an event, with no conversation: email intent
-classification (cv/partner/event/internal/other) and CV parsing into structured
-data. Already implemented in the recruitment module. This is a pipeline, not an
-agent.
-_Avoid_: calling this "the AI Agent"
+Các tác vụ AI chạy nền theo event, không có hội thoại: phân loại intent của email (cv/partner/event/internal/other) và parse CV thành dữ liệu có cấu trúc. Đã được triển khai trong module recruitment. Đây là pipeline, không phải agent.
+_Avoid_: gọi khái niệm này là “the AI Agent”
 
 **AI Assistant**:
-A conversational chatbot for HR (the admin role). It can READ recruitment and
-onboarding data (candidate counts by status, parsed CV summaries, interview
-schedules, onboarding progress) and DRAFT actions for HR (e.g. compose an
-interview-invitation or congratulations email), but it never writes to the
-database on its own — HR confirms every write (human-in-the-loop).
-_Avoid_: Chatbot (too generic), Agent (implies autonomous writes)
+Chatbot hội thoại dành cho HR (role admin). Có thể READ dữ liệu recruitment và onboarding (số lượng Candidate theo status, tóm tắt CV đã parse, lịch phỏng vấn, tiến độ onboarding) và DRAFT action cho HR (ví dụ soạn email mời phỏng vấn hoặc chúc mừng), nhưng không bao giờ tự ghi database — HR phải xác nhận mọi write (human-in-the-loop).
+_Avoid_: Chatbot (quá chung), Agent (hàm ý tự động ghi dữ liệu)
 
 **AI Agent (autonomous)**:
-A hypothetical future capability where AI decides and executes write actions on
-its own. Explicitly out of scope — recorded only as a future direction.
-_Avoid_: using "Agent" to describe the current Assistant, which is not autonomous
+Khả năng tương lai giả định, trong đó AI tự quyết định và tự thực thi write action. Rõ ràng nằm ngoài scope hiện tại — chỉ được ghi nhận như một định hướng tương lai.
+_Avoid_: dùng “Agent” để gọi Assistant hiện tại vì Assistant không autonomous
 
 ## Recruitment & Onboarding
 
 **Candidate**:
-A person being considered for employment, created (auto or manually) from a
-parsed CV. Moves through a pipeline: new → reviewing → interview*scheduled →
-accepted/rejected/archived. A Candidate is NOT yet an Employee. A Candidate may
-be unassigned or assigned to exactly one Job Opening, and that assignment may
-change only before the Candidate reaches accepted/rejected/archived.
-\_Avoid*: Applicant, Employee (an Employee is post-onboarding)
+Một người đang được cân nhắc tuyển dụng, được tạo tự động hoặc thủ công từ CV đã parse. Candidate đi qua pipeline: new → reviewing → interview*scheduled → accepted/rejected/archived. Candidate CHƯA phải Employee. Candidate có thể chưa được gán hoặc được gán vào đúng một Job Opening; việc gán có thể thay đổi cho đến trước khi Candidate đạt accepted/rejected/archived.
+_Avoid_: Applicant, Employee (Employee chỉ tồn tại sau onboarding)
 
 **Job Opening**:
-A specific hiring need for one Position in the Organization. Its Department is
-derived from that Position in the initial model. It optionally groups the
-Candidates being considered for that need and tracks the target headcount
-separately from the Candidate pipeline; a Candidate may exist without a Job
-Opening. Its lifecycle is draft → open → closed/cancelled, and only open Job
-Openings accept new Candidate assignments. Its headcount is measured against
-accepted Candidates, not onboarding completion or active Employees.
+Một nhu cầu tuyển dụng cụ thể cho một Position trong Organization. Department được suy ra từ Position trong model ban đầu. Job Opening có thể nhóm các Candidate đang được cân nhắc cho nhu cầu đó và theo dõi target headcount riêng với Candidate pipeline; Candidate có thể tồn tại mà không cần Job Opening. Vòng đời: draft → open → closed/cancelled; chỉ Job Opening open mới nhận Candidate assignment mới. Headcount được tính theo Candidate accepted, không theo onboarding completion hoặc Employee active.
 _Avoid_: Recruitment Plan, Hiring Plan, Vacancy, Requisition
 
 **Backbone Flow**:
-The project's single core workflow: incoming email → AI intent classification →
-CV parsing → Candidate → HR review → interview scheduling → accept →
-congratulations email → onboarding → Employee. This is what the project is
-built around; everything else is secondary or shelved.
-_Avoid_: Pipeline (pipeline refers specifically to the candidate status machine)
+Workflow cốt lõi duy nhất của project: email đến → AI phân loại intent → parse CV → Candidate → HR review → lên lịch phỏng vấn → accept → email chúc mừng → onboarding → Employee. Đây là flow mà project được xây dựng xoay quanh; mọi thứ khác là thứ yếu hoặc đã tạm gác.
+_Avoid_: Pipeline (Pipeline chỉ machine status của Candidate)
 
 **Onboarding**:
-A checklist-driven process that turns an accepted Candidate into an active
-Employee. Triggered by the candidate "accepted" event. An OnboardingProcess
-holds a list of tasks (e.g. sign contract, submit documents, assign
-department/position, set start date); HR completes each task, and when all are
-done the Candidate becomes an active Employee. The currently missing link in the
-backbone.
+Quy trình dựa trên checklist, biến Candidate accepted thành Employee active. Quy trình được kích hoạt bởi event Candidate “accepted”. Một OnboardingProcess chứa danh sách task (ví dụ ký hợp đồng, nộp hồ sơ, gán department/position, đặt start date); HR hoàn tất từng task, và khi tất cả task xong thì Candidate trở thành Employee active. Đây là mắt xích hiện còn thiếu trong Backbone Flow.
 _Avoid_: Promotion, Hiring
 
 **Onboarding Task**:
-A single item in an OnboardingProcess checklist, with a status (pending/done).
+Một item trong checklist của OnboardingProcess, có status (pending/done).
 _Avoid_: Step, Stage
 
-## AI Assistant Internals
+## Nội bộ AI Assistant
 
 **Tool**:
-A typed function the AI Assistant can invoke. There are exactly two kinds, and
-no others: Read-Tool and Draft-Tool. The LLM is never given a tool that writes
-to the database — that safety boundary is structural, not a convention.
-_Avoid_: Function (too generic), Plugin, Skill
+Một hàm có kiểu dữ liệu mà AI Assistant có thể gọi. Chỉ có đúng hai loại, không có loại nào khác: Read-Tool và Draft-Tool. LLM không bao giờ được cung cấp tool có khả năng ghi database — đây là ranh giới an toàn mang tính cấu trúc, không phụ thuộc vào convention.
+_Avoid_: Function (quá chung), Plugin, Skill
 
 **Read-Tool**:
-A tool that executes a real read against existing services and returns live data
-(e.g. count candidates by status, get a candidate, list the review queue). Safe
-to call freely.
-_Avoid_: Query (reserved for the command/query layer)
+Tool thực hiện read thật thông qua các service hiện có và trả về dữ liệu live (ví dụ đếm Candidate theo status, lấy một Candidate, liệt kê review queue). Có thể gọi tự do vì an toàn.
+_Avoid_: Query (dành riêng cho command/query layer)
 
 **Draft-Tool**:
-A tool that does NOT execute a write. It returns a structured proposal — an
-action type, its parameters, and a human-readable preview (e.g. a composed
-interview-invitation email). The LLM can only ever propose; it cannot act.
+Tool KHÔNG thực hiện write. Tool trả về một proposal có cấu trúc — gồm action type, parameters và preview dễ đọc (ví dụ email mời phỏng vấn đã soạn). LLM chỉ có thể đề xuất, không thể thực thi.
 _Avoid_: Write-tool, Action-tool
 
 **Draft Action**:
-The structured proposal returned by a Draft-Tool. HR reviews it and, on confirm,
-the frontend calls the existing real write endpoint directly (not via the LLM).
-This is the mechanism that keeps the Assistant human-in-the-loop.
+Proposal có cấu trúc do Draft-Tool trả về. HR review proposal và khi confirm, frontend gọi trực tiếp write endpoint thật hiện có (không gọi thông qua LLM). Đây là cơ chế giữ AI Assistant trong mô hình human-in-the-loop.
 _Avoid_: Auto-action, Command

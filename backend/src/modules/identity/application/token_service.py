@@ -97,6 +97,12 @@ class RefreshTokenRecord(Protocol):
     @property
     def email(self) -> str: ...
 
+    @property
+    def employee_id(self) -> UUID | None: ...
+
+    @property
+    def must_change_password(self) -> bool: ...
+
 
 class TokenService:
     """Manages JWT access tokens and opaque refresh tokens.
@@ -128,7 +134,11 @@ class TokenService:
         self._refresh_token_repo = refresh_token_repository
 
     def create_access_token(
-        self, user_id: UUID, email: str, employee_id: UUID | None = None
+        self,
+        user_id: UUID,
+        email: str,
+        employee_id: UUID | None = None,
+        must_change_password: bool = False,
     ) -> str:
         """Issue a JWT access token with user claims.
 
@@ -148,6 +158,7 @@ class TokenService:
         payload = {
             "sub": str(user_id),
             "email": email,
+            "must_change_password": must_change_password,
         }
         if employee_id:
             payload["employee_id"] = str(employee_id)
@@ -197,6 +208,7 @@ class TokenService:
                 sub=decoded["sub"],
                 email=decoded["email"],
                 employee_id=employee_id,
+                must_change_password=bool(decoded.get("must_change_password", False)),
                 exp=decoded["exp"],
                 iat=decoded["iat"],
             )
@@ -232,7 +244,12 @@ class TokenService:
         if record.expires_at <= datetime.now(UTC):
             raise InvalidTokenError()
 
-        return self.create_access_token(record.user_id, record.email)
+        return self.create_access_token(
+            record.user_id,
+            record.email,
+            employee_id=record.employee_id,
+            must_change_password=record.must_change_password,
+        )
 
     async def revoke_user_tokens(self, user_id: UUID) -> None:
         """Revoke all active refresh tokens for a user.

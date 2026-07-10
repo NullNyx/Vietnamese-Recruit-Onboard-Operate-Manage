@@ -39,7 +39,6 @@ async def _has_existing_data(session: AsyncSession) -> bool:
 
 async def seed_demo_data(session: AsyncSession) -> bool:
     """Seed minimal data: departments, positions, and one demo employee."""
-    from src.modules.identity.domain.entities import User
     from src.modules.identity.infrastructure.config import AuthSettings
 
     settings = AuthSettings()  # type: ignore[call-arg]

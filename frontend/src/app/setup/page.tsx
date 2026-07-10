@@ -4,15 +4,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2 } from "lucide-react";
 
-import { login, getSetupStatus } from "@/lib/api/auth";
+import { getSetupStatus, setupFirstRun } from "@/lib/api/auth";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
-export default function LoginPage() {
+export default function SetupPage() {
   const router = useRouter();
   const { user, loading: userLoading, refetch } = useCurrentUser();
   const [checkingSetup, setCheckingSetup] = useState(true);
+  const [organizationName, setOrganizationName] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -33,8 +36,8 @@ export default function LoginPage() {
       try {
         const result = await getSetupStatus();
         if (!active) return;
-        if (!result.setup_complete) {
-          router.replace("/setup");
+        if (result.setup_complete) {
+          router.replace("/login");
           return;
         }
       } catch {
@@ -55,15 +58,17 @@ export default function LoginPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await login(email, password);
+      const result = await setupFirstRun(
+        organizationName,
+        name,
+        email,
+        password,
+        passwordConfirmation,
+      );
       await refetch();
-      if (result.must_change_password) {
-        router.replace("/change-password");
-        return;
-      }
       router.replace(result.user.role === "admin" ? "/" : "/employee/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
+      setError(err instanceof Error ? err.message : "Khởi tạo thất bại");
     } finally {
       setSubmitting(false);
     }
@@ -84,8 +89,8 @@ export default function LoginPage() {
           <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
             <span className="text-sm font-bold text-white">V</span>
           </div>
-          <h1 className="text-2xl font-semibold text-foreground">Vroom HR</h1>
-          <p className="text-sm text-muted-foreground">Đăng nhập vào hệ thống</p>
+          <h1 className="text-2xl font-semibold text-foreground">First-Run Setup</h1>
+          <p className="text-sm text-muted-foreground">Tạo HR account đầu tiên</p>
         </div>
 
         {error && (
@@ -97,6 +102,30 @@ export default function LoginPage() {
 
         <form className="space-y-4 rounded-lg border border-border bg-card p-6" onSubmit={handleSubmit}>
           <div className="space-y-2">
+            <label htmlFor="organizationName" className="text-xs font-medium text-muted-foreground">
+              Tên Organization
+            </label>
+            <input
+              id="organizationName"
+              value={organizationName}
+              onChange={(e) => setOrganizationName(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="name" className="text-xs font-medium text-muted-foreground">
+              Họ tên
+            </label>
+            <input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+              required
+            />
+          </div>
+          <div className="space-y-2">
             <label htmlFor="email" className="text-xs font-medium text-muted-foreground">
               Email
             </label>
@@ -106,12 +135,9 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-              placeholder="name@company.com"
-              autoComplete="email"
               required
             />
           </div>
-
           <div className="space-y-2">
             <label htmlFor="password" className="text-xs font-medium text-muted-foreground">
               Mật khẩu
@@ -122,17 +148,30 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-              autoComplete="current-password"
+              autoComplete="new-password"
               required
             />
           </div>
-
+          <div className="space-y-2">
+            <label htmlFor="passwordConfirmation" className="text-xs font-medium text-muted-foreground">
+              Xác nhận mật khẩu
+            </label>
+            <input
+              id="passwordConfirmation"
+              type="password"
+              value={passwordConfirmation}
+              onChange={(e) => setPasswordConfirmation(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+              autoComplete="new-password"
+              required
+            />
+          </div>
           <button
             type="submit"
             disabled={submitting}
             className="flex w-full items-center justify-center rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Đăng nhập"}
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Tạo HR account"}
           </button>
         </form>
       </div>
