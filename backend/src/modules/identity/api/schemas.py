@@ -57,7 +57,6 @@ class GoogleTokens(BaseModel):
     scope: str
 
 
-
 class GrantStatus(BaseModel):
     """OAuth grant validity status.
 
@@ -196,7 +195,6 @@ class GrantStatusResponse(BaseModel):
 
     gmail_grant_valid: bool
     calendar_grant_valid: bool
-
 
 
 # --- Admin Whitelist Schemas ---
