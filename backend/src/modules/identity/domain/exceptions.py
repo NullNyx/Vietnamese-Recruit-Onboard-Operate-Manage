@@ -70,6 +70,14 @@ class AccessDeniedError(AuthError):
     message = "Access denied. Contact administrator."
 
 
+class SetupAlreadyCompletedError(AuthError):
+    """First-Run Setup lost the singleton race or was already completed."""
+
+    status_code = 409
+    error_code = "AUTH_SETUP_ALREADY_COMPLETED"
+    message = "First-run setup already completed"
+
+
 class DomainAccessDeniedError(AuthError):
     """Email domain is not in the Organization's allowed list.
 

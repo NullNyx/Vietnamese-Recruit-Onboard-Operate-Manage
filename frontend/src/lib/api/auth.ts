@@ -39,15 +39,37 @@ export interface EmployeeAccountCreateResponse {
 
 const BASE = "/api/auth";
 
+export class AuthApiError extends Error {
+  code?: string;
+  fields: Record<string, string>;
+
+  constructor(message: string, code?: string, fields: Record<string, string> = {}) {
+    super(message);
+    this.name = "AuthApiError";
+    this.code = code;
+    this.fields = fields;
+  }
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const payload = await res.json().catch(() => null);
+    const details = Array.isArray(payload?.detail) ? payload.detail : [];
+    const fields = Object.fromEntries(
+      details
+        .filter((item: { loc?: unknown; msg?: unknown }) => Array.isArray(item.loc) && item.msg)
+        .map((item: { loc: string[]; msg: string }) => [item.loc.at(-1), item.msg]),
+    );
     const message =
       payload?.error?.message ??
-      payload?.detail ??
+      (typeof payload?.detail === "string" ? payload.detail : undefined) ??
       payload?.message ??
-      res.statusText;
-    throw new Error(typeof message === "string" ? message : JSON.stringify(message));
+      (Object.keys(fields).length ? "Vui lòng kiểm tra lại thông tin" : res.statusText);
+    throw new AuthApiError(
+      typeof message === "string" ? message : JSON.stringify(message),
+      payload?.error?.code,
+      fields,
+    );
   }
   return res.json() as Promise<T>;
 }

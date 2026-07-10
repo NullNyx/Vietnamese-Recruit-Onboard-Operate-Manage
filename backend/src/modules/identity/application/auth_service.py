@@ -7,10 +7,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
+from sqlalchemy.exc import IntegrityError
+
 from src.modules.identity.domain.entities import UserRole
 from src.modules.identity.domain.exceptions import (
     AccessDeniedError,
     InvalidTokenError,
+    SetupAlreadyCompletedError,
 )
 from src.modules.identity.infrastructure.config import AuthSettings
 from src.modules.identity.infrastructure.password_utils import (
@@ -76,17 +79,34 @@ class AuthService:
         if self._organization_repository is None:
             raise RuntimeError("Organization repository is not configured")
         if await self.get_setup_status():
-            raise AccessDeniedError("First-run setup already completed")
+            raise SetupAlreadyCompletedError()
 
-        # Both records and the session token are flushed in this transaction.
-        await self._organization_repository.create_for_setup(organization_name)
-        user = await self._user_repository.create_local_account(
-            email=email,
-            name=name,
-            password_hash=hash_password(password),
-            role=UserRole.ADMIN,
-            must_change_password=False,
-        )
+        # The unique singleton key is the serialization point for concurrent
+        # bootstrap requests. A losing request must not leak the transaction's
+        # partial Organization row or expose a session.
+        try:
+            await self._organization_repository.create_for_setup(organization_name)
+        except (IntegrityError, ValueError) as exc:
+            if self._session is not None:
+                await self._session.rollback()
+            raise SetupAlreadyCompletedError() from exc
+
+        try:
+            user = await self._user_repository.create_local_account(
+                email=email,
+                name=name,
+                password_hash=hash_password(password),
+                role=UserRole.ADMIN,
+                must_change_password=False,
+            )
+        except Exception:
+            if self._session is not None:
+                await self._session.rollback()
+            raise
+
+        # Commit the two setup records before issuing any authenticated session.
+        if self._session is not None:
+            await self._session.commit()
         result = await self._issue_session(user)
         if self._session is not None:
             await self._session.commit()

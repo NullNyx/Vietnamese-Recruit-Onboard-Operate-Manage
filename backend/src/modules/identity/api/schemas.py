@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from src.modules.identity.domain.entities import UserRole, WhitelistEntryType
 
@@ -122,6 +122,14 @@ class FirstRunSetupRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=12, max_length=255)
     password_confirmation: str = Field(..., min_length=12, max_length=255)
+
+    @field_validator("organization_name", "name", mode="before")
+    @classmethod
+    def require_identity(cls, value: str) -> str:
+        """Reject blank identity values after trimming whitespace."""
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("This field is required")
+        return value.strip()
 
     @model_validator(mode="after")
     def passwords_match(self) -> "FirstRunSetupRequest":

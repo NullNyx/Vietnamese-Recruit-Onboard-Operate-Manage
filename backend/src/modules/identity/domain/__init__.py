@@ -9,6 +9,7 @@ from .exceptions import (
     InvalidStateError,
     InvalidTokenError,
     RateLimitExceededError,
+    SetupAlreadyCompletedError,
 )
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     "OAuthGrant",
     "RateLimitExceededError",
     "RefreshToken",
+    "SetupAlreadyCompletedError",
     "User",
 ]
