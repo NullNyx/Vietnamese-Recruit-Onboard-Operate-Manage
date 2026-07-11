@@ -139,8 +139,6 @@ class RecruitmentAuditLog(SQLModel, table=True):
     )
 
 
-
-
 class CalendarSyncCursor(SQLModel, table=True):
     """Tracks the sync token for incremental calendar synchronization.
 
@@ -158,9 +156,7 @@ class CalendarSyncCursor(SQLModel, table=True):
     )
     sync_token: str | None = Field(default=None, max_length=1024)
     page_token: str | None = Field(default=None, max_length=1024)
-    last_sync_at: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
+    last_sync_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -169,6 +165,7 @@ class CalendarSyncCursor(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+
 
 class OrganizationSettings(SQLModel, table=True):
     """Single-row settings for the Organization (the company deployment).
