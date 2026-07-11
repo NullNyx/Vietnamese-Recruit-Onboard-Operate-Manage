@@ -50,6 +50,18 @@ class RecruitmentError(Exception):
         super().__init__(self.message)
 
 
+class CalendarConflictNotFoundError(RecruitmentError):
+    """CalendarConflict with given ID does not exist.
+
+    Raised when a resolution request targets a conflict ID that cannot
+    be found in the database.
+    """
+
+    status_code = 404
+    error_code = "CALENDAR_CONFLICT_NOT_FOUND"
+    message = "Calendar conflict not found"
+
+
 class CandidateNotFoundError(RecruitmentError):
     """Candidate with given ID does not exist.
 
@@ -271,6 +283,14 @@ class CalendarEventCreateFailedError(RecruitmentError):
     status_code = 502
     error_code = "CALENDAR_CREATE_FAILED"
     message = "Failed to create the Google Calendar event"
+
+
+class CalendarEventConflictError(RecruitmentError):
+    """Google Calendar rejected a conditional write because the event changed."""
+
+    status_code = 412
+    error_code = "CALENDAR_CONFLICT"
+    message = "The Google Calendar event changed; review the conflict before retrying"
 
 
 class CalendarEventUpdateFailedError(RecruitmentError):

@@ -24,6 +24,7 @@ from sqlmodel import col, select
 
 from src.modules.employee.domain.entities import Employee
 from src.modules.recruitment.domain.entities import (
+    CalendarConflict,
     Candidate,
     CVDocument,
     Interview,
@@ -32,6 +33,8 @@ from src.modules.recruitment.domain.entities import (
 )
 from src.modules.recruitment.domain.enums import CandidateStatus, JobOpeningStatus
 from src.modules.recruitment.domain.exceptions import (
+    CalendarConflictNotFoundError,
+    CalendarEventConflictError,
     CalendarEventCreateFailedError,
     CalendarEventUpdateFailedError,
     CalendarGrantMissingError,
@@ -229,9 +232,13 @@ class CalendarPort(Protocol):
         ...
 
     async def patch_event(
-        self, access_token: str, event_id: str, spec: CalendarEventSpec
+        self,
+        access_token: str,
+        event_id: str,
+        spec: CalendarEventSpec,
+        if_match: str | None = None,
     ) -> CalendarEvent:
-        """Patch an existing Calendar event identified by event_id."""
+        """Conditionally patch an existing Calendar event."""
         ...
 
         async def delete_event(
@@ -239,10 +246,18 @@ class CalendarPort(Protocol):
             access_token: str,
             event_id: str,
             calendar_id: str = "primary",
+            if_match: str | None = None,
         ) -> None:
-            """Delete (cancel) the Calendar event identified by event_id.
-            The calendar_id parameter defaults to "primary".
-            """
+            """Conditionally delete (cancel) an existing Calendar event."""
+            ...
+
+        async def get_event(
+            self,
+            access_token: str,
+            event_id: str,
+            calendar_id: str = "primary",
+        ) -> CalendarEvent:
+            """Fetch a single Calendar event by ID to get the remote snapshot."""
             ...
 
         async def list_events(
@@ -1447,8 +1462,10 @@ class CandidateService:
             request_meet_link=False,
         )
 
-        # Capture the previous start before any mutation (R12.2).
+        # Capture the previous start and remote version before any mutation.
         previous_start = candidate.interview_start_at
+        stored_interview = await self._get_interview_by_event_id(candidate.id, event_id)
+        stored_etag = stored_interview.calendar_etag if stored_interview else None
 
         # Step 5: patch the EXACT existing event BEFORE committing (R7.1). On
         # failure, roll back, audit, and raise; references stay unchanged (R7.4,
@@ -1458,6 +1475,7 @@ class CandidateService:
             candidate_id=candidate_id,
             event_id=event_id,
             spec=spec,
+            if_match=stored_etag,
         )
 
         # Step 6: update only the stored start and timezone, leaving the
@@ -1579,6 +1597,7 @@ class CandidateService:
         candidate_id: UUID,
         event_id: str,
         spec: CalendarEventSpec,
+        if_match: str | None = None,
     ) -> None:
         """Patch an existing Calendar event, logging and rolling back on failure."""
         if self._calendar_port is None:
@@ -1589,8 +1608,32 @@ class CandidateService:
         try:
             await self._with_calendar_token(
                 user_id,
-                lambda token: calendar_port.patch_event(token, event_id, spec),
+                lambda token: (
+                    calendar_port.patch_event(token, event_id, spec, if_match)
+                    if if_match is not None
+                    else calendar_port.patch_event(token, event_id, spec)
+                ),
             )
+        except httpx.HTTPStatusError as exc:
+            await self._session.rollback()
+            if exc.response.status_code == 412:
+                await self._capture_calendar_conflict(
+                    user_id=user_id,
+                    candidate_id=candidate_id,
+                    event_id=event_id,
+                    operation="patch_event",
+                )
+                raise CalendarEventConflictError(
+                    details={
+                        "calendar_event_id": event_id,
+                        "remote_status": 412,
+                        "message": (
+                            "The Google Calendar event changed; "
+                            "a conflict record has been created for resolution"
+                        ),
+                    }
+                ) from exc
+            raise
         except Exception as exc:
             await self._session.rollback()
 
@@ -2621,3 +2664,292 @@ class CandidateService:
         await self._session.commit()
 
         return new_interview
+
+    # ─── Calendar conflict capture and resolution ──────────────────────
+
+    async def _capture_calendar_conflict(
+        self,
+        user_id: UUID,
+        candidate_id: UUID,
+        event_id: str,
+        operation: str,
+    ) -> None:
+        """Capture a calendar conflict by fetching the remote event snapshot.
+
+        When a conditional write (If-Match) fails with 412, this method:
+        1. Fetches the remote latest event state from Google Calendar.
+        2. Builds a local snapshot from the stored Interview record.
+        3. Persists a CalendarConflict with status "unresolved".
+        4. Does NOT mutate the Interview or Candidate.
+
+        Args:
+            user_id: The acting HR user's identifier.
+            candidate_id: The candidate whose event conflicted.
+            event_id: The Google Calendar event ID.
+            operation: The operation that failed (e.g. "patch_event").
+        """
+        if self._calendar_port is None:
+            logger.warning("Cannot capture conflict: Calendar port not configured")
+            return
+
+        calendar_port = self._calendar_port
+
+        # Fetch the remote event snapshot.
+        remote_event: CalendarEvent | None = None
+        try:
+            remote_event = await self._with_calendar_token(
+                user_id,
+                lambda token: calendar_port.get_event(token, event_id),
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to fetch remote event for conflict capture (event %s): %s",
+                event_id,
+                exc,
+            )
+
+        # Build local snapshot from the Interview record.
+        interview = await self._get_interview_by_event_id(candidate_id, event_id)
+        local_snapshot: dict[str, Any] = {
+            "interview_id": str(interview.id) if interview else None,
+            "status": interview.status if interview else None,
+            "start_at": (
+                interview.start_at.isoformat() if interview and interview.start_at else None
+            ),
+            "end_at": interview.end_at.isoformat() if interview and interview.end_at else None,
+            "timezone": interview.timezone if interview else None,
+            "calendar_etag": interview.calendar_etag if interview else None,
+            "calendar_updated": (
+                interview.calendar_updated.isoformat()
+                if interview and interview.calendar_updated
+                else None
+            ),
+            "meeting_mode": interview.meeting_mode if interview else None,
+            "meeting_link": interview.meeting_link if interview else None,
+        }
+
+        remote_snapshot: dict[str, Any] = {}
+        if remote_event is not None:
+            remote_snapshot = {
+                "event_id": remote_event.event_id,
+                "etag": remote_event.etag,
+                "updated": remote_event.updated.isoformat() if remote_event.updated else None,
+                "status": remote_event.status,
+                "html_link": remote_event.html_link,
+                "meet_link": remote_event.meet_link,
+                "location": remote_event.location,
+            }
+
+        # Compute conflict details: what fields differ.
+        conflict_details: dict[str, Any] = {
+            "operation": operation,
+            "calendar_event_id": event_id,
+            "reason": "If-Match conditional write failed with 412",
+        }
+
+        conflict = CalendarConflict(
+            interview_id=interview.id if interview else UUID(int=0),
+            candidate_id=candidate_id,
+            calendar_event_id=event_id,
+            local_snapshot=local_snapshot,
+            remote_snapshot=remote_snapshot,
+            conflict_details=conflict_details,
+            status="unresolved",
+        )
+        self._session.add(conflict)
+        await self._session.commit()
+
+        logger.info(
+            "Calendar conflict captured: event=%s, candidate=%s, conflict_id=%s",
+            event_id,
+            candidate_id,
+            conflict.id,
+        )
+
+    async def list_calendar_conflicts(
+        self,
+        status: str | None = None,
+        candidate_id: UUID | None = None,
+    ) -> list[CalendarConflict]:
+        """List calendar conflicts, optionally filtered by status or candidate.
+
+        Args:
+            status: Optional status filter ("unresolved", "resolved_keep_google",
+                "resolved_overwrite_vroom"). Defaults to "unresolved".
+            candidate_id: Optional candidate UUID to filter by.
+
+        Returns:
+            List of CalendarConflict entities matching the filters.
+        """
+        stmt = select(CalendarConflict).order_by(CalendarConflict.created_at.desc())
+
+        if status is not None:
+            stmt = stmt.where(CalendarConflict.status == status)
+        else:
+            # Default: show unresolved conflicts
+            stmt = stmt.where(CalendarConflict.status == "unresolved")
+
+        if candidate_id is not None:
+            stmt = stmt.where(CalendarConflict.candidate_id == candidate_id)
+
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def resolve_calendar_conflict(
+        self,
+        conflict_id: UUID,
+        choice: str,
+        acting_user_id: UUID,
+    ) -> CalendarConflict:
+        """Resolve a calendar conflict by keeping Google or overwriting Vroom.
+
+        ``keep_google``: Update the local Interview record to match the remote
+        Google Calendar snapshot and update the stored calendar_etag.
+
+        ``overwrite_vroom``: Push Vroom's current state to Google Calendar
+        using the remote event's ETag (the local etag is stale), then update
+        the stored calendar_etag to the new value returned by Google.
+
+        Args:
+            conflict_id: UUID of the CalendarConflict to resolve.
+            choice: "keep_google" or "overwrite_vroom".
+            acting_user_id: UUID of the HR user resolving the conflict.
+
+        Returns:
+            The updated CalendarConflict entity.
+
+        Raises:
+            CalendarConflictNotFoundError: If the conflict doesn't exist.
+            ValueError: If the choice is invalid or the conflict is already resolved.
+            CalendarEventConflictError: If overwrite_vroom also gets a 412.
+        """
+        if choice not in ("keep_google", "overwrite_vroom"):
+            raise ValueError(
+                f"Invalid resolution choice: {choice!r}; expected "
+                "'keep_google' or 'overwrite_vroom'"
+            )
+
+        stmt = select(CalendarConflict).where(CalendarConflict.id == conflict_id)
+        result = await self._session.execute(stmt)
+        conflict = result.scalars().first()
+
+        if conflict is None:
+            raise CalendarConflictNotFoundError(f"Calendar conflict not found: {conflict_id}")
+
+        if conflict.status != "unresolved":
+            raise ValueError(
+                f"Conflict {conflict_id} is already resolved (status: {conflict.status})"
+            )
+
+        if self._calendar_port is None:
+            raise RuntimeError("Calendar port is not configured")
+        calendar_port = self._calendar_port
+
+        interview = await self._get_interview_by_event_id(
+            conflict.candidate_id, conflict.calendar_event_id
+        )
+        remote_etag = conflict.remote_snapshot.get("etag")
+
+        if choice == "keep_google":
+            # Update local Interview to match remote.
+            if interview is not None:
+                # Only update metadata; don't change interview status from the event status
+                # since Google event status != Vroom interview status mapping is not 1:1.
+                if remote_event_etag := conflict.remote_snapshot.get("etag"):
+                    interview.calendar_etag = remote_event_etag
+                if remote_updated := conflict.remote_snapshot.get("updated"):
+                    try:
+                        interview.calendar_updated = datetime.fromisoformat(remote_updated)
+                    except (ValueError, TypeError):
+                        pass
+                self._session.add(interview)
+
+            conflict.status = "resolved_keep_google"
+            conflict.resolved_by = acting_user_id
+            conflict.resolved_at = datetime.now(UTC)
+            self._session.add(conflict)
+            await self._session.commit()
+
+        elif choice == "overwrite_vroom":
+            # Push Vroom's current state to Google.
+            if interview is not None:
+                timezone = interview.timezone or "Asia/Ho_Chi_Minh"
+                spec = CalendarEventSpec(
+                    summary=f"Interview with {interview.candidate_id}",
+                    description=None,
+                    start=interview.start_at,
+                    end=interview.end_at,
+                    timezone=timezone,
+                    attendee_emails=(),
+                    request_meet_link=False,
+                )
+                try:
+                    result_event = await self._with_calendar_token(
+                        acting_user_id,
+                        lambda token: calendar_port.patch_event(
+                            token,
+                            conflict.calendar_event_id,
+                            spec,
+                            if_match=remote_etag,
+                        ),
+                    )
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code == 412:
+                        # Another conflict occurred during resolution.
+                        await self._capture_calendar_conflict(
+                            user_id=acting_user_id,
+                            candidate_id=conflict.candidate_id,
+                            event_id=conflict.calendar_event_id,
+                            operation="resolve_overwrite_vroom",
+                        )
+                        raise CalendarEventConflictError(
+                            details={
+                                "calendar_event_id": conflict.calendar_event_id,
+                                "remote_status": 412,
+                                "message": (
+                                    "Another conflict occurred while overwriting; "
+                                    "a new conflict record has been created"
+                                ),
+                            }
+                        ) from exc
+                    raise
+                except Exception:
+                    await self._session.rollback()
+                    raise
+
+                interview.calendar_etag = result_event.etag
+                if result_event.updated:
+                    interview.calendar_updated = result_event.updated
+                self._session.add(interview)
+
+            conflict.status = "resolved_overwrite_vroom"
+            conflict.resolved_by = acting_user_id
+            conflict.resolved_at = datetime.now(UTC)
+            self._session.add(conflict)
+            await self._session.commit()
+
+        # Audit the resolution.
+        await log_audit(
+            session=self._session,
+            operation_type="calendar_conflict_resolved",
+            entity_type="calendar_conflict",
+            entity_id=conflict.id,
+            user_id=acting_user_id,
+            previous_value={"status": "unresolved"},
+            new_value={
+                "conflict_id": str(conflict.id),
+                "choice": choice,
+                "status": conflict.status,
+                "calendar_event_id": conflict.calendar_event_id,
+                "candidate_id": str(conflict.candidate_id),
+                "interview_id": str(conflict.interview_id),
+            },
+            change_summary=(
+                f"Calendar conflict {conflict.id} resolved by {choice}: "
+                f"event {conflict.calendar_event_id}"
+            ),
+            success=True,
+        )
+        await self._session.commit()
+
+        return conflict

@@ -107,6 +107,8 @@ EventOutcome = CalendarEvent | BaseException | Callable[[RecordedCalendarCall], 
 DeleteOutcome = BaseException | Callable[[RecordedCalendarCall], None] | None
 # A scripted outcome for a sync (list_events) call.
 SyncOutcome = SyncEventChanges | BaseException | Callable[[RecordedCalendarCall], SyncEventChanges]
+# A scripted outcome for a get_event call.
+GetOutcome = CalendarEvent | BaseException | Callable[[RecordedCalendarCall], CalendarEvent]
 
 
 class _Default:
@@ -157,6 +159,10 @@ class FakeCalendarPort:
       callable computing the event from the recorded call.
     * ``delete_outcomes``: each item is ``None`` (success), a ``BaseException``
       to raise, or a callable side effect.
+    * ``sync_outcomes``: each item is a :class:`SyncEventChanges`, a
+      ``BaseException``, or a callable computing the result.
+    * ``get_outcomes``: each item is a :class:`CalendarEvent`, a
+      ``BaseException``, or a callable computing the event.
 
     When a queue is omitted (``None``) or becomes exhausted, the default
     behaviour applies: create/patch synthesize a :class:`CalendarEvent` from the
@@ -172,6 +178,7 @@ class FakeCalendarPort:
         patch_outcomes: Sequence[EventOutcome] | None = None,
         delete_outcomes: Sequence[DeleteOutcome] | None = None,
         sync_outcomes: Sequence[SyncOutcome] | None = None,
+        get_outcomes: Sequence[GetOutcome] | None = None,
         meet_link: str | None = DEFAULT_MEET_LINK,
         html_link: str | None = DEFAULT_HTML_LINK,
     ) -> None:
@@ -182,6 +189,7 @@ class FakeCalendarPort:
             patch_outcomes: Scripted outcomes for ``patch_event`` calls.
             delete_outcomes: Scripted outcomes for ``delete_event`` calls.
             sync_outcomes: Scripted outcomes for ``list_events`` calls.
+            get_outcomes: Scripted outcomes for ``get_event`` calls.
             meet_link: Default Meet link returned when a spec requests one and
                 no explicit outcome is scripted.
             html_link: Default ``htmlLink`` returned by default outcomes.
@@ -198,6 +206,9 @@ class FakeCalendarPort:
         )
         self._sync_outcomes: list[SyncOutcome] | None = (
             list(sync_outcomes) if sync_outcomes is not None else None
+        )
+        self._get_outcomes: list[GetOutcome] | None = (
+            list(get_outcomes) if get_outcomes is not None else None
         )
         self._meet_link = meet_link
         self._html_link = html_link
@@ -217,7 +228,8 @@ class FakeCalendarPort:
         return self._resolve_event(outcome, call)
 
     async def patch_event(
-        self, access_token: str, event_id: str, spec: CalendarEventSpec
+        self, access_token: str, event_id: str, spec: CalendarEventSpec,
+        if_match: str | None = None,
     ) -> CalendarEvent:
         """Record a patch call and return/raise its scripted outcome."""
         call = RecordedCalendarCall(
@@ -240,38 +252,58 @@ class FakeCalendarPort:
             return
         if isinstance(outcome, BaseException):
             raise outcome
-            outcome(call)
+        outcome(call)
 
-        async def list_events(
-            self,
-            access_token: str,
-            calendar_id: str = "primary",
-            *,
-            sync_token: str | None = None,
-            page_token: str | None = None,
-            max_results: int = 250,
-        ) -> SyncEventChanges:
-            """Record a list_events call and return/raise its scripted outcome."""
-            call = RecordedCalendarCall(
-                method="list_events",
-                access_token=access_token,
-                event_id=None,
-                spec=None,
+    async def get_event(
+        self,
+        access_token: str,
+        event_id: str,
+        calendar_id: str = "primary",
+    ) -> CalendarEvent:
+        """Record a get_event call and return a default or scripted outcome."""
+        call = RecordedCalendarCall(
+            method="get_event", access_token=access_token, event_id=event_id, spec=None
+        )
+        self.calls.append(call)
+        outcome = self._take(self._get_outcomes)
+        if isinstance(outcome, _Default):
+            return CalendarEvent(event_id=event_id, html_link=None, meet_link=None)
+        if isinstance(outcome, BaseException):
+            raise outcome
+        if isinstance(outcome, CalendarEvent):
+            return outcome
+        return outcome(call)
+
+    async def list_events(
+        self,
+        access_token: str,
+        calendar_id: str = "primary",
+        *,
+        sync_token: str | None = None,
+        page_token: str | None = None,
+        max_results: int = 250,
+    ) -> SyncEventChanges:
+        """Record a list_events call and return/raise its scripted outcome."""
+        call = RecordedCalendarCall(
+            method="list_events",
+            access_token=access_token,
+            event_id=None,
+            spec=None,
+        )
+        self.calls.append(call)
+        outcome = self._take(self._sync_outcomes)
+        if isinstance(outcome, _Default):
+            return SyncEventChanges(
+                events=(),
+                next_sync_token="tok-default-sync",
             )
-            self.calls.append(call)
-            outcome = self._take(self._sync_outcomes)
-            if isinstance(outcome, _Default):
-                return SyncEventChanges(
-                    events=(),
-                    next_sync_token="tok-default-sync",
-                )
-            if isinstance(outcome, BaseException):
-                raise outcome
-            if isinstance(outcome, SyncEventChanges):
-                return outcome
-            return outcome(call)
+        if isinstance(outcome, BaseException):
+            raise outcome
+        if isinstance(outcome, SyncEventChanges):
+            return outcome
+        return outcome(call)
 
-        # -- Recording helpers ----------------------------------------------
+    # -- Recording helpers ----------------------------------------------
 
     @property
     def create_calls(self) -> list[RecordedCalendarCall]:
@@ -292,6 +324,11 @@ class FakeCalendarPort:
     def sync_calls(self) -> list[RecordedCalendarCall]:
         """All recorded ``list_events`` calls, in order."""
         return [c for c in self.calls if c.method == "list_events"]
+
+    @property
+    def get_calls(self) -> list[RecordedCalendarCall]:
+        """All recorded ``get_event`` calls, in order."""
+        return [c for c in self.calls if c.method == "get_event"]
 
     @property
     def was_called(self) -> bool:
@@ -329,6 +366,8 @@ class FakeCalendarPort:
         if isinstance(outcome, CalendarEvent):
             return outcome
         return outcome(call)
+
+
 
 
 # ─── In-memory candidate repository + session ──────────────────────────
@@ -446,6 +485,10 @@ class FakeCalendarSession:
         self.rollback_count = 0
         self._candidate_repo: FakeCandidateRepository | None = None
         self._staged_candidate_ids: set[UUID] = set()
+
+    def add(self, instance: object) -> None:
+        """No-op add for compatibility with service methods that persist."""
+        pass
 
     def bind_candidate_repo(self, repo: FakeCandidateRepository) -> None:
         """Associate the candidate repository for commit/rollback coordination."""

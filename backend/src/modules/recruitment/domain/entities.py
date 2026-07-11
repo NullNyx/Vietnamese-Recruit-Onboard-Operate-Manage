@@ -282,3 +282,43 @@ class InterviewParticipant(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+
+
+class CalendarConflict(SQLModel, table=True):
+    """Records a calendar event write conflict for resolution.
+
+    When a conditional write (If-Match) to Google Calendar fails with 412,
+    the current Vroom-side Interview state and the remote Calendar event
+    state are captured without mutating the Interview or Candidate.
+    """
+
+    __tablename__ = "calendar_conflicts"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    interview_id: UUID = Field(foreign_key="interviews.id", index=True, nullable=False)
+    candidate_id: UUID = Field(foreign_key="candidates.id", index=True, nullable=False)
+    calendar_event_id: str = Field(max_length=1024, nullable=False)
+    # Vroom-side snapshot at conflict time
+    local_snapshot: dict[str, Any] = Field(
+        default_factory=dict, sa_column=Column(JSONB, nullable=False)
+    )
+    # Remote Google Calendar snapshot at conflict time
+    remote_snapshot: dict[str, Any] = Field(
+        default_factory=dict, sa_column=Column(JSONB, nullable=False)
+    )
+    # conflict_details: what fields differed
+    conflict_details: dict[str, Any] = Field(
+        default_factory=dict, sa_column=Column(JSONB, nullable=False)
+    )
+    # status: unresolved, resolved_keep_google, resolved_overwrite_vroom
+    status: str = Field(default="unresolved", max_length=30, nullable=False, index=True)
+    resolved_by: UUID | None = Field(default=None, foreign_key="users.id")
+    resolved_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
