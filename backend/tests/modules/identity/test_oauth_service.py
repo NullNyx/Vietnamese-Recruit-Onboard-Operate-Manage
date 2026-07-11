@@ -11,11 +11,10 @@ from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
 
 # Full scope URLs used by Google OAuth2.
 GMAIL_READONLY = "https://www.googleapis.com/auth/gmail.readonly"
-GMAIL_MODIFY = "https://www.googleapis.com/auth/gmail.modify"
 GMAIL_SEND = "https://www.googleapis.com/auth/gmail.send"
 CALENDAR_EVENTS = "https://www.googleapis.com/auth/calendar.events"
 
-ALL_SCOPES = [GMAIL_READONLY, GMAIL_MODIFY, GMAIL_SEND, CALENDAR_EVENTS]
+ALL_SCOPES = [GMAIL_READONLY, GMAIL_SEND, CALENDAR_EVENTS]
 
 
 @pytest.fixture
@@ -42,7 +41,7 @@ class TestDetermineGrantStatus:
 
     def test_only_gmail_scopes(self, oauth_service: OAuthService) -> None:
         """All Gmail scopes without Calendar yields gmail valid only."""
-        scopes = [GMAIL_READONLY, GMAIL_MODIFY, GMAIL_SEND]
+        scopes = [GMAIL_READONLY, GMAIL_SEND]
         result = oauth_service.determine_grant_status(scopes)
         assert result == GrantStatus(gmail_grant_valid=True, calendar_grant_valid=False)
 
@@ -54,18 +53,18 @@ class TestDetermineGrantStatus:
 
     def test_partial_gmail_scopes_missing_send(self, oauth_service: OAuthService) -> None:
         """Missing gmail.send means gmail_grant_valid is False."""
-        scopes = [GMAIL_READONLY, GMAIL_MODIFY, CALENDAR_EVENTS]
+        scopes = [GMAIL_READONLY, CALENDAR_EVENTS]
         result = oauth_service.determine_grant_status(scopes)
         assert result == GrantStatus(gmail_grant_valid=False, calendar_grant_valid=True)
 
     def test_partial_gmail_scopes_missing_readonly(self, oauth_service: OAuthService) -> None:
         """Missing gmail.readonly means gmail_grant_valid is False."""
-        scopes = [GMAIL_MODIFY, GMAIL_SEND, CALENDAR_EVENTS]
+        scopes = [GMAIL_SEND, CALENDAR_EVENTS]
         result = oauth_service.determine_grant_status(scopes)
         assert result == GrantStatus(gmail_grant_valid=False, calendar_grant_valid=True)
 
     def test_partial_gmail_scopes_missing_modify(self, oauth_service: OAuthService) -> None:
-        """Missing gmail.modify means gmail_grant_valid is False."""
+        """Missing Gmail scope still means gmail_grant_valid is False."""
         scopes = [GMAIL_READONLY, GMAIL_SEND, CALENDAR_EVENTS]
         result = oauth_service.determine_grant_status(scopes)
         assert result == GrantStatus(gmail_grant_valid=False, calendar_grant_valid=True)

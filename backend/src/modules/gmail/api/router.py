@@ -13,6 +13,8 @@ import logging
 from typing import TYPE_CHECKING, Annotated, Any
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
     from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
     from src.modules.gmail.infrastructure.audit_logger import AuditLogger
     from src.modules.gmail.infrastructure.config import GmailSettings
@@ -43,9 +45,6 @@ from src.modules.gmail.application.attachment_service import (
     AttachmentMetadata,
     AttachmentService,
 )
-from src.modules.gmail.application.connection_service import (
-    ConnectionService,
-)
 from src.modules.gmail.application.email_sync_service import EmailSyncService
 from src.modules.gmail.application.import_service import HistoricalImportService
 from src.modules.gmail.application.outbound_email_service import OutboundEmailService
@@ -57,7 +56,6 @@ from src.modules.gmail.application.send_service import (
 from src.modules.gmail.container import (
     get_arq_pool,
     get_attachment_service,
-    get_connection_service,
     get_email_repository,
     get_email_sync_service,
     get_gmail_adapter,
@@ -77,7 +75,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
-ConnectionServiceDep = Annotated[ConnectionService, Depends(get_connection_service)]
+
 EmailSyncServiceDep = Annotated[EmailSyncService, Depends(get_email_sync_service)]
 EmailRepositoryDep = Annotated[EmailRepository, Depends(get_email_repository)]
 SendServiceDep = Annotated[SendService, Depends(get_send_service)]
@@ -381,8 +379,8 @@ async def list_messages(
 async def get_message_body(
     message_id: str,
     current_user: CurrentUserDep,
+    email_repo: EmailRepositoryDep,
     gmail_adapter: GmailAdapterDep,
-    connection_service: ConnectionServiceDep,
 ) -> MessageBodyResponse:
     """Fetch the full email body content for a message.
 
@@ -392,21 +390,14 @@ async def get_message_body(
     Args:
         message_id: The Gmail message ID.
         current_user: The authenticated user.
+        email_repo: The email repository for session access.
         gmail_adapter: The Gmail API adapter.
-        connection_service: The connection service for token access.
 
     Returns:
         MessageBodyResponse with plain_text and/or html content.
     """
-    from src.modules.gmail.domain.exceptions import GmailNotConnectedException
-
-    # Verify connection and get access token
-    status_result = await connection_service.get_status(current_user.id)
-    if status_result.status != "connected":
-        raise GmailNotConnectedException()
-
-    # Get access token from OAuth grant
-    access_token = await _get_user_access_token(current_user.id, connection_service)
+    # Get access token from organization connection (raises if not connected)
+    access_token = await _get_user_access_token(email_repo.session)
 
     body = await gmail_adapter.get_message_body(access_token, message_id)
     return MessageBodyResponse(
@@ -493,7 +484,7 @@ async def fetch_attachments(
     message_id: str,
     current_user: CurrentUserDep,
     attachment_service: AttachmentServiceDep,
-    connection_service: ConnectionServiceDep,
+    email_repo: EmailRepositoryDep,
     gmail_adapter: GmailAdapterDep,
 ) -> dict[str, Any]:
     """Fetch and validate attachments for an email message.
@@ -506,21 +497,14 @@ async def fetch_attachments(
         message_id: The Gmail message ID containing attachments.
         current_user: The authenticated user.
         attachment_service: The attachment service.
-        connection_service: The connection service for token access.
+        email_repo: The email repository for session access.
         gmail_adapter: The Gmail API adapter.
 
     Returns:
         Dictionary with fetched_count, skipped_count, and attachment metadata.
     """
-    from src.modules.gmail.domain.exceptions import GmailNotConnectedException
-
-    # Verify connection
-    status_result = await connection_service.get_status(current_user.id)
-    if status_result.status != "connected":
-        raise GmailNotConnectedException()
-
-    # Get access token
-    access_token = await _get_user_access_token(current_user.id, connection_service)
+    # Get access token from organization connection (raises if not connected)
+    access_token = await _get_user_access_token(email_repo.session)
 
     # Fetch the full message to get attachment parts
     response = await gmail_adapter._http_client.get(
@@ -571,7 +555,6 @@ async def process_attachments(
     message_id: str,
     current_user: CurrentUserDep,
     attachment_service: AttachmentServiceDep,
-    connection_service: ConnectionServiceDep,
     email_repo: EmailRepositoryDep,
     gmail_adapter: GmailAdapterDep,
 ) -> dict[str, Any]:
@@ -586,7 +569,6 @@ async def process_attachments(
         message_id: The Gmail message ID containing attachments.
         current_user: The authenticated user.
         attachment_service: The attachment service.
-        connection_service: The connection service for token access.
         email_repo: The email repository.
 
     Returns:
@@ -596,17 +578,11 @@ async def process_attachments(
     from sqlmodel import select
 
     from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
-    from src.modules.gmail.domain.exceptions import GmailNotConnectedException
     from src.modules.recruitment.application.cv_processor import AttachmentInput
     from src.modules.recruitment.container import get_cv_processor_service
 
-    # Verify connection
-    status_result = await connection_service.get_status(current_user.id)
-    if status_result.status != "connected":
-        raise GmailNotConnectedException()
-
-    # Get access token
-    access_token = await _get_user_access_token(current_user.id, connection_service)
+    # Get access token from organization connection (raises if not connected)
+    access_token = await _get_user_access_token(email_repo.session)
 
     # Find email record
     stmt = select(EmailMessageEntity).where(EmailMessageEntity.gmail_message_id == message_id)
@@ -740,7 +716,6 @@ async def process_attachments(
 async def classify_emails(
     current_user: CurrentUserDep,
     email_repo: EmailRepositoryDep,
-    connection_service: ConnectionServiceDep,
     gmail_adapter: GmailAdapterDep,
     limit: int = Query(default=5, ge=1, le=20, description="Max emails to classify per request"),
 ) -> dict[str, Any] | JSONResponse:
@@ -764,7 +739,6 @@ async def classify_emails(
     settings = GmailSettings()
 
     async def _do_classify(
-        connection_service: ConnectionService,
         gmail_adapter: GmailAdapter,
     ) -> dict[str, Any]:
 
@@ -800,7 +774,6 @@ async def classify_emails(
 
         cv_processed_count = await _update_database_and_process_cvs(
             current_user=current_user,
-            connection_service=connection_service,
             gmail_adapter=gmail_adapter,
             settings=settings,
             email_repo=email_repo,
@@ -839,7 +812,7 @@ async def classify_emails(
 
     try:
         return await asyncio.wait_for(
-            _do_classify(connection_service, gmail_adapter),
+            _do_classify(gmail_adapter),
             timeout=settings.classification_request_timeout_seconds,
         )
     except TimeoutError:
@@ -857,7 +830,7 @@ async def classify_emails(
 async def _auto_process_cv_attachments(
     current_user: User,
     email_repo: EmailRepository,
-    connection_service: ConnectionService,
+
     gmail_adapter: GmailAdapter,
     settings: GmailSettings,
     audit_logger: AuditLogger,
@@ -886,7 +859,7 @@ async def _auto_process_cv_attachments(
             from src.modules.recruitment.container import get_cv_processor_service
 
             # Fetch attachment binary data from Gmail API
-            access_token = await _get_user_access_token(current_user.id, connection_service)
+            access_token = await _get_user_access_token(email_repo.session)
 
             response = await gmail_adapter._http_client.get(
                 f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{email.gmail_message_id}",
@@ -989,32 +962,39 @@ async def _get_unclassified_emails_and_count(
     return unclassified_emails, total_remaining
 
 
-async def _get_user_access_token(user_id: UUID, connection_service: ConnectionService) -> str:
-    """Retrieve the decrypted access token for a user.
+async def _get_user_access_token(session: AsyncSession) -> str:
+    """Retrieve the decrypted Gmail access token from the organization connection.
 
-    Uses the connection service's internal OAuth grant repository
-    to fetch and decrypt the user's Gmail access token.
+    Uses the OrganizationGoogleConnectionRepository singleton lookup
+    to fetch the organization's Google connection and decrypt its
+    stored access token.
 
     Args:
-        user_id: The UUID of the user.
-        connection_service: The connection service with access to OAuth grants.
+        session: The async database session.
 
     Returns:
         The decrypted access token string.
 
     Raises:
-        GmailNotConnectedException: If no valid token is available.
+        GmailNotConnectedException: If no valid connection or token is available.
     """
     from src.modules.gmail.domain.exceptions import GmailNotConnectedException
     from src.modules.identity.container import get_crypto_utils
+    from src.modules.identity.infrastructure.connection_state_repository import (
+        OrganizationGoogleConnectionRepository,
+    )
+
+    repo = OrganizationGoogleConnectionRepository(session)
+    connection = await repo.get_singleton()
+
+    if connection is None or connection.status != "connected":
+        raise GmailNotConnectedException("Organization Google Connection is not active")
+
+    if not connection.access_token_enc:
+        raise GmailNotConnectedException("No stored access token")
 
     crypto = get_crypto_utils()
-    grant = await connection_service._oauth_grant_repo.get_by_user_id(user_id)
-
-    if grant is None or not grant.is_valid:
-        raise GmailNotConnectedException()
-
-    return crypto.decrypt(grant.access_token_enc)
+    return crypto.decrypt(connection.access_token_enc)
 
 
 def _extract_attachment_metadata(payload: dict[str, Any]) -> list[AttachmentMetadata]:
@@ -1107,7 +1087,7 @@ async def _evaluate_rules(
 
 async def _update_database_and_process_cvs(
     current_user: User,
-    connection_service: ConnectionService,
+
     gmail_adapter: GmailAdapter,
     settings: Any,
     email_repo: EmailRepository,
@@ -1118,7 +1098,6 @@ async def _update_database_and_process_cvs(
 
     Args:
         current_user: The authenticated user.
-        connection_service: The connection service.
         gmail_adapter: The Gmail API adapter.
         settings: The Gmail settings.
         email_repo: The email repository.
@@ -1156,7 +1135,7 @@ async def _update_database_and_process_cvs(
                 from src.modules.recruitment.container import get_cv_processor_service
 
                 # Fetch attachment binary data from Gmail API
-                access_token = await _get_user_access_token(current_user.id, connection_service)
+                access_token = await _get_user_access_token(email_repo.session)
 
                 response = await gmail_adapter._http_client.get(
                     f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{email.gmail_message_id}",

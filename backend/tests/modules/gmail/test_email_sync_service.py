@@ -135,7 +135,6 @@ def _make_grant(
     grant.refresh_token_enc = refresh_token_enc
     grant.scopes = scopes or [
         "https://www.googleapis.com/auth/gmail.readonly",
-        "https://www.googleapis.com/auth/gmail.modify",
         "https://www.googleapis.com/auth/gmail.send",
     ]
     grant.token_expires_at = token_expires_at or (datetime.now(UTC) + timedelta(hours=1))

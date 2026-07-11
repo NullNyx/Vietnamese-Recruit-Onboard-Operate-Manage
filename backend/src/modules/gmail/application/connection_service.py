@@ -316,7 +316,7 @@ class ConnectionService:
         """Build the Google OAuth2 consent screen redirect URL.
 
         Constructs the URL with required parameters including Gmail
-        scopes (gmail.readonly, gmail.modify, gmail.send), access_type
+        scopes (gmail.readonly, gmail.send), access_type
         offline for refresh token, and prompt consent.
 
         Returns:
