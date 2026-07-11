@@ -7,7 +7,6 @@ database session and Redis client from the identity module.
 
 from __future__ import annotations
 
-import logging
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
@@ -23,8 +22,8 @@ from src.modules.gmail.application.classification_service import ClassificationS
 from src.modules.gmail.application.connection_service import ConnectionService
 from src.modules.gmail.application.email_sync_service import EmailSyncService
 from src.modules.gmail.application.import_service import HistoricalImportService
-from src.modules.gmail.application.outbound_email_service import OutboundEmailService
 from src.modules.gmail.application.label_service import LabelService
+from src.modules.gmail.application.outbound_email_service import OutboundEmailService
 from src.modules.gmail.application.send_service import SendService
 from src.modules.gmail.infrastructure.audit_logger import AuditLogger
 from src.modules.gmail.infrastructure.config import GmailSettings
@@ -99,6 +98,7 @@ async def get_arq_pool() -> ArqRedis:
     """
     from arq import create_pool
     from arq.connections import RedisSettings
+
     pool = await create_pool(RedisSettings.from_dsn(get_auth_settings().redis_url))
     return pool
 
@@ -164,8 +164,6 @@ async def get_label_repository(
     return LabelRepository(session)
 
 
-
-
 async def get_outbound_email_repository(
     session: AsyncSession = Depends(get_db_session),
 ) -> OutboundEmailRepository:
@@ -178,6 +176,7 @@ async def get_outbound_email_repository(
         An OutboundEmailRepository bound to the current session.
     """
     return OutboundEmailRepository(session)
+
 
 async def get_audit_logger(
     session: AsyncSession = Depends(get_db_session),
@@ -436,9 +435,6 @@ async def build_outbound_email_service(session: AsyncSession) -> OutboundEmailSe
     from src.modules.identity.infrastructure.audit_log_repository import (
         AuditLogRepository,
     )
-    from src.modules.recruitment.infrastructure.repositories import (
-        CandidateRepository,
-    )
 
     auth_settings = get_auth_settings()
     gmail_adapter = await get_gmail_adapter()
@@ -458,7 +454,7 @@ async def build_outbound_email_service(session: AsyncSession) -> OutboundEmailSe
         audit_service=audit_service,
         oauth_config_client_id=auth_settings.google_client_id,
         http_client=get_http_client(),
-            audit_action_type=AuditActionType,
+        audit_action_type=AuditActionType,
     )
 
 

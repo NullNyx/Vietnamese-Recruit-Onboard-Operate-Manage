@@ -19,9 +19,9 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
+from src.modules.gmail.api.schemas import OutboundEmailResponse as OutboundEmailResponseSchema
 from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User, UserRole
-from src.modules.gmail.api.schemas import OutboundEmailResponse as OutboundEmailResponseSchema
 from src.modules.recruitment.api.schemas import (
     AssignCandidateRequest,
     CandidateDetailResponse,
@@ -524,7 +524,6 @@ async def send_email(
         ValueError: If the candidate's email is invalid.
     """
 
-
     from src.modules.gmail.container import build_outbound_email_service
 
     candidate = await candidate_service._get_candidate_or_raise(candidate_id)
@@ -549,6 +548,7 @@ async def send_email(
     await session.commit()
 
     return OutboundEmailResponseSchema.model_validate(outbound)
+
 
 # ---------------------------------------------------------------------------
 # Reject candidate
