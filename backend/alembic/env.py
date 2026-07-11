@@ -47,6 +47,8 @@ from src.modules.recruitment.domain.entities import (  # noqa: E402, F401
     CVDocument,
     OrganizationSettings,
     RecruitmentAuditLog,
+    Interview,
+    InterviewParticipant,
 )
 
 target_metadata = SQLModel.metadata

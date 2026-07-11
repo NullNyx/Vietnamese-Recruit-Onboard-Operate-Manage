@@ -73,7 +73,7 @@ from src.modules.identity.infrastructure.config import AuthSettings
 from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
 from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
 from src.modules.recruitment.application.candidate_service import CandidateService
-from src.modules.recruitment.domain.entities import Candidate, RecruitmentAuditLog
+from src.modules.recruitment.domain.entities import Candidate, RecruitmentAuditLog, Interview, InterviewParticipant
 from src.modules.recruitment.domain.enums import CandidateStatus
 from src.modules.recruitment.infrastructure.calendar_adapter import CalendarAdapter
 from src.modules.recruitment.infrastructure.config import RecruitmentSettings
@@ -511,6 +511,19 @@ async def test_schedule_reschedule_reject_against_mocked_google_layer(
     assert after_schedule.interview_start_at is not None
     assert _same_instant(after_schedule.interview_start_at, schedule_start)
 
+    # Assert Interview created (GH issue 150)
+    async with session_maker() as session:
+        interviews = (await session.execute(select(Interview).where(Interview.candidate_id == candidate_id))).scalars().all()
+        assert len(interviews) == 1
+        iv = interviews[0]
+        assert iv.status == "scheduled"
+        assert iv.calendar_event_id == _EVENT_ID
+        assert _same_instant(iv.start_at, schedule_start)
+        
+        participants = (await session.execute(select(InterviewParticipant).where(InterviewParticipant.interview_id == iv.id))).scalars().all()
+        assert len(participants) == 2
+        assert {p.type for p in participants} == {"candidate", "employee"}
+
     # An interview_scheduled audit row exists, recording actor + event (R12.1).
     scheduled_audit = await _load_audit(session_maker, candidate_id, _OP_SCHEDULED)
     assert len(scheduled_audit) == 1
@@ -554,6 +567,14 @@ async def test_schedule_reschedule_reject_against_mocked_google_layer(
     assert _same_instant(after_reschedule.interview_start_at, reschedule_start)
     assert not _same_instant(after_reschedule.interview_start_at, schedule_start)
 
+    # Assert Interview updated (GH issue 150)
+    async with session_maker() as session:
+        interviews = (await session.execute(select(Interview).where(Interview.candidate_id == candidate_id))).scalars().all()
+        assert len(interviews) == 1
+        iv = interviews[0]
+        assert iv.status == "scheduled"
+        assert _same_instant(iv.start_at, reschedule_start)
+
     # An interview_rescheduled audit row exists with previous + new start (R12.2).
     reschedule_audit = await _load_audit(session_maker, candidate_id, _OP_RESCHEDULED)
     assert len(reschedule_audit) == 1
@@ -586,6 +607,13 @@ async def test_schedule_reschedule_reject_against_mocked_google_layer(
     after_reject = await _load_candidate(session_maker, candidate_id)
     assert after_reject.status == CandidateStatus.REJECTED
     assert after_reject.rejection_reason == "Not a fit"
+
+    # Assert Interview cancelled (GH issue 150)
+    async with session_maker() as session:
+        interviews = (await session.execute(select(Interview).where(Interview.candidate_id == candidate_id))).scalars().all()
+        assert len(interviews) == 1
+        iv = interviews[0]
+        assert iv.status == "cancelled"
 
     # An interview_event_cancelled audit row exists, recording the cancelled
     # event id and the reject trigger (R12.3).

@@ -197,3 +197,45 @@ class JobOpening(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+
+
+class Interview(SQLModel, table=True):
+    """Represents a specific interview for a candidate."""
+
+    __tablename__ = "interviews"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    candidate_id: UUID = Field(foreign_key="candidates.id", index=True, nullable=False)
+    status: str = Field(default="scheduled", max_length=30, nullable=False, index=True)  # scheduled, completed, cancelled
+    round_name: str = Field(max_length=255, nullable=False)
+    start_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+    end_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+    timezone: str = Field(max_length=64, nullable=False)
+    calendar_event_id: str | None = Field(default=None, max_length=1024, index=True)
+    needs_relink: bool = Field(default=False, nullable=False)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+
+class InterviewParticipant(SQLModel, table=True):
+    """Represents a participant in an interview."""
+
+    __tablename__ = "interview_participants"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    interview_id: UUID = Field(foreign_key="interviews.id", index=True, nullable=False)
+    type: str = Field(max_length=20, nullable=False, index=True)  # candidate, employee, external
+    email: str = Field(max_length=255, nullable=False)
+    name: str | None = Field(default=None, max_length=255)
+    employee_id: UUID | None = Field(default=None, foreign_key="employees.id", index=True)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+

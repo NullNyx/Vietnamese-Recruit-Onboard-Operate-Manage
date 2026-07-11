@@ -184,6 +184,34 @@ class CandidateListResponse(BaseModel):
     page_size: int
 
 
+class InterviewParticipantResponse(BaseModel):
+    """Response schema for an interview participant."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    interview_id: UUID
+    type: str
+    email: str
+    name: str | None = None
+    employee_id: UUID | None = None
+
+
+class InterviewResponse(BaseModel):
+    """Response schema for an interview."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    candidate_id: UUID
+    status: str
+    round_name: str
+    start_at: datetime
+    end_at: datetime
+    timezone: str
+    calendar_event_id: str | None = None
+    needs_relink: bool = False
+    participants: list[InterviewParticipantResponse] = Field(default_factory=list)
+
+
 class CandidateDetailResponse(BaseModel):
     """Full candidate detail response including CV documents.
 
@@ -206,6 +234,7 @@ class CandidateDetailResponse(BaseModel):
         created_at: Creation timestamp.
         updated_at: Last update timestamp.
         cv_documents: List of linked CV documents with presigned URLs.
+        interviews: List of interviews for the candidate.
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -230,6 +259,8 @@ class CandidateDetailResponse(BaseModel):
     job_opening_id: UUID | None = None
     job_opening_title: str = ""
     cv_documents: list[CVDocumentResponse] = Field(default_factory=list)
+    interviews: list[InterviewResponse] = Field(default_factory=list)
+
 
 
 class CVReviewItemResponse(BaseModel):
