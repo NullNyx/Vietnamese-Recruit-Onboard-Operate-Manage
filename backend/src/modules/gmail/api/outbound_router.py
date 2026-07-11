@@ -59,6 +59,7 @@ async def get_outbound_service_dep(
 ) -> OutboundEmailService:
     """FastAPI dependency: provide an OutboundEmailService."""
     from src.modules.gmail.container import build_outbound_email_service
+
     return await build_outbound_email_service(session)
 
 
@@ -192,9 +193,7 @@ async def send_outbound_email(
             outbound = await outbound_service.get_outbound(outbound_id)
             return OutboundEmailResponse.model_validate(outbound)
         except OutboundEmailNotFoundError:
-            raise HTTPException(
-                status_code=502, detail=f"Send failed: {exc}"
-            ) from exc
+            raise HTTPException(status_code=502, detail=f"Send failed: {exc}") from exc
 
     return OutboundEmailResponse.model_validate(outbound)
 
@@ -236,9 +235,7 @@ async def retry_outbound_email(
                 message=f"Retry failed: {exc}",
             )
         except OutboundEmailNotFoundError:
-            raise HTTPException(
-                status_code=502, detail=f"Retry failed: {exc}"
-            ) from exc
+            raise HTTPException(status_code=502, detail=f"Retry failed: {exc}") from exc
 
     return OutboundEmailRetryResponse(
         id=outbound.id,

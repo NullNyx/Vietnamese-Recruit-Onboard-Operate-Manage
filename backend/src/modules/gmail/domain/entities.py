@@ -163,9 +163,7 @@ class OutboundEmail(SQLModel, table=True):
     __tablename__ = "outbound_emails"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    idempotency_key: str = Field(
-        max_length=64, unique=True, nullable=False, index=True
-    )
+    idempotency_key: str = Field(max_length=64, unique=True, nullable=False, index=True)
     candidate_id: UUID | None = Field(
         default=None, foreign_key="recruitment_candidates.id", nullable=True
     )

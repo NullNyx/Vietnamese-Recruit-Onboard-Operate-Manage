@@ -35,12 +35,11 @@ from src.modules.gmail.api.schemas import (
     MessageBodyResponse,
     MessageListItem,
     MessageListResponse,
-    SendEmailRequest,
-    SendEmailResponse,
     OutboundEmailCreateRequest,
     OutboundEmailListResponse,
     OutboundEmailResponse,
-    OutboundEmailRetryResponse,
+    SendEmailRequest,
+    SendEmailResponse,
     SyncResponse,
 )
 from src.modules.gmail.application.attachment_service import (
@@ -52,21 +51,21 @@ from src.modules.gmail.application.connection_service import (
 )
 from src.modules.gmail.application.email_sync_service import EmailSyncService
 from src.modules.gmail.application.import_service import HistoricalImportService
-from src.modules.gmail.application.outbound_email_service import OutboundEmailService
 from src.modules.gmail.application.label_service import LabelService
+from src.modules.gmail.application.outbound_email_service import OutboundEmailService
 from src.modules.gmail.application.send_service import (
     AttachmentData,
     SendEmailParams,
     SendService,
 )
 from src.modules.gmail.container import (
+    get_arq_pool,
     get_attachment_service,
     get_connection_service,
     get_email_repository,
     get_email_sync_service,
     get_gmail_adapter,
     get_historical_import_service,
-    get_arq_pool,
     get_label_service,
     get_outbound_email_service,
     get_send_service,
@@ -99,7 +98,6 @@ HistoricalImportServiceDep = Annotated[
     HistoricalImportService,
     Depends(get_historical_import_service),
 ]
-
 
 
 # ---------------------------------------------------------------------------
@@ -354,16 +352,14 @@ async def start_import(
         await import_service._cleanup_job_state()
         logger.error(
             "Failed to enqueue ARQ job for historical import %s: %s",
-            job_id, exc,
+            job_id,
+            exc,
         )
         from fastapi import HTTPException
 
         raise HTTPException(
             status_code=500,
-            detail=(
-                f"Không thể xếp hàng đợi import: {exc}. "
-                "Vui lòng thử lại sau."
-            ),
+            detail=(f"Không thể xếp hàng đợi import: {exc}. Vui lòng thử lại sau."),
         )
     return ImportStartResponse(
         job_id=job_id,
@@ -372,7 +368,6 @@ async def start_import(
         message=f"Import {body.days}-ngày đã được khởi tạo. "
         f"Kiểm tra trạng thái để theo dõi tiến độ.",
     )
-
 
 
 @router.get(
@@ -1588,8 +1583,8 @@ async def reclassify_email(
         label_ids=email.label_ids,
         has_attachments=email.has_attachments,
         category=email.category,
-            processing_status=email.processing_status,
-        )
+        processing_status=email.processing_status,
+    )
 
 
 # ---------------------------------------------------------------------------

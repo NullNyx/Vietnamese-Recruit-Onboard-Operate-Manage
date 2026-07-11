@@ -4,12 +4,13 @@ Defines data transfer objects used by the Gmail router endpoints
 for structured data validation and serialization.
 """
 
-from typing import Any
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from datetime import datetime
+from typing import Any
 from uuid import UUID
-from src.modules.gmail.domain.enums import ConnectionStatus
 
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from src.modules.gmail.domain.enums import ConnectionStatus
 
 # ---------------------------------------------------------------------------
 # Connection schemas
@@ -315,6 +316,7 @@ class ImportCancelResponse(BaseModel):
 
     status: str
     message: str
+
 
 # ---------------------------------------------------------------------------
 # Outbound Email schemas

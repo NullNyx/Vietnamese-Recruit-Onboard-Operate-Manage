@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from collections.abc import Callable
-from datetime import UTC, datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import TYPE_CHECKING, Any
@@ -18,6 +16,7 @@ from uuid import UUID
 import httpx
 
 from src.modules.gmail.domain.entities import OutboundEmail
+from src.modules.gmail.domain.enums import OutboundEmailStatus
 from src.modules.gmail.domain.exceptions import (
     GmailSendFailedException,
     OrganizationNotConnectedError,
@@ -25,7 +24,6 @@ from src.modules.gmail.domain.exceptions import (
     OutboundEmailMaxRetriesExceededError,
     OutboundEmailNotFoundError,
 )
-from src.modules.gmail.domain.enums import OutboundEmailStatus
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,7 +33,6 @@ if TYPE_CHECKING:
         OutboundEmailRepository,
     )
     from src.modules.identity.application.audit_service import AuditService
-    from src.modules.identity.domain.entities import AuditActionType, User
     from src.modules.identity.infrastructure.connection_state_repository import (
         OrganizationGoogleConnectionRepository,
     )
@@ -229,9 +226,7 @@ class OutboundEmailService:
         # Get the Organization Google Connection
         connection = await self._connection_repo.get_singleton()
         if connection is None or connection.status != "connected":
-            raise OrganizationNotConnectedError(
-                "Organization Google Connection is not active"
-            )
+            raise OrganizationNotConnectedError("Organization Google Connection is not active")
 
         # Decrypt the access token
         if not connection.access_token_enc:
@@ -377,9 +372,7 @@ class OutboundEmailService:
             error_message=error_msg,
         )
         if _updated is None:
-            raise OutboundEmailNotFoundError(
-                f"Outbound email not found after error: {outbound_id}"
-            )
+            raise OutboundEmailNotFoundError(f"Outbound email not found after error: {outbound_id}")
         outbound = _updated
         await self._session.commit()
 
@@ -434,8 +427,7 @@ class OutboundEmailService:
 
         if outbound.retry_count >= outbound.max_retries:
             raise OutboundEmailMaxRetriesExceededError(
-                f"Outbound email {outbound_id} has exceeded max retries "
-                f"({outbound.max_retries})"
+                f"Outbound email {outbound_id} has exceeded max retries ({outbound.max_retries})"
             )
 
         return await self.send_outbound(outbound_id, hr_user=hr_user)

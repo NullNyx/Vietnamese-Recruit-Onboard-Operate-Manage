@@ -95,9 +95,7 @@ class OutboundEmailRepository:
 
         return list(result.scalars().all()), total
 
-    async def list_by_status(
-        self, status: str, limit: int = 50
-    ) -> list[OutboundEmail]:
+    async def list_by_status(self, status: str, limit: int = 50) -> list[OutboundEmail]:
         """List OutboundEmail records by status, oldest first.
 
         Args:
@@ -159,11 +157,7 @@ class OutboundEmailRepository:
         if sender_email is not None:
             values["sender_email"] = sender_email
 
-        stmt = (
-            update(OutboundEmail)
-            .where(col(OutboundEmail.id) == outbound_id)
-            .values(**values)
-        )
+        stmt = update(OutboundEmail).where(col(OutboundEmail.id) == outbound_id).values(**values)
         await self._session.execute(stmt)
         await self._session.flush()
 
