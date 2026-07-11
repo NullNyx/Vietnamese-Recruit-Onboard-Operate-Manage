@@ -274,8 +274,16 @@ class CalendarEventCreateFailedError(RecruitmentError):
     message = "Failed to create the Google Calendar event"
 
 
-class CalendarEventUpdateFailedError(RecruitmentError):
-    """Google Calendar event update failed.
+    class CalendarEventConflictError(RecruitmentError):
+        """Google Calendar rejected a conditional write because the event changed."""
+
+        status_code = 412
+        error_code = "CALENDAR_CONFLICT"
+        message = "The Google Calendar event changed; review the conflict before retrying"
+
+
+    class CalendarEventUpdateFailedError(RecruitmentError):
+        """Google Calendar event update failed.
 
     Raised when the existing Calendar event could not be patched during
     a reschedule request, leaving the stored references unchanged (R7.4).

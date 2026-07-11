@@ -32,6 +32,7 @@ from src.modules.recruitment.domain.entities import (
 )
 from src.modules.recruitment.domain.enums import CandidateStatus, JobOpeningStatus
 from src.modules.recruitment.domain.exceptions import (
+    CalendarEventConflictError,
     CalendarEventCreateFailedError,
     CalendarEventUpdateFailedError,
     CalendarGrantMissingError,
@@ -229,21 +230,24 @@ class CalendarPort(Protocol):
         ...
 
     async def patch_event(
-        self, access_token: str, event_id: str, spec: CalendarEventSpec
+        self,
+        access_token: str,
+        event_id: str,
+        spec: CalendarEventSpec,
+        if_match: str | None = None,
     ) -> CalendarEvent:
-        """Patch an existing Calendar event identified by event_id."""
+        """Conditionally patch an existing Calendar event."""
         ...
 
-        async def delete_event(
-            self,
-            access_token: str,
-            event_id: str,
-            calendar_id: str = "primary",
-        ) -> None:
-            """Delete (cancel) the Calendar event identified by event_id.
-            The calendar_id parameter defaults to "primary".
-            """
-            ...
+    async def delete_event(
+        self,
+        access_token: str,
+        event_id: str,
+        calendar_id: str = "primary",
+        if_match: str | None = None,
+    ) -> None:
+        """Conditionally delete (cancel) an existing Calendar event."""
+        ...
 
         async def list_events(
             self,
@@ -1447,8 +1451,10 @@ class CandidateService:
             request_meet_link=False,
         )
 
-        # Capture the previous start before any mutation (R12.2).
+        # Capture the previous start and remote version before any mutation.
         previous_start = candidate.interview_start_at
+        stored_interview = await self._get_interview_by_event_id(candidate.id, event_id)
+        stored_etag = stored_interview.calendar_etag if stored_interview else None
 
         # Step 5: patch the EXACT existing event BEFORE committing (R7.1). On
         # failure, roll back, audit, and raise; references stay unchanged (R7.4,
@@ -1458,6 +1464,7 @@ class CandidateService:
             candidate_id=candidate_id,
             event_id=event_id,
             spec=spec,
+            if_match=stored_etag,
         )
 
         # Step 6: update only the stored start and timezone, leaving the
@@ -1579,6 +1586,7 @@ class CandidateService:
         candidate_id: UUID,
         event_id: str,
         spec: CalendarEventSpec,
+        if_match: str | None = None,
     ) -> None:
         """Patch an existing Calendar event, logging and rolling back on failure."""
         if self._calendar_port is None:
@@ -1589,8 +1597,19 @@ class CandidateService:
         try:
             await self._with_calendar_token(
                 user_id,
-                lambda token: calendar_port.patch_event(token, event_id, spec),
+                lambda token: (
+                    calendar_port.patch_event(token, event_id, spec, if_match)
+                    if if_match is not None
+                    else calendar_port.patch_event(token, event_id, spec)
+                ),
             )
+        except httpx.HTTPStatusError as exc:
+            await self._session.rollback()
+            if exc.response.status_code == 412:
+                raise CalendarEventConflictError(
+                    details={"calendar_event_id": event_id, "remote_status": 412}
+                ) from exc
+            raise
         except Exception as exc:
             await self._session.rollback()
 

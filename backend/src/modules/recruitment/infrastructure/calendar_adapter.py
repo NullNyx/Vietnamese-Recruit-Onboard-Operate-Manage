@@ -406,9 +406,9 @@ class CalendarAdapter:
         async def _request() -> httpx.Response:
             response = await self._http_client.post(
                 url,
-                headers=self._auth_headers(access_token),
-                params=params,
-                json=body,
+                    headers=self._auth_headers(access_token),
+                    params=params,
+                    json=body,
             )
             response.raise_for_status()
             return response
@@ -428,7 +428,11 @@ class CalendarAdapter:
         return self._parse_event(data)
 
     async def patch_event(
-        self, access_token: str, event_id: str, spec: CalendarEventSpec
+        self,
+        access_token: str,
+        event_id: str,
+        spec: CalendarEventSpec,
+        if_match: str | None = None,
     ) -> CalendarEvent:
         """Patch an existing Calendar event's time window (reschedule).
 
@@ -457,7 +461,7 @@ class CalendarAdapter:
         async def _request() -> httpx.Response:
             response = await self._http_client.patch(
                 url,
-                headers=self._auth_headers(access_token),
+                headers={**self._auth_headers(access_token), **({"If-Match": if_match} if if_match else {})},
                 params=params,
                 json=body,
             )
@@ -467,7 +471,7 @@ class CalendarAdapter:
         try:
             response = await self.retry_with_backoff(_request)
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 401:
+            if exc.response.status_code in (401, 412):
                 raise
             raise CalendarEventUpdateFailedError(
                 f"Failed to update calendar event {event_id}: "
@@ -482,7 +486,11 @@ class CalendarAdapter:
         return self._parse_event(data)
 
     async def delete_event(
-        self, access_token: str, event_id: str, calendar_id: str = "primary"
+        self,
+        access_token: str,
+        event_id: str,
+        calendar_id: str = "primary",
+        if_match: str | None = None,
     ) -> None:
         """Delete (cancel) a Calendar event idempotently.
 
@@ -506,7 +514,7 @@ class CalendarAdapter:
         async def _request() -> httpx.Response:
             response = await self._http_client.delete(
                 url,
-                headers=self._auth_headers(access_token),
+                headers={**self._auth_headers(access_token), **({"If-Match": if_match} if if_match else {})},
                 params=params,
             )
             response.raise_for_status()
