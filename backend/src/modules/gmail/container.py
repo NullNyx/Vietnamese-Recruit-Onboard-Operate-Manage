@@ -219,10 +219,25 @@ async def get_connection_service(
     )
 
 
+async def get_organization_google_connection_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> OrganizationGoogleConnectionRepository:
+    """Provide an OrganizationGoogleConnectionRepository instance.
+
+    Args:
+        session: The async database session from DI.
+
+    Returns:
+        An OrganizationGoogleConnectionRepository bound to the current session.
+    """
+    return OrganizationGoogleConnectionRepository(session)
+
+
 async def get_email_sync_service(
     email_repo: EmailRepository = Depends(get_email_repository),
     sync_cursor_repo: SyncCursorRepository = Depends(get_sync_cursor_repository),
-    oauth_grant_repo: OAuthGrantRepository = Depends(get_oauth_grant_repository),
+    connection_repo: OrganizationGoogleConnectionRepository
+    = Depends(get_organization_google_connection_repository),
     audit_logger: AuditLogger = Depends(get_audit_logger),
 ) -> EmailSyncService:
     """Provide an EmailSyncService instance.
@@ -230,7 +245,7 @@ async def get_email_sync_service(
     Args:
         email_repo: The email repository from DI.
         sync_cursor_repo: The sync cursor repository from DI.
-        oauth_grant_repo: The OAuth grant repository from DI.
+        connection_repo: The organization Google connection repository from DI.
         audit_logger: The audit logger from DI.
 
     Returns:
@@ -243,7 +258,7 @@ async def get_email_sync_service(
         gmail_adapter=gmail_adapter,
         email_repo=email_repo,
         sync_cursor_repo=sync_cursor_repo,
-        oauth_grant_repo=oauth_grant_repo,
+        connection_repo=connection_repo,
         crypto=get_crypto_utils(),
         audit_logger=audit_logger,
         settings=get_gmail_settings(),
@@ -255,14 +270,15 @@ async def get_email_sync_service(
 
 async def get_send_service(
     email_repo: EmailRepository = Depends(get_email_repository),
-    oauth_grant_repo: OAuthGrantRepository = Depends(get_oauth_grant_repository),
+    connection_repo: OrganizationGoogleConnectionRepository
+    = Depends(get_organization_google_connection_repository),
     audit_logger: AuditLogger = Depends(get_audit_logger),
 ) -> SendService:
     """Provide a SendService instance.
 
     Args:
         email_repo: The email repository from DI.
-        oauth_grant_repo: The OAuth grant repository from DI.
+        connection_repo: The organization Google connection repository from DI.
         audit_logger: The audit logger from DI.
 
     Returns:
@@ -274,7 +290,7 @@ async def get_send_service(
     return SendService(
         gmail_adapter=gmail_adapter,
         email_repo=email_repo,
-        oauth_grant_repo=oauth_grant_repo,
+        connection_repo=connection_repo,
         crypto=get_crypto_utils(),
         audit_logger=audit_logger,
         settings=get_gmail_settings(),
