@@ -315,12 +315,12 @@ async def _seed_data(
     interviewer = Employee(
         employee_code=f"NV-{suffix}",
         full_name="Interviewer X",
-        email="interviewer.x@example.com",
+        email=f"interviewer-{suffix}@example.com",
         is_active=True,
     )
     candidate = Candidate(
         name="Ung Vien",
-        email="candidate@example.com",
+        email=f"candidate-{suffix}@example.com",
         phone="0901234567",
         skills=["Python"],
         status=CandidateStatus.NEW,
