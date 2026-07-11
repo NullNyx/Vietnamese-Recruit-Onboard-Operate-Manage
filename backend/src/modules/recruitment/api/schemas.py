@@ -615,3 +615,40 @@ class JobOpeningMetricsResponse(BaseModel):
     open_count: int
     closed_count: int
     cancelled_count: int
+
+
+class CalendarConflictResponse(BaseModel):
+    """Response schema for a calendar conflict."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    interview_id: UUID
+    candidate_id: UUID
+    calendar_event_id: str
+    local_snapshot: dict[str, Any] = Field(default_factory=dict)
+    remote_snapshot: dict[str, Any] = Field(default_factory=dict)
+    conflict_details: dict[str, Any] = Field(default_factory=dict)
+    status: str
+    resolved_by: UUID | None = None
+    resolved_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class CalendarConflictListResponse(BaseModel):
+    """Paginated response for the calendar conflict list."""
+
+    conflicts: list[CalendarConflictResponse]
+    total_count: int
+
+
+class ResolveConflictRequest(BaseModel):
+    """Request schema for resolving a calendar conflict.
+
+    Attributes:
+        choice: "keep_google" or "overwrite_vroom".
+    """
+
+    choice: str = Field(pattern=r"^(keep_google|overwrite_vroom)$")
+

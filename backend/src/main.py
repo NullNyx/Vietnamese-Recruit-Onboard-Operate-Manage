@@ -51,6 +51,7 @@ from src.modules.payslip.api.admin_router import admin_payslip_router  # noqa: E
 from src.modules.payslip.api.employee_router import employee_payslip_router
 from src.modules.payslip.api.error_handler import register_payslip_error_handlers  # noqa: E402
 from src.modules.recruitment.api.candidate_router import candidate_router  # noqa: E402
+from src.modules.recruitment.api.conflict_router import conflict_router  # noqa: E402
 from src.modules.recruitment.api.cv_review_router import cv_review_router  # noqa: E402
 from src.modules.recruitment.api.error_handler import (  # noqa: E402
     register_recruitment_error_handlers,
@@ -212,7 +213,8 @@ app.include_router(admin_router)
 app.include_router(employee_router)
 app.include_router(gmail_router)
 app.include_router(outbound_email_router)
-app.include_router(candidate_router)
+    app.include_router(candidate_router)
+    app.include_router(conflict_router)
 app.include_router(cv_review_router)
 app.include_router(metrics_router)
 app.include_router(onboarding_router)

@@ -461,7 +461,10 @@ class CalendarAdapter:
         async def _request() -> httpx.Response:
             response = await self._http_client.patch(
                 url,
-                headers={**self._auth_headers(access_token), **({"If-Match": if_match} if if_match else {})},
+                headers={
+                    **self._auth_headers(access_token),
+                    **({"If-Match": if_match} if if_match else {}),
+                },
                 params=params,
                 json=body,
             )
@@ -514,7 +517,10 @@ class CalendarAdapter:
         async def _request() -> httpx.Response:
             response = await self._http_client.delete(
                 url,
-                headers={**self._auth_headers(access_token), **({"If-Match": if_match} if if_match else {})},
+                headers={
+                    **self._auth_headers(access_token),
+                    **({"If-Match": if_match} if if_match else {}),
+                },
                 params=params,
             )
             response.raise_for_status()
@@ -571,6 +577,49 @@ class CalendarAdapter:
         data: dict[str, Any] = response.json()
         items: list[dict[str, Any]] = data.get("items", [])
         return items
+
+    async def get_event(
+        self,
+        access_token: str,
+        event_id: str,
+        calendar_id: str = "primary",
+    ) -> CalendarEvent:
+        """Fetch a single Calendar event by ID for conflict snapshot capture.
+
+        Sends ``GET {CAL_BASE}/calendars/{calendar_id}/events/{event_id}`` to fetch
+        the remote latest state of the event. Used to capture the remote snapshot
+        when a conditional write (If-Match) fails with 412.
+
+        Args:
+            access_token: OAuth2 access token for the acting HR user.
+            event_id: The Google Calendar event identifier to fetch.
+            calendar_id: The Google Calendar ID (default ``primary``).
+
+        Returns:
+            The :class:`CalendarEvent` representing the remote event state.
+
+        Raises:
+            httpx.HTTPStatusError: For non-2xx responses, including ``401``.
+        """
+        url = f"{self._base_url}/calendars/{calendar_id}/events/{event_id}"
+
+        async def _request() -> httpx.Response:
+            response = await self._http_client.get(
+                url,
+                headers=self._auth_headers(access_token),
+            )
+            response.raise_for_status()
+            return response
+
+        try:
+            response = await self.retry_with_backoff(_request)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 401:
+                raise
+            raise
+
+        data: dict[str, Any] = response.json()
+        return self._parse_event(data)
 
     async def list_events(
         self,
