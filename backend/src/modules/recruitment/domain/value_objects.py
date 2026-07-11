@@ -9,8 +9,17 @@ per ADR-0008.
 
 from dataclasses import dataclass
 from datetime import datetime
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
+
+
+class MeetingMode(StrEnum):
+    """Mode for an interview meeting."""
+
+    GOOGLE_MEET = "google_meet"
+    IN_PERSON = "in_person"
+    CUSTOM_LINK = "custom_link"
 
 
 class ExperienceItem(BaseModel):
@@ -85,6 +94,7 @@ class CalendarEventSpec:
     end: datetime
     timezone: str
     attendee_emails: tuple[str, ...]
+    calendar_id: str = "primary"
     request_meet_link: bool = True
 
     def __post_init__(self) -> None:
@@ -121,3 +131,5 @@ class CalendarEvent:
     html_link: str | None
     meet_link: str | None
     invited_emails: tuple[str, ...]
+    etag: str | None = None
+    updated: datetime | None = None

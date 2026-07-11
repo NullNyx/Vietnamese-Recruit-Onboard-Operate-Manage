@@ -38,7 +38,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(["candidate_id"], ["recruitment_candidates.id"]),
+        sa.ForeignKeyConstraint(["candidate_id"], ["candidates.id"]),
         sa.ForeignKeyConstraint(["created_by_user_id"], ["users.id"]),
         sa.UniqueConstraint("idempotency_key", name="uq_outbound_emails_idempotency_key"),
     )

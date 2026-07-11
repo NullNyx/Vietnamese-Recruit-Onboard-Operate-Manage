@@ -217,10 +217,10 @@ class DomainEventPublisher(Protocol):
 class CalendarPort(Protocol):
     """Protocol for Google Calendar event operations.
 
-    Abstracts the recruitment ``CalendarAdapter`` so the service can be
-    exercised against an in-memory fake, mirroring the ``GmailSendProtocol``
-    seam. Each method takes the acting HR user's OAuth ``access_token`` (with
-    the ``calendar.events`` scope) and operates on the user's primary calendar.
+    Abstracts the recruitment CalendarAdapter so the service can be
+    exercised against an in-memory fake, mirroring the GmailSendProtocol
+    seam. Each method takes the acting HR user's OAuth access_token (with
+    the calendar.events scope) and operates on the specified calendar.
     """
 
     async def create_event(self, access_token: str, spec: CalendarEventSpec) -> CalendarEvent:
@@ -230,11 +230,18 @@ class CalendarPort(Protocol):
     async def patch_event(
         self, access_token: str, event_id: str, spec: CalendarEventSpec
     ) -> CalendarEvent:
-        """Patch an existing Calendar event identified by ``event_id``."""
+        """Patch an existing Calendar event identified by event_id."""
         ...
 
-    async def delete_event(self, access_token: str, event_id: str) -> None:
-        """Delete (cancel) the Calendar event identified by ``event_id``."""
+    async def delete_event(
+        self,
+        access_token: str,
+        event_id: str,
+        calendar_id: str = "primary",
+    ) -> None:
+        """Delete (cancel) the Calendar event identified by event_id.
+        The calendar_id parameter defaults to "primary".
+        """
         ...
 
 
@@ -2084,4 +2091,282 @@ class CandidateService:
                 return scalars.first()
             except Exception:
                 return None
+        return None
+
+    # ─── Interview creation (GH #154) ──────────────────────────────────────────
+
+    _EMAIL_PATTERN_INTERVIEW = re.compile(r"^[^@]+@[^@]+$")
+
+    async def create_interview(
+        self,
+        candidate_id: UUID,
+        *,
+        round_name: str,
+        start: datetime,
+        end: datetime,
+        timezone: str,
+        mode: str,
+        meeting_link: str | None = None,
+        interviewer_ids: list[UUID] | None = None,
+        external_participant_emails: list[str] | None = None,
+        notes: str | None = None,
+    ) -> Interview:
+        """Create a new interview with Calendar event on the selected calendar.
+
+        This is the GH #154 interview creation command, separate from the legacy
+        schedule_interview flow. It does NOT change the Candidate status --
+        the HR explicitly transitions the candidate via accept/reject after the
+        interview rounds complete.
+
+        Steps:
+        1. Validate request fields.
+        2. Load the Candidate.
+        3. Assert Calendar grant.
+        4. Resolve employee interviewers and their emails.
+        5. Validate external participant emails.
+        6. Build the attendee list (candidate + employees + externals).
+        7. Resolve calendar_id (selected_calendar_id or primary).
+        8. Build CalendarEventSpec with the appropriate mode.
+        9. Create the Calendar event.
+        10. Persist Interview + InterviewParticipant records with metadata.
+        11. Write audit entries.
+
+        Args:
+            candidate_id: UUID of the Candidate being interviewed.
+            round_name: Interview round name.
+            start: Interview start datetime (tz-aware preferred).
+            end: Interview end datetime (must be strictly after start).
+            timezone: IANA timezone (e.g. "Asia/Ho_Chi_Minh").
+            mode: Meeting mode (google_meet, in_person, custom_link).
+            meeting_link: Custom meeting link (required when mode=custom_link).
+            interviewer_ids: Employee UUIDs conducting the interview.
+            external_participant_emails: External participant email addresses.
+            notes: Optional interview notes.
+
+        Returns:
+            The created Interview entity.
+
+        Raises:
+            ValueError: If request fields violate bounds.
+            CandidateNotFoundError: If the candidate doesn't exist.
+            CalendarGrantMissingError: If Calendar grant is missing.
+            InterviewerNotFoundError: If any interviewer id has no Employee.
+            InterviewerMissingEmailError: If a matched interviewer has no email.
+            CalendarEventCreateFailedError: If Calendar event creation fails.
+        """
+        if self._calendar_port is None:
+            raise RuntimeError("Calendar port is not configured")
+        if self._user_id is None:
+            raise RuntimeError("Acting HR user id is not configured")
+        calendar_port = self._calendar_port
+        user_id = self._user_id
+
+        # Step 1: validate request fields.
+        if not round_name or not round_name.strip():
+            raise ValueError("round_name must not be empty")
+        if start.tzinfo is None or start.utcoffset() is None:
+            raise ValueError("start must be timezone-aware")
+        if end.tzinfo is None or end.utcoffset() is None:
+            raise ValueError("end must be timezone-aware")
+        if end <= start:
+            raise ValueError("end must be strictly after start")
+        timezone = timezone.strip()
+        if not timezone:
+            raise ValueError("timezone must not be empty")
+        valid_modes = {"google_meet", "in_person", "custom_link"}
+        if mode not in valid_modes:
+            raise ValueError(f"mode must be one of {valid_modes}, got {mode!r}")
+        if mode == "custom_link" and not meeting_link:
+            raise ValueError("meeting_link is required when mode is custom_link")
+        if notes is not None and len(notes) > 1000:
+            raise ValueError("notes must be at most 1000 characters")
+        resolved_interviewer_ids = interviewer_ids or []
+        resolved_external_emails = external_participant_emails or []
+        if len(resolved_interviewer_ids) > 20:
+            raise ValueError("interviewer_ids must not exceed 20")
+        if len(resolved_external_emails) > 20:
+            raise ValueError("external_participant_emails must not exceed 20")
+
+        # Step 2: load the candidate.
+        candidate = await self._get_candidate_or_raise(candidate_id)
+        candidate_email = (candidate.email or "").strip()
+        if not self._EMAIL_PATTERN_INTERVIEW.match(candidate_email):
+            raise ValueError(f"Candidate email is invalid: {candidate.email!r}")
+
+        # Step 3: assert Calendar grant.
+        await self._assert_calendar_grant(user_id)
+
+        # Step 4: resolve employee interviewers.
+        resolved: list[tuple[Employee, str]] = []
+        if resolved_interviewer_ids:
+            statement = select(Employee).where(col(Employee.id).in_(resolved_interviewer_ids))
+            emp_result = await self._session.execute(statement)
+            employees_by_id = {emp.id: emp for emp in emp_result.scalars().all()}
+            unmatched = [id_ for id_ in resolved_interviewer_ids if id_ not in employees_by_id]
+            if unmatched:
+                from src.modules.recruitment.domain.exceptions import InterviewerNotFoundError
+
+                raise InterviewerNotFoundError(unmatched)
+            for id_ in resolved_interviewer_ids:
+                employee = employees_by_id[id_]
+                email = (employee.email or "").strip()
+                if not email:
+                    from src.modules.recruitment.domain.exceptions import (
+                        InterviewerMissingEmailError,
+                    )
+
+                    raise InterviewerMissingEmailError(employee.id)
+                resolved.append((employee, email))
+
+        # Step 5: validate external participant emails.
+        for ext_email in resolved_external_emails:
+            ext_email = ext_email.strip()
+            if not self._EMAIL_PATTERN_INTERVIEW.match(ext_email):
+                raise ValueError(f"Invalid external participant email: {ext_email!r}")
+
+        # Step 6: build attendee list (candidate + employees + externals).
+        attendee_emails: list[str] = [candidate_email]
+        for _, emp_email in resolved:
+            attendee_emails.append(emp_email)
+        attendee_emails.extend(resolved_external_emails)
+        attendee_emails = [e.strip() for e in attendee_emails if e and e.strip()]
+
+        # Step 7: resolve calendar_id from Organization Google Connection.
+        calendar_id = "primary"
+        from src.modules.identity.domain.entities import OrganizationGoogleConnection
+
+        selected_calendar = await self._session.execute(
+            select(OrganizationGoogleConnection.selected_calendar_id).limit(1)
+        )
+        selected_calendar_id = selected_calendar.scalar_one_or_none()
+        if selected_calendar_id:
+            calendar_id = selected_calendar_id
+
+        # Step 8: build CalendarEventSpec.
+        request_meet = mode == "google_meet"
+        summary = f"{round_name} - {candidate.name}"
+        description = notes
+        if mode == "custom_link":
+            description = f"{notes or ''}\nMeeting link: {meeting_link}".strip()
+        spec = CalendarEventSpec(
+            summary=summary,
+            description=description,
+            start=start,
+            end=end,
+            timezone=timezone,
+            calendar_id=calendar_id,
+            attendee_emails=tuple(attendee_emails),
+            request_meet_link=request_meet,
+        )
+
+        # Step 9: create Calendar event.
+        try:
+            event = await self._with_calendar_token(
+                user_id,
+                lambda token: calendar_port.create_event(token, spec),
+            )
+        except Exception as exc:
+            await self._session.rollback()
+            await log_audit(
+                session=self._session,
+                operation_type="interview_create_failed",
+                entity_type="candidate",
+                entity_id=candidate_id,
+                user_id=user_id,
+                new_value={"error": str(exc)},
+                change_summary="Interview creation failed: Calendar event error",
+                success=False,
+            )
+            await self._session.commit()
+            from src.modules.recruitment.domain.exceptions import CalendarEventCreateFailedError
+
+            raise CalendarEventCreateFailedError() from exc
+
+        # Step 10: persist Interview + InterviewParticipant records.
+        interview = Interview(
+            candidate_id=candidate.id,
+            status="scheduled",
+            round_name=round_name.strip(),
+            start_at=start,
+            end_at=end,
+            timezone=timezone,
+            calendar_event_id=event.event_id,
+            calendar_etag=event.etag,
+            calendar_updated=event.updated,
+            meeting_mode=mode,
+            meeting_link=meeting_link,
+            needs_relink=False,
+        )
+        self._session.add(interview)
+        if hasattr(self._session, "flush"):
+            try:
+                await self._session.flush()
+            except Exception:
+                pass
+
+        # Candidate participant
+        cand_part = InterviewParticipant(
+            interview_id=interview.id,
+            type="candidate",
+            email=candidate.email or "",
+            name=candidate.name,
+            response_status="needsAction",
+        )
+        self._session.add(cand_part)
+
+        # Employee participants
+        for emp, emp_email in resolved:
+            emp_part = InterviewParticipant(
+                interview_id=interview.id,
+                type="employee",
+                email=emp_email,
+                name=emp.full_name,
+                employee_id=emp.id,
+                response_status="needsAction",
+            )
+            self._session.add(emp_part)
+
+        # External participants
+        for ext_email in resolved_external_emails:
+            ext_part = InterviewParticipant(
+                interview_id=interview.id,
+                type="external",
+                email=ext_email.strip(),
+                response_status="needsAction",
+            )
+            self._session.add(ext_part)
+
+        # Commit
+        await self._session.commit()
+
+        # Step 11: audit.
+        await log_audit(
+            session=self._session,
+            operation_type="interview_created",
+            entity_type="interview",
+            entity_id=interview.id,
+            user_id=user_id,
+            new_value={
+                "candidate_id": str(candidate.id),
+                "calendar_event_id": event.event_id,
+                "calendar_id": calendar_id,
+                "round_name": round_name.strip(),
+                "mode": mode,
+                "start": start.isoformat(),
+                "end": end.isoformat(),
+                "timezone": timezone,
+                "participant_count": len(attendee_emails),
+                "has_meet_link": event.meet_link is not None,
+                "etag": event.etag,
+            },
+            change_summary=(
+                f"Interview created: {round_name.strip()} for {candidate.name}, "
+                f"event={event.event_id}, mode={mode}"
+            ),
+            success=True,
+        )
+        await self._session.commit()
+
+        return interview
+
         return None

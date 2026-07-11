@@ -10,6 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Session, select
 
@@ -254,14 +255,88 @@ async def callback_google_connection(
     res = await connection_service.callback(hr=current_user, state=body.state, code=body.code)
     return GoogleWorkspaceConnectionResponse(**res.__dict__)
 
+    @router.delete("/organization-google-connection")
+    async def disconnect_google_connection(
+        current_user: AdminOnlyDep,
+        connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
+    ) -> GoogleWorkspaceConnectionResponse:
+        res = await connection_service.disconnect(current_user)
+        return GoogleWorkspaceConnectionResponse(**res.__dict__)
 
-@router.delete("/organization-google-connection")
-async def disconnect_google_connection(
-    current_user: AdminOnlyDep,
-    connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
-) -> GoogleWorkspaceConnectionResponse:
-    res = await connection_service.disconnect(current_user)
-    return GoogleWorkspaceConnectionResponse(**res.__dict__)
+    # ---------------------------------------------------------------------------
+    # Calendar list + selection (Issue 154)
+    # ---------------------------------------------------------------------------
+
+    class CalendarEntryResponse(BaseModel):
+        """A single calendar list entry."""
+
+        model_config = ConfigDict(from_attributes=True)
+
+        id: str
+        summary: str
+        description: str | None = None
+        primary: bool = False
+        access_role: str = ""
+
+    class CalendarListResponseSchema(BaseModel):
+        """Response for the calendar list endpoint."""
+
+        calendars: list[CalendarEntryResponse]
+        selected_calendar_id: str | None = None
+
+    class SelectCalendarRequest(BaseModel):
+        """Request to select a calendar for interview scheduling."""
+
+        calendar_id: str
+
+    @router.get("/organization-google-connection/calendars")
+    async def list_calendars_for_selection(
+        current_user: AdminOnlyDep,
+        connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
+    ) -> CalendarListResponseSchema:
+        """List available calendars and the currently selected one.
+
+        Returns calendars the Organization Google Connection has writer access to,
+        along with the currently selected calendar ID (if any).
+        """
+
+        # Get the current connection to read selected_calendar_id
+        from src.modules.identity.container import get_db_session
+        from src.modules.identity.infrastructure.connection_state_repository import (
+            OrganizationGoogleConnectionRepository,
+        )
+
+        session = await get_db_session().__anext__()
+        conn_repo = OrganizationGoogleConnectionRepository(session)
+        current_conn = await conn_repo.get_singleton()
+        selected_calendar_id = current_conn.selected_calendar_id if current_conn else None
+
+        calendars = await connection_service.list_calendars(current_user)
+        entries = [
+            CalendarEntryResponse(
+                id=cal["id"],
+                summary=cal.get("summary", cal["id"]),
+                description=cal.get("description"),
+                primary=cal.get("primary", False),
+                access_role=cal.get("accessRole", ""),
+            )
+            for cal in calendars
+        ]
+        return CalendarListResponseSchema(
+            calendars=entries, selected_calendar_id=selected_calendar_id
+        )
+
+    @router.put("/organization-google-connection/selected-calendar", status_code=204)
+    async def save_selected_calendar(
+        body: SelectCalendarRequest,
+        current_user: AdminOnlyDep,
+        connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
+    ) -> None:
+        """Save the selected calendar ID for interview scheduling."""
+        await connection_service.update_selected_calendar(
+            calendar_id=body.calendar_id,
+            hr=current_user,
+        )
 
 
 @router.post("/login", response_model=AuthSessionResponse)
