@@ -29,19 +29,19 @@ from src.modules.recruitment.api.schemas import (
     CandidateResponse,
     CVDocumentResponse,
     CVPresignedUrlResponse,
+    InterviewParticipantResponse,
+    InterviewResponse,
     ReassignCandidateRequest,
     RejectRequest,
     ScheduleInterviewRequest,
     SendEmailRequest,
-    InterviewResponse,
-    InterviewParticipantResponse,
 )
 from src.modules.recruitment.application.candidate_service import (
     CandidateService,
     PaginatedCandidates,
 )
 from src.modules.recruitment.container import get_candidate_service
-from src.modules.recruitment.domain.entities import JobOpening, Interview, InterviewParticipant
+from src.modules.recruitment.domain.entities import Interview, InterviewParticipant, JobOpening
 from src.modules.recruitment.domain.enums import CandidateStatus, ProcessingStatus
 from src.modules.recruitment.domain.exceptions import (
     CandidateNotFoundError,
@@ -266,13 +266,13 @@ async def get_candidate(
     interviews_stmt = select(Interview).where(Interview.candidate_id == candidate.id)
     interviews_res = await session.execute(interviews_stmt)
     interviews_list = interviews_res.scalars().all()
-    
+
     interview_responses = []
     for iv in interviews_list:
         parts_stmt = select(InterviewParticipant).where(InterviewParticipant.interview_id == iv.id)
         parts_res = await session.execute(parts_stmt)
         parts_list = parts_res.scalars().all()
-        
+
         part_responses = [
             InterviewParticipantResponse(
                 id=p.id,
@@ -284,7 +284,7 @@ async def get_candidate(
             )
             for p in parts_list
         ]
-        
+
         interview_responses.append(
             InterviewResponse(
                 id=iv.id,

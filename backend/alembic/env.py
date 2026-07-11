@@ -20,6 +20,9 @@ if config.config_file_name is not None:
 # Import SQLModel metadata so Alembic can detect tables
 from sqlmodel import SQLModel  # noqa: E402
 
+from src.modules.assistant.domain.entities import (  # noqa: E402, F401
+    AssistantToolConfig,
+)
 from src.modules.employee.domain.entities import (  # noqa: E402, F401
     Department,
     Employee,
@@ -36,19 +39,16 @@ from src.modules.onboarding.domain.entities import (  # noqa: E402, F401
     OnboardingProcess,
     OnboardingTask,
 )
-from src.modules.assistant.domain.entities import (  # noqa: E402, F401
-    AssistantToolConfig,
-)
 from src.modules.payslip.domain.entities import (  # noqa: E402, F401
     Payslip,
 )
 from src.modules.recruitment.domain.entities import (  # noqa: E402, F401
     Candidate,
     CVDocument,
-    OrganizationSettings,
-    RecruitmentAuditLog,
     Interview,
     InterviewParticipant,
+    OrganizationSettings,
+    RecruitmentAuditLog,
 )
 
 target_metadata = SQLModel.metadata

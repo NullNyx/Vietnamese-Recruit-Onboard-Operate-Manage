@@ -206,7 +206,8 @@ class Interview(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     candidate_id: UUID = Field(foreign_key="candidates.id", index=True, nullable=False)
-    status: str = Field(default="scheduled", max_length=30, nullable=False, index=True)  # scheduled, completed, cancelled
+    # status: scheduled, completed, cancelled
+    status: str = Field(default="scheduled", max_length=30, nullable=False, index=True)
     round_name: str = Field(max_length=255, nullable=False)
     start_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     end_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))

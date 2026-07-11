@@ -15,7 +15,6 @@ import os
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Sequence, Union
 from uuid import uuid4
 
 import pytest
@@ -44,6 +43,7 @@ def _docker_available() -> bool:
 
 def _run_alembic_upgrade_head(async_url: str) -> None:
     from alembic.config import Config
+
     from alembic import command
 
     config = Config(str(BACKEND_DIR / "alembic.ini"))
@@ -103,7 +103,17 @@ def test_migration_creates_interview_tables(
     assert "interview_participants" in tables, "interview_participants table is missing"
 
     columns = {col["name"] for col in inspector.get_columns("interviews")}
-    expected = {"id", "candidate_id", "status", "round_name", "start_at", "end_at", "timezone", "calendar_event_id", "needs_relink"}
+    expected = {
+        "id",
+        "candidate_id",
+        "status",
+        "round_name",
+        "start_at",
+        "end_at",
+        "timezone",
+        "calendar_event_id",
+        "needs_relink",
+    }
     assert expected.issubset(columns)
 
     part_columns = {col["name"] for col in inspector.get_columns("interview_participants")}
@@ -114,6 +124,7 @@ def test_migration_creates_interview_tables(
 @pytest.mark.integration
 def test_migration_backfill_and_rollback(migrated_engine: Engine) -> None:
     from alembic.config import Config
+
     from alembic import command
 
     config = Config(str(BACKEND_DIR / "alembic.ini"))
@@ -133,8 +144,13 @@ def test_migration_backfill_and_rollback(migrated_engine: Engine) -> None:
         with migrated_engine.begin() as conn:
             conn.execute(
                 sa.text(
-                    "INSERT INTO candidates (id, name, email, phone, status, confidence_score, calendar_event_id, interview_start_at, interview_timezone, created_at, updated_at, skills, experience, education) "
-                    "VALUES (:id, :name, :email, :phone, :status, :confidence_score, :calendar_event_id, :interview_start_at, :interview_timezone, now(), now(), '[]', '[]', '[]')"
+                    "INSERT INTO candidates (id, name, email, phone, status, "
+                    "confidence_score, calendar_event_id, interview_start_at, "
+                    "interview_timezone, created_at, updated_at, skills, "
+                    "experience, education) "
+                    "VALUES (:id, :name, :email, :phone, :status, "
+                    ":confidence_score, :calendar_event_id, :interview_start_at, "
+                    ":interview_timezone, now(), now(), '[]', '[]', '[]')"
                 ),
                 {
                     "id": cand_id,
