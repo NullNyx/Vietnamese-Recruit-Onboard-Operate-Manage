@@ -23,15 +23,12 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 
 from src.modules.gmail.api.schemas import (
-    ConnectionStatusResponse,
-    ConnectResponse,
     ErrorResponse,
     ImportCancelResponse,
     ImportPreviewResponse,
     ImportStartRequest,
     ImportStartResponse,
     ImportStatusResponse,
-    LabelRemoveRequest,
     MessageBodyResponse,
     MessageListItem,
     MessageListResponse,
@@ -51,7 +48,6 @@ from src.modules.gmail.application.connection_service import (
 )
 from src.modules.gmail.application.email_sync_service import EmailSyncService
 from src.modules.gmail.application.import_service import HistoricalImportService
-from src.modules.gmail.application.label_service import LabelService
 from src.modules.gmail.application.outbound_email_service import OutboundEmailService
 from src.modules.gmail.application.send_service import (
     AttachmentData,
@@ -66,7 +62,6 @@ from src.modules.gmail.container import (
     get_email_sync_service,
     get_gmail_adapter,
     get_historical_import_service,
-    get_label_service,
     get_outbound_email_service,
     get_send_service,
 )
@@ -86,7 +81,7 @@ ConnectionServiceDep = Annotated[ConnectionService, Depends(get_connection_servi
 EmailSyncServiceDep = Annotated[EmailSyncService, Depends(get_email_sync_service)]
 EmailRepositoryDep = Annotated[EmailRepository, Depends(get_email_repository)]
 SendServiceDep = Annotated[SendService, Depends(get_send_service)]
-LabelServiceDep = Annotated[LabelService, Depends(get_label_service)]
+
 
 OutboundEmailServiceDep = Annotated[
     OutboundEmailService,
@@ -105,131 +100,6 @@ HistoricalImportServiceDep = Annotated[
 # ---------------------------------------------------------------------------
 
 router = APIRouter(prefix="/api/gmail", tags=["gmail"])
-
-
-# ---------------------------------------------------------------------------
-# Connection endpoints
-# ---------------------------------------------------------------------------
-
-
-@router.get(
-    "/status",
-    response_model=ConnectionStatusResponse,
-    responses={401: {"model": ErrorResponse}},
-)
-async def get_connection_status(
-    current_user: CurrentUserDep,
-    connection_service: ConnectionServiceDep,
-) -> ConnectionStatusResponse:
-    """Check the current Gmail connection status.
-
-    Returns the connection state (connected, disconnected, or token_expired)
-    along with the connected Gmail email address if available.
-
-    Args:
-        current_user: The authenticated user.
-        connection_service: The connection service.
-
-    Returns:
-        ConnectionStatusResponse with current status.
-    """
-    result = await connection_service.get_status(current_user.id)
-    return ConnectionStatusResponse(
-        status=result.status,
-        email=result.email,
-    )
-
-
-@router.post(
-    "/connect",
-    response_model=ConnectResponse,
-    responses={401: {"model": ErrorResponse}},
-)
-async def initiate_connect(
-    current_user: CurrentUserDep,
-    connection_service: ConnectionServiceDep,
-) -> ConnectResponse:
-    """Initiate Gmail OAuth2 connection.
-
-    If already connected with valid credentials, returns the connected status.
-    Otherwise, returns a redirect URL to the Google OAuth2 consent screen.
-
-    Args:
-        current_user: The authenticated user.
-        connection_service: The connection service.
-
-    Returns:
-        ConnectResponse with either connected status or redirect_url.
-    """
-    result = await connection_service.initiate_connect(current_user.id)
-    return ConnectResponse(
-        status=result.status,
-        redirect_url=result.redirect_url,
-    )
-
-
-@router.get(
-    "/callback",
-    response_model=ConnectionStatusResponse,
-    responses={
-        400: {"model": ErrorResponse},
-        401: {"model": ErrorResponse},
-    },
-)
-async def oauth_callback(
-    current_user: CurrentUserDep,
-    connection_service: ConnectionServiceDep,
-    code: str = Query(..., description="Authorization code from Google OAuth2"),
-    state: str = Query(default="", description="OAuth2 state parameter"),
-) -> ConnectionStatusResponse:
-    """Handle the OAuth2 callback from Google.
-
-    Exchanges the authorization code for tokens, validates scopes,
-    stores encrypted credentials, and triggers label initialization.
-
-    Args:
-        current_user: The authenticated user.
-        connection_service: The connection service.
-        code: The authorization code from Google.
-        state: The OAuth2 state parameter for CSRF protection.
-
-    Returns:
-        ConnectionStatusResponse with connected status on success.
-    """
-    result = await connection_service.handle_callback(current_user.id, code)
-    return ConnectionStatusResponse(
-        status=result.status,
-        email=result.email,
-    )
-
-
-@router.post(
-    "/disconnect",
-    response_model=ConnectionStatusResponse,
-    responses={401: {"model": ErrorResponse}},
-)
-async def disconnect(
-    current_user: CurrentUserDep,
-    connection_service: ConnectionServiceDep,
-) -> ConnectionStatusResponse:
-    """Disconnect Gmail from the system.
-
-    Revokes the OAuth2 token via Google's revocation endpoint (with 10s
-    timeout), marks the OAuth grant as invalid, and removes Gmail scopes.
-    Proceeds with disconnect even if revocation fails.
-
-    Args:
-        current_user: The authenticated user.
-        connection_service: The connection service.
-
-    Returns:
-        ConnectionStatusResponse with disconnected status.
-    """
-    result = await connection_service.disconnect(current_user.id)
-    return ConnectionStatusResponse(
-        status=result.status,
-        email=result.email,
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -543,62 +413,6 @@ async def get_message_body(
         plain_text=body.plain_text,
         html=body.html,
     )
-
-
-# ---------------------------------------------------------------------------
-# Label endpoints
-# ---------------------------------------------------------------------------
-
-
-@router.post(
-    "/messages/{message_id}/labels/remove",
-    responses={
-        400: {"model": ErrorResponse},
-        401: {"model": ErrorResponse},
-        403: {"model": ErrorResponse},
-        502: {"model": ErrorResponse},
-    },
-)
-async def remove_label(
-    message_id: str,
-    body: LabelRemoveRequest,
-    current_user: CurrentUserDep,
-    label_service: LabelServiceDep,
-    connection_service: ConnectionServiceDep,
-) -> dict[str, str]:
-    """Remove a VroomHR label from an email message.
-
-    Only labels within the VroomHR/ namespace can be removed.
-    Requires an active Gmail connection.
-
-    Args:
-        message_id: The Gmail message ID.
-        body: Request body with the label name to remove.
-        current_user: The authenticated user.
-        label_service: The label service.
-        connection_service: The connection service for token access.
-
-    Returns:
-        Success confirmation message.
-    """
-    from src.modules.gmail.domain.exceptions import GmailNotConnectedException
-
-    # Verify connection
-    status_result = await connection_service.get_status(current_user.id)
-    if status_result.status != "connected":
-        raise GmailNotConnectedException()
-
-    # Get access token
-    access_token = await _get_user_access_token(current_user.id, connection_service)
-
-    await label_service.remove_label(
-        user_id=current_user.id,
-        message_id=message_id,
-        label_name=body.label_name,
-        access_token=access_token,
-    )
-
-    return {"status": "ok"}
 
 
 # ---------------------------------------------------------------------------

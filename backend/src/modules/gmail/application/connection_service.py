@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 from uuid import UUID
 
@@ -28,16 +28,7 @@ if TYPE_CHECKING:
         OAuthGrantRepository,
     )
 
-
-class LabelServiceProtocol(Protocol):
-    """Protocol for LabelService dependency to avoid circular imports."""
-
-    async def initialize_labels(self, user_id: UUID, access_token: str) -> None:
-        """Initialize VroomHR labels on the user's Gmail account."""
-        ...
-
-
-logger = logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
 
 # Google OAuth2 authorization endpoint.
 _GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -94,7 +85,6 @@ class ConnectionService:
         oauth_grant_repo: Repository for OAuth grant persistence.
         gmail_adapter: Gmail API adapter for token operations.
         crypto: AES-256-GCM encryption utilities.
-        label_service: LabelService for post-connection label initialization.
     """
 
     def __init__(
@@ -106,7 +96,6 @@ class ConnectionService:
         oauth_grant_repo: OAuthGrantRepository,
         gmail_adapter: GmailAdapter,
         crypto: CryptoUtils,
-        label_service: LabelServiceProtocol | None = None,
     ) -> None:
         """Initialize ConnectionService with dependencies.
 
@@ -118,7 +107,6 @@ class ConnectionService:
             oauth_grant_repo: Repository for OAuth grant persistence.
             gmail_adapter: Gmail API adapter for token operations.
             crypto: AES-256-GCM encryption utilities.
-            label_service: LabelService for post-connection label initialization.
         """
         self._settings = settings
         self._client_id = auth_settings_client_id
@@ -127,7 +115,6 @@ class ConnectionService:
         self._oauth_grant_repo = oauth_grant_repo
         self._gmail_adapter = gmail_adapter
         self._crypto = crypto
-        self._label_service = label_service
 
     async def get_status(self, user_id: UUID) -> ConnectionStatusResponse:
         """Determine the current Gmail connection status for a user.
@@ -270,18 +257,6 @@ class ConnectionService:
             scopes=list(granted_scopes),
             token_expires_at=token_expires_at,
         )
-
-        # Trigger label initialization (fire-and-forget style, log errors)
-        if self._label_service is not None:
-            try:
-                await self._label_service.initialize_labels(
-                    user_id=user_id, access_token=access_token
-                )
-            except Exception as exc:
-                logger.warning(
-                    "Label initialization failed after connect (will retry on next poll): %s",
-                    exc,
-                )
 
         return ConnectionStatusResponse(status=ConnectionStatus.connected)
 

@@ -240,33 +240,19 @@ async def get_label_service(
         audit_logger=audit_logger,
     )
 
-
 async def get_connection_service(
     oauth_grant_repo: OAuthGrantRepository = Depends(get_oauth_grant_repository),
-    label_service: LabelService = Depends(get_label_service),
 ) -> ConnectionService:
-    """Provide a ConnectionService instance.
-
-    Args:
-        oauth_grant_repo: The OAuth grant repository from DI.
-        label_service: The label service from DI.
-
-    Returns:
-        A ConnectionService configured with all dependencies.
-    """
+    """Provide the legacy service for internal attachment compatibility."""
     auth_settings = get_auth_settings()
-    gmail_settings = get_gmail_settings()
-    gmail_adapter = await get_gmail_adapter()
-
     return ConnectionService(
-        settings=gmail_settings,
+        settings=get_gmail_settings(),
         auth_settings_client_id=auth_settings.google_client_id,
         auth_settings_client_secret=auth_settings.google_client_secret,
         gmail_redirect_uri=auth_settings.google_redirect_uri,
         oauth_grant_repo=oauth_grant_repo,
-        gmail_adapter=gmail_adapter,
+        gmail_adapter=await get_gmail_adapter(),
         crypto=get_crypto_utils(),
-        label_service=label_service,
     )
 
 

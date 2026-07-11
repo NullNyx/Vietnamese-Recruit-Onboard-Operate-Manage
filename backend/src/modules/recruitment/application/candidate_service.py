@@ -1425,10 +1425,12 @@ class CandidateService:
             raise RuntimeError("Acting HR user id is not configured")
         user_id = self._user_id
 
-        # Step 1: load the Candidate and require an existing event (R7.5). When
-        # absent, raise before any Calendar call.
+        # Step 1: load the Candidate and find the scheduled Interview (R7.5).
+        # The Interview holds the calendar event reference — no legacy Candidate
+        # calendar columns (removed in migration 054).
         candidate = await self._get_candidate_or_raise(candidate_id)
-        event_id = candidate.calendar_event_id
+        interview = await self._get_scheduled_interview(candidate.id)
+        event_id = interview.calendar_event_id if interview else None
         if event_id is None:
             raise NoInterviewToRescheduleError()
 
@@ -1463,7 +1465,7 @@ class CandidateService:
         )
 
         # Capture the previous start and remote version before any mutation.
-        previous_start = candidate.interview_start_at
+        previous_start = interview.start_at
         stored_interview = await self._get_interview_by_event_id(candidate.id, event_id)
         stored_etag = stored_interview.calendar_etag if stored_interview else None
 
@@ -1478,51 +1480,44 @@ class CandidateService:
             if_match=stored_etag,
         )
 
-        # Step 6: update only the stored start and timezone, leaving the
+        # Step 6: update the Interview start/end/timezone, leaving the
         # calendar_event_id unchanged, then commit (R7.1, R7.3).
-        candidate.interview_start_at = start_resolved
-        candidate.interview_timezone = timezone
-        candidate = await self._candidate_repo.update(candidate)
+        interview.start_at = start_resolved
+        interview.end_at = start_resolved + timedelta(minutes=duration_minutes)
+        interview.timezone = timezone
+        self._session.add(interview)
+        await self._session.commit()
 
-        # Update corresponding Interview and participants
-        if hasattr(self._session, "add"):
-            interview = await self._get_interview_by_event_id(candidate.id, event_id)
-            if interview:
-                interview.start_at = start_resolved
-                interview.end_at = start_resolved + timedelta(minutes=duration_minutes)
-                interview.timezone = timezone
-                self._session.add(interview)
+        # Delete old participants except candidate
+        from sqlalchemy import text
 
-                # Delete old participants except candidate
-                from sqlalchemy import text
+        await self._session.execute(
+            text(
+                "DELETE FROM interview_participants "
+                "WHERE interview_id = :interview_id AND type != 'candidate'"
+            ),
+            {"interview_id": interview.id},
+        )
 
-                await self._session.execute(
-                    text(
-                        "DELETE FROM interview_participants "
-                        "WHERE interview_id = :interview_id AND type != 'candidate'"
-                    ),
-                    {"interview_id": interview.id},
+        for emp_id in interviewer_ids:
+            emp_stmt = select(Employee).where(Employee.id == emp_id)
+            emp_res = await self._session.execute(emp_stmt)
+            emp_scalars = emp_res.scalars()
+            emp = None
+            if hasattr(emp_scalars, "first"):
+                try:
+                    emp = emp_scalars.first()
+                except Exception:
+                    pass
+            if emp:
+                emp_part = InterviewParticipant(
+                    interview_id=interview.id,
+                    type="employee",
+                    email=emp.email,
+                    name=emp.full_name,
+                    employee_id=emp_id,
                 )
-
-                for emp_id in interviewer_ids:
-                    emp_stmt = select(Employee).where(Employee.id == emp_id)
-                    emp_res = await self._session.execute(emp_stmt)
-                    emp_scalars = emp_res.scalars()
-                    emp = None
-                    if hasattr(emp_scalars, "first"):
-                        try:
-                            emp = emp_scalars.first()
-                        except Exception:
-                            pass
-                    if emp:
-                        emp_part = InterviewParticipant(
-                            interview_id=interview.id,
-                            type="employee",
-                            email=emp.email,
-                            name=emp.full_name,
-                            employee_id=emp_id,
-                        )
-                        self._session.add(emp_part)
+                self._session.add(emp_part)
 
         await self._session.commit()
 
@@ -1809,10 +1804,11 @@ class CandidateService:
         if self._calendar_port is None or self._user_id is None:
             return
 
-        event_id = candidate.calendar_event_id
-        if event_id is None:
-            # No interview event to cancel (R8.3).
-            return
+            interview = await self._get_scheduled_interview(candidate.id)
+            event_id = interview.calendar_event_id if interview else None
+            if event_id is None:
+                # No interview event to cancel (R8.3).
+                return
 
         calendar_port = self._calendar_port
         user_id = self._user_id
@@ -2083,12 +2079,8 @@ class CandidateService:
                         self._session.add(emp_part)
 
         candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
-        candidate.calendar_event_id = event_id
-        candidate.interview_start_at = start_resolved
-        candidate.interview_timezone = timezone
         candidate = await self._candidate_repo.update(candidate)
         await self._session.commit()
-        return candidate
 
     async def _send_interview_email_notification(
         self,
@@ -2137,30 +2129,41 @@ class CandidateService:
         )
         await self._session.commit()
 
-    async def _get_interview_by_event_id(
-        self, candidate_id: UUID, event_id: str
-    ) -> Interview | None:
-        stmt = select(Interview).where(
-            Interview.candidate_id == candidate_id, Interview.calendar_event_id == event_id
-        )
-        res = await self._session.execute(stmt)
-        scalars = res.scalars()
-        if hasattr(scalars, "first"):
-            try:
-                return scalars.first()
-            except Exception:
-                return None
+        async def _get_interview_by_event_id(
+            self, candidate_id: UUID, event_id: str
+        ) -> Interview | None:
+            stmt = select(Interview).where(
+                Interview.candidate_id == candidate_id, Interview.calendar_event_id == event_id
+            )
+            res = await self._session.execute(stmt)
+            scalars = res.scalars()
+            if hasattr(scalars, "first"):
+                try:
+                    return scalars.first()
+                except Exception:
+                    return None
 
-    async def _get_interview_or_raise(self, interview_id: UUID) -> Interview:
-        """Retrieve an Interview by ID or raise InterviewNotFoundError."""
-        stmt = select(Interview).where(Interview.id == interview_id)
-        res = await self._session.execute(stmt)
-        interview = res.scalars().first()
-        if interview is None:
-            from src.modules.recruitment.domain.exceptions import InterviewNotFoundError
+        async def _get_scheduled_interview(self, candidate_id: UUID) -> Interview | None:
+            """Return the first scheduled Interview for a candidate, or None."""
+            stmt = (
+                select(Interview)
+                .where(Interview.candidate_id == candidate_id)
+                .where(Interview.status == "scheduled")
+                .limit(1)
+            )
+            res = await self._session.execute(stmt)
+            return res.scalars().first()
 
-            raise InterviewNotFoundError(f"Interview not found: {interview_id}")
-        return interview
+        async def _get_interview_or_raise(self, interview_id: UUID) -> Interview:
+            """Retrieve an Interview by ID or raise InterviewNotFoundError."""
+            stmt = select(Interview).where(Interview.id == interview_id)
+            res = await self._session.execute(stmt)
+            interview = res.scalars().first()
+            if interview is None:
+                from src.modules.recruitment.domain.exceptions import InterviewNotFoundError
+
+                raise InterviewNotFoundError(f"Interview not found: {interview_id}")
+            return interview
 
     @staticmethod
     def _assert_interview_is_scheduled(interview: Interview, action: str) -> None:
