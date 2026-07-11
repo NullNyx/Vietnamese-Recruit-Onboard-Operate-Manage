@@ -31,6 +31,7 @@ from src.modules.identity.container import (
 )
 from src.modules.identity.domain.entities import User
 from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
+from src.modules.recruitment.application.calendar_sync_service import CalendarSyncService
 from src.modules.recruitment.application.candidate_service import CandidateService
 from src.modules.recruitment.application.cv_processor import CVProcessorService
 from src.modules.recruitment.application.intent_classifier import IntentClassifierService
