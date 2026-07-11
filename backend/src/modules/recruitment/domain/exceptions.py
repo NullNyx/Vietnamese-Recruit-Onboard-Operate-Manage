@@ -247,6 +247,19 @@ class InterviewerMissingEmailError(RecruitmentError):
         super().__init__(details=details)
 
 
+class CalendarEventSyncError(RecruitmentError):
+    """Google Calendar event sync (events.list) failed.
+
+    Raised when the Calendar events.list request fails after retries,
+    wrapping non-401 non-410 errors so the sync service can distinguish
+    transient API failures from auth/expired-sync-token problems.
+    """
+
+    status_code = 502
+    error_code = "CALENDAR_SYNC_FAILED"
+    message = "Failed to sync calendar events"
+
+
 class CalendarEventCreateFailedError(RecruitmentError):
     """Google Calendar event creation failed.
 

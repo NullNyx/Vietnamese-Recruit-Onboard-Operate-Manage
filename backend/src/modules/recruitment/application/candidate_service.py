@@ -49,6 +49,7 @@ from src.modules.recruitment.domain.value_objects import (
     CalendarEvent,
     CalendarEventSpec,
     ParsedCV,
+    SyncEventChanges,
 )
 from src.modules.recruitment.infrastructure.audit_repository import log_audit
 from src.modules.recruitment.infrastructure.minio_client import RecruitmentMinIOClient
@@ -233,16 +234,31 @@ class CalendarPort(Protocol):
         """Patch an existing Calendar event identified by event_id."""
         ...
 
-    async def delete_event(
-        self,
-        access_token: str,
-        event_id: str,
-        calendar_id: str = "primary",
-    ) -> None:
-        """Delete (cancel) the Calendar event identified by event_id.
-        The calendar_id parameter defaults to "primary".
-        """
-        ...
+        async def delete_event(
+            self,
+            access_token: str,
+            event_id: str,
+            calendar_id: str = "primary",
+        ) -> None:
+            """Delete (cancel) the Calendar event identified by event_id.
+            The calendar_id parameter defaults to "primary".
+            """
+            ...
+
+        async def list_events(
+            self,
+            access_token: str,
+            calendar_id: str = "primary",
+            *,
+            sync_token: str | None = None,
+            page_token: str | None = None,
+            max_results: int = 250,
+        ) -> SyncEventChanges:
+            """List events (sync) from a Calendar, with optional sync token.
+
+            Returns changes since the last sync token, or a full snapshot.
+            """
+            ...
 
 
 @runtime_checkable

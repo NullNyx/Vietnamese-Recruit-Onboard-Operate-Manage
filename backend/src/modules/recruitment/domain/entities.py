@@ -139,6 +139,34 @@ class RecruitmentAuditLog(SQLModel, table=True):
     )
 
 
+class CalendarSyncCursor(SQLModel, table=True):
+    """Tracks the sync token for incremental calendar synchronization.
+
+    One cursor per Organization (singleton). The sync_token is used with
+    Google Calendar's events.list API to fetch only events newer than the
+    last successful sync. A 410 GONE from Google clears the token and
+    triggers a bounded full sync.
+    """
+
+    __tablename__ = "calendar_sync_cursors"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    organization_singleton_key: str = Field(
+        default="default", max_length=32, unique=True, nullable=False
+    )
+    sync_token: str | None = Field(default=None, max_length=1024)
+    page_token: str | None = Field(default=None, max_length=1024)
+    last_sync_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+
 class OrganizationSettings(SQLModel, table=True):
     """Single-row settings for the Organization (the company deployment).
 
@@ -214,6 +242,7 @@ class Interview(SQLModel, table=True):
     end_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     timezone: str = Field(max_length=64, nullable=False)
     calendar_event_id: str | None = Field(default=None, max_length=1024, index=True)
+    remote_location: str | None = Field(default=None, max_length=1024)
     needs_relink: bool = Field(default=False, nullable=False)
     calendar_etag: str | None = Field(default=None, max_length=255)
     calendar_updated: datetime | None = Field(

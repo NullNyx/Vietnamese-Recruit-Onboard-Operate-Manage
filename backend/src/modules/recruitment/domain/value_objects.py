@@ -10,6 +10,7 @@ per ADR-0008.
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -114,22 +115,46 @@ class CalendarEventSpec:
 
 @dataclass(frozen=True)
 class CalendarEvent:
-    """Result returned by the Calendar adapter after a create or patch.
+    """Result returned by the Calendar adapter after a create, patch, or sync.
 
     Models the relevant parts of the Google Calendar API response so the
     Scheduling_System can persist the event reference on the Candidate.
 
     Attributes:
-        event_id: Google Calendar event identifier (stored as
-            ``calendar_event_id`` on the Candidate).
+        event_id: Google Calendar event identifier.
         html_link: Link to view the event in Google Calendar, if returned.
         meet_link: Google Meet conferencing link, if one was generated.
+        location: Physical location from the calendar event, if set.
         invited_emails: Attendee emails that Google accepted on the event.
+        etag: ETag for optimistic concurrency.
+        updated: RFC3339 update timestamp from Google.
+        status: Event status ("confirmed", "cancelled", "tentative").
+        attendees: Raw attendee list with "email", "responseStatus", etc.
     """
 
     event_id: str
     html_link: str | None
     meet_link: str | None
-    invited_emails: tuple[str, ...]
+    location: str | None = None
+    invited_emails: tuple[str, ...] = ()
     etag: str | None = None
     updated: datetime | None = None
+    status: str | None = None
+    attendees: tuple[dict[str, Any], ...] = ()
+
+
+@dataclass(frozen=True)
+class SyncEventChanges:
+    """Result returned by the Calendar adapter after a sync (events.list).
+
+    Contains the list of changed events plus pagination/sync tokens.
+
+    Attributes:
+        events: Tuple of changed CalendarEvent objects.
+        next_sync_token: Token for the next incremental sync.
+        next_page_token: Token to paginate a single sync response.
+    """
+
+    events: tuple[CalendarEvent, ...] = ()
+    next_sync_token: str | None = None
+    next_page_token: str | None = None
