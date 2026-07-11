@@ -363,41 +363,42 @@ class PaginatedResponse(BaseModel):
     page: int
     page_size: int
 
-    class CandidateResponse(BaseModel):
-        """Response schema for a single candidate (used by action endpoints).
 
-        Attributes:
-            id: Candidate UUID.
-            name: Candidate full name.
-            email: Candidate email address.
-            phone: Candidate phone number.
-            skills: List of skills.
-            status: Current lifecycle status.
-            confidence_score: Confidence score (0.0-1.0).
-            rejection_reason: Rejection reason if rejected.
-            rejected_at: Rejection timestamp.
-            accepted_at: Acceptance timestamp.
-            archived_at: Archive timestamp.
-            created_at: Creation timestamp.
-            updated_at: Last update timestamp.
-        """
+class CandidateResponse(BaseModel):
+    """Response schema for a single candidate (used by action endpoints).
 
-        model_config = ConfigDict(from_attributes=True)
+    Attributes:
+        id: Candidate UUID.
+        name: Candidate full name.
+        email: Candidate email address.
+        phone: Candidate phone number.
+        skills: List of skills.
+        status: Current lifecycle status.
+        confidence_score: Confidence score (0.0-1.0).
+        rejection_reason: Rejection reason if rejected.
+        rejected_at: Rejection timestamp.
+        accepted_at: Acceptance timestamp.
+        archived_at: Archive timestamp.
+        created_at: Creation timestamp.
+        updated_at: Last update timestamp.
+    """
 
-        id: UUID
-        name: str
-        email: str
-        phone: str = ""
-        skills: list[str] = Field(default_factory=list)
-        status: CandidateStatus
-        confidence_score: float = 0.0
-        rejection_reason: str | None = None
-        rejected_at: datetime | None = None
-        accepted_at: datetime | None = None
-        archived_at: datetime | None = None
-        created_at: datetime
-        updated_at: datetime
-        job_opening_id: UUID | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    email: str
+    phone: str = ""
+    skills: list[str] = Field(default_factory=list)
+    status: CandidateStatus
+    confidence_score: float = 0.0
+    rejection_reason: str | None = None
+    rejected_at: datetime | None = None
+    accepted_at: datetime | None = None
+    archived_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+    job_opening_id: UUID | None = None
 
 
 class CVPresignedUrlResponse(BaseModel):

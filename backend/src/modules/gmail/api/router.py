@@ -830,7 +830,6 @@ async def classify_emails(
 async def _auto_process_cv_attachments(
     current_user: User,
     email_repo: EmailRepository,
-
     gmail_adapter: GmailAdapter,
     settings: GmailSettings,
     audit_logger: AuditLogger,
@@ -1087,7 +1086,6 @@ async def _evaluate_rules(
 
 async def _update_database_and_process_cvs(
     current_user: User,
-
     gmail_adapter: GmailAdapter,
     settings: Any,
     email_repo: EmailRepository,

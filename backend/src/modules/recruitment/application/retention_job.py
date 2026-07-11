@@ -69,18 +69,18 @@ async def _get_expired_candidates(
     statement = (
         select(Candidate)
         .where(
-                Candidate.status == CandidateStatus.REJECTED,
-                Candidate.rejected_at < cutoff,  # type: ignore[operator]
-                # A scheduled Interview owns a live Calendar event. Retention
-                # must never remove its Candidate first: HR must explicitly
-                # cancel it (which sends Google's cancellation) beforehand.
-                ~exists(
-                    select(Interview.id).where(
-                        Interview.candidate_id == Candidate.id,
-                        Interview.status == "scheduled",
-                    )
-                ),
-            )
+            Candidate.status == CandidateStatus.REJECTED,
+            Candidate.rejected_at < cutoff,  # type: ignore[operator]
+            # A scheduled Interview owns a live Calendar event. Retention
+            # must never remove its Candidate first: HR must explicitly
+            # cancel it (which sends Google's cancellation) beforehand.
+            ~exists(
+                select(Interview.id).where(
+                    Interview.candidate_id == Candidate.id,
+                    Interview.status == "scheduled",
+                )
+            ),
+        )
         .limit(batch_size)
     )
 

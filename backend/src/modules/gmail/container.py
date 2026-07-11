@@ -236,8 +236,9 @@ async def get_organization_google_connection_repository(
 async def get_email_sync_service(
     email_repo: EmailRepository = Depends(get_email_repository),
     sync_cursor_repo: SyncCursorRepository = Depends(get_sync_cursor_repository),
-    connection_repo: OrganizationGoogleConnectionRepository
-    = Depends(get_organization_google_connection_repository),
+    connection_repo: OrganizationGoogleConnectionRepository = Depends(
+        get_organization_google_connection_repository
+    ),
     audit_logger: AuditLogger = Depends(get_audit_logger),
 ) -> EmailSyncService:
     """Provide an EmailSyncService instance.
@@ -270,8 +271,9 @@ async def get_email_sync_service(
 
 async def get_send_service(
     email_repo: EmailRepository = Depends(get_email_repository),
-    connection_repo: OrganizationGoogleConnectionRepository
-    = Depends(get_organization_google_connection_repository),
+    connection_repo: OrganizationGoogleConnectionRepository = Depends(
+        get_organization_google_connection_repository
+    ),
     audit_logger: AuditLogger = Depends(get_audit_logger),
 ) -> SendService:
     """Provide a SendService instance.
