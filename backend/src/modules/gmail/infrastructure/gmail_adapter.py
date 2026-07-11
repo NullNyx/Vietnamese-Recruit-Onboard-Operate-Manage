@@ -310,25 +310,31 @@ class GmailAdapter:
                 raise
             raise GmailFetchError(f"Failed to fetch messages: {exc}") from exc
 
-    async def _list_message_ids(
+    async def list_message_ids(
         self,
         access_token: str,
         query: str | None = None,
         max_results: int = 100,
-    ) -> list[dict[str, Any]]:
-        """List message IDs from Gmail API messages.list.
+        page_token: str | None = None,
+    ) -> tuple[list[dict[str, str]], str | None]:
+        """List message IDs from Gmail API messages.list with pagination.
 
         Args:
             access_token: OAuth2 access token.
             query: Optional Gmail search query.
-            max_results: Maximum results to return.
+            max_results: Maximum results to return (max 500).
+            page_token: Optional page token for continuation.
 
         Returns:
-            List of message stubs with 'id' and 'threadId' keys.
+            Tuple of (message_stubs, next_page_token).
+            message_stubs is a list of dicts with 'id' or 'threadId' keys.
+            next_page_token is None if no more pages.
         """
         params: dict[str, str | int] = {"maxResults": max_results}
         if query:
             params["q"] = query
+        if page_token:
+            params["pageToken"] = page_token
 
         async def _request() -> dict[str, Any]:
             response = await self._http_client.get(
@@ -340,7 +346,46 @@ class GmailAdapter:
             return response.json()  # type: ignore[no-any-return]
 
         data = await self.retry_with_backoff(_request, quota_units=5)
-        return data.get("messages", [])  # type: ignore[no-any-return]
+        messages = data.get("messages", [])
+        next_token = data.get("nextPageToken")
+        return messages, next_token
+
+    async def _list_message_ids(
+        self,
+        access_token: str,
+        query: str | None = None,
+        max_results: int = 100,
+    ) -> list[dict[str, Any]]:
+        """List message IDs from Gmail API messages.list.
+
+        Legacy private method. Prefer list_message_ids for pagination.
+
+        Args:
+            access_token: OAuth2 access token.
+            query: Optional Gmail search query.
+            max_results: Maximum results to return.
+
+        Returns:
+            List of message stubs with 'id' and 'threadId' keys.
+        """
+        stubs, _ = await self.list_message_ids(
+            access_token, query=query, max_results=max_results, page_token=None
+        )
+        return stubs
+
+    async def get_single_message_metadata(
+        self, access_token: str, message_id: str
+    ) -> GmailMessageMetadata | None:
+        """Fetch metadata for a single message (public API).
+
+        Args:
+            access_token: OAuth2 access token.
+            message_id: Gmail message ID.
+
+        Returns:
+            GmailMessageMetadata or None if fetch fails.
+        """
+        return await self._get_message_metadata(access_token, message_id)
 
     async def _get_message_metadata(
         self, access_token: str, message_id: str

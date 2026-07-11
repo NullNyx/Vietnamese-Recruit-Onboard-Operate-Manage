@@ -225,3 +225,92 @@ class ErrorResponse(BaseModel):
     error_code: str
     message: str
     details: dict[str, Any] | None = None
+
+
+# ---------------------------------------------------------------------------
+# Historical import schemas
+# ---------------------------------------------------------------------------
+
+
+class ImportPreviewResponse(BaseModel):
+    """Response schema for historical import preview.
+
+    Attributes:
+        days: The requested time window in days.
+        estimated_count: Estimated number of importable messages not previously imported.
+        already_imported_count: Messages in window already imported.
+        query_window_start: ISO timestamp of the window start.
+        query_window_end: ISO timestamp of the window end.
+    """
+
+    days: int
+    estimated_count: int
+    already_imported_count: int
+    query_window_start: str
+    query_window_end: str
+
+
+class ImportStartRequest(BaseModel):
+    """Request schema for starting a historical import.
+
+    Attributes:
+        days: Time window in days (7 or 30).
+    """
+
+    days: int = Field(..., ge=7, le=30)
+
+
+class ImportStartResponse(BaseModel):
+    """Response schema for starting a historical import.
+
+    Attributes:
+        job_id: The UUID string of the started job.
+        status: Initial status (always 'running').
+        days: The time window in days.
+        message: Human-readable confirmation.
+    """
+
+    job_id: str
+    status: str = "running"
+    days: int
+    message: str
+
+
+class ImportStatusResponse(BaseModel):
+    """Response schema for import status check.
+
+    Attributes:
+        job_id: UUID string for the running/completed job, or None.
+        status: One of 'running', 'completed', 'cancelled', 'failed', 'none'.
+        days: The time window of the job.
+        total_count: Total messages found for the window.
+        processed_count: Messages processed so far / final.
+        cv_count: Messages classified as cv that entered Backbone Flow.
+        errors: Count of errors encountered.
+        started_at: ISO timestamp when the job started.
+        completed_at: ISO timestamp when the job finished or None.
+        error_message: Final error message if status == 'failed'.
+    """
+
+    job_id: str | None = None
+    status: str = "none"
+    days: int | None = None
+    total_count: int = 0
+    processed_count: int = 0
+    cv_count: int = 0
+    errors: int = 0
+    started_at: str | None = None
+    completed_at: str | None = None
+    error_message: str | None = None
+
+
+class ImportCancelResponse(BaseModel):
+    """Response schema for cancelling a historical import.
+
+    Attributes:
+        status: Result status ('cancelled' or 'no_active_job').
+        message: Human-readable description.
+    """
+
+    status: str
+    message: str

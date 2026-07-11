@@ -8,15 +8,20 @@ database session and Redis client from the identity module.
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import TYPE_CHECKING
 
 import httpx
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+if TYPE_CHECKING:
+    from arq.connections import ArqRedis
+
 from src.modules.gmail.application.attachment_service import AttachmentService
 from src.modules.gmail.application.classification_service import ClassificationService
 from src.modules.gmail.application.connection_service import ConnectionService
 from src.modules.gmail.application.email_sync_service import EmailSyncService
+from src.modules.gmail.application.import_service import HistoricalImportService
 from src.modules.gmail.application.label_service import LabelService
 from src.modules.gmail.application.send_service import SendService
 from src.modules.gmail.infrastructure.audit_logger import AuditLogger
@@ -33,6 +38,9 @@ from src.modules.identity.container import (
 )
 from src.modules.identity.container import (
     get_settings as get_auth_settings,
+)
+from src.modules.identity.infrastructure.connection_state_repository import (
+    OrganizationGoogleConnectionRepository,
 )
 from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
 
@@ -70,6 +78,22 @@ def get_http_client() -> httpx.AsyncClient:
         An httpx.AsyncClient for Gmail API calls.
     """
     return httpx.AsyncClient()
+
+
+async def get_arq_pool() -> ArqRedis:
+    """Create and cache the shared ARQ Redis pool.
+
+    Uses the same Redis URL as the auth settings. The pool is created
+    lazily and cached, so multiple call sites share one connection.
+
+    Returns:
+        An ArqRedis pool for enqueuing ARQ jobs.
+    """
+    from arq import create_pool
+    from arq.connections import RedisSettings
+
+    pool = await create_pool(RedisSettings.from_dsn(get_auth_settings().redis_url))
+    return pool
 
 
 # ---------------------------------------------------------------------------
@@ -333,4 +357,41 @@ async def get_classification_service(
         audit_logger=audit_logger,
         settings=settings,
         session=email_repo.session,
+    )
+
+
+async def get_historical_import_service(
+    email_repo: EmailRepository = Depends(get_email_repository),
+    sync_cursor_repo: SyncCursorRepository = Depends(get_sync_cursor_repository),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+    session: AsyncSession = Depends(get_db_session),
+) -> HistoricalImportService:
+    """Provide a HistoricalImportService instance.
+
+    Args:
+        email_repo: The email repository from DI.
+        sync_cursor_repo: The sync cursor repository from DI.
+        audit_logger: The audit logger from DI.
+        session: The async database session from DI.
+
+    Returns:
+        A HistoricalImportService configured with all dependencies.
+    """
+    auth_settings = get_auth_settings()
+    gmail_adapter = await get_gmail_adapter()
+    connection_repo = OrganizationGoogleConnectionRepository(session)
+
+    return HistoricalImportService(
+        session=session,
+        gmail_adapter=gmail_adapter,
+        email_repo=email_repo,
+        sync_cursor_repo=sync_cursor_repo,
+        connection_repo=connection_repo,
+        crypto=get_crypto_utils(),
+        audit_logger=audit_logger,
+        settings=get_gmail_settings(),
+        redis_client=get_redis_client(),
+        http_client=get_http_client(),
+        client_id=auth_settings.google_client_id,
+        client_secret=auth_settings.google_client_secret,
     )

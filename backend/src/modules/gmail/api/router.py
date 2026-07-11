@@ -26,6 +26,11 @@ from src.modules.gmail.api.schemas import (
     ConnectionStatusResponse,
     ConnectResponse,
     ErrorResponse,
+    ImportCancelResponse,
+    ImportPreviewResponse,
+    ImportStartRequest,
+    ImportStartResponse,
+    ImportStatusResponse,
     LabelRemoveRequest,
     MessageBodyResponse,
     MessageListItem,
@@ -42,6 +47,7 @@ from src.modules.gmail.application.connection_service import (
     ConnectionService,
 )
 from src.modules.gmail.application.email_sync_service import EmailSyncService
+from src.modules.gmail.application.import_service import HistoricalImportService
 from src.modules.gmail.application.label_service import LabelService
 from src.modules.gmail.application.send_service import (
     AttachmentData,
@@ -49,11 +55,13 @@ from src.modules.gmail.application.send_service import (
     SendService,
 )
 from src.modules.gmail.container import (
+    get_arq_pool,
     get_attachment_service,
     get_connection_service,
     get_email_repository,
     get_email_sync_service,
     get_gmail_adapter,
+    get_historical_import_service,
     get_label_service,
     get_send_service,
 )
@@ -76,6 +84,10 @@ SendServiceDep = Annotated[SendService, Depends(get_send_service)]
 LabelServiceDep = Annotated[LabelService, Depends(get_label_service)]
 AttachmentServiceDep = Annotated[AttachmentService, Depends(get_attachment_service)]
 GmailAdapterDep = Annotated[GmailAdapter, Depends(get_gmail_adapter)]
+HistoricalImportServiceDep = Annotated[
+    HistoricalImportService,
+    Depends(get_historical_import_service),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -244,6 +256,177 @@ async def manual_sync(
     return SyncResponse(
         synced_count=synced_count,
         status="ok",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Historical import endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/import/preview",
+    response_model=ImportPreviewResponse,
+    responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+    },
+)
+async def preview_import(
+    current_user: CurrentUserDep,
+    import_service: HistoricalImportServiceDep,
+    body: ImportStartRequest,
+) -> ImportPreviewResponse:
+    """Preview the number of importable emails in a time window.
+
+    Scans the Organization Shared Google Account INBOX for emails
+    within the specified window (7 or 30 days) and reports how many
+    have not yet been imported.
+
+    Args:
+        current_user: The authenticated HR user.
+        import_service: The historical import service.
+        body: Request with days parameter.
+
+    Returns:
+        ImportPreviewResponse with estimated counts.
+    """
+    result = await import_service.preview_import(body.days, current_user.id)
+    return ImportPreviewResponse(
+        days=result.days,
+        estimated_count=result.estimated_count,
+        already_imported_count=result.already_imported_count,
+        query_window_start=result.query_window_start,
+        query_window_end=result.query_window_end,
+    )
+
+
+@router.post(
+    "/import/start",
+    response_model=ImportStartResponse,
+    responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+    },
+)
+async def start_import(
+    current_user: CurrentUserDep,
+    import_service: HistoricalImportServiceDep,
+    body: ImportStartRequest,
+) -> ImportStartResponse:
+    """Start a historical email import job.
+
+    Enqueues an import for the specified window (7 or 30 days).
+    The import runs in the background; progress can be tracked
+    via the status endpoint.
+
+    Args:
+        current_user: The authenticated HR user.
+        import_service: The historical import service.
+        body: Request with days parameter.
+
+    Returns:
+        ImportStartResponse with job_id.
+    """
+    job_id = await import_service.start_import(body.days, current_user.id)
+
+    # Enqueue the ARQ background job using the shared pool.
+    try:
+        arq_pool = await get_arq_pool()
+        await arq_pool.enqueue_job("import_historical_emails")
+    except Exception as exc:
+        # Surface failure: clean up the zombie job state so the client
+        # sees a clear error instead of a phantom "running" job.
+        await import_service._cleanup_job_state()
+        logger.error(
+            "Failed to enqueue ARQ job for historical import %s: %s",
+            job_id,
+            exc,
+        )
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=500,
+            detail=(f"Không thể xếp hàng đợi import: {exc}. Vui lòng thử lại sau."),
+        )
+    return ImportStartResponse(
+        job_id=job_id,
+        status="running",
+        days=body.days,
+        message=f"Import {body.days}-ngày đã được khởi tạo. "
+        f"Kiểm tra trạng thái để theo dõi tiến độ.",
+    )
+
+
+@router.get(
+    "/import/status",
+    response_model=ImportStatusResponse,
+    responses={
+        401: {"model": ErrorResponse},
+    },
+)
+async def get_import_status(
+    import_service: HistoricalImportServiceDep,
+) -> ImportStatusResponse:
+    """Get the status of current or last historical import job.
+
+    Returns progress counters and current state.
+
+    Args:
+        import_service: The historical import service.
+
+    Returns:
+        ImportStatusResponse with job progress.
+    """
+    result = await import_service.get_import_status()
+    return ImportStatusResponse(
+        job_id=result.job_id,
+        status=result.status,
+        days=result.days,
+        total_count=result.total_count,
+        processed_count=result.processed_count,
+        cv_count=result.cv_count,
+        errors=result.errors,
+        started_at=result.started_at,
+        completed_at=result.completed_at,
+        error_message=result.error_message,
+    )
+
+
+@router.post(
+    "/import/cancel",
+    response_model=ImportCancelResponse,
+    responses={
+        401: {"model": ErrorResponse},
+    },
+)
+async def cancel_import(
+    current_user: CurrentUserDep,
+    import_service: HistoricalImportServiceDep,
+) -> ImportCancelResponse:
+    """Cancel a running historical import job.
+
+    Requests cancellation of the running import. The worker will
+    stop at the next batch boundary.
+
+    Args:
+        current_user: The authenticated HR user.
+        import_service: The historical import service.
+
+    Returns:
+        ImportCancelResponse confirming cancellation.
+    """
+    cancelled = await import_service.cancel_import(current_user.id)
+    if cancelled:
+        return ImportCancelResponse(
+            status="cancelled",
+            message="Đã yêu cầu dừng import. Job sẽ dừng sau batch hiện tại.",
+        )
+    return ImportCancelResponse(
+        status="no_active_job",
+        message="Không có import nào đang chạy.",
     )
 
 

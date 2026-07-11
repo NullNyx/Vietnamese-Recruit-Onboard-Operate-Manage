@@ -28,6 +28,7 @@ from arq.connections import RedisSettings
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.modules.gmail.application.email_sync_service import EmailSyncService
+from src.modules.gmail.application.import_service import HistoricalImportService
 from src.modules.gmail.infrastructure.audit_logger import AuditLogger
 from src.modules.gmail.infrastructure.config import GmailSettings
 from src.modules.gmail.infrastructure.email_repository import EmailRepository
@@ -199,6 +200,81 @@ async def poll_gmail_emails(ctx: dict[str, Any]) -> None:
             raise  # Let ARQ handle the retry at next interval
 
 
+async def import_historical_emails(ctx: dict[str, Any]) -> dict[str, Any]:
+    """ARQ task: execute the historical email import job.
+
+    Reads job metadata from Redis (set by the API's start_import endpoint),
+    builds a HistoricalImportService, and processes the import.
+    The job checks cancellation between batches.
+
+    Args:
+        ctx: The ARQ worker context dictionary containing shared resources.
+
+    Returns:
+        A summary dict with status and counts.
+    """
+    session_maker: async_sessionmaker[AsyncSession] = ctx["session_maker"]
+    redis_client: redis.Redis = ctx["redis_client"]
+    http_client: httpx.AsyncClient = ctx["http_client"]
+    crypto: CryptoUtils = ctx["crypto"]
+    quota_tracker: QuotaTracker = ctx["quota_tracker"]
+    auth_settings: AuthSettings = ctx["auth_settings"]
+    gmail_settings: GmailSettings = ctx["gmail_settings"]
+
+    async with session_maker() as session:
+        try:
+            connection_repo = OrganizationGoogleConnectionRepository(session)
+            connection = await connection_repo.get_singleton()
+
+            if connection is None or connection.status != "connected":
+                logger.warning("Historical import skipped: no active connection")
+                return {"status": "skipped", "reason": "no_connection"}
+
+            if connection.connected_by_user_id is None:
+                logger.error("Connection has no connected_by_user_id")
+                return {"status": "failed", "reason": "no_user_id"}
+
+            user_id = connection.connected_by_user_id
+
+            gmail_adapter = GmailAdapter(
+                settings=gmail_settings,
+                quota_tracker=quota_tracker,
+                http_client=http_client,
+                user_id=user_id,
+            )
+            email_repo = EmailRepository(session)
+            sync_cursor_repo = SyncCursorRepository(session)
+            audit_logger = AuditLogger(session, gmail_settings)
+
+            import_service = HistoricalImportService(
+                gmail_adapter=gmail_adapter,
+                session=session,
+                email_repo=email_repo,
+                sync_cursor_repo=sync_cursor_repo,
+                connection_repo=connection_repo,
+                crypto=crypto,
+                audit_logger=audit_logger,
+                settings=gmail_settings,
+                redis_client=redis_client,
+                http_client=http_client,
+                client_id=auth_settings.google_client_id,
+                client_secret=auth_settings.google_client_secret,
+            )
+
+            result = await import_service.process_import_job()
+
+            await session.commit()
+            return result
+
+        except Exception:
+            logger.error(
+                "Unhandled exception in import_historical_emails:\n%s",
+                traceback.format_exc(),
+            )
+            await session.rollback()
+            return {"status": "failed", "error": "Worker exception"}
+
+
 def _build_cron_schedule(poll_interval_seconds: int) -> set[int]:
     """Build the set of minute marks for the ARQ cron schedule.
 
@@ -234,6 +310,7 @@ class WorkerSettings:
 
     on_startup = startup
     on_shutdown = shutdown
+    functions = [import_historical_emails]
 
     cron_jobs = [
         cron(
