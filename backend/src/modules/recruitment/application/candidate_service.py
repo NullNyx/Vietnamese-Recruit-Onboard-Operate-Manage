@@ -23,7 +23,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
 from src.modules.employee.domain.entities import Employee
-from src.modules.recruitment.domain.entities import Candidate, CVDocument, JobOpening
+from src.modules.recruitment.domain.entities import (
+    Candidate,
+    CVDocument,
+    Interview,
+    InterviewParticipant,
+    JobOpening,
+)
 from src.modules.recruitment.domain.enums import CandidateStatus, JobOpeningStatus
 from src.modules.recruitment.domain.exceptions import (
     CalendarEventCreateFailedError,
@@ -1316,7 +1322,13 @@ class CandidateService:
         # event exists, so the schedule succeeds even without a Meet link (R5.3,
         # R6.2, R6.3).
         candidate = await self._persist_interview_schedule(
-            candidate, event.event_id, start_resolved, timezone
+            candidate,
+            event.event_id,
+            start_resolved,
+            timezone,
+            duration_minutes,
+            interviewer_ids,
+            notes,
         )
 
         # Step 9: success audit (R12.1). Audit failure never rolls back (R12.5):
@@ -1460,6 +1472,47 @@ class CandidateService:
         candidate.interview_start_at = start_resolved
         candidate.interview_timezone = timezone
         candidate = await self._candidate_repo.update(candidate)
+
+        # Update corresponding Interview and participants
+        if hasattr(self._session, "add"):
+            interview = await self._get_interview_by_event_id(candidate.id, event_id)
+            if interview:
+                interview.start_at = start_resolved
+                interview.end_at = start_resolved + timedelta(minutes=duration_minutes)
+                interview.timezone = timezone
+                self._session.add(interview)
+
+                # Delete old participants except candidate
+                from sqlalchemy import text
+
+                await self._session.execute(
+                    text(
+                        "DELETE FROM interview_participants "
+                        "WHERE interview_id = :interview_id AND type != 'candidate'"
+                    ),
+                    {"interview_id": interview.id},
+                )
+
+                for emp_id in interviewer_ids:
+                    emp_stmt = select(Employee).where(Employee.id == emp_id)
+                    emp_res = await self._session.execute(emp_stmt)
+                    emp_scalars = emp_res.scalars()
+                    emp = None
+                    if hasattr(emp_scalars, "first"):
+                        try:
+                            emp = emp_scalars.first()
+                        except Exception:
+                            pass
+                    if emp:
+                        emp_part = InterviewParticipant(
+                            interview_id=interview.id,
+                            type="employee",
+                            email=emp.email,
+                            name=emp.full_name,
+                            employee_id=emp_id,
+                        )
+                        self._session.add(emp_part)
+
         await self._session.commit()
 
         # Step 8: reschedule audit recording previous/new start (R12.2). Audit
@@ -1547,6 +1600,22 @@ class CandidateService:
             )
         except Exception as exc:
             await self._session.rollback()
+
+            # Check if event is not found / not accessible on Google Calendar (e.g. 404/410)
+            is_not_found = False
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (404, 410):
+                is_not_found = True
+            elif "404" in str(exc) or "410" in str(exc):
+                is_not_found = True
+
+            if is_not_found:
+                # Mark interview as needs_relink = True
+                interview = await self._get_interview_by_event_id(candidate_id, event_id)
+                if interview:
+                    interview.needs_relink = True
+                    self._session.add(interview)
+                    await self._session.commit()
+
             await log_audit(
                 session=self._session,
                 operation_type="interview_reschedule_failed",
@@ -1717,7 +1786,19 @@ class CandidateService:
                 user_id,
                 lambda token: calendar_port.delete_event(token, event_id),
             )
+            # Update corresponding Interview status to cancelled on success
+            interview = await self._get_interview_by_event_id(candidate.id, event_id)
+            if interview:
+                interview.status = "cancelled"
+                self._session.add(interview)
+                await self._session.commit()
         except Exception as exc:
+            # Update corresponding Interview status to cancelled even on failure
+            interview = await self._get_interview_by_event_id(candidate.id, event_id)
+            if interview:
+                interview.status = "cancelled"
+                self._session.add(interview)
+                await self._session.commit()
             # Cancellation failure must NOT block the already-committed terminal
             # transition (R8.4, R8.5). Record a failed-cancellation audit entry
             # capturing the action and the calendar_event_id (R8.6).
@@ -1878,14 +1959,13 @@ class CandidateService:
         self,
         user_id: UUID,
         candidate_id: UUID,
+        calendar_port: Any,
         spec: CalendarEventSpec,
     ) -> CalendarEvent:
-        if self._calendar_port is None:
-            raise RuntimeError("Calendar port is not configured")
         try:
             return await self._with_calendar_token(
                 user_id,
-                lambda token: self._calendar_port.create_event(token, spec),
+                lambda token: calendar_port.create_event(token, spec),
             )
         except Exception as exc:
             await self._session.rollback()
@@ -1912,7 +1992,60 @@ class CandidateService:
         event_id: str,
         start_resolved: datetime,
         timezone: str,
+        duration_minutes: int,
+        interviewer_ids: list[UUID],
+        notes: str | None = None,
     ) -> Candidate:
+        # Check if an Interview with this event_id already exists for this candidate
+        if hasattr(self._session, "add"):
+            existing_interview = await self._get_interview_by_event_id(candidate.id, event_id)
+
+            if not existing_interview:
+                interview = Interview(
+                    candidate_id=candidate.id,
+                    status="scheduled",
+                    round_name="Interview",
+                    start_at=start_resolved,
+                    end_at=start_resolved + timedelta(minutes=duration_minutes),
+                    timezone=timezone,
+                    calendar_event_id=event_id,
+                    needs_relink=False,
+                )
+                self._session.add(interview)
+                if hasattr(self._session, "flush"):
+                    try:
+                        await self._session.flush()
+                    except Exception:
+                        pass
+
+                cand_part = InterviewParticipant(
+                    interview_id=interview.id,
+                    type="candidate",
+                    email=candidate.email,
+                    name=candidate.name,
+                )
+                self._session.add(cand_part)
+
+                for emp_id in interviewer_ids:
+                    emp_stmt = select(Employee).where(Employee.id == emp_id)
+                    emp_res = await self._session.execute(emp_stmt)
+                    emp_scalars = emp_res.scalars()
+                    emp = None
+                    if hasattr(emp_scalars, "first"):
+                        try:
+                            emp = emp_scalars.first()
+                        except Exception:
+                            pass
+                    if emp:
+                        emp_part = InterviewParticipant(
+                            interview_id=interview.id,
+                            type="employee",
+                            email=emp.email,
+                            name=emp.full_name,
+                            employee_id=emp_id,
+                        )
+                        self._session.add(emp_part)
+
         candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
         candidate.calendar_event_id = event_id
         candidate.interview_start_at = start_resolved
@@ -1968,80 +2101,17 @@ class CandidateService:
         )
         await self._session.commit()
 
-    async def _create_calendar_event(
-        self,
-        user_id: UUID,
-        candidate_id: UUID,
-        calendar_port: Any,
-        spec: CalendarEventSpec,
-    ) -> CalendarEvent:
-        try:
-            return await self._with_calendar_token(
-                user_id,
-                lambda token: calendar_port.create_event(token, spec),
-            )
-        except Exception as exc:
-            await self._session.rollback()
-            await log_audit(
-                session=self._session,
-                operation_type="interview_schedule_failed",
-                entity_type="candidate",
-                entity_id=candidate_id,
-                user_id=user_id,
-                new_value={
-                    "attempted_action": "schedule_interview",
-                    "candidate_id": str(candidate_id),
-                    "error": str(exc),
-                },
-                change_summary="Interview schedule failed: Calendar event creation error",
-                success=False,
-            )
-            await self._session.commit()
-            raise CalendarEventCreateFailedError() from exc
-
-    async def _persist_interview_schedule(
-        self,
-        candidate: Candidate,
-        event_id: str,
-        start_resolved: datetime,
-        timezone: str,
-    ) -> Candidate:
-        candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
-        candidate.calendar_event_id = event_id
-        candidate.interview_start_at = start_resolved
-        candidate.interview_timezone = timezone
-        candidate = await self._candidate_repo.update(candidate)
-        await self._session.commit()
-        return candidate
-
-    async def _audit_interview_schedule(
-        self,
-        user_id: UUID,
-        candidate: Candidate,
-        event_id: str,
-        start_resolved: datetime,
-        timezone: str,
-        interviewer_ids: list[UUID],
-        previous_status: str,
-    ) -> None:
-        await log_audit(
-            session=self._session,
-            operation_type="interview_scheduled",
-            entity_type="candidate",
-            entity_id=candidate.id,
-            user_id=user_id,
-            previous_value={"status": previous_status},
-            new_value={
-                "status": CandidateStatus.INTERVIEW_SCHEDULED,
-                "calendar_event_id": event_id,
-                "candidate_id": str(candidate.id),
-                "start": start_resolved.isoformat(),
-                "timezone": timezone,
-                "interviewer_ids": [str(id_) for id_ in interviewer_ids],
-            },
-            change_summary=(
-                f"Interview scheduled with {len(interviewer_ids)} interviewer(s); event {event_id}"
-            ),
-            success=True,
+    async def _get_interview_by_event_id(
+        self, candidate_id: UUID, event_id: str
+    ) -> Interview | None:
+        stmt = select(Interview).where(
+            Interview.candidate_id == candidate_id, Interview.calendar_event_id == event_id
         )
-        await self._session.commit()
+        res = await self._session.execute(stmt)
+        scalars = res.scalars()
+        if hasattr(scalars, "first"):
+            try:
+                return scalars.first()
+            except Exception:
+                return None
+        return None

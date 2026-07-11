@@ -29,6 +29,8 @@ from src.modules.recruitment.api.schemas import (
     CandidateResponse,
     CVDocumentResponse,
     CVPresignedUrlResponse,
+    InterviewParticipantResponse,
+    InterviewResponse,
     ReassignCandidateRequest,
     RejectRequest,
     ScheduleInterviewRequest,
@@ -39,7 +41,7 @@ from src.modules.recruitment.application.candidate_service import (
     PaginatedCandidates,
 )
 from src.modules.recruitment.container import get_candidate_service
-from src.modules.recruitment.domain.entities import JobOpening
+from src.modules.recruitment.domain.entities import Interview, InterviewParticipant, JobOpening
 from src.modules.recruitment.domain.enums import CandidateStatus, ProcessingStatus
 from src.modules.recruitment.domain.exceptions import (
     CandidateNotFoundError,
@@ -260,6 +262,44 @@ async def get_candidate(
         if jo:
             job_opening_title = jo.title
 
+    # Fetch interviews for this candidate
+    interviews_stmt = select(Interview).where(Interview.candidate_id == candidate.id)
+    interviews_res = await session.execute(interviews_stmt)
+    interviews_list = interviews_res.scalars().all()
+
+    interview_responses = []
+    for iv in interviews_list:
+        parts_stmt = select(InterviewParticipant).where(InterviewParticipant.interview_id == iv.id)
+        parts_res = await session.execute(parts_stmt)
+        parts_list = parts_res.scalars().all()
+
+        part_responses = [
+            InterviewParticipantResponse(
+                id=p.id,
+                interview_id=p.interview_id,
+                type=p.type,
+                email=p.email,
+                name=p.name,
+                employee_id=p.employee_id,
+            )
+            for p in parts_list
+        ]
+
+        interview_responses.append(
+            InterviewResponse(
+                id=iv.id,
+                candidate_id=iv.candidate_id,
+                status=iv.status,
+                round_name=iv.round_name,
+                start_at=iv.start_at,
+                end_at=iv.end_at,
+                timezone=iv.timezone,
+                calendar_event_id=iv.calendar_event_id,
+                needs_relink=iv.needs_relink,
+                participants=part_responses,
+            )
+        )
+
     return CandidateDetailResponse(
         id=candidate.id,
         name=candidate.name,
@@ -281,6 +321,7 @@ async def get_candidate(
         job_opening_id=candidate.job_opening_id,
         job_opening_title=job_opening_title,
         cv_documents=cv_docs,
+        interviews=interview_responses,
     )
 
 
