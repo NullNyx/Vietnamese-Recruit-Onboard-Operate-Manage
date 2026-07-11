@@ -178,7 +178,7 @@ class OrganizationGoogleConnectionService:
         if not email or not hd:
             raise DomainAccessDeniedError()
         domains = await self._org_settings_repo.get_allowed_domains()
-        if domains and hd.lower() not in {d.lower() for d in domains}:
+        if not domains or hd.lower() not in {d.lower() for d in domains}:
             raise DomainAccessDeniedError()
         refresh_token = data.get("refresh_token")
         if current and current.refresh_token_enc and refresh_token is None:
@@ -198,11 +198,16 @@ class OrganizationGoogleConnectionService:
             connected_by_user_id=hr.id,
         )
         await self._connection_repo.upsert_singleton(connection)
+        action_type = AuditActionType.ORG_GOOGLE_CONNECT
+        if current and current.email and current.email != email:
+            action_type = AuditActionType.ORG_GOOGLE_SWITCH_ACCOUNT
+        elif current and current.status == "connected":
+            action_type = AuditActionType.ORG_GOOGLE_RECONNECT
         await self._audit_service.log_action(
             admin=hr,
-            action_type=AuditActionType.ORG_GOOGLE_CONNECT,
-            details={"email": email, "result": "connected"},
-        )
+            action_type=action_type,
+            details={"result": "connected"},
+            )
         return OrganizationGoogleConnectionResponse(status="connected", email=email, has_secret=True)
 
     async def disconnect(self, hr: User) -> OrganizationGoogleConnectionResponse:

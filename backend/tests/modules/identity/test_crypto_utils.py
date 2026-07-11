@@ -129,3 +129,31 @@ class TestDecryptionFailures:
     def test_invalid_base64_fails(self, crypto: CryptoUtils) -> None:
         with pytest.raises(Exception):
             crypto.decrypt("not-valid-base64!!!")
+
+
+class TestVersionedEnvelope:
+    def test_encrypt_returns_versioned_envelope(self, crypto: CryptoUtils) -> None:
+        encrypted = crypto.encrypt("secret")
+        payload = base64.b64decode(encrypted).decode("utf-8")
+        assert "format_version" in payload
+        assert "key_version" in payload
+        assert "nonce" in payload
+        assert "ciphertext" in payload
+
+    def test_decrypt_legacy_nonce_ciphertext_format(self) -> None:
+        key = _generate_valid_key_b64()
+        crypto = CryptoUtils(key)
+        nonce = os.urandom(12)
+        legacy_ciphertext = crypto._aesgcm.encrypt(nonce, b"legacy", b"v1")
+        raw = base64.b64encode(nonce + legacy_ciphertext).decode("ascii")
+        assert crypto.decrypt(raw) == "legacy"
+
+    def test_previous_key_can_decrypt_legacy_payload(self) -> None:
+        current_key = _generate_valid_key_b64()
+        previous_key = _generate_valid_key_b64()
+        writer = CryptoUtils(previous_key)
+        nonce = os.urandom(12)
+        legacy_ciphertext = writer._aesgcm.encrypt(nonce, b"old", b"v1")
+        raw = base64.b64encode(nonce + legacy_ciphertext).decode("ascii")
+        reader = CryptoUtils(current_key, previous_encryption_key_b64=previous_key)
+        assert reader.decrypt(raw) == "old"

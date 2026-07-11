@@ -313,3 +313,8 @@ class TestAdminSchemasCompat:
         assert WhitelistEntryCreatedResponse is not None
         assert WhitelistEntrySchema is not None
         assert WhitelistListResponse is not None
+
+
+    def test_google_connection_routes_exist(self, client):
+        assert client.get("/api/auth/organization-google-connection/authorize-url").status_code in {200, 401, 403}
+        assert client.post("/api/auth/organization-google-connection/reconnect").status_code in {200, 401, 403}
