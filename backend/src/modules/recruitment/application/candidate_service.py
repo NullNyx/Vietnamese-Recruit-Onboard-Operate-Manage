@@ -2092,7 +2092,6 @@ class CandidateService:
             except Exception:
                 return None
 
-
     async def _get_interview_or_raise(self, interview_id: UUID) -> Interview:
         """Retrieve an Interview by ID or raise InterviewNotFoundError."""
         stmt = select(Interview).where(Interview.id == interview_id)
@@ -2390,7 +2389,6 @@ class CandidateService:
 
         return interview
 
-
     # ─── Interview lifecycle: complete, cancel, replacement (GH #155) ──────────
 
     async def complete_interview(self, interview_id: UUID) -> Interview:
@@ -2470,16 +2468,14 @@ class CandidateService:
             try:
                 await self._with_calendar_token(
                     user_id,
-                    lambda token: calendar_port.delete_event(
-                        token, event_id
-                    ),
+                    lambda token: calendar_port.delete_event(token, event_id),
                 )
             except Exception as exc:
                 # Check if the event is already gone (404/410) -- treat as success.
                 is_gone = False
-                if (
-                    isinstance(exc, httpx.HTTPStatusError)
-                    and exc.response.status_code in (404, 410)
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
+                    404,
+                    410,
                 ):
                     is_gone = True
                 elif "404" in str(exc) or "410" in str(exc):
@@ -2609,4 +2605,3 @@ class CandidateService:
         await self._session.commit()
 
         return new_interview
-

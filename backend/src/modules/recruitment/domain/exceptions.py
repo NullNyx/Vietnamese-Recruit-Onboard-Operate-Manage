@@ -371,6 +371,7 @@ class CandidateAssignmentBlockedError(RecruitmentError):
     error_code = "CANDIDATE_ASSIGNMENT_BLOCKED"
     message = "Cannot change assignment for a candidate in terminal status"
 
+
 class InterviewNotFoundError(RecruitmentError):
     """Interview with given ID does not exist.
 

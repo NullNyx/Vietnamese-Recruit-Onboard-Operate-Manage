@@ -487,9 +487,12 @@ async def reschedule_interview(
     return CandidateResponse.model_validate(candidate)
 
     # ---------------------------------------------------------------------------
+
+
 # ---------------------------------------------------------------------------
 # Create interview (GH #154)
 # ---------------------------------------------------------------------------
+
 
 @candidate_router.post(
     "/{candidate_id}/create-interview",
@@ -567,7 +570,6 @@ async def create_interview(
         needs_relink=interview.needs_relink,
         participants=part_responses,
     )
-
 
 
 # ---------------------------------------------------------------------------
@@ -784,6 +786,7 @@ async def create_replacement_interview(
         needs_relink=interview.needs_relink,
         participants=part_responses,
     )
+
 
 # Send email
 # ---------------------------------------------------------------------------
