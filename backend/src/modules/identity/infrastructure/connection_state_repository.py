@@ -51,6 +51,25 @@ class OrganizationGoogleConnectionRepository:
         await self.session.flush()
         return existing
 
+        async def update_status(self, status: str) -> OrganizationGoogleConnection:
+            """Update only the status field of the organization connection.
+
+            Args:
+                status: The new status value.
+
+            Returns:
+                The updated OrganizationGoogleConnection entity.
+            """
+            existing = await self.get_singleton()
+            if existing is None:
+                existing = OrganizationGoogleConnection(status=status)
+                self.session.add(existing)
+            else:
+                existing.status = status
+            existing.updated_at = datetime.now(UTC)
+            await self.session.flush()
+            return existing
+
     async def disconnect(self) -> OrganizationGoogleConnection:
         existing = await self.get_singleton()
         if existing is None:

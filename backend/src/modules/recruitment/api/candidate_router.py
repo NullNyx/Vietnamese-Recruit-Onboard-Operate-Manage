@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
+from src.modules.gmail.api.schemas import OutboundEmailResponse as OutboundEmailResponseSchema
 from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User, UserRole
 from src.modules.recruitment.api.schemas import (
@@ -492,41 +493,61 @@ async def reschedule_interview(
 
 @candidate_router.post(
     "/{candidate_id}/send-email",
-    status_code=200,
+    status_code=201,
+    response_model=OutboundEmailResponseSchema,
 )
 async def send_email(
     candidate_id: UUID,
     body: SendEmailRequest,
     current_user: CurrentUserDep,
     candidate_service: CandidateServiceDep,
-) -> dict[str, str]:
-    """Send an email to a candidate via Gmail.
+    session: AsyncSession = Depends(get_db_session),
+) -> OutboundEmailResponseSchema:
+    """Create an outbound email command for a candidate.
 
-    Validates Gmail connection and candidate email, then sends
-    the email using the Gmail adapter.
+    Instead of sending directly, creates an OutboundEmail record
+    with pending status. A background process sends it using the
+    Organization Google Connection.
 
     Args:
         candidate_id: UUID of the candidate.
-        body: Email parameters (subject, body_html, optional template).
+        body: Email parameters (subject, body_html).
         current_user: The authenticated user.
         candidate_service: The candidate service.
+        session: The async database session.
 
     Returns:
-        Success message.
+        The created OutboundEmail record.
 
     Raises:
         CandidateNotFoundError: If the candidate doesn't exist.
-        GmailNotConnectedError: If Gmail is not connected.
         ValueError: If the candidate's email is invalid.
     """
-    await candidate_service.send_email_to_candidate(
+
+    from src.modules.gmail.container import build_outbound_email_service
+
+    candidate = await candidate_service._get_candidate_or_raise(candidate_id)
+
+    # Validate candidate email
+    if not candidate.email or not candidate.email.strip():
+        raise ValueError(f"Candidate email is empty or invalid: '{candidate.email}'")
+    email = candidate.email.strip()
+    if "@" not in email or email.startswith("@") or email.endswith("@"):
+        raise ValueError(f"Candidate email is invalid: '{candidate.email}'")
+
+    outbound_service = await build_outbound_email_service(session)
+    outbound = await outbound_service.create_outbound(
         candidate_id=candidate_id,
+        recipient_email=email,
         subject=body.subject,
         body_html=body.body_html,
-        template_name=body.template_name,
+        created_by_user_id=current_user.id,
+        hr_user=current_user,
     )
 
-    return {"message": "Email sent successfully"}
+    await session.commit()
+
+    return OutboundEmailResponseSchema.model_validate(outbound)
 
 
 # ---------------------------------------------------------------------------

@@ -1,8 +1,8 @@
 """Domain exceptions for the Gmail Integration module.
 
 This module defines the exception hierarchy used throughout the Gmail
-module to represent business rule violations, API errors, and
-connection state issues.
+module to represent business rule violations, API errors, connection
+state issues, and outbound email lifecycle errors.
 """
 
 
@@ -165,3 +165,66 @@ class GmailImportException(GmailError):
     status_code = 409
     error_code = "GMAIL_IMPORT_ERROR"
     message = "Historical email import operation failed"
+
+
+# ---------------------------------------------------------------------------
+# Outbound email exceptions
+# ---------------------------------------------------------------------------
+
+
+class OutboundEmailNotFoundError(GmailError):
+    """Outbound email record does not exist.
+
+    Raised when an operation targets an outbound email ID that
+    cannot be found in the database.
+    """
+
+    status_code = 404
+    error_code = "OUTBOUND_EMAIL_NOT_FOUND"
+    message = "Outbound email not found"
+
+
+class OutboundEmailAlreadySentError(GmailError):
+    """Outbound email has already been sent.
+
+    Raised when retry is attempted on an already-sent email.
+    """
+
+    status_code = 409
+    error_code = "OUTBOUND_ALREADY_SENT"
+    message = "Outbound email has already been sent"
+
+
+class OutboundEmailMaxRetriesExceededError(GmailError):
+    """Outbound email has exceeded maximum retry attempts.
+
+    Raised when retry is attempted past max_retries.
+    """
+
+    status_code = 409
+    error_code = "OUTBOUND_MAX_RETRIES"
+    message = "Outbound email has exceeded maximum retry attempts"
+
+
+class OrganizationNotConnectedError(GmailError):
+    """Organization Google Connection is not active.
+
+    Raised when sending requires the Organization Google Connection
+    but it is not in 'connected' status.
+    """
+
+    status_code = 409
+    error_code = "ORG_NOT_CONNECTED"
+    message = "Organization Google Connection is not active"
+
+
+class OutboundEmailIdempotencyConflictError(GmailError):
+    """Idempotency key already exists with different parameters.
+
+    Raised when creating an outbound email with a duplicate
+    idempotency key but different content.
+    """
+
+    status_code = 409
+    error_code = "OUTBOUND_IDEMPOTENCY_CONFLICT"
+    message = "Idempotency key already exists with different content"

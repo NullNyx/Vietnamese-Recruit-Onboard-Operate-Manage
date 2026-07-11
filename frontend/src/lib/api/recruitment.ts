@@ -351,13 +351,13 @@ export async function rescheduleInterview(
 export async function sendEmail(
   id: string,
   data: SendEmailRequest,
-): Promise<void> {
+): Promise<OutboundEmailResponse> {
   const res = await fetchWithTimeout(`${BASE}/candidates/${id}/send-email`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  await handleResponse<unknown>(res);
+  return handleResponse<OutboundEmailResponse>(res);
 }
 
 /**
@@ -620,4 +620,93 @@ export interface JobOpeningMetrics {
 export async function getJobOpeningMetrics(): Promise<JobOpeningMetrics> {
   const res = await fetchWithTimeout(`${BASE}/job-openings/metrics`);
   return handleResponse<JobOpeningMetrics>(res);
+}
+
+// ---------------------------------------------------------------------------
+// Outbound Email Types and API Functions
+// ---------------------------------------------------------------------------
+
+export type OutboundEmailStatus = "pending" | "sending" | "sent" | "failed";
+
+export interface OutboundEmailResponse {
+  id: string;
+  candidate_id: string | null;
+  subject: string;
+  recipient_email: string;
+  sender_email: string | null;
+  status: OutboundEmailStatus;
+  gmail_message_id: string | null;
+  gmail_thread_id: string | null;
+  error_message: string | null;
+  retry_count: number;
+  max_retries: number;
+  last_retry_at: string | null;
+  created_by_user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutboundEmailListResponse {
+  items: OutboundEmailResponse[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface OutboundEmailRetryResponse {
+  id: string;
+  status: OutboundEmailStatus;
+  message: string;
+}
+
+/**
+ * Get the status of an outbound email.
+ */
+export async function getOutboundEmail(
+  outboundId: string,
+): Promise<OutboundEmailResponse> {
+  const res = await fetchWithTimeout(`/api/outbound-emails/${outboundId}`);
+  return handleResponse<OutboundEmailResponse>(res);
+}
+
+/**
+ * List outbound emails for a candidate.
+ */
+export async function listOutboundEmails(
+  params: { candidate_id?: string; page?: number; page_size?: number } = {},
+): Promise<OutboundEmailListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params.candidate_id) searchParams.set("candidate_id", params.candidate_id);
+  if (params.page) searchParams.set("page", String(params.page));
+  if (params.page_size) searchParams.set("page_size", String(params.page_size));
+  const query = searchParams.toString();
+  const url = `/api/outbound-emails${query ? `?${query}` : ""}`;
+  const res = await fetchWithTimeout(url);
+  return handleResponse<OutboundEmailListResponse>(res);
+}
+
+/**
+ * Send (process) a pending outbound email.
+ */
+export async function sendOutboundEmail(
+  outboundId: string,
+): Promise<OutboundEmailResponse> {
+  const res = await fetchWithTimeout(
+    `/api/outbound-emails/${outboundId}/send`,
+    { method: "POST" },
+  );
+  return handleResponse<OutboundEmailResponse>(res);
+}
+
+/**
+ * Retry a failed outbound email.
+ */
+export async function retryOutboundEmail(
+  outboundId: string,
+): Promise<OutboundEmailRetryResponse> {
+  const res = await fetchWithTimeout(
+    `/api/outbound-emails/${outboundId}/retry`,
+    { method: "POST" },
+  );
+  return handleResponse<OutboundEmailRetryResponse>(res);
 }

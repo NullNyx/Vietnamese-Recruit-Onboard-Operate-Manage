@@ -48,6 +48,7 @@ from src.modules.gmail.domain.entities import (  # noqa: E402, F401
     GmailLabelMapping,
     EmailAttachment,
     GmailAuditLog,
+    OutboundEmail,
 )
 from src.modules.recruitment.domain.entities import (  # noqa: E402, F401
     Candidate,

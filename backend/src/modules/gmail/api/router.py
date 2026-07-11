@@ -35,6 +35,9 @@ from src.modules.gmail.api.schemas import (
     MessageBodyResponse,
     MessageListItem,
     MessageListResponse,
+    OutboundEmailCreateRequest,
+    OutboundEmailListResponse,
+    OutboundEmailResponse,
     SendEmailRequest,
     SendEmailResponse,
     SyncResponse,
@@ -49,6 +52,7 @@ from src.modules.gmail.application.connection_service import (
 from src.modules.gmail.application.email_sync_service import EmailSyncService
 from src.modules.gmail.application.import_service import HistoricalImportService
 from src.modules.gmail.application.label_service import LabelService
+from src.modules.gmail.application.outbound_email_service import OutboundEmailService
 from src.modules.gmail.application.send_service import (
     AttachmentData,
     SendEmailParams,
@@ -63,6 +67,7 @@ from src.modules.gmail.container import (
     get_gmail_adapter,
     get_historical_import_service,
     get_label_service,
+    get_outbound_email_service,
     get_send_service,
 )
 from src.modules.gmail.infrastructure.email_repository import EmailRepository
@@ -82,6 +87,11 @@ EmailSyncServiceDep = Annotated[EmailSyncService, Depends(get_email_sync_service
 EmailRepositoryDep = Annotated[EmailRepository, Depends(get_email_repository)]
 SendServiceDep = Annotated[SendService, Depends(get_send_service)]
 LabelServiceDep = Annotated[LabelService, Depends(get_label_service)]
+
+OutboundEmailServiceDep = Annotated[
+    OutboundEmailService,
+    Depends(get_outbound_email_service),
+]
 AttachmentServiceDep = Annotated[AttachmentService, Depends(get_attachment_service)]
 GmailAdapterDep = Annotated[GmailAdapter, Depends(get_gmail_adapter)]
 HistoricalImportServiceDep = Annotated[
@@ -1574,4 +1584,268 @@ async def reclassify_email(
         has_attachments=email.has_attachments,
         category=email.category,
         processing_status=email.processing_status,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Outbound Email endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/outbound",
+    response_model=OutboundEmailResponse,
+    responses={
+        401: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+    },
+)
+async def create_outbound_email(
+    body: OutboundEmailCreateRequest,
+    current_user: CurrentUserDep,
+    outbound_service: OutboundEmailServiceDep,
+) -> OutboundEmailResponse:
+    """Create a new outbound email command (pending).
+
+    Does NOT send the email. Generates an idempotency key so
+    duplicate creation requests return the existing record.
+
+    Args:
+        body: The outbound email creation request.
+        current_user: The authenticated HR user.
+        outbound_service: The outbound email service.
+
+    Returns:
+        OutboundEmailResponse with the created record.
+    """
+    result = await outbound_service.create_outbound(
+        candidate_id=body.candidate_id,
+        recipient_email=body.recipient_email,
+        subject=body.subject,
+        body_html=body.body_html,
+        created_by_user_id=current_user.id,
+        hr_user=current_user,
+    )
+    return OutboundEmailResponse(
+        id=result.id,
+        candidate_id=result.candidate_id,
+        subject=result.subject,
+        recipient_email=result.recipient_email,
+        sender_email=result.sender_email,
+        status=result.status,
+        gmail_message_id=result.gmail_message_id,
+        gmail_thread_id=result.gmail_thread_id,
+        error_message=result.error_message,
+        retry_count=result.retry_count,
+        max_retries=result.max_retries,
+        last_retry_at=result.last_retry_at,
+        created_by_user_id=result.created_by_user_id,
+        created_at=result.created_at,
+        updated_at=result.updated_at,
+    )
+
+
+@router.post(
+    "/outbound/{outbound_id}/send",
+    response_model=OutboundEmailResponse,
+    responses={
+        401: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+        502: {"model": ErrorResponse},
+    },
+)
+async def send_outbound_email(
+    outbound_id: UUID,
+    current_user: CurrentUserDep,
+    outbound_service: OutboundEmailServiceDep,
+) -> OutboundEmailResponse:
+    """Send a pending outbound email immediately.
+
+    Uses the Organization Google Connection token to send.
+    On auth failure, marks the connection as reauthorization_required.
+
+    Args:
+        outbound_id: The UUID of the outbound email to send.
+        current_user: The authenticated HR user.
+        outbound_service: The outbound email service.
+
+    Returns:
+        OutboundEmailResponse with updated status.
+    """
+    result = await outbound_service.send_outbound(
+        outbound_id,
+        hr_user=current_user,
+    )
+    return OutboundEmailResponse(
+        id=result.id,
+        candidate_id=result.candidate_id,
+        subject=result.subject,
+        recipient_email=result.recipient_email,
+        sender_email=result.sender_email,
+        status=result.status,
+        gmail_message_id=result.gmail_message_id,
+        gmail_thread_id=result.gmail_thread_id,
+        error_message=result.error_message,
+        retry_count=result.retry_count,
+        max_retries=result.max_retries,
+        last_retry_at=result.last_retry_at,
+        created_by_user_id=result.created_by_user_id,
+        created_at=result.created_at,
+        updated_at=result.updated_at,
+    )
+
+
+@router.post(
+    "/outbound/{outbound_id}/retry",
+    response_model=OutboundEmailResponse,
+    responses={
+        401: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+        502: {"model": ErrorResponse},
+    },
+)
+async def retry_outbound_email(
+    outbound_id: UUID,
+    current_user: CurrentUserDep,
+    outbound_service: OutboundEmailServiceDep,
+) -> OutboundEmailResponse:
+    """Retry a failed outbound email.
+
+    Validates the email can be retried (not sent, not exceeded
+    max retries), then re-sends via the Organization Google Connection.
+
+    Args:
+        outbound_id: The UUID of the outbound email to retry.
+        current_user: The authenticated HR user.
+        outbound_service: The outbound email service.
+
+    Returns:
+        OutboundEmailResponse with updated status.
+    """
+    result = await outbound_service.retry_outbound(
+        outbound_id,
+        hr_user=current_user,
+    )
+    return OutboundEmailResponse(
+        id=result.id,
+        candidate_id=result.candidate_id,
+        subject=result.subject,
+        recipient_email=result.recipient_email,
+        sender_email=result.sender_email,
+        status=result.status,
+        gmail_message_id=result.gmail_message_id,
+        gmail_thread_id=result.gmail_thread_id,
+        error_message=result.error_message,
+        retry_count=result.retry_count,
+        max_retries=result.max_retries,
+        last_retry_at=result.last_retry_at,
+        created_by_user_id=result.created_by_user_id,
+        created_at=result.created_at,
+        updated_at=result.updated_at,
+    )
+
+
+@router.get(
+    "/outbound/{outbound_id}",
+    response_model=OutboundEmailResponse,
+    responses={
+        401: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+    },
+)
+async def get_outbound_email(
+    outbound_id: UUID,
+    current_user: CurrentUserDep,
+    outbound_service: OutboundEmailServiceDep,
+) -> OutboundEmailResponse:
+    """Get an outbound email by ID.
+
+    Args:
+        outbound_id: The UUID of the outbound email.
+        current_user: The authenticated HR user.
+        outbound_service: The outbound email service.
+
+    Returns:
+        OutboundEmailResponse with the record details.
+
+    Raises:
+        404 if the outbound email is not found.
+    """
+    result = await outbound_service.get_outbound(outbound_id)
+    return OutboundEmailResponse(
+        id=result.id,
+        candidate_id=result.candidate_id,
+        subject=result.subject,
+        recipient_email=result.recipient_email,
+        sender_email=result.sender_email,
+        status=result.status,
+        gmail_message_id=result.gmail_message_id,
+        gmail_thread_id=result.gmail_thread_id,
+        error_message=result.error_message,
+        retry_count=result.retry_count,
+        max_retries=result.max_retries,
+        last_retry_at=result.last_retry_at,
+        created_by_user_id=result.created_by_user_id,
+        created_at=result.created_at,
+        updated_at=result.updated_at,
+    )
+
+
+@router.get(
+    "/candidates/{candidate_id}/outbound",
+    response_model=OutboundEmailListResponse,
+    responses={
+        401: {"model": ErrorResponse},
+    },
+)
+async def list_candidate_outbound_emails(
+    candidate_id: UUID,
+    current_user: CurrentUserDep,
+    outbound_service: OutboundEmailServiceDep,
+    page: int = Query(default=1, ge=1, description="Page number"),
+    page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
+) -> OutboundEmailListResponse:
+    """List outbound emails for a candidate.
+
+    Args:
+        candidate_id: The UUID of the candidate.
+        current_user: The authenticated HR user.
+        outbound_service: The outbound email service.
+        page: Page number (1-indexed).
+        page_size: Items per page.
+
+    Returns:
+        OutboundEmailListResponse with paginated results.
+    """
+    items, total = await outbound_service.list_for_candidate(
+        candidate_id,
+        page=page,
+        page_size=page_size,
+    )
+    return OutboundEmailListResponse(
+        items=[
+            OutboundEmailResponse(
+                id=item.id,
+                candidate_id=item.candidate_id,
+                subject=item.subject,
+                recipient_email=item.recipient_email,
+                sender_email=item.sender_email,
+                status=item.status,
+                gmail_message_id=item.gmail_message_id,
+                gmail_thread_id=item.gmail_thread_id,
+                error_message=item.error_message,
+                retry_count=item.retry_count,
+                max_retries=item.max_retries,
+                last_retry_at=item.last_retry_at,
+                created_by_user_id=item.created_by_user_id,
+                created_at=item.created_at,
+                updated_at=item.updated_at,
+            )
+            for item in items
+        ],
+        total=total,
+        page=page,
+        page_size=page_size,
     )
