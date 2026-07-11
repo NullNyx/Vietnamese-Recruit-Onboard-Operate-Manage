@@ -65,7 +65,7 @@ class TestLogAction:
             details=details,
         )
 
-        result = await audit_service.log_action(
+        await audit_service.log_action(
             admin=admin_user,
             action_type=AuditActionType.WHITELIST_ADD,
             details=details,

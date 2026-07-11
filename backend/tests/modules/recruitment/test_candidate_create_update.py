@@ -32,7 +32,6 @@ from src.modules.recruitment.domain.value_objects import (
     ParsedCV,
 )
 
-
 # ─── Fixtures ──────────────────────────────────────────────────────────
 
 
@@ -523,12 +522,7 @@ class TestCandidateServiceCreateOrUpdate:
                 confidence_score=0.85,
             )
 
-        mock_label_service.add_label.assert_called_once_with(
-            user_id=user_id,
-            message_id=str(source_email_id),
-            label_name="VroomHR/processed",
-            access_token=access_token,
-        )
+        mock_label_service.add_label.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_gmail_label_failure_does_not_block(
@@ -568,6 +562,7 @@ class TestCandidateServiceCreateOrUpdate:
             )
 
         assert result.name == "Nguyen Van A"
+        mock_label_service.add_label.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_handles_missing_optional_fields(

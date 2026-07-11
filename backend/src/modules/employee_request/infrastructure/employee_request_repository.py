@@ -75,7 +75,7 @@ class EmployeeRequestRepository:
         statement = (
             select(EmployeeRequest)
             .where(EmployeeRequest.employee_id == employee_id)  # type: ignore[arg-type]
-            .order_by(EmployeeRequest.submitted_at.desc())
+            .order_by(EmployeeRequest.submitted_at.desc())  # type: ignore[attr-defined]
         )
         result = await self.session.execute(statement)
         return list(result.scalars().all())
@@ -100,7 +100,7 @@ class EmployeeRequestRepository:
             EmployeeRequest.employee_id == employee_id,  # type: ignore[arg-type]
             EmployeeRequest.request_type == RequestType.OVERTIME,  # type: ignore[arg-type]
             EmployeeRequest.work_date == work_date,  # type: ignore[arg-type]
-            EmployeeRequest.status.in_(  # type: ignore[arg-type]
+            EmployeeRequest.status.in_(  # type: ignore[attr-defined]
                 [RequestStatus.SUBMITTED, RequestStatus.APPROVED],
             ),
         )
@@ -134,9 +134,9 @@ class EmployeeRequestRepository:
         statement = select(EmployeeRequest).where(
             EmployeeRequest.employee_id == employee_id,  # type: ignore[arg-type]
             EmployeeRequest.request_type == RequestType.LEAVE,  # type: ignore[arg-type]
-            EmployeeRequest.start_date <= end_date,  # type: ignore[arg-type]
-            EmployeeRequest.end_date >= start_date,  # type: ignore[arg-type]
-            EmployeeRequest.status.in_(  # type: ignore[arg-type]
+            EmployeeRequest.start_date <= end_date,  # type: ignore[operator, arg-type]
+            EmployeeRequest.end_date >= start_date,  # type: ignore[operator, arg-type]
+            EmployeeRequest.status.in_(  # type: ignore[attr-defined]
                 [RequestStatus.SUBMITTED, RequestStatus.APPROVED],
             ),
         )
@@ -190,10 +190,10 @@ class EmployeeRequestRepository:
             List of SubmittedRequestWithEmployee objects.
         """
         statement = (
-            select(EmployeeRequest, Employee.full_name)
-            .join(Employee, EmployeeRequest.employee_id == Employee.id)  # type: ignore[arg-type]
-            .where(EmployeeRequest.status == RequestStatus.SUBMITTED)  # type: ignore[arg-type]
-            .order_by(EmployeeRequest.submitted_at.desc())
+            select(EmployeeRequest, Employee.full_name)  # type: ignore[call-overload]
+            .join(Employee, EmployeeRequest.employee_id == Employee.id)
+            .where(EmployeeRequest.status == RequestStatus.SUBMITTED)
+            .order_by(EmployeeRequest.submitted_at.desc())  # type: ignore[attr-defined]
         )
         result = await self.session.execute(statement)
         rows = result.all()
@@ -223,31 +223,31 @@ class EmployeeRequestRepository:
             List of SubmittedRequestWithEmployee objects matching the filters.
         """
         statement = (
-            select(EmployeeRequest, Employee.full_name)
-            .join(Employee, EmployeeRequest.employee_id == Employee.id)  # type: ignore[arg-type]
-            .order_by(EmployeeRequest.submitted_at.desc())
+            select(EmployeeRequest, Employee.full_name)  # type: ignore[call-overload]
+            .join(Employee, EmployeeRequest.employee_id == Employee.id)
+            .order_by(EmployeeRequest.submitted_at.desc())  # type: ignore[attr-defined]
         )
 
         if request_type is not None:
-            statement = statement.where(  # type: ignore[arg-type]
+            statement = statement.where(
                 EmployeeRequest.request_type == request_type,
             )
         if status is not None:
-            statement = statement.where(  # type: ignore[arg-type]
+            statement = statement.where(
                 EmployeeRequest.status == status,
             )
         if date_from is not None:
             inclusive_start = datetime.combine(date_from, time.min)
-            statement = statement.where(  # type: ignore[arg-type]
-                EmployeeRequest.submitted_at >= inclusive_start,  # type: ignore[operator]
+            statement = statement.where(
+                EmployeeRequest.submitted_at >= inclusive_start,
             )
         if date_to is not None:
             exclusive_end = datetime.combine(date_to + timedelta(days=1), time.min)
-            statement = statement.where(  # type: ignore[arg-type]
-                EmployeeRequest.submitted_at < exclusive_end,  # type: ignore[operator]
+            statement = statement.where(
+                EmployeeRequest.submitted_at < exclusive_end,
             )
         if employee_id is not None:
-            statement = statement.where(  # type: ignore[arg-type]
+            statement = statement.where(
                 EmployeeRequest.employee_id == employee_id,
             )
 

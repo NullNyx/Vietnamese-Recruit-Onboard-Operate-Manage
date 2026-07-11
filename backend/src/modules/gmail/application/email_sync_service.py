@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import time
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import httpx
@@ -19,6 +19,7 @@ import redis.asyncio as redis
 
 from src.modules.gmail.domain.entities import EmailMessage, SyncCursor
 from src.modules.gmail.domain.exceptions import (
+    GmailFetchError,
     GmailNotConnectedException,
     RateLimitedException,
 )
@@ -39,6 +40,10 @@ if TYPE_CHECKING:
         OAuthGrantRepository,
     )
 
+from src.modules.identity.infrastructure.connection_state_repository import (
+    OrganizationGoogleConnectionRepository,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,15 +51,15 @@ class EmailSyncService:
     """Orchestrates email fetching from Gmail.
 
     Handles both scheduled polling (via ARQ cron) and manual sync triggers.
-    Implements first-poll logic (fetch last 7 days), incremental sync
-    (history_id-based), token refresh on 401, partial failure handling,
-    and manual sync rate limiting.
+    Implements baseline-only first-poll logic, incremental sync (history_id-based),
+    token refresh on 401, partial failure handling, and manual sync rate limiting.
 
     Args:
         gmail_adapter: Gmail API adapter for fetching messages.
         email_repo: Repository for persisting email messages.
         sync_cursor_repo: Repository for sync cursor management.
-        oauth_grant_repo: Repository for OAuth grant token access.
+        oauth_grant_repo: Repository for per-user OAuth grant tokens. Optional;
+            only required when the legacy per-HR grant flow is still in use.
         crypto: AES-256-GCM encryption utilities for token decryption.
         audit_logger: Structured audit logger for operation tracking.
         settings: Gmail module configuration.
@@ -68,13 +73,14 @@ class EmailSyncService:
         gmail_adapter: GmailAdapter,
         email_repo: EmailRepository,
         sync_cursor_repo: SyncCursorRepository,
-        oauth_grant_repo: OAuthGrantRepository,
         crypto: CryptoUtils,
         audit_logger: AuditLogger,
         settings: GmailSettings,
         redis_client: redis.Redis,
         client_id: str,
         client_secret: str,
+        oauth_grant_repo: OAuthGrantRepository | None = None,
+        connection_repo: OrganizationGoogleConnectionRepository | None = None,
     ) -> None:
         """Initialize EmailSyncService with dependencies.
 
@@ -82,13 +88,17 @@ class EmailSyncService:
             gmail_adapter: Gmail API adapter for fetching messages.
             email_repo: Repository for persisting email messages.
             sync_cursor_repo: Repository for sync cursor management.
-            oauth_grant_repo: Repository for OAuth grant token access.
             crypto: AES-256-GCM encryption utilities for token decryption.
             audit_logger: Structured audit logger for operation tracking.
             settings: Gmail module configuration.
             redis_client: Async Redis client for manual sync rate limiting.
             client_id: Google OAuth2 client ID for token refresh.
             client_secret: Google OAuth2 client secret for token refresh.
+            oauth_grant_repo: Repository for per-user OAuth grant tokens.
+                Optional; only required for the legacy per-HR grant flow.
+            connection_repo: Repository for the singleton Organization Google
+                Connection. If not provided it is constructed from the
+                email_repo session at runtime.
         """
         self._gmail_adapter = gmail_adapter
         self._email_repo = email_repo
@@ -100,6 +110,68 @@ class EmailSyncService:
         self._redis = redis_client
         self._client_id = client_id
         self._client_secret = client_secret
+        self._connection_repo = connection_repo
+
+    async def _handle_connection_token_refresh(
+        self,
+        connection: Any,
+        connection_repo: Any,
+    ) -> str | None:
+        """Attempt to refresh the organization connection's access token."""
+        try:
+            if not connection.refresh_token_enc:
+                raise Exception("No refresh token in connection")
+            refresh_token = self._crypto.decrypt(connection.refresh_token_enc)
+
+            client_secret = self._client_secret
+            if connection.client_secret_enc:
+                client_secret = self._crypto.decrypt(connection.client_secret_enc)
+
+            new_access_token, expires_at = await self._gmail_adapter.refresh_access_token(
+                refresh_token=refresh_token,
+                client_id=self._client_id,
+                client_secret=client_secret,
+            )
+
+            connection.access_token_enc = self._crypto.encrypt(new_access_token)
+            connection.token_expires_at = expires_at
+            connection.updated_at = datetime.now(UTC)
+            await connection_repo.upsert_singleton(connection)
+
+            logger.info("Successfully refreshed access token for organization connection")
+            return new_access_token
+
+        except Exception as exc:
+            exc_str = str(exc).lower()
+            is_invalid_grant = "invalid_grant" in exc_str or "revoked" in exc_str
+
+            await self._update_ingestion_health("degraded")
+            logger.error("Token refresh failed for organization connection: %s", exc)
+
+            if is_invalid_grant or (
+                isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 400
+            ):
+                connection.status = "reauthorization_required"
+                connection.updated_at = datetime.now(UTC)
+                await connection_repo.upsert_singleton(connection)
+                logger.warning("Organization connection transitioned to reauthorization_required")
+
+            audit_user_id = connection.connected_by_user_id
+            if audit_user_id is not None:
+                await self._audit_logger.log_operation(
+                    operation_type="fetch",
+                    user_id=audit_user_id,
+                    message_count=0,
+                    success=False,
+                    metadata={"error": "token_refresh_failed", "reason": str(exc)},
+                )
+            return None
+
+    async def _update_ingestion_health(self, status: str) -> None:
+        try:
+            await self._redis.set("gmail:health:gmail_ingestion", status, ex=3600)
+        except Exception:
+            pass
 
     async def poll_emails(self, user_id: UUID) -> int:
         """Execute a poll cycle to fetch new emails from Gmail.
@@ -107,157 +179,197 @@ class EmailSyncService:
         Called by the ARQ cron job on schedule. Checks connection status,
         retrieves the access token, fetches emails (initial or incremental),
         and persists them. Handles 401 errors by attempting token refresh.
-
-        Args:
-            user_id: The UUID of the user whose emails to poll.
-
-        Returns:
-            The number of new emails successfully persisted.
-
-        Raises:
-            GmailNotConnectedException: If the user's Gmail is not connected.
         """
-        # Get the OAuth grant to verify connection and get access token
-        grant = await self._oauth_grant_repo.get_by_user_id(user_id)
-        if grant is None or not grant.is_valid:
-            raise GmailNotConnectedException()
+        connection_repo = self._connection_repo or OrganizationGoogleConnectionRepository(
+            self._email_repo.session
+        )
+        connection = await connection_repo.get_singleton()
 
-        # Decrypt access token
-        access_token = self._crypto.decrypt(grant.access_token_enc)
+        if connection is not None and connection.status != "disconnected":
+            if connection.status == "reauthorization_required":
+                raise GmailNotConnectedException()
 
-        # Get current sync cursor
-        cursor = await self._sync_cursor_repo.get_cursor(user_id)
+            if not connection.access_token_enc:
+                raise GmailNotConnectedException()
+            access_token = self._crypto.decrypt(connection.access_token_enc)
 
-        try:
-            count = await self._fetch_and_persist(user_id, access_token, cursor)
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 401:
-                # Attempt token refresh and retry once
-                new_access_token = await self._handle_token_refresh(user_id)
+            connected_user_id = connection.connected_by_user_id or user_id
+            cursor = await self._sync_cursor_repo.get_cursor(connected_user_id)
+
+            if connection.token_expires_at and connection.token_expires_at <= datetime.now(UTC):
+                new_access_token = await self._handle_connection_token_refresh(
+                    connection, connection_repo
+                )
                 if new_access_token is None:
-                    # Token refresh failed — grant already marked invalid
                     return 0
-                # Retry with refreshed token
-                count = await self._fetch_and_persist(user_id, new_access_token, cursor)
-            else:
+                access_token = new_access_token
+
+            try:
+                count = await self._fetch_and_persist(connected_user_id, access_token, cursor)
+                await self._update_ingestion_health("healthy")
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 401:
+                    new_access_token = await self._handle_connection_token_refresh(
+                        connection, connection_repo
+                    )
+                    if new_access_token is None:
+                        return 0
+                    try:
+                        count = await self._fetch_and_persist(
+                            connected_user_id, new_access_token, cursor
+                        )
+                        await self._update_ingestion_health("healthy")
+                    except Exception as retry_exc:
+                        if isinstance(
+                            retry_exc, (RateLimitedException, httpx.HTTPError, TimeoutError)
+                        ):
+                            await self._update_ingestion_health("degraded")
+                        raise
+                else:
+                    if exc.response.status_code == 400:
+                        connection.status = "reauthorization_required"
+                        connection.updated_at = datetime.now(UTC)
+                        await connection_repo.upsert_singleton(connection)
+                    await self._update_ingestion_health("degraded")
+                    raise
+            except (RateLimitedException, httpx.HTTPError, TimeoutError, GmailFetchError):
+                await self._update_ingestion_health("degraded")
                 raise
 
-        # Log the sync operation
-        await self._audit_logger.log_operation(
-            operation_type="fetch",
-            user_id=user_id,
-            message_count=count,
-            success=True,
-            metadata={"sync_type": "poll"},
-        )
+            await self._audit_logger.log_operation(
+                operation_type="fetch",
+                user_id=connected_user_id,
+                message_count=count,
+                success=True,
+                metadata={"sync_type": "poll"},
+            )
+            return count
 
-        return count
+        raise GmailNotConnectedException("Organization Google Connection is not connected")
 
     async def manual_sync(self, user_id: UUID) -> int:
-        """Trigger an immediate email sync outside the regular schedule.
-
-        Applies rate limiting (1 request per 30 seconds per user) via Redis.
-        Uses the same fetch logic as poll_emails.
-
-        Args:
-            user_id: The UUID of the user requesting manual sync.
-
-        Returns:
-            The number of new emails successfully fetched.
-
-        Raises:
-            GmailNotConnectedException: If the user's Gmail is not connected.
-            RateLimitedException: If called within 30 seconds of last manual sync.
-        """
-        # Check rate limit via Redis
+        """Trigger an immediate email sync outside the regular schedule."""
         await self._check_manual_sync_rate_limit(user_id)
 
-        # Get the OAuth grant to verify connection and get access token
-        grant = await self._oauth_grant_repo.get_by_user_id(user_id)
-        if grant is None or not grant.is_valid:
-            raise GmailNotConnectedException()
+        connection_repo = self._connection_repo or OrganizationGoogleConnectionRepository(
+            self._email_repo.session
+        )
+        connection = await connection_repo.get_singleton()
+        if connection is not None and connection.status != "disconnected":
+            if connection.status == "reauthorization_required":
+                raise GmailNotConnectedException()
 
-        # Decrypt access token
-        access_token = self._crypto.decrypt(grant.access_token_enc)
+            if not connection.access_token_enc:
+                raise GmailNotConnectedException()
+            access_token = self._crypto.decrypt(connection.access_token_enc)
 
-        # Get current sync cursor
-        cursor = await self._sync_cursor_repo.get_cursor(user_id)
+            connected_user_id = connection.connected_by_user_id or user_id
+            cursor = await self._sync_cursor_repo.get_cursor(connected_user_id)
 
-        try:
-            count = await self._fetch_and_persist(user_id, access_token, cursor)
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 401:
-                # Attempt token refresh and retry once
-                new_access_token = await self._handle_token_refresh(user_id)
+            if connection.token_expires_at and connection.token_expires_at <= datetime.now(UTC):
+                new_access_token = await self._handle_connection_token_refresh(
+                    connection, connection_repo
+                )
                 if new_access_token is None:
                     return 0
-                count = await self._fetch_and_persist(user_id, new_access_token, cursor)
-            else:
+                access_token = new_access_token
+
+            try:
+                count = await self._fetch_and_persist(connected_user_id, access_token, cursor)
+                await self._update_ingestion_health("healthy")
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 401:
+                    new_access_token = await self._handle_connection_token_refresh(
+                        connection, connection_repo
+                    )
+                    if new_access_token is None:
+                        return 0
+                    try:
+                        count = await self._fetch_and_persist(
+                            connected_user_id, new_access_token, cursor
+                        )
+                        await self._update_ingestion_health("healthy")
+                    except Exception as retry_exc:
+                        if isinstance(
+                            retry_exc, (RateLimitedException, httpx.HTTPError, TimeoutError)
+                        ):
+                            await self._update_ingestion_health("degraded")
+                        raise
+                else:
+                    if exc.response.status_code == 400:
+                        connection.status = "reauthorization_required"
+                        connection.updated_at = datetime.now(UTC)
+                        await connection_repo.upsert_singleton(connection)
+                    await self._update_ingestion_health("degraded")
+                    raise
+            except (RateLimitedException, httpx.HTTPError, TimeoutError, GmailFetchError):
+                await self._update_ingestion_health("degraded")
                 raise
 
-        # Record the manual sync timestamp in Redis
-        await self._record_manual_sync_timestamp(user_id)
+            await self._record_manual_sync_timestamp(user_id)
+            await self._audit_logger.log_operation(
+                operation_type="fetch",
+                user_id=connected_user_id,
+                message_count=count,
+                success=True,
+                metadata={"sync_type": "manual"},
+            )
+            return count
 
-        # Log the sync operation
-        await self._audit_logger.log_operation(
-            operation_type="fetch",
-            user_id=user_id,
-            message_count=count,
-            success=True,
-            metadata={"sync_type": "manual"},
-        )
-
-        return count
+        raise GmailNotConnectedException("Organization Google Connection is not connected")
 
     async def _fetch_and_persist(
         self, user_id: UUID, access_token: str, cursor: SyncCursor | None
     ) -> int:
-        """Fetch emails from Gmail and persist them to the database.
-
-        Implements two strategies:
-        - First poll (no cursor): fetch emails from last 7 days using search query.
-        - Incremental sync (cursor exists): fetch emails newer than stored history_id.
-
-        Handles partial failures: saves successful messages, increments retry
-        count for failed ones, and marks messages with 5+ failures as permanent.
-
-        Args:
-            user_id: The UUID of the user whose emails to fetch.
-            access_token: Decrypted Gmail OAuth2 access token.
-            cursor: The current sync cursor, or None for first poll.
-
-        Returns:
-            The number of emails successfully persisted.
-        """
-
+        """Fetch emails from Gmail and persist them to the database."""
         latest_history_id: str | None = None
 
         if cursor is None:
-            # First poll: fetch emails from last N days
-            days_ago = datetime.now(UTC) - timedelta(days=self._settings.initial_sync_days)
-            epoch_seconds = int(days_ago.timestamp())
-            query = f"after:{epoch_seconds}"
-
-            messages = await self._gmail_adapter.fetch_messages(
-                access_token=access_token,
-                query=query,
-                max_results=self._settings.batch_size,
-            )
-
-            # Extract the latest history_id from fetched messages
-            if messages:
-                latest_history_id = max(
-                    (m.history_id for m in messages if m.history_id),
-                    default=None,
+            # First poll: establish baseline history ID, do not import historical emails
+            latest_history_id = await self._gmail_adapter.get_latest_history_id(access_token)
+            if latest_history_id:
+                await self._sync_cursor_repo.upsert_cursor(
+                    user_id=user_id, history_id=latest_history_id
                 )
+            return 0
         else:
             # Incremental sync: fetch since last history_id
-            messages, new_history_id = await self._gmail_adapter.fetch_history(
-                access_token=access_token,
-                start_history_id=cursor.history_id,
-                max_results=self._settings.batch_size,
-            )
-            latest_history_id = new_history_id
+            try:
+                messages, new_history_id = await self._gmail_adapter.fetch_history(
+                    access_token=access_token,
+                    start_history_id=cursor.history_id,
+                    max_results=self._settings.batch_size,
+                )
+                latest_history_id = new_history_id
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 404:
+                    logger.warning(
+                        "History ID %s expired/404. Triggering bounded full-sync recovery.",
+                        cursor.history_id,
+                    )
+                    days_ago = datetime.now(UTC) - timedelta(days=self._settings.initial_sync_days)
+                    epoch_seconds = int(days_ago.timestamp())
+                    query = f"after:{epoch_seconds}"
+
+                    messages = await self._gmail_adapter.fetch_messages(
+                        access_token=access_token,
+                        query=query,
+                        max_results=self._settings.batch_size,
+                    )
+                    if messages:
+                        latest_history_id = max(
+                            (m.history_id for m in messages if m.history_id),
+                            default=None,
+                        )
+                    else:
+                        latest_history_id = await self._gmail_adapter.get_latest_history_id(
+                            access_token
+                        )
+                else:
+                    raise
+
+        # Filter: Incremental sync only processes new emails in INBOX
+        messages = [m for m in messages if "INBOX" in (m.label_ids or [])]
 
         if not messages:
             # No new emails — update cursor timestamp if we have a new history_id
@@ -291,6 +403,10 @@ class EmailSyncService:
         # Handle failed messages: increment retry count and check for permanent failure
         await self._handle_failed_messages(failed_message_ids)
 
+        # Do not advance the cursor when any message failed; retry it next cycle.
+        if failed_message_ids or persisted_count < len(email_entities):
+            return persisted_count
+
         # Atomic cursor update: update cursor to latest history_id
         if latest_history_id:
             await self._sync_cursor_repo.upsert_cursor(
@@ -318,6 +434,8 @@ class EmailSyncService:
         Returns:
             The new decrypted access token on success, or None on failure.
         """
+        if self._oauth_grant_repo is None:
+            return None
         grant = await self._oauth_grant_repo.get_by_user_id(user_id)
         if grant is None:
             return None

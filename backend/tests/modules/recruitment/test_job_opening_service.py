@@ -27,6 +27,7 @@ from src.modules.recruitment.infrastructure.repositories import JobOpeningReposi
 
 # ─── Fixtures ──────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def mock_job_opening_repo():
     """Create a mock Job Opening repository."""
@@ -465,7 +466,8 @@ class TestAuditLogging:
         assert mock_session.add.called
         # Check the add calls for audit log entry
         audit_calls = [
-            c for c in mock_session.add.call_args_list
+            c
+            for c in mock_session.add.call_args_list
             if c[0] and hasattr(c[0][0], "operation_type")
         ]
         assert len(audit_calls) >= 1
@@ -494,7 +496,8 @@ class TestAuditLogging:
 
         # Verify audit log was emitted
         audit_calls = [
-            c for c in mock_session.add.call_args_list
+            c
+            for c in mock_session.add.call_args_list
             if c[0] and hasattr(c[0][0], "operation_type")
         ]
         assert len(audit_calls) >= 1
@@ -524,7 +527,8 @@ class TestAuditLogging:
 
         # Verify audit log was emitted
         audit_calls = [
-            c for c in mock_session.add.call_args_list
+            c
+            for c in mock_session.add.call_args_list
             if c[0] and hasattr(c[0][0], "operation_type")
         ]
         assert len(audit_calls) >= 1
@@ -553,7 +557,8 @@ class TestAuditLogging:
 
         # Verify audit log was emitted
         audit_calls = [
-            c for c in mock_session.add.call_args_list
+            c
+            for c in mock_session.add.call_args_list
             if c[0] and hasattr(c[0][0], "operation_type")
         ]
         assert len(audit_calls) >= 1
@@ -585,7 +590,8 @@ class TestAuditLogging:
 
         # Verify audit log was emitted
         audit_calls = [
-            c for c in mock_session.add.call_args_list
+            c
+            for c in mock_session.add.call_args_list
             if c[0] and hasattr(c[0][0], "operation_type")
         ]
         assert len(audit_calls) >= 1
@@ -630,7 +636,9 @@ class TestTimestampCleanup:
         # even though the transition is blocked by the state machine
         pass
 
+
 # ─── Headcount Tests ──────────────────────────────────────────────────
+
 
 class TestHeadcountStatus:
     """Tests for Job Opening headcount tracking and filled/overfilled states."""

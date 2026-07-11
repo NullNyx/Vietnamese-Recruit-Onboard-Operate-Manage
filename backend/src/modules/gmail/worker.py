@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import logging
 import traceback
-from datetime import UTC, datetime
 
 from dotenv import load_dotenv
 
@@ -28,7 +27,6 @@ from arq import cron
 from arq.connections import RedisSettings
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.modules.gmail.application.connection_service import GMAIL_SCOPES
 from src.modules.gmail.application.email_sync_service import EmailSyncService
 from src.modules.gmail.infrastructure.audit_logger import AuditLogger
 from src.modules.gmail.infrastructure.config import GmailSettings
@@ -37,8 +35,10 @@ from src.modules.gmail.infrastructure.gmail_adapter import GmailAdapter
 from src.modules.gmail.infrastructure.quota_tracker import QuotaTracker
 from src.modules.gmail.infrastructure.sync_cursor_repository import SyncCursorRepository
 from src.modules.identity.infrastructure.config import AuthSettings
+from src.modules.identity.infrastructure.connection_state_repository import (
+    OrganizationGoogleConnectionRepository,
+)
 from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
-from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,8 @@ async def poll_gmail_emails(ctx: dict[str, Any]) -> None:
     EmailSyncService.poll_emails for each connected user.
 
     Exceptions for individual users are caught and logged with stack traces.
-    A single user's failure does not prevent polling for other users.
+    Gmail polling now uses the singleton Organization Google Connection.
+    If no active connection is found the job exits cleanly.
     ARQ automatically retries the job at the next scheduled interval.
 
     Args:
@@ -141,67 +142,51 @@ async def poll_gmail_emails(ctx: dict[str, Any]) -> None:
     auth_settings: AuthSettings = ctx["auth_settings"]
     gmail_settings: GmailSettings = ctx["gmail_settings"]
 
-    gmail_scopes_list = list(GMAIL_SCOPES)
-
     async with session_maker() as session:
         try:
-            # Get all users with valid Gmail OAuth grants
-            oauth_grant_repo = OAuthGrantRepository(session)
-            grants = await oauth_grant_repo.get_all_valid_with_scopes(gmail_scopes_list)
+            connection_repo = OrganizationGoogleConnectionRepository(session)
+            connection = await connection_repo.get_singleton()
 
-            if not grants:
-                logger.debug("No users with active Gmail connections found")
+            if connection is None or connection.status != "connected":
+                logger.debug("No active Organization Google Connection found")
                 return
 
-            logger.info("Starting Gmail poll cycle for %d user(s)", len(grants))
+            logger.info(
+                "Starting Gmail poll cycle for Organization Connection: %s", connection.email
+            )
 
-            for grant in grants:
-                user_id = grant.user_id
+            if connection.connected_by_user_id is None:
+                logger.error(
+                    "Organization Google Connection has no connected_by_user_id; "
+                    "skipping poll cycle."
+                )
+                return
+            user_id = connection.connected_by_user_id
 
-                try:
-                    # Check connection status: skip if token expired
-                    if not grant.is_valid:
-                        logger.debug("Skipping user %s: grant is invalid", user_id)
-                        continue
+            gmail_adapter = GmailAdapter(
+                settings=gmail_settings,
+                quota_tracker=quota_tracker,
+                http_client=http_client,
+                user_id=user_id,
+            )
+            email_repo = EmailRepository(session)
+            sync_cursor_repo = SyncCursorRepository(session)
+            audit_logger = AuditLogger(session, gmail_settings)
 
-                    if grant.token_expires_at <= datetime.now(UTC):
-                        logger.debug("Skipping user %s: token expired", user_id)
-                        continue
+            email_sync_service = EmailSyncService(
+                gmail_adapter=gmail_adapter,
+                email_repo=email_repo,
+                sync_cursor_repo=sync_cursor_repo,
+                crypto=crypto,
+                audit_logger=audit_logger,
+                settings=gmail_settings,
+                redis_client=redis_client,
+                client_id=auth_settings.google_client_id,
+                client_secret=auth_settings.google_client_secret,
+            )
 
-                    # Build per-user service dependencies
-                    gmail_adapter = GmailAdapter(
-                        settings=gmail_settings,
-                        quota_tracker=quota_tracker,
-                        http_client=http_client,
-                        user_id=user_id,
-                    )
-                    email_repo = EmailRepository(session)
-                    sync_cursor_repo = SyncCursorRepository(session)
-                    audit_logger = AuditLogger(session, gmail_settings)
-
-                    email_sync_service = EmailSyncService(
-                        gmail_adapter=gmail_adapter,
-                        email_repo=email_repo,
-                        sync_cursor_repo=sync_cursor_repo,
-                        oauth_grant_repo=oauth_grant_repo,
-                        crypto=crypto,
-                        audit_logger=audit_logger,
-                        settings=gmail_settings,
-                        redis_client=redis_client,
-                        client_id=auth_settings.google_client_id,
-                        client_secret=auth_settings.google_client_secret,
-                    )
-
-                    count = await email_sync_service.poll_emails(user_id)
-                    logger.info("Polled %d new email(s) for user %s", count, user_id)
-
-                except Exception:
-                    logger.error(
-                        "Unhandled exception polling emails for user %s:\n%s",
-                        user_id,
-                        traceback.format_exc(),
-                    )
-                    # Continue to next user — don't let one failure stop others
+            count = await email_sync_service.poll_emails(user_id)
+            logger.info("Polled %d new email(s) for organization", count)
 
             await session.commit()
 

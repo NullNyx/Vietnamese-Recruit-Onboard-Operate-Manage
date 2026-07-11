@@ -14,7 +14,6 @@ from uuid import uuid4
 import pytest
 
 from src.modules.onboarding.container import process_candidate_accepted
-from src.modules.onboarding.domain.enums import OnboardingStatus
 
 
 @pytest.fixture
@@ -96,7 +95,7 @@ async def test_process_candidate_accepted_rejects_malformed_event(
     with patch(
         "src.modules.onboarding.container._build_service", return_value=mock_onboarding_service
     ):
-        result = await process_candidate_accepted(ctx, payload)
+        await process_candidate_accepted(ctx, payload)
 
     # Service should not be called for malformed events
     mock_onboarding_service.start_from_event.assert_not_called()

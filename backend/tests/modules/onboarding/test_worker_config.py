@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.modules.onboarding.worker import OnboardingWorkerSettings
 from src.modules.onboarding.container import process_candidate_accepted
+from src.modules.onboarding.worker import OnboardingWorkerSettings
 
 
 class TestOnboardingWorkerSettings:

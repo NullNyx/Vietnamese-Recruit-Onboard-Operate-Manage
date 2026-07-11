@@ -1,6 +1,6 @@
 """Tests for OCR Adapter (olmOCR integration)."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
@@ -273,8 +273,9 @@ class TestHandleDOCX:
 
     async def test_docx_with_sufficient_text_returns_directly(self, adapter: OCRAdapter) -> None:
         """DOCX with >= 50 chars of text should return extracted text directly."""
-        from docx import Document
         import io
+
+        from docx import Document
 
         # Create a DOCX with enough text
         doc = Document()
@@ -300,8 +301,9 @@ class TestHandleDOCX:
         self, adapter: OCRAdapter
     ) -> None:
         """DOCX with < 50 chars AND > 500KB should fall back to OCR."""
-        from docx import Document
         import io
+
+        from docx import Document
 
         # Create a DOCX with minimal text
         doc = Document()
@@ -332,8 +334,9 @@ class TestHandleDOCX:
         self, adapter: OCRAdapter
     ) -> None:
         """DOCX with < 50 chars AND <= 500KB should return the short text."""
-        from docx import Document
         import io
+
+        from docx import Document
 
         doc = Document()
         doc.add_paragraph("Hi")

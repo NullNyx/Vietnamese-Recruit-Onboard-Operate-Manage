@@ -39,7 +39,7 @@ class LocalAuthResult:
 
     access_token: str
     refresh_token: str
-    user: object
+    user: Any
     must_change_password: bool
 
 

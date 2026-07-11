@@ -7,7 +7,7 @@ using python-jose with HMAC-SHA signing algorithms.
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from jose import JWTError, jwt
+from jose import JWTError, jwt  # type: ignore[import-untyped]
 
 from src.modules.identity.domain.exceptions import InvalidStateError, InvalidTokenError
 

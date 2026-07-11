@@ -28,7 +28,6 @@ from src.modules.recruitment.domain.enums import ProcessingStatus
 from src.modules.recruitment.domain.exceptions import CVDocumentNotFoundError
 from src.modules.recruitment.domain.value_objects import ParsedCV
 
-
 # ─── Fixtures ──────────────────────────────────────────────────────────
 
 
@@ -318,7 +317,7 @@ class TestSubmitCorrection:
             "src.modules.recruitment.application.review_service.log_audit",
             new_callable=AsyncMock,
         ):
-            result = await service.submit_correction(
+            await service.submit_correction(
                 cv_document_id=sample_cv_document.id,
                 corrected_data=valid_parsed_cv,
             )

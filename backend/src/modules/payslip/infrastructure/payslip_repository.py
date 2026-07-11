@@ -92,8 +92,8 @@ class PayslipRepository:
                 Payslip.status == PayslipStatus.PUBLISHED,  # type: ignore[arg-type]
             )
             .order_by(
-                Payslip.period_month.desc(),  # type: ignore[arg-type]
-                Payslip.updated_at.desc(),  # type: ignore[arg-type]
+                Payslip.period_month.desc(),  # type: ignore[attr-defined]
+                Payslip.updated_at.desc(),  # type: ignore[attr-defined]
             )
             .offset(offset)
             .limit(page_size)
@@ -239,7 +239,7 @@ class PayslipRepository:
 
         stmt = (
             sa_update(Payslip)
-            .where(Payslip.id == payslip_id, Payslip.status == PayslipStatus.DRAFT)
+            .where(Payslip.id == payslip_id, Payslip.status == PayslipStatus.DRAFT)  # type: ignore[arg-type]
             .values(
                 status=PayslipStatus.PUBLISHED,
                 published_at=datetime.now(UTC),
@@ -266,8 +266,8 @@ class PayslipRepository:
         from sqlalchemy import delete as sa_delete
 
         stmt = (
-            sa_delete(Payslip)
-            .where(Payslip.id == payslip_id, Payslip.status == PayslipStatus.DRAFT)
+            sa_delete(Payslip)  # type: ignore[call-overload]
+            .where(Payslip.id == payslip_id, Payslip.status == PayslipStatus.DRAFT)  # type: ignore[arg-type]
             .returning(Payslip.id)
         )
         result = await self.session.execute(stmt)
@@ -290,7 +290,7 @@ class PayslipRepository:
         Returns:
             Total matching records.
         """
-        statement = select(func.count()).select_from(Payslip)  # type: ignore[arg-type]
+        statement = select(func.count()).select_from(Payslip)
         if employee_id is not None:
             statement = statement.where(Payslip.employee_id == employee_id)  # type: ignore[arg-type]
         if status is not None:
@@ -330,8 +330,8 @@ class PayslipRepository:
             statement = statement.where(Payslip.period_month == period_month)  # type: ignore[arg-type]
         statement = (
             statement.order_by(
-                Payslip.period_month.desc(),  # type: ignore[arg-type]
-                Payslip.updated_at.desc(),  # type: ignore[arg-type]
+                Payslip.period_month.desc(),  # type: ignore[attr-defined]
+                Payslip.updated_at.desc(),  # type: ignore[attr-defined]
             )
             .offset(offset)
             .limit(page_size)

@@ -407,7 +407,7 @@ class EmployeeToolRegistry:
     # OpenAI-format tools
     # -----------------------------------------------------------------------
 
-    def get_openai_tools(self) -> list[dict]:
+    def get_openai_tools(self) -> list[dict[str, Any]]:
         return [
             {
                 "type": "function",

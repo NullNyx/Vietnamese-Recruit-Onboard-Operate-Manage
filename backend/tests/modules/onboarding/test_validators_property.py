@@ -162,7 +162,13 @@ def _empty_name_payloads(draw: st.DrawFn) -> dict[str, Any]:
 
 @st.composite
 def _too_long_name_payloads(draw: st.DrawFn) -> dict[str, Any]:
-    too_long = draw(st.text(alphabet=_SAFE_ALPHABET, min_size=FULL_NAME_MAX_LENGTH + 1, max_size=FULL_NAME_MAX_LENGTH + 50))
+    too_long = draw(
+        st.text(
+            alphabet=_SAFE_ALPHABET,
+            min_size=FULL_NAME_MAX_LENGTH + 1,
+            max_size=FULL_NAME_MAX_LENGTH + 50,
+        )
+    )
     key = draw(st.sampled_from(["name", "full_name"]))
     return {
         "candidate_id": draw(st.uuids()),
@@ -193,7 +199,9 @@ def _empty_email_payloads(draw: st.DrawFn) -> dict[str, Any]:
 
 @st.composite
 def _too_long_email_payloads(draw: st.DrawFn) -> dict[str, Any]:
-    total_length = draw(st.integers(min_value=EMAIL_MAX_LENGTH + 1, max_value=EMAIL_MAX_LENGTH + 50))
+    total_length = draw(
+        st.integers(min_value=EMAIL_MAX_LENGTH + 1, max_value=EMAIL_MAX_LENGTH + 50)
+    )
     too_long = f"{'a' * (total_length - 2)}@b"
     return {
         "candidate_id": draw(st.uuids()),
@@ -257,7 +265,9 @@ def _valid_payloads(draw: st.DrawFn) -> dict[str, Any]:
 
     # Optionally add extra keys to simulate raw events with extra data.
     # Exclude required keys to avoid overwriting them with invalid values.
-    extra_keys_strategy = st.text(min_size=1).filter(lambda x: x not in ("event_type", "candidate_id", "name", "full_name", "email"))
+    extra_keys_strategy = st.text(min_size=1).filter(
+        lambda x: x not in ("event_type", "candidate_id", "name", "full_name", "email")
+    )
     extra_keys = draw(st.dictionaries(keys=extra_keys_strategy, values=st.integers(), max_size=3))
     payload.update(extra_keys)
 
@@ -299,6 +309,7 @@ def test_event_validation_accepts_valid_events(payload: dict[str, Any]) -> None:
     expected_id = payload["candidate_id"]
     if isinstance(expected_id, str):
         import uuid
+
         expected_id = uuid.UUID(expected_id.strip())
     assert validated.candidate_id == expected_id
 

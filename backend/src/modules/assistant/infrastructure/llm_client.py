@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import Any
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI
 
@@ -34,7 +35,7 @@ class LLMResponse:
     """
 
     content: str | None
-    tool_calls: list[dict]
+    tool_calls: list[dict[str, Any]]
     token_usage: dict[str, int]
 
 
@@ -56,8 +57,8 @@ class AssistantLLMClient:
 
     async def chat(
         self,
-        messages: list[dict],
-        tools: list[dict] | None = None,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
     ) -> LLMResponse:
         """Send a chat completion request with optional tool definitions.
 
@@ -71,7 +72,7 @@ class AssistantLLMClient:
         Raises:
             ConnectionError: If the LLM endpoint is unreachable.
         """
-        kwargs: dict = {
+        kwargs: dict[str, Any] = {
             "model": self._model,
             "messages": messages,
             "temperature": 0.3,
@@ -95,7 +96,7 @@ class AssistantLLMClient:
         choice = response.choices[0]
         message = choice.message
 
-        tool_calls: list[dict] = []
+        tool_calls: list[dict[str, Any]] = []
         if message.tool_calls:
             for tc in message.tool_calls:
                 tool_calls.append(

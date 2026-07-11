@@ -11,10 +11,11 @@ Core invariants verified:
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, MagicMock, call
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.modules.assistant.application.employee_tool_registry import EmployeeToolRegistry
 from src.modules.assistant.domain.employee_tools import (
     EMPLOYEE_TOOL_DEFINITIONS,
     EMPLOYEE_TOOL_NAMES,
@@ -27,11 +28,11 @@ def _make_registry(**overrides: MagicMock) -> EmployeeToolRegistry:
     from src.modules.assistant.application.employee_tool_registry import (
         EmployeeToolRegistry,
     )
-    from src.modules.employee.application.employee_service import EmployeeService
-    from src.modules.employee.application.document_service import DocumentService
     from src.modules.attendance.infrastructure.attendance_record_repository import (
         AttendanceRecordRepository,
     )
+    from src.modules.employee.application.document_service import DocumentService
+    from src.modules.employee.application.employee_service import EmployeeService
     from src.modules.employee_request.application.leave_service import LeaveService
     from src.modules.employee_request.application.overtime_service import OvertimeService
     from src.modules.payslip.application.payslip_service import PayslipService
@@ -353,9 +354,9 @@ class TestEmployeeToolRegistryReadTools:
         ]
 
         for pattern in forbidden:
-            lines = [l.strip() for l in handler_section.split("\n") if pattern in l]
+            lines = [ln.strip() for ln in handler_section.split("\n") if pattern in ln]
             # Allow SELECT with execute
-            lines = [l for l in lines if not ("select" in l.lower() and "execute" in l.lower())]
+            lines = [ln for ln in lines if not ("select" in ln.lower() and "execute" in ln.lower())]
             assert not lines, f"Handler section contains forbidden pattern '{pattern}': {lines}"
 
     @pytest.mark.asyncio

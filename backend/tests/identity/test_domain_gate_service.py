@@ -6,8 +6,6 @@ email domain is permitted by the Organization's allowed_domains list.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
-
 import pytest
 
 from src.modules.identity.application.domain_gate_service import DomainGateService

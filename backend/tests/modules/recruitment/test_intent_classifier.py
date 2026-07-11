@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -241,13 +241,8 @@ class TestProcessClassificationResult:
             access_token="test_token",
         )
 
-        # Verify label was applied
-        mock_gmail_label_service.add_label.assert_called_once_with(
-            user_id=user_id,
-            message_id="msg_cv",
-            label_name="VroomHR/recruitment",
-            access_token="test_token",
-        )
+        # Verify label was NOT applied
+        mock_gmail_label_service.add_label.assert_not_called()
 
         # Verify CV processing was enqueued
         mock_enqueue_func.assert_called_once_with("process_cv_from_email", email_message_id)

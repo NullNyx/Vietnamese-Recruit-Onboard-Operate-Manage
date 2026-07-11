@@ -11,7 +11,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import httpx
@@ -557,6 +557,20 @@ class GmailAdapter:
             if isinstance(exc, RateLimitedException):
                 raise
             raise GmailFetchError(f"Failed to fetch history: {exc}") from exc
+
+    async def get_latest_history_id(self, access_token: str) -> str:
+        """Fetch the latest history ID from the user profile endpoint."""
+
+        async def _request() -> dict[str, Any]:
+            response = await self._http_client.get(
+                f"{GMAIL_API_BASE}profile",
+                headers=self._auth_headers(access_token),
+            )
+            response.raise_for_status()
+            return cast(dict[str, Any], response.json())
+
+        data = await self.retry_with_backoff(_request, quota_units=5)
+        return str(data["historyId"])
 
     async def get_message_body(self, access_token: str, message_id: str) -> MessageBody:
         """Fetch the full message body (text/plain and text/html parts).

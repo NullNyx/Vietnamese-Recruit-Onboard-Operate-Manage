@@ -84,7 +84,7 @@ class UpdatePayslipRequest(BaseModel):
 
     @field_validator("pdf_url", mode="before")
     @classmethod
-    def normalize_pdf_url(cls, v):
+    def normalize_pdf_url(cls, v: str | None) -> str | None:
         """Convert empty string to None to allow clearing pdf_url."""
         if v == "":
             return None

@@ -217,7 +217,10 @@ class TestLogoutEndpoint:
         client.cookies.set("must_change_password", "true")
         response = client.post("/api/auth/logout")
         set_cookie_headers = response.headers.get_list("set-cookie")
-        assert any('must_change_password=""' in h or "must_change_password=;" in h for h in set_cookie_headers)
+        assert any(
+            'must_change_password=""' in h or "must_change_password=;" in h
+            for h in set_cookie_headers
+        )
 
 
 class TestMeEndpoint:
@@ -267,7 +270,6 @@ class TestGrantStatusEndpoint:
         mock_auth_service.logout.assert_not_called()
 
 
-
 class TestAdminSchemasCompat:
     def test_identity_api_schemas_exports_admin_dtos(self):
         from src.modules.identity.api.schemas import (
@@ -284,7 +286,14 @@ class TestAdminSchemasCompat:
         assert WhitelistEntrySchema is not None
         assert WhitelistListResponse is not None
 
-
     def test_google_connection_routes_exist(self, client):
-        assert client.get("/api/auth/organization-google-connection/authorize-url").status_code in {200, 401, 403}
-        assert client.post("/api/auth/organization-google-connection/reconnect").status_code in {200, 401, 403}
+        assert client.get("/api/auth/organization-google-connection/authorize-url").status_code in {
+            200,
+            401,
+            403,
+        }
+        assert client.post("/api/auth/organization-google-connection/reconnect").status_code in {
+            200,
+            401,
+            403,
+        }

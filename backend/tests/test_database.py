@@ -1,6 +1,9 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from src.database import get_session
+
 
 def test_get_session_success():
     """
@@ -10,9 +13,10 @@ def test_get_session_success():
     """
     mock_session_instance = MagicMock()
 
-    with patch("src.database.Session", return_value=mock_session_instance) as MockSession, \
-         patch("src.database._get_engine") as mock_get_engine:
-
+    with (
+        patch("src.database.Session", return_value=mock_session_instance),
+        patch("src.database._get_engine"),
+    ):
         # __enter__ returns the session context manager
         mock_session_instance.__enter__.return_value = mock_session_instance
 
@@ -31,6 +35,7 @@ def test_get_session_success():
         mock_session_instance.commit.assert_called_once()
         mock_session_instance.rollback.assert_not_called()
 
+
 def test_get_session_rollback():
     """
     Test that the session rollbacks and raises an exception when an error occurs
@@ -38,14 +43,15 @@ def test_get_session_rollback():
     """
     mock_session_instance = MagicMock()
 
-    with patch("src.database.Session", return_value=mock_session_instance) as MockSession, \
-         patch("src.database._get_engine") as mock_get_engine:
-
+    with (
+        patch("src.database.Session", return_value=mock_session_instance),
+        patch("src.database._get_engine"),
+    ):
         mock_session_instance.__enter__.return_value = mock_session_instance
 
         gen = get_session()
 
-        session = next(gen)
+        next(gen)
 
         # Simulate exception raised in the scope using the generator
         with pytest.raises(ValueError, match="Test error"):

@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
@@ -14,6 +14,7 @@ from src.modules.gmail.domain.exceptions import (
     RateLimitedException,
 )
 from src.modules.gmail.infrastructure.config import GmailSettings
+from src.modules.identity.domain.entities import OrganizationGoogleConnection
 from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
 
 
@@ -76,6 +77,22 @@ def user_id():
 
 
 @pytest.fixture
+def mock_connection_repo(user_id: UUID) -> AsyncMock:
+    """Mock the singleton Organization Google Connection."""
+    connection = MagicMock(spec=OrganizationGoogleConnection)
+    connection.status = "connected"
+    connection.access_token_enc = "encrypted_test_access_token"
+    connection.refresh_token_enc = "encrypted_test_refresh_token"
+    connection.client_secret_enc = None
+    connection.connected_by_user_id = user_id
+    connection.token_expires_at = datetime.now(UTC) + timedelta(hours=1)
+    repo = AsyncMock()
+    repo.get_singleton = AsyncMock(return_value=connection)
+    repo.upsert_singleton = AsyncMock()
+    return repo
+
+
+@pytest.fixture
 def sync_service(
     gmail_adapter: AsyncMock,
     email_repo: AsyncMock,
@@ -85,19 +102,21 @@ def sync_service(
     audit_logger: AsyncMock,
     settings: GmailSettings,
     mock_redis: AsyncMock,
+    mock_connection_repo: AsyncMock,
 ) -> EmailSyncService:
     """Create an EmailSyncService with mocked dependencies."""
     return EmailSyncService(
         gmail_adapter=gmail_adapter,
         email_repo=email_repo,
         sync_cursor_repo=sync_cursor_repo,
-        oauth_grant_repo=oauth_grant_repo,
         crypto=crypto,
         audit_logger=audit_logger,
         settings=settings,
         redis_client=mock_redis,
         client_id="test-client-id",
         client_secret="test-client-secret",
+        oauth_grant_repo=oauth_grant_repo,
+        connection_repo=mock_connection_repo,
     )
 
 
@@ -148,25 +167,27 @@ def _make_message_metadata(
 class TestPollEmails:
     """Tests for poll_emails method."""
 
-    async def test_raises_when_no_grant(
-        self, sync_service: EmailSyncService, oauth_grant_repo: AsyncMock, user_id
+    async def test_raises_when_connection_disconnected(
+        self, sync_service: EmailSyncService, mock_connection_repo: AsyncMock, user_id
     ) -> None:
-        """Should raise GmailNotConnectedException when no grant exists."""
-        oauth_grant_repo.get_by_user_id.return_value = None
+        """Should raise when the singleton connection is disconnected."""
+        connection = mock_connection_repo.get_singleton.return_value
+        connection.status = "disconnected"
 
         with pytest.raises(GmailNotConnectedException):
             await sync_service.poll_emails(user_id)
 
-    async def test_raises_when_grant_invalid(
-        self, sync_service: EmailSyncService, oauth_grant_repo: AsyncMock, user_id
+    async def test_raises_when_connection_requires_reauthorization(
+        self, sync_service: EmailSyncService, mock_connection_repo: AsyncMock, user_id
     ) -> None:
-        """Should raise GmailNotConnectedException when grant is invalid."""
-        oauth_grant_repo.get_by_user_id.return_value = _make_grant(is_valid=False)
+        """Should raise when the singleton connection needs reauthorization."""
+        connection = mock_connection_repo.get_singleton.return_value
+        connection.status = "reauthorization_required"
 
         with pytest.raises(GmailNotConnectedException):
             await sync_service.poll_emails(user_id)
 
-    async def test_first_poll_fetches_last_7_days(
+    async def test_first_poll_establishes_baseline(
         self,
         sync_service: EmailSyncService,
         oauth_grant_repo: AsyncMock,
@@ -175,18 +196,36 @@ class TestPollEmails:
         email_repo: AsyncMock,
         user_id,
     ) -> None:
-        """First poll (no cursor) should fetch emails from last 7 days."""
+        """First poll (no cursor) should establish baseline and not fetch emails."""
         oauth_grant_repo.get_by_user_id.return_value = _make_grant()
         sync_cursor_repo.get_cursor.return_value = None
-        gmail_adapter.fetch_messages.return_value = [_make_message_metadata()]
-        email_repo.batch_upsert.return_value = 1
+        gmail_adapter.get_latest_history_id.return_value = "55555"
 
         result = await sync_service.poll_emails(user_id)
 
-        assert result == 1
-        # Verify fetch_messages was called with an "after:" query
-        call_args = gmail_adapter.fetch_messages.call_args
-        assert "after:" in call_args.kwargs["query"]
+        assert result == 0
+        gmail_adapter.get_latest_history_id.assert_called_once_with("test_access_token")
+        sync_cursor_repo.upsert_cursor.assert_called_once_with(user_id=user_id, history_id="55555")
+        email_repo.batch_upsert.assert_not_called()
+
+    async def test_no_new_emails_returns_zero(
+        self,
+        sync_service: EmailSyncService,
+        oauth_grant_repo: AsyncMock,
+        sync_cursor_repo: AsyncMock,
+        gmail_adapter: AsyncMock,
+        email_repo: AsyncMock,
+        user_id,
+    ) -> None:
+        """Should return 0 when no new emails are found."""
+        oauth_grant_repo.get_by_user_id.return_value = _make_grant()
+        sync_cursor_repo.get_cursor.return_value = None
+        gmail_adapter.fetch_messages.return_value = []
+
+        result = await sync_service.poll_emails(user_id)
+
+        assert result == 0
+        email_repo.batch_upsert.assert_not_called()
 
     async def test_incremental_sync_uses_history(
         self,
@@ -217,44 +256,6 @@ class TestPollEmails:
             max_results=100,
         )
 
-    async def test_updates_cursor_after_successful_fetch(
-        self,
-        sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
-        sync_cursor_repo: AsyncMock,
-        gmail_adapter: AsyncMock,
-        email_repo: AsyncMock,
-        user_id,
-    ) -> None:
-        """Should update sync cursor after successful fetch."""
-        oauth_grant_repo.get_by_user_id.return_value = _make_grant()
-        sync_cursor_repo.get_cursor.return_value = None
-        gmail_adapter.fetch_messages.return_value = [_make_message_metadata(history_id="55555")]
-        email_repo.batch_upsert.return_value = 1
-
-        await sync_service.poll_emails(user_id)
-
-        sync_cursor_repo.upsert_cursor.assert_called_once_with(user_id=user_id, history_id="55555")
-
-    async def test_no_new_emails_returns_zero(
-        self,
-        sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
-        sync_cursor_repo: AsyncMock,
-        gmail_adapter: AsyncMock,
-        email_repo: AsyncMock,
-        user_id,
-    ) -> None:
-        """Should return 0 when no new emails are found."""
-        oauth_grant_repo.get_by_user_id.return_value = _make_grant()
-        sync_cursor_repo.get_cursor.return_value = None
-        gmail_adapter.fetch_messages.return_value = []
-
-        result = await sync_service.poll_emails(user_id)
-
-        assert result == 0
-        email_repo.batch_upsert.assert_not_called()
-
     async def test_token_refresh_on_401(
         self,
         sync_service: EmailSyncService,
@@ -267,14 +268,17 @@ class TestPollEmails:
         """Should attempt token refresh on 401 and retry."""
         grant = _make_grant()
         oauth_grant_repo.get_by_user_id.return_value = grant
-        sync_cursor_repo.get_cursor.return_value = None
+
+        cursor = MagicMock(spec=SyncCursor)
+        cursor.history_id = "12345"
+        sync_cursor_repo.get_cursor.return_value = cursor
 
         # First call raises 401, second call succeeds
         response_401 = MagicMock()
         response_401.status_code = 401
-        gmail_adapter.fetch_messages.side_effect = [
+        gmail_adapter.fetch_history.side_effect = [
             httpx.HTTPStatusError("401", request=MagicMock(), response=response_401),
-            [_make_message_metadata()],
+            ([_make_message_metadata()], "12346"),
         ]
         gmail_adapter.refresh_access_token.return_value = (
             "new_access_token",
@@ -287,23 +291,22 @@ class TestPollEmails:
         assert result == 1
         gmail_adapter.refresh_access_token.assert_called_once()
 
-    async def test_token_refresh_failure_marks_invalid(
+    async def test_token_refresh_network_failure_keeps_connection_connected(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
         sync_cursor_repo: AsyncMock,
         gmail_adapter: AsyncMock,
-        audit_logger: AsyncMock,
+        mock_connection_repo: AsyncMock,
         user_id,
     ) -> None:
-        """Should mark grant invalid when token refresh fails."""
-        grant = _make_grant()
-        oauth_grant_repo.get_by_user_id.return_value = grant
-        sync_cursor_repo.get_cursor.return_value = None
+        """Transient refresh failure must not require reauthorization."""
+        cursor = MagicMock(spec=SyncCursor)
+        cursor.history_id = "12345"
+        sync_cursor_repo.get_cursor.return_value = cursor
 
         response_401 = MagicMock()
         response_401.status_code = 401
-        gmail_adapter.fetch_messages.side_effect = httpx.HTTPStatusError(
+        gmail_adapter.fetch_history.side_effect = httpx.HTTPStatusError(
             "401", request=MagicMock(), response=response_401
         )
         gmail_adapter.refresh_access_token.side_effect = Exception("Refresh failed")
@@ -311,7 +314,7 @@ class TestPollEmails:
         result = await sync_service.poll_emails(user_id)
 
         assert result == 0
-        oauth_grant_repo.mark_invalid.assert_called_once_with(user_id)
+        assert mock_connection_repo.get_singleton.return_value.status == "connected"
 
     async def test_logs_audit_on_success(
         self,
@@ -325,8 +328,12 @@ class TestPollEmails:
     ) -> None:
         """Should log audit entry on successful poll."""
         oauth_grant_repo.get_by_user_id.return_value = _make_grant()
-        sync_cursor_repo.get_cursor.return_value = None
-        gmail_adapter.fetch_messages.return_value = [_make_message_metadata()]
+
+        cursor = MagicMock(spec=SyncCursor)
+        cursor.history_id = "12345"
+        sync_cursor_repo.get_cursor.return_value = cursor
+
+        gmail_adapter.fetch_history.return_value = ([_make_message_metadata()], "12346")
         email_repo.batch_upsert.return_value = 1
 
         await sync_service.poll_emails(user_id)
@@ -374,8 +381,12 @@ class TestManualSync:
         # Simulate last sync was 60 seconds ago (beyond 30s cooldown)
         mock_redis.get.return_value = str(time.time() - 60).encode()
         oauth_grant_repo.get_by_user_id.return_value = _make_grant()
-        sync_cursor_repo.get_cursor.return_value = None
-        gmail_adapter.fetch_messages.return_value = [_make_message_metadata()]
+
+        cursor = MagicMock(spec=SyncCursor)
+        cursor.history_id = "12345"
+        sync_cursor_repo.get_cursor.return_value = cursor
+
+        gmail_adapter.fetch_history.return_value = ([_make_message_metadata()], "12346")
         email_repo.batch_upsert.return_value = 1
 
         result = await sync_service.manual_sync(user_id)
@@ -395,8 +406,12 @@ class TestManualSync:
         """Should allow manual sync when no previous sync recorded."""
         mock_redis.get.return_value = None
         oauth_grant_repo.get_by_user_id.return_value = _make_grant()
-        sync_cursor_repo.get_cursor.return_value = None
-        gmail_adapter.fetch_messages.return_value = [_make_message_metadata()]
+
+        cursor = MagicMock(spec=SyncCursor)
+        cursor.history_id = "12345"
+        sync_cursor_repo.get_cursor.return_value = cursor
+
+        gmail_adapter.fetch_history.return_value = ([_make_message_metadata()], "12346")
         email_repo.batch_upsert.return_value = 1
 
         result = await sync_service.manual_sync(user_id)
@@ -416,26 +431,29 @@ class TestManualSync:
         """Should record manual sync timestamp in Redis after success."""
         mock_redis.get.return_value = None
         oauth_grant_repo.get_by_user_id.return_value = _make_grant()
-        sync_cursor_repo.get_cursor.return_value = None
-        gmail_adapter.fetch_messages.return_value = []
+
+        cursor = MagicMock(spec=SyncCursor)
+        cursor.history_id = "12345"
+        sync_cursor_repo.get_cursor.return_value = cursor
+
+        gmail_adapter.fetch_history.return_value = ([], "12345")
 
         await sync_service.manual_sync(user_id)
 
-        mock_redis.set.assert_called_once()
-        call_args = mock_redis.set.call_args
-        assert f"gmail:manual_sync:{user_id}" == call_args.args[0]
-        assert call_args.kwargs["ex"] == 30
+        calls = mock_redis.set.call_args_list
+        manual_call = next(call for call in calls if call.args[0] == f"gmail:manual_sync:{user_id}")
+        assert manual_call.kwargs["ex"] == 30
 
     async def test_raises_not_connected(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
+        mock_connection_repo: AsyncMock,
         mock_redis: AsyncMock,
         user_id,
     ) -> None:
         """Should raise GmailNotConnectedException when not connected."""
         mock_redis.get.return_value = None
-        oauth_grant_repo.get_by_user_id.return_value = None
+        mock_connection_repo.get_singleton.return_value.status = "disconnected"
 
         with pytest.raises(GmailNotConnectedException):
             await sync_service.manual_sync(user_id)
@@ -454,8 +472,12 @@ class TestManualSync:
         """Should log audit entry with sync_type=manual."""
         mock_redis.get.return_value = None
         oauth_grant_repo.get_by_user_id.return_value = _make_grant()
-        sync_cursor_repo.get_cursor.return_value = None
-        gmail_adapter.fetch_messages.return_value = [_make_message_metadata()]
+
+        cursor = MagicMock(spec=SyncCursor)
+        cursor.history_id = "12345"
+        sync_cursor_repo.get_cursor.return_value = cursor
+
+        gmail_adapter.fetch_history.return_value = ([_make_message_metadata()], "12346")
         email_repo.batch_upsert.return_value = 1
 
         await sync_service.manual_sync(user_id)
@@ -480,18 +502,14 @@ class TestFetchAndPersist:
         sync_cursor_repo: AsyncMock,
         user_id,
     ) -> None:
-        """First poll should use 'after:' query with epoch timestamp."""
-        gmail_adapter.fetch_messages.return_value = []
+        """First poll should set baseline using get_latest_history_id."""
+        gmail_adapter.get_latest_history_id.return_value = "55555"
 
-        await sync_service._fetch_and_persist(user_id, "token", None)
+        result = await sync_service._fetch_and_persist(user_id, "token", None)
 
-        call_args = gmail_adapter.fetch_messages.call_args
-        query = call_args.kwargs["query"]
-        assert query.startswith("after:")
-        # Verify the epoch is roughly 7 days ago
-        epoch = int(query.split(":")[1])
-        seven_days_ago = int((datetime.now(UTC) - timedelta(days=7)).timestamp())
-        assert abs(epoch - seven_days_ago) < 10  # within 10 seconds
+        assert result == 0
+        gmail_adapter.get_latest_history_id.assert_called_once_with("token")
+        sync_cursor_repo.upsert_cursor.assert_called_once_with(user_id=user_id, history_id="55555")
 
     async def test_incremental_sync_uses_fetch_history(
         self,
@@ -522,14 +540,19 @@ class TestFetchAndPersist:
         sync_cursor_repo: AsyncMock,
         user_id,
     ) -> None:
-        """Should convert metadata to entities and batch upsert."""
-        gmail_adapter.fetch_messages.return_value = [
-            _make_message_metadata("msg_1", history_id="100"),
-            _make_message_metadata("msg_2", history_id="101"),
-        ]
+        """Should convert metadata to entities and batch upsert during incremental sync."""
+        cursor = MagicMock(spec=SyncCursor)
+        cursor.history_id = "99"
+
+        msg1 = _make_message_metadata("msg_1", history_id="100")
+        msg1.label_ids = ["INBOX"]
+        msg2 = _make_message_metadata("msg_2", history_id="101")
+        msg2.label_ids = ["INBOX"]
+
+        gmail_adapter.fetch_history.return_value = ([msg1, msg2], "101")
         email_repo.batch_upsert.return_value = 2
 
-        result = await sync_service._fetch_and_persist(user_id, "token", None)
+        result = await sync_service._fetch_and_persist(user_id, "token", cursor)
 
         assert result == 2
         # Verify batch_upsert was called with 2 entities
@@ -716,3 +739,76 @@ class TestMetadataToEntity:
         entity = sync_service._metadata_to_entity(user_id, metadata)
 
         assert len(entity.recipient_emails) == 50
+
+
+class TestOrganizationConnectionSync:
+    """Tests for Organization Google Connection sync flows."""
+
+    def _make_org_service(
+        self,
+        gmail_adapter,
+        email_repo,
+        sync_cursor_repo,
+        crypto,
+        audit_logger,
+        settings,
+        mock_redis,
+        connection,
+    ) -> EmailSyncService:
+        """Build a service with an injected connection_repo returning the given connection."""
+        connection_repo = AsyncMock()
+        connection_repo.get_singleton = AsyncMock(return_value=connection)
+        connection_repo.upsert_singleton = AsyncMock()
+        return EmailSyncService(
+            gmail_adapter=gmail_adapter,
+            email_repo=email_repo,
+            sync_cursor_repo=sync_cursor_repo,
+            crypto=crypto,
+            audit_logger=audit_logger,
+            settings=settings,
+            redis_client=mock_redis,
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            connection_repo=connection_repo,
+        )
+
+    @pytest.mark.asyncio
+    async def test_organization_sync_establishes_baseline_first_poll(
+        self,
+        gmail_adapter: AsyncMock,
+        email_repo: AsyncMock,
+        sync_cursor_repo: AsyncMock,
+        crypto: MagicMock,
+        audit_logger: AsyncMock,
+        settings: GmailSettings,
+        mock_redis: AsyncMock,
+    ) -> None:
+        """First poll establishes baseline history ID and returns 0 messages."""
+        user_id = uuid4()
+        connection = OrganizationGoogleConnection(
+            email="org@vroom.hr",
+            status="connected",
+            connected_by_user_id=user_id,
+            access_token_enc=crypto.encrypt("token"),
+        )
+
+        svc = self._make_org_service(
+            gmail_adapter,
+            email_repo,
+            sync_cursor_repo,
+            crypto,
+            audit_logger,
+            settings,
+            mock_redis,
+            connection,
+        )
+
+        sync_cursor_repo.get_cursor.return_value = None
+        gmail_adapter.get_latest_history_id.return_value = "88888"
+
+        result = await svc.poll_emails(user_id)
+
+        assert result == 0
+        gmail_adapter.get_latest_history_id.assert_called_once_with("token")
+        sync_cursor_repo.upsert_cursor.assert_called_once_with(user_id=user_id, history_id="88888")
+        email_repo.batch_upsert.assert_not_called()

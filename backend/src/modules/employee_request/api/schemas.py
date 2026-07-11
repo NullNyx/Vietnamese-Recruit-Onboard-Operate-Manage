@@ -1,6 +1,7 @@
 """API schemas for Employee Request module."""
 
 from datetime import date, datetime, time
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -55,7 +56,7 @@ class OvertimeCreateRequest(BaseModel):
 
     @field_validator("end_time")
     @classmethod
-    def reject_end_before_start(cls, v: time, info) -> time:
+    def reject_end_before_start(cls, v: time, info: Any) -> time:
         start = info.data.get("start_time") if info.data else None
         if start is not None and v <= start:
             raise ValueError("End time must be after start time")
@@ -139,7 +140,7 @@ class LeaveCreateRequest(BaseModel):
 
     @field_validator("end_date")
     @classmethod
-    def reject_end_before_start(cls, v: date, info) -> date:
+    def reject_end_before_start(cls, v: date, info: Any) -> date:
         start = info.data.get("start_date") if info.data else None
         if start is not None and v < start:
             raise ValueError("End date must be on or after start date")

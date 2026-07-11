@@ -224,6 +224,7 @@ def _build_world(
     """Set up an in-progress process, inactive employee, and pending tasks."""
     from datetime import date
     from uuid import uuid4
+
     manager = Employee(
         employee_code="MGR-001",
         full_name="Manager",

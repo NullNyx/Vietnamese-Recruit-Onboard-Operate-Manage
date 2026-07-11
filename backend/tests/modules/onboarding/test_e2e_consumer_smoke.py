@@ -192,7 +192,9 @@ async def _insert_admin_user(maker: async_sessionmaker[AsyncSession]) -> User:
     )
 
 
-async def _insert_setup_dependencies(maker: async_sessionmaker[AsyncSession]) -> tuple[UUID, UUID, UUID]:
+async def _insert_setup_dependencies(
+    maker: async_sessionmaker[AsyncSession],
+) -> tuple[UUID, UUID, UUID]:
     suffix = uuid4().hex[:8]
     dept = Department(name=f"Engineering-{suffix}")
     pos = Position(name=f"Software Engineer-{suffix}", department_id=dept.id)
@@ -337,6 +339,7 @@ async def test_candidate_accepted_drives_full_chain_to_active_employee(
     async with session_maker() as svc_session:
         service = container._build_service(svc_session)
         from datetime import date
+
         today = date.today()
         await service.update_employee_setup(
             process_id=process.id,
@@ -346,7 +349,7 @@ async def test_candidate_accepted_drives_full_chain_to_active_employee(
                 "position_id": pos_id,
                 "manager_id": mgr_id,
                 "start_date": today,
-            }
+            },
         )
 
     # Verify setup updates

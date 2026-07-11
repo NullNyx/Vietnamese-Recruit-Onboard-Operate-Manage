@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.modules.recruitment.infrastructure.pii_redactor import PIIRedactor, REDACTED_TOKEN
+from src.modules.recruitment.infrastructure.pii_redactor import REDACTED_TOKEN, PIIRedactor
 
 
 @pytest.fixture

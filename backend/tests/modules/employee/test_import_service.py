@@ -1,15 +1,14 @@
 """Unit tests for the ImportService module."""
 
-from datetime import date
 from io import BytesIO
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
 from openpyxl import Workbook
 
 from src.modules.employee.application.import_service import ImportService
-from src.modules.employee.domain.entities import Department, Employee, Position
+from src.modules.employee.domain.entities import Department, Position
 
 
 def _create_excel(headers: list[str], rows: list[list]) -> bytes:
@@ -255,8 +254,10 @@ class TestImportServiceMixedRows:
         employee_repo.create.return_value = MagicMock()
 
         department_repo = AsyncMock()
+
         def get_by_name_side_effect(name):
             return dept if name == "Engineering" else None
+
         department_repo.get_by_name.side_effect = get_by_name_side_effect
         department_repo.create.return_value = new_dept
 

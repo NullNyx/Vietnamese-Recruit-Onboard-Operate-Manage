@@ -3,7 +3,6 @@
 from datetime import date, datetime
 from io import BytesIO
 
-import pytest
 from openpyxl import Workbook
 
 from src.modules.employee.infrastructure.excel_parser import parse_excel
@@ -291,7 +290,6 @@ class TestParseExcelEdgeCases:
     def test_empty_file(self):
         """An empty workbook should return empty results."""
         wb = Workbook()
-        ws = wb.active
         buffer = BytesIO()
         wb.save(buffer)
         file_bytes = buffer.getvalue()

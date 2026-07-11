@@ -203,7 +203,7 @@ class AssistantService:
 
     def _build_messages(
         self, messages: list[ChatMessage], enabled_tool_names: set[str] | None = None
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """Build OpenAI-format messages with system prompt and history trimming.
 
         Applies max_history limit per grill decision (20 messages).

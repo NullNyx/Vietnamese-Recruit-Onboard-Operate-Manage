@@ -16,10 +16,11 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.modules.assistant.application.assistant_service import ChatMessage
 from src.modules.assistant.application.employee_assistant_service import (
     EmployeeAssistantService,
 )
-from src.modules.assistant.application.assistant_service import ChatMessage
+from src.modules.assistant.application.employee_tool_registry import EmployeeToolRegistry
 from src.modules.assistant.infrastructure.config import AssistantSettings
 from src.modules.assistant.infrastructure.llm_client import LLMResponse
 
@@ -66,34 +67,42 @@ class TestDraftActionFlow:
         mock_llm_client: MagicMock,
         settings: AssistantSettings,
     ) -> None:
-        mock_llm_client.chat = AsyncMock(side_effect=[
-            LLMResponse(
-                content=None,
-                tool_calls=[{
-                    "id": "tc_1",
-                    "type": "function",
-                    "function": {
-                        "name": "draft_leave_request",
-                        "arguments": json.dumps({
-                            "leave_type": "annual",
-                            "start_date": "2026-07-01",
-                            "end_date": "2026-07-03",
-                            "reason": "Nghỉ phép du lịch",
-                        }),
-                    },
-                }],
-                token_usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
-            ),
-            LLMResponse(
-                content="Tôi đã tạo draft đơn xin nghỉ phép cho bạn.",
-                tool_calls=None,
-                token_usage={"prompt_tokens": 20, "completion_tokens": 10, "total_tokens": 30},
-            ),
-        ])
+        mock_llm_client.chat = AsyncMock(
+            side_effect=[
+                LLMResponse(
+                    content=None,
+                    tool_calls=[
+                        {
+                            "id": "tc_1",
+                            "type": "function",
+                            "function": {
+                                "name": "draft_leave_request",
+                                "arguments": json.dumps(
+                                    {
+                                        "leave_type": "annual",
+                                        "start_date": "2026-07-01",
+                                        "end_date": "2026-07-03",
+                                        "reason": "Nghỉ phép du lịch",
+                                    }
+                                ),
+                            },
+                        }
+                    ],
+                    token_usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+                ),
+                LLMResponse(
+                    content="Tôi đã tạo draft đơn xin nghỉ phép cho bạn.",
+                    tool_calls=None,
+                    token_usage={"prompt_tokens": 20, "completion_tokens": 10, "total_tokens": 30},
+                ),
+            ]
+        )
         service = _make_service(mock_llm_client, settings)
-        response = await service.chat([
-            ChatMessage(role="user", content="Cho tôi xin nghỉ phép từ 01/07 đến 03/07"),
-        ])
+        response = await service.chat(
+            [
+                ChatMessage(role="user", content="Cho tôi xin nghỉ phép từ 01/07 đến 03/07"),
+            ]
+        )
         assert response.draft_action is not None
         assert response.draft_action["action_type"] == "submit_leave_request"
         assert response.draft_action["confirm_endpoint"] == "/api/employee-requests/me/leave"
@@ -111,34 +120,42 @@ class TestDraftActionFlow:
         mock_llm_client: MagicMock,
         settings: AssistantSettings,
     ) -> None:
-        mock_llm_client.chat = AsyncMock(side_effect=[
-            LLMResponse(
-                content=None,
-                tool_calls=[{
-                    "id": "tc_1",
-                    "type": "function",
-                    "function": {
-                        "name": "draft_overtime_request",
-                        "arguments": json.dumps({
-                            "work_date": "2026-06-15",
-                            "start_time": "18:00",
-                            "end_time": "21:00",
-                            "reason": "Xử lý báo cáo Q2",
-                        }),
-                    },
-                }],
-                token_usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
-            ),
-            LLMResponse(
-                content="Tôi đã tạo draft đăng ký tăng ca cho bạn.",
-                tool_calls=None,
-                token_usage={"prompt_tokens": 20, "completion_tokens": 10, "total_tokens": 30},
-            ),
-        ])
+        mock_llm_client.chat = AsyncMock(
+            side_effect=[
+                LLMResponse(
+                    content=None,
+                    tool_calls=[
+                        {
+                            "id": "tc_1",
+                            "type": "function",
+                            "function": {
+                                "name": "draft_overtime_request",
+                                "arguments": json.dumps(
+                                    {
+                                        "work_date": "2026-06-15",
+                                        "start_time": "18:00",
+                                        "end_time": "21:00",
+                                        "reason": "Xử lý báo cáo Q2",
+                                    }
+                                ),
+                            },
+                        }
+                    ],
+                    token_usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+                ),
+                LLMResponse(
+                    content="Tôi đã tạo draft đăng ký tăng ca cho bạn.",
+                    tool_calls=None,
+                    token_usage={"prompt_tokens": 20, "completion_tokens": 10, "total_tokens": 30},
+                ),
+            ]
+        )
         service = _make_service(mock_llm_client, settings)
-        response = await service.chat([
-            ChatMessage(role="user", content="Đăng ký tăng ca ngày 15/06"),
-        ])
+        response = await service.chat(
+            [
+                ChatMessage(role="user", content="Đăng ký tăng ca ngày 15/06"),
+            ]
+        )
         assert response.draft_action is not None
         assert response.draft_action["action_type"] == "submit_overtime_request"
 
@@ -148,25 +165,29 @@ class TestDraftActionFlow:
         mock_llm_client: MagicMock,
         settings: AssistantSettings,
     ) -> None:
-        mock_llm_client.chat = AsyncMock(side_effect=[
-            LLMResponse(
-                content=None,
-                tool_calls=[{
-                    "id": "tc_1",
-                    "type": "function",
-                    "function": {
-                        "name": "get_my_profile",
-                        "arguments": "{}",
-                    },
-                }],
-                token_usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
-            ),
-            LLMResponse(
-                content="Đây là thông tin profile của bạn.",
-                tool_calls=None,
-                token_usage={"prompt_tokens": 20, "completion_tokens": 10, "total_tokens": 30},
-            ),
-        ])
+        mock_llm_client.chat = AsyncMock(
+            side_effect=[
+                LLMResponse(
+                    content=None,
+                    tool_calls=[
+                        {
+                            "id": "tc_1",
+                            "type": "function",
+                            "function": {
+                                "name": "get_my_profile",
+                                "arguments": "{}",
+                            },
+                        }
+                    ],
+                    token_usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+                ),
+                LLMResponse(
+                    content="Đây là thông tin profile của bạn.",
+                    tool_calls=None,
+                    token_usage={"prompt_tokens": 20, "completion_tokens": 10, "total_tokens": 30},
+                ),
+            ]
+        )
 
         dummy_employee = MagicMock()
         dummy_employee.employee_code = "NV-001"
@@ -195,9 +216,11 @@ class TestDraftActionFlow:
             document_service=MagicMock(),
             settings=settings,
         )
-        response = await service.chat([
-            ChatMessage(role="user", content="Xem profile của tôi"),
-        ])
+        response = await service.chat(
+            [
+                ChatMessage(role="user", content="Xem profile của tôi"),
+            ]
+        )
         assert response.draft_action is None
 
     @pytest.mark.asyncio
@@ -207,42 +230,49 @@ class TestDraftActionFlow:
         settings: AssistantSettings,
     ) -> None:
         """Draft tool returns draft_action but NEVER auto-confirms."""
-        mock_llm_client.chat = AsyncMock(side_effect=[
-            LLMResponse(
-                content=None,
-                tool_calls=[{
-                    "id": "tc_1",
-                    "type": "function",
-                    "function": {
-                        "name": "draft_leave_request",
-                        "arguments": json.dumps({
-                            "leave_type": "sick",
-                            "start_date": "2026-07-05",
-                            "end_date": "2026-07-05",
-                            "reason": "Bị ốm",
-                        }),
-                    },
-                }],
-                token_usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
-            ),
-            LLMResponse(
-                content="Tôi đã tạo draft đơn nghỉ ốm. Vui lòng kiểm tra và xác nhận.",
-                tool_calls=None,
-                token_usage={"prompt_tokens": 20, "completion_tokens": 10, "total_tokens": 30},
-            ),
-        ])
+        mock_llm_client.chat = AsyncMock(
+            side_effect=[
+                LLMResponse(
+                    content=None,
+                    tool_calls=[
+                        {
+                            "id": "tc_1",
+                            "type": "function",
+                            "function": {
+                                "name": "draft_leave_request",
+                                "arguments": json.dumps(
+                                    {
+                                        "leave_type": "sick",
+                                        "start_date": "2026-07-05",
+                                        "end_date": "2026-07-05",
+                                        "reason": "Bị ốm",
+                                    }
+                                ),
+                            },
+                        }
+                    ],
+                    token_usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+                ),
+                LLMResponse(
+                    content="Tôi đã tạo draft đơn nghỉ ốm. Vui lòng kiểm tra và xác nhận.",
+                    tool_calls=None,
+                    token_usage={"prompt_tokens": 20, "completion_tokens": 10, "total_tokens": 30},
+                ),
+            ]
+        )
         service = _make_service(mock_llm_client, settings)
-        response = await service.chat([
-            ChatMessage(role="user", content="Tôi bị ốm, xin nghỉ 1 ngày"),
-        ])
+        response = await service.chat(
+            [
+                ChatMessage(role="user", content="Tôi bị ốm, xin nghỉ 1 ngày"),
+            ]
+        )
         assert response.draft_action is not None
         assert "confirmed" not in response.draft_action
         assert "submission_result" not in response.draft_action
 
         # Verify assistant text does not claim the request was submitted
         assistant_texts = [
-            m.content for m in response.messages
-            if m.role == "assistant" and m.content
+            m.content for m in response.messages if m.role == "assistant" and m.content
         ]
         for text in assistant_texts:
             assert "đã gửi" not in text.lower()
@@ -252,11 +282,13 @@ class TestStructuralNoWrite:
     """Verify the Employee Assistant has NO write capability at any layer."""
 
     @staticmethod
-    def _make_registry(**overrides: MagicMock) -> "EmployeeToolRegistry":
+    def _make_registry(**overrides: MagicMock) -> EmployeeToolRegistry:
+        from unittest.mock import MagicMock
+
         from src.modules.assistant.application.employee_tool_registry import (
             EmployeeToolRegistry,
         )
-        from unittest.mock import MagicMock
+
         defaults = {
             "employee_service": MagicMock(),
             "attendance_repo": MagicMock(),
@@ -270,6 +302,7 @@ class TestStructuralNoWrite:
             employee_id="00000000-0000-0000-0000-000000000001",
             **defaults,
         )
+
     """Verify the Employee Assistant has NO write capability at any layer."""
 
     def test_tool_registry_has_no_write_handlers(self) -> None:
@@ -286,14 +319,14 @@ class TestStructuralNoWrite:
             # Must not define any method starting with these prefixes
             for line in source.split("\n"):
                 stripped = line.strip()
-                if stripped.startswith(f"async def {prefix}") or stripped.startswith(f"def {prefix}"):
-                    raise AssertionError(
-                        f"Found forbidden write handler: {stripped}"
-                    )
+                if stripped.startswith(f"async def {prefix}") or stripped.startswith(
+                    f"def {prefix}"
+                ):
+                    raise AssertionError(f"Found forbidden write handler: {stripped}")
 
         # 2. Check that handler implementations do not call session.write methods
         # Extract only the handler section (private async methods)
-        handler_section = source[source.find("async def _get_my_profile"):]
+        handler_section = source[source.find("async def _get_my_profile") :]
         forbidden_calls = [
             "session.commit(",
             "session.add(",
@@ -306,18 +339,12 @@ class TestStructuralNoWrite:
             ".save(",
         ]
         for pattern in forbidden_calls:
-            lines = [
-                line.strip()
-                for line in handler_section.split("\n")
-                if pattern in line
-            ]
+            lines = [line.strip() for line in handler_section.split("\n") if pattern in line]
             for line in lines:
                 # Allow SELECT statements with .execute()
                 if "execute(" in line and "SELECT" in line.upper():
                     continue
-                raise AssertionError(
-                    f"Found forbidden call '{pattern}' in handler: {line}"
-                )
+                raise AssertionError(f"Found forbidden call '{pattern}' in handler: {line}")
 
     def test_all_handler_methods_are_approved(self) -> None:
         approved_handlers = {
@@ -361,8 +388,13 @@ class TestStructuralNoWrite:
 
         source = inspect.getsource(EmployeeAssistantService)
         for pattern in [
-            "requests.post", "requests.put", "httpx.", "aiohttp.",
-            "session.commit", "session.add(", "confirm(",
+            "requests.post",
+            "requests.put",
+            "httpx.",
+            "aiohttp.",
+            "session.commit",
+            "session.add(",
+            "confirm(",
         ]:
             assert pattern not in source
         assert "draft_action = result_data" in source
@@ -390,9 +422,7 @@ class TestStructuralNoWrite:
         for handler_name in ["_draft_leave_request", "_draft_overtime_request"]:
             marker = f"async def {handler_name}"
             handler_start = source.find(marker)
-            assert handler_start != -1, (
-                f"Draft handler '{handler_name}' not found"
-            )
+            assert handler_start != -1, f"Draft handler '{handler_name}' not found"
 
             # Find next method boundary
             next_method = source.find("\n    async def ", handler_start + 1)
@@ -414,8 +444,7 @@ class TestStructuralNoWrite:
             ]
             for pattern in forbidden:
                 assert pattern not in handler_section, (
-                    f"Handler '{handler_name}' calls service/repo: "
-                    f"'{pattern}'"
+                    f"Handler '{handler_name}' calls service/repo: '{pattern}'"
                 )
 
     @pytest.mark.asyncio

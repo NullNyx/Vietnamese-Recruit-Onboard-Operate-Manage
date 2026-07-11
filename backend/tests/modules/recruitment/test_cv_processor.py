@@ -32,7 +32,6 @@ from src.modules.recruitment.domain.value_objects import ParsedCV
 from src.modules.recruitment.infrastructure.config import RecruitmentSettings
 from src.modules.recruitment.infrastructure.llm_adapter import ParsedCVResult
 
-
 # ─── Fixtures ──────────────────────────────────────────────────────────
 
 
@@ -105,6 +104,8 @@ def mock_cv_document_repo():
     # Make create and update return the input document
     repo.create = AsyncMock(side_effect=lambda doc: doc)
     repo.update = AsyncMock(side_effect=lambda doc: doc)
+    # Default: no duplicate found — processing continues normally
+    repo.find_by_checksum = AsyncMock(return_value=None)
     return repo
 
 
@@ -167,6 +168,26 @@ def valid_attachment():
 
 class TestProcessSingleAttachment:
     """Tests for process_single_attachment method."""
+
+    @pytest.mark.asyncio
+    async def test_duplicate_checksum_returns_existing_doc(
+        self, service, valid_attachment, mock_cv_document_repo
+    ):
+        """Existing checksum returns the existing CVDocument without re-processing."""
+        existing_doc = MagicMock()
+        existing_doc.id = uuid4()
+        mock_cv_document_repo.find_by_checksum = AsyncMock(return_value=existing_doc)
+
+        email_id = uuid4()
+        result = await service.process_single_attachment(
+            email_message_id=email_id,
+            attachment=valid_attachment,
+            gmail_message_id="msg-dedup",
+        )
+
+        assert result is existing_doc
+        # Confirm no MinIO upload or OCR happened
+        mock_cv_document_repo.create.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_successful_pipeline_high_confidence(
@@ -354,8 +375,6 @@ class TestProcessSingleAttachment:
         """Verify status transitions: pending → ocr_processing → llm_parsing → completed."""
         email_id = uuid4()
         statuses_seen: list[str] = []
-
-        original_update = mock_cv_document_repo.update
 
         async def track_update(doc):
             statuses_seen.append(doc.processing_status)

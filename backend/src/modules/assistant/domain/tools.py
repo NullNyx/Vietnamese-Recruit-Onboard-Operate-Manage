@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 
 
 class ToolKind(StrEnum):
@@ -38,7 +39,7 @@ class ToolDefinition:
     name: str
     kind: ToolKind
     description: str
-    parameters: dict
+    parameters: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -48,21 +49,21 @@ class DraftAction:
     HR reviews it; on confirm, the frontend calls the real write endpoint
     directly — never the LLM. This is the human-in-the-loop mechanism.
 
-    Attributes:
-        action_type: The type of action (e.g. "send_email").
-        parameters: Action parameters for the confirm endpoint.
-        preview: Human-readable preview for HR.
+    Action attributes (from HR’s perspective):
+        action_type: What the action is (e.g. send_email).
+        parameters: Action parameters.
+        preview: Human-readable preview for HR to review.
         confirm_endpoint: The real API endpoint to call on confirm.
         confirm_method: HTTP method for the confirm endpoint.
         confirm_body: The request body for the confirm endpoint.
     """
 
     action_type: str
-    parameters: dict
+    parameters: dict[str, Any]
     preview: str
     confirm_endpoint: str
     confirm_method: str
-    confirm_body: dict
+    confirm_body: dict[str, Any]
 
 
 # ---------------------------------------------------------------------------
@@ -189,7 +190,7 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
 ]
 
 
-def get_openai_tools(enabled_names: set[str] | None = None) -> list[dict]:
+def get_openai_tools(enabled_names: set[str] | None = None) -> list[dict[str, Any]]:
     """Convert TOOL_DEFINITIONS to OpenAI function-calling format.
 
     Args:

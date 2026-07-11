@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -10,7 +9,6 @@ import pytest
 
 from src.modules.recruitment.domain.enums import EmailIntent
 from src.modules.recruitment.domain.exceptions import LLMParseError
-from src.modules.recruitment.domain.value_objects import ParsedCV
 from src.modules.recruitment.infrastructure.config import RecruitmentSettings
 from src.modules.recruitment.infrastructure.llm_adapter import (
     IntentResult,
@@ -177,7 +175,7 @@ class TestClassifyIntent:
         with patch.object(
             adapter._client.chat.completions, "create", new_callable=AsyncMock
         ) as mock_create:
-            mock_create.side_effect = asyncio.TimeoutError()
+            mock_create.side_effect = TimeoutError()
 
             with patch("asyncio.sleep", new_callable=AsyncMock):
                 with pytest.raises(LLMParseError):
@@ -383,7 +381,7 @@ class TestParseCV:
         with patch.object(
             adapter._client.chat.completions, "create", new_callable=AsyncMock
         ) as mock_create:
-            mock_create.side_effect = asyncio.TimeoutError()
+            mock_create.side_effect = TimeoutError()
 
             with patch("asyncio.sleep", new_callable=AsyncMock):
                 with pytest.raises(LLMParseError):
