@@ -88,6 +88,7 @@ class CVDocument(SQLModel, table=True):
     mime_type: str = Field(max_length=100, nullable=False)
     size_bytes: int = Field(nullable=False)
     file_path: str = Field(max_length=500, nullable=False)
+    checksum: str | None = Field(default=None, max_length=64, index=True)
     ocr_output: str | None = Field(default=None)
     parsed_cv_data: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     confidence_score: float | None = Field(default=None)

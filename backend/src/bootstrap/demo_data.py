@@ -156,7 +156,7 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
     from src.modules.attendance.domain.entities import AttendanceRecord, AttendanceSource
 
     # Only active employees -- Employee Self-Service data.
-    statement = select(Employee).where(Employee.is_active.is_(True))  # type: ignore[arg-type]
+    statement = select(Employee).where(Employee.is_active.is_(True))  # type: ignore[attr-defined]
     result = await session.execute(statement)
     active_employees = list(result.scalars().all())
 
@@ -179,8 +179,8 @@ async def seed_demo_attendance(session: AsyncSession) -> bool:
         select(func.count())
         .select_from(AttendanceRecord)
         .where(
-            AttendanceRecord.employee_id.in_(emp_ids),  # type: ignore[arg-type]
-            AttendanceRecord.work_date.between(monday, week_end),
+            AttendanceRecord.employee_id.in_(emp_ids),  # type: ignore[attr-defined]
+            AttendanceRecord.work_date.between(monday, week_end),  # type: ignore[attr-defined]
         )
     )
     count_result = await session.execute(count_stmt)
@@ -258,7 +258,7 @@ async def seed_demo_payslips(session: AsyncSession) -> bool:
     from src.modules.payslip.domain.entities import Payslip, PayslipStatus
 
     # Only active employees -- Employee Self-Service data.
-    statement = select(Employee).where(Employee.is_active.is_(True))  # type: ignore[arg-type]
+    statement = select(Employee).where(Employee.is_active.is_(True))  # type: ignore[attr-defined]
     result = await session.execute(statement)
     active_employees = list(result.scalars().all())
 
@@ -268,10 +268,10 @@ async def seed_demo_payslips(session: AsyncSession) -> bool:
 
     # Idempotent: only skip payslips that already exist per (employee_id, period_month).
     emp_ids = [emp.id for emp in active_employees]
-    existing_stmt = select(
+    existing_stmt = select(  # type: ignore[call-overload]
         Payslip.employee_id,
         Payslip.period_month,
-    ).where(Payslip.employee_id.in_(emp_ids))  # type: ignore[arg-type]
+    ).where(Payslip.employee_id.in_(emp_ids))  # type: ignore[attr-defined]
     existing_result = await session.execute(existing_stmt)
     existing_periods = {(row.employee_id, row.period_month) for row in existing_result}
 

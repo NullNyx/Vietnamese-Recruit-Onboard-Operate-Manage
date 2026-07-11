@@ -73,6 +73,8 @@ def _build_processor(
     mock_cv_doc_repo = AsyncMock()
     mock_cv_doc_repo.create = AsyncMock(side_effect=lambda doc: doc)
     mock_cv_doc_repo.update = AsyncMock(side_effect=lambda doc: doc)
+    # No pre-existing document — deduplication does not short-circuit the pipeline
+    mock_cv_doc_repo.find_by_checksum = AsyncMock(return_value=None)
 
     processor = CVProcessorService(
         minio_client=mock_minio,

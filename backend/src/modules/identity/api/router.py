@@ -10,6 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Session, select
 
 from src.modules.employee.domain.entities import Employee
@@ -27,6 +28,7 @@ from src.modules.identity.api.schemas import (
     UserResponse,
 )
 from src.modules.identity.application.auth_service import AuthService
+from src.modules.identity.application.oauth_config_manager import OAuthConfigManager
 from src.modules.identity.application.oauth_service import OAuthService
 from src.modules.identity.application.organization_google_connection_service import (
     OrganizationGoogleConnectionService,
@@ -67,6 +69,7 @@ OAuthServiceDep = Annotated[OAuthService, Depends(get_oauth_service)]
 RateLimiterDep = Annotated[RateLimiter, Depends(get_rate_limiter)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 AdminOnlyDep = Annotated[User, Depends(require_admin)]
+OAuthConfigManagerDep = Annotated[OAuthConfigManager, Depends(get_oauth_config_manager)]
 
 # Compatibility alias for router tests and older dependency overrides.
 get_session = get_db_session
@@ -76,12 +79,13 @@ get_session = get_db_session
 # ---------------------------------------------------------------------------
 
 
-def _get_connection_service(
-    session: Session = Depends(get_db_session),
+async def _get_connection_service(
+    session: AsyncSession = Depends(get_db_session),
 ) -> OrganizationGoogleConnectionService:
     from httpx import AsyncClient
 
-    from src.modules.identity.container import get_audit_service
+    from src.modules.identity.application.audit_service import AuditService
+    from src.modules.identity.infrastructure.audit_log_repository import AuditLogRepository
     from src.modules.identity.infrastructure.connection_state_repository import (
         OrganizationGoogleConnectionRepository,
     )
@@ -91,11 +95,13 @@ def _get_connection_service(
         OrganizationSettingsRepository,
     )
 
+    audit_log_repo = AuditLogRepository(session)
+
     return OrganizationGoogleConnectionService(
         connection_repo=OrganizationGoogleConnectionRepository(session),
         oauth_config_repo=OAuthConfigRepository(session),
         oauth_grant_repo=OAuthGrantRepository(session),
-        audit_service=get_audit_service(session),
+        audit_service=AuditService(repository=audit_log_repo),
         crypto=get_crypto_utils(),
         state_jwt=get_jwt_utils(),
         org_settings_repo=OrganizationSettingsRepository(session),
@@ -199,7 +205,7 @@ async def setup(
 async def save_google_connection_config(
     body: OAuthConfigUpdateRequest,
     current_user: AdminOnlyDep,
-    manager=Depends(get_oauth_config_manager),
+    manager: OAuthConfigManagerDep,
     connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
 ) -> GoogleWorkspaceConnectionResponse:
     await manager.update_config(

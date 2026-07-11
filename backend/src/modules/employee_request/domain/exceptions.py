@@ -32,7 +32,7 @@ class OvertimeOverlapError(EmployeeRequestError):
     error_code = "OVERTIME_OVERLAP"
     message = "You already have a submitted or approved overtime request on this date"
 
-    def __init__(self, work_date) -> None:
+    def __init__(self, work_date: _date) -> None:
         self.message = (
             f"You already have a submitted or approved overtime request on {work_date.isoformat()}"
         )

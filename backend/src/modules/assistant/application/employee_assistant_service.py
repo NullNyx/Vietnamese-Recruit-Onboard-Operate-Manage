@@ -200,7 +200,7 @@ class EmployeeAssistantService:
         self,
         messages: list[ChatMessage],
         tool_registry: EmployeeToolRegistry,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """Build OpenAI-format messages with employee system prompt."""
         tools = tool_registry.get_openai_tools()
         tools_str = "\n".join(

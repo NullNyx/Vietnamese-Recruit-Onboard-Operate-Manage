@@ -40,14 +40,25 @@ class FakeResponse:
 
 
 class FakeHttpClient:
-    def __init__(self, *, token: FakeResponse | Exception, userinfo: FakeResponse | Exception, revoke: FakeResponse | Exception) -> None:
+    def __init__(
+        self,
+        *,
+        token: FakeResponse | Exception,
+        userinfo: FakeResponse | Exception,
+        revoke: FakeResponse | Exception,
+    ) -> None:
         self.token = token
         self.userinfo = userinfo
         self.revoke = revoke
         self.posts: list[tuple[str, dict[str, object] | None]] = []
         self.gets: list[tuple[str, dict[str, object] | None]] = []
 
-    async def post(self, url: str, data: dict[str, object] | None = None, headers: dict[str, object] | None = None):
+    async def post(
+        self,
+        url: str,
+        data: dict[str, object] | None = None,
+        headers: dict[str, object] | None = None,
+    ):
         self.posts.append((url, data))
         if url == GOOGLE_TOKEN_URL:
             if isinstance(self.token, Exception):
@@ -93,11 +104,6 @@ def hr_user() -> User:
     )
 
 
-
-
-
-
-
 class DurableConnectionRepo:
     def __init__(self) -> None:
         self.state = None
@@ -116,6 +122,7 @@ class DurableConnectionRepo:
         self.disconnect_calls += 1
         self.state = None
         return None
+
 
 @pytest.fixture
 def oauth_config_repo(crypto: CryptoUtils) -> AsyncMock:
@@ -156,7 +163,9 @@ def http_client() -> FakeHttpClient:
                 "expires_in": 3600,
             },
         ),
-        userinfo=FakeResponse(200, {"email": "hr@example.com", "hd": "example.com", "sub": "sub-123"}),
+        userinfo=FakeResponse(
+            200, {"email": "hr@example.com", "hd": "example.com", "sub": "sub-123"}
+        ),
         revoke=FakeResponse(200, {}),
     )
 
@@ -165,8 +174,17 @@ def http_client() -> FakeHttpClient:
 def connection_repo() -> DurableConnectionRepo:
     return DurableConnectionRepo()
 
+
 @pytest.fixture
-def service(connection_repo, oauth_config_repo, audit_service, crypto, state_jwt, org_settings_repo, http_client) -> OrganizationGoogleConnectionService:
+def service(
+    connection_repo,
+    oauth_config_repo,
+    audit_service,
+    crypto,
+    state_jwt,
+    org_settings_repo,
+    http_client,
+) -> OrganizationGoogleConnectionService:
     return OrganizationGoogleConnectionService(
         connection_repo=connection_repo,
         oauth_config_repo=oauth_config_repo,
@@ -197,7 +215,9 @@ def test_schema_accepts_basic_payload() -> None:
 
 
 @pytest.mark.asyncio
-async def test_initiate_builds_offline_consent_url(service: OrganizationGoogleConnectionService, hr_user: User) -> None:
+async def test_initiate_builds_offline_consent_url(
+    service: OrganizationGoogleConnectionService, hr_user: User
+) -> None:
     result = await service.initiate(hr_user)
     assert result.status == "disconnected"
     assert result.redirect_url and result.redirect_url.startswith(GOOGLE_AUTH_URL)
@@ -219,7 +239,9 @@ async def test_callback_persists_grant_and_reuses_refresh_token(
 
     result = await service.callback(hr=hr_user, state=state, code="code")
 
-    assert result == OrganizationGoogleConnectionResponse(status="connected", email="hr@example.com", has_secret=True)
+    assert result == OrganizationGoogleConnectionResponse(
+        status="connected", email="hr@example.com", has_secret=True
+    )
     assert connection_repo.upsert_calls >= 2
     stored = connection_repo.state
     assert stored is not None
@@ -232,7 +254,9 @@ async def test_callback_persists_grant_and_reuses_refresh_token(
 
 
 @pytest.mark.asyncio
-async def test_callback_rejects_replay_state(service: OrganizationGoogleConnectionService, hr_user: User) -> None:
+async def test_callback_rejects_replay_state(
+    service: OrganizationGoogleConnectionService, hr_user: User
+) -> None:
     init = await service.initiate(hr_user)
     state = parse_qs(urlparse(init.redirect_url or "").query)["state"][0]
     await service.callback(hr=hr_user, state=state, code="code")
@@ -284,7 +308,10 @@ async def test_callback_logs_switch_account_when_email_changes(
         200, {"email": "new@example.com", "hd": "example.com", "sub": "sub-123"}
     )
     await service.callback(hr=hr_user, state=state, code="code")
-    assert audit_service.log_action.await_args.kwargs["action_type"].value == "org_google_switch_account"
+    assert (
+        audit_service.log_action.await_args.kwargs["action_type"].value
+        == "org_google_switch_account"
+    )
 
 
 @pytest.mark.asyncio
@@ -298,4 +325,3 @@ async def test_callback_fails_closed_when_allowed_domains_empty(
     state = parse_qs(urlparse(init.redirect_url or "").query)["state"][0]
     with pytest.raises(DomainAccessDeniedError):
         await service.callback(hr=hr_user, state=state, code="code")
-

@@ -22,7 +22,6 @@ from src.main import app
 from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User, UserRole
 
-
 # ─── Fixtures ──────────────────────────────────────────────────────────
 
 

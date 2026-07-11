@@ -37,7 +37,7 @@ _BASE_BACKOFF_SECONDS: Final[float] = 5.0
 
 def _sync_convert_docx_to_pdf(file_content: bytes) -> bytes:
     """Synchronous helper to convert DOCX to PDF without blocking event loop."""
-    import fitz  # PyMuPDF
+    import fitz  # type: ignore[import-untyped]
     from docx import Document
 
     # Extract all text from DOCX
@@ -79,7 +79,7 @@ def _sync_extract_docx_text(file_content: bytes) -> str:
 
 def _sync_chunk_pdf(file_content: bytes, max_pages: int) -> tuple[int, list[tuple[bytes, str]]]:
     """Synchronous helper to chunk a PDF file."""
-    import fitz  # PyMuPDF
+    import fitz
 
     doc = fitz.open(stream=file_content, filetype="pdf")
     try:

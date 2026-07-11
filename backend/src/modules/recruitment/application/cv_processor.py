@@ -11,6 +11,7 @@ Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 3.1, 4.1, 4.2,
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import time
 from dataclasses import dataclass
@@ -235,6 +236,19 @@ class CVProcessorService:
         """
         start_time = time.monotonic()
 
+        checksum = hashlib.sha256(attachment.data).hexdigest()
+
+        existing_doc = await self._cv_document_repo.find_by_checksum(checksum)
+        if existing_doc is not None:
+            logger.info(
+                "Deduplicated CV processing for attachment %s with checksum %s "
+                "(matches CVDocument ID: %s)",
+                attachment.filename,
+                checksum,
+                existing_doc.id,
+            )
+            return existing_doc
+
         # Step 1: Validate attachment
         validation = validate_attachment(
             mime_type=attachment.mime_type,
@@ -306,6 +320,7 @@ class CVProcessorService:
             mime_type=attachment.mime_type,
             size_bytes=attachment.size_bytes,
             file_path=file_path,
+            checksum=checksum,
             processing_status=ProcessingStatus.PENDING,
         )
         cv_doc = await self._cv_document_repo.create(cv_doc)

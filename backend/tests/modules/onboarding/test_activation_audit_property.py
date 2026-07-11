@@ -214,6 +214,7 @@ def _build_fixture(task_count: int) -> _Fixture:
 
     candidate_id = uuid4()
     from datetime import date
+
     manager = Employee(
         employee_code="MGR-001",
         full_name="Manager",

@@ -9,7 +9,7 @@ from datetime import date, datetime
 from io import BytesIO
 from typing import Any
 
-from openpyxl import load_workbook
+from openpyxl import load_workbook  # type: ignore[import-untyped]
 
 # Required fields that must be present and non-empty in each row.
 REQUIRED_FIELDS = {"full_name", "email"}

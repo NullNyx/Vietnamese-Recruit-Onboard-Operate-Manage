@@ -299,27 +299,8 @@ class IntentClassifierService:
         intent = intent_result.intent
 
         if intent == EmailIntent.CV:
-            # Requirement 1.4: Apply Gmail label "VroomHR/recruitment"
-            if self._gmail_label_service and user_id and access_token:
-                try:
-                    await self._gmail_label_service.add_label(
-                        user_id=user_id,
-                        message_id=gmail_message_id,
-                        label_name="VroomHR/recruitment",
-                        access_token=access_token,
-                    )
-                    logger.info(
-                        "Applied label 'VroomHR/recruitment' to email %s",
-                        gmail_message_id,
-                        extra={"gmail_message_id": gmail_message_id},
-                    )
-                except Exception as exc:
-                    logger.warning(
-                        "Failed to apply Gmail label to email %s: %s",
-                        gmail_message_id,
-                        exc,
-                        extra={"gmail_message_id": gmail_message_id},
-                    )
+            # Gmail labels creation/modification is bypassed in VroomHR
+            pass
 
             # Enqueue CV processing via ARQ
             if self._enqueue_func and email_message_id:

@@ -7,7 +7,7 @@ Input/output schemas are separate (diagnosis #2):
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -45,7 +45,9 @@ class OutgoingMessageSchema(BaseModel):
 
     role: str = Field(..., description="Message role: user, assistant, or tool")
     content: str | None = Field(default=None, description="Text content")
-    tool_calls: list[dict] | None = Field(default=None, description="Tool calls from assistant")
+    tool_calls: list[dict[str, Any]] | None = Field(
+        default=None, description="Tool calls from assistant"
+    )
     tool_call_id: str | None = Field(default=None, description="Tool call ID for results")
     name: str | None = Field(default=None, description="Tool name for results")
 
@@ -73,11 +75,11 @@ class DraftActionSchema(BaseModel):
     """
 
     action_type: str = Field(..., description="Action type (e.g. send_email)")
-    parameters: dict = Field(..., description="Action parameters")
+    parameters: dict[str, Any] = Field(..., description="Action parameters")
     preview: str = Field(..., description="Human-readable preview for HR")
     confirm_endpoint: str = Field(..., description="Real API endpoint to call on confirm")
     confirm_method: str = Field(..., description="HTTP method (POST, PATCH, etc.)")
-    confirm_body: dict = Field(..., description="Request body for the confirm endpoint")
+    confirm_body: dict[str, Any] = Field(..., description="Request body for the confirm endpoint")
 
     @field_validator("confirm_endpoint")
     @classmethod

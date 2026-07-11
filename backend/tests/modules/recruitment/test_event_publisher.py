@@ -20,7 +20,6 @@ from src.modules.recruitment.infrastructure.event_publisher import (
     ArqDomainEventPublisher,
 )
 
-
 # ─── Constants ─────────────────────────────────────────────────────────
 
 

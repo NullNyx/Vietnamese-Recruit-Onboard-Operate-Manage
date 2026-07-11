@@ -40,7 +40,7 @@ def verify_password(password: str, hashed: str) -> bool:
         iterations = int(iterations_raw)
         salt = base64.urlsafe_b64decode(salt_raw.encode("ascii"))
         expected = base64.urlsafe_b64decode(digest_raw.encode("ascii"))
-    except (ValueError, TypeError, base64.binascii.Error):
+    except (ValueError, TypeError):
         return False
 
     candidate = hashlib.pbkdf2_hmac(

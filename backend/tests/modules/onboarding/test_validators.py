@@ -1,6 +1,6 @@
 """Unit tests for onboarding validation logic."""
 
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -13,7 +13,9 @@ class TestValidateCandidateId:
 
     def test_missing_value_raises_error(self):
         """A missing (None) candidate_id raises InvalidEventPayloadError."""
-        with pytest.raises(InvalidEventPayloadError, match="Event payload is missing 'candidate_id'"):
+        with pytest.raises(
+            InvalidEventPayloadError, match="Event payload is missing 'candidate_id'"
+        ):
             _validate_candidate_id(None)
 
     def test_valid_uuid_object_returns_same_object(self):
@@ -36,15 +38,22 @@ class TestValidateCandidateId:
 
     def test_empty_string_raises_error(self):
         """An empty or whitespace-only string raises InvalidEventPayloadError."""
-        with pytest.raises(InvalidEventPayloadError, match="Event payload 'candidate_id' must not be empty"):
+        with pytest.raises(
+            InvalidEventPayloadError, match="Event payload 'candidate_id' must not be empty"
+        ):
             _validate_candidate_id("   ")
 
     def test_invalid_uuid_string_raises_error(self):
         """A string that is not a valid UUID raises InvalidEventPayloadError."""
-        with pytest.raises(InvalidEventPayloadError, match="Event payload 'candidate_id' is not a valid UUID"):
+        with pytest.raises(
+            InvalidEventPayloadError, match="Event payload 'candidate_id' is not a valid UUID"
+        ):
             _validate_candidate_id("not-a-uuid")
 
     def test_unexpected_type_raises_error(self):
         """An unexpected type (e.g. an integer) raises InvalidEventPayloadError."""
-        with pytest.raises(InvalidEventPayloadError, match="Event payload 'candidate_id' must be a string or UUID, got int"):
+        with pytest.raises(
+            InvalidEventPayloadError,
+            match="Event payload 'candidate_id' must be a string or UUID, got int",
+        ):
             _validate_candidate_id(123)

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -18,8 +18,8 @@ from src.modules.recruitment.domain.entities import JobOpening
 from src.modules.recruitment.domain.enums import CandidateStatus, JobOpeningStatus
 from src.modules.recruitment.infrastructure.repositories import JobOpeningRepository
 
-
 # ─── Fixtures ──────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def mock_job_opening_repo():
@@ -45,6 +45,7 @@ def user_id():
 
 
 # ─── Test: Repository count_job_openings_by_status ────────────────────
+
 
 class TestCountJobOpeningsByStatus:
     """Tests for repository count_job_openings_by_status method."""
@@ -98,6 +99,7 @@ class TestCountJobOpeningsByStatus:
 
 
 # ─── Test: Service get_summary_metrics ────────────────────────────────
+
 
 class TestGetSummaryMetrics:
     """Tests for service get_summary_metrics method."""
@@ -155,6 +157,7 @@ class TestGetSummaryMetrics:
 
 # ─── Test: Candidate counts per Job Opening (all 6 statuses) ──────────
 
+
 class TestCandidateCountPerJobOpening:
     """Tests for candidate counts grouped by status per Job Opening.
 
@@ -163,7 +166,8 @@ class TestCandidateCountPerJobOpening:
     """
 
     async def test_count_candidates_by_status_returns_all_six_statuses(
-        self, mock_session,
+        self,
+        mock_session,
     ):
         """Should return counts for all 6 candidate statuses."""
         jo_id = uuid4()
@@ -197,7 +201,8 @@ class TestCandidateCountPerJobOpening:
         assert counts == {}
 
     async def test_count_candidates_by_status_partial_counts(
-        self, mock_session,
+        self,
+        mock_session,
     ):
         """Should handle Job Openings with only some statuses populated."""
         jo_ids = [uuid4(), uuid4()]
@@ -217,7 +222,8 @@ class TestCandidateCountPerJobOpening:
         assert counts[jo_ids[1]] == {}
 
     async def test_count_candidates_by_status_multiple_job_openings(
-        self, mock_session,
+        self,
+        mock_session,
     ):
         """Should aggregate across multiple Job Openings."""
         jo_a = uuid4()
@@ -240,6 +246,7 @@ class TestCandidateCountPerJobOpening:
 
 
 # ─── Test: Headcount sync with real JobOpening entities ──────────────
+
 
 class TestHeadcountSyncWithRealEntities:
     """Tests for filled/overfilled signals using real JobOpening entities."""

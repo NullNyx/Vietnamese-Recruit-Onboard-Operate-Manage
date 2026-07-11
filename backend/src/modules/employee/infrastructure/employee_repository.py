@@ -7,6 +7,7 @@ SQLAlchemy async sessions with SQLModel.
 
 from __future__ import annotations
 
+import builtins
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -110,7 +111,7 @@ class EmployeeRepository:
         result = await self.session.execute(statement)
         return result.scalars().first()
 
-    async def get_by_ids(self, employee_ids: list[UUID]) -> dict[UUID, Employee]:
+    async def get_by_ids(self, employee_ids: builtins.list[UUID]) -> dict[UUID, Employee]:
         """Retrieve multiple employees by their IDs in one query.
 
         Args:
@@ -121,7 +122,7 @@ class EmployeeRepository:
         """
         if not employee_ids:
             return {}
-        statement = select(Employee).where(Employee.id.in_(employee_ids))  # type: ignore[arg-type]
+        statement = select(Employee).where(Employee.id.in_(employee_ids))  # type: ignore[attr-defined]
         result = await self.session.execute(statement)
         return {emp.id: emp for emp in result.scalars().all()}
 

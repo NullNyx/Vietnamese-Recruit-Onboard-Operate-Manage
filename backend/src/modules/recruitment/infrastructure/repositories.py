@@ -350,6 +350,22 @@ class CVDocumentRepository:
         await self.session.flush()
         return doc
 
+    async def find_by_checksum(self, checksum: str) -> CVDocument | None:
+        """Retrieve the first CV document matching a SHA-256 checksum.
+
+        Used for idempotent attachment processing: if a document with the
+        same checksum already exists it can be returned without re-processing.
+
+        Args:
+            checksum: The hex-encoded SHA-256 digest of the attachment bytes.
+
+        Returns:
+            The CVDocument entity if found, None otherwise.
+        """
+        statement = select(CVDocument).where(CVDocument.checksum == checksum)
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
     async def delete(self, id: UUID) -> None:
         """Hard-delete a CV document from the database.
 

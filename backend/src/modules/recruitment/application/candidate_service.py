@@ -743,38 +743,8 @@ class CandidateService:
         Args:
             source_email_id: UUID of the source email message, or None.
         """
-        if (
-            self._gmail_label_service is None
-            or source_email_id is None
-            or self._access_token_provider is None
-            or self._user_id_provider is None
-        ):
-            return
-
-        try:
-            # Get access token and user_id from providers
-            access_token = None
-            user_id = None
-
-            if callable(self._access_token_provider):
-                access_token = await self._access_token_provider()
-            if callable(self._user_id_provider):
-                user_id = await self._user_id_provider()
-
-            if access_token and user_id:
-                await self._gmail_label_service.add_label(
-                    user_id=user_id,
-                    message_id=str(source_email_id),
-                    label_name="VroomHR/processed",
-                    access_token=access_token,
-                )
-        except Exception as exc:
-            # Best-effort: log but don't block candidate creation
-            logger.warning(
-                "Failed to apply 'VroomHR/processed' label for email %s: %s",
-                source_email_id,
-                exc,
-            )
+        # Gmail labels creation/modification is bypassed in VroomHR
+        return
 
     # ─── Status transition validation ──────────────────────────────────
 

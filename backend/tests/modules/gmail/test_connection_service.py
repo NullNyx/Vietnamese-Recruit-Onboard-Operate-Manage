@@ -188,7 +188,6 @@ class TestInitiateConnect:
         assert result.redirect_url is not None
         assert "accounts.google.com" in result.redirect_url
         assert "gmail.readonly" in result.redirect_url
-        assert "gmail.modify" in result.redirect_url
         assert "gmail.send" in result.redirect_url
 
     async def test_returns_redirect_url_when_grant_invalid(

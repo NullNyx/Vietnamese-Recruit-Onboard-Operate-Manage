@@ -224,21 +224,21 @@ class AttendanceRecordRepository:
 
         if status == "checked_in":
             base_query = base_query.where(
-                AttendanceRecord.check_in_at.isnot(None),  # type: ignore[arg-type]
-                AttendanceRecord.check_out_at.is_(None),  # type: ignore[arg-type]
+                AttendanceRecord.check_in_at.isnot(None),  # type: ignore[union-attr]
+                AttendanceRecord.check_out_at.is_(None),  # type: ignore[union-attr]
             )
             count_query = count_query.where(
-                AttendanceRecord.check_in_at.isnot(None),  # type: ignore[arg-type]
-                AttendanceRecord.check_out_at.is_(None),  # type: ignore[arg-type]
+                AttendanceRecord.check_in_at.isnot(None),  # type: ignore[union-attr]
+                AttendanceRecord.check_out_at.is_(None),  # type: ignore[union-attr]
             )
         elif status == "completed":
             base_query = base_query.where(
-                AttendanceRecord.check_in_at.isnot(None),  # type: ignore[arg-type]
-                AttendanceRecord.check_out_at.isnot(None),  # type: ignore[arg-type]
+                AttendanceRecord.check_in_at.isnot(None),  # type: ignore[union-attr]
+                AttendanceRecord.check_out_at.isnot(None),  # type: ignore[union-attr]
             )
             count_query = count_query.where(
-                AttendanceRecord.check_in_at.isnot(None),  # type: ignore[arg-type]
-                AttendanceRecord.check_out_at.isnot(None),  # type: ignore[arg-type]
+                AttendanceRecord.check_in_at.isnot(None),  # type: ignore[union-attr]
+                AttendanceRecord.check_out_at.isnot(None),  # type: ignore[union-attr]
             )
 
         # Get total count
@@ -249,8 +249,8 @@ class AttendanceRecordRepository:
         offset = (page - 1) * page_size
         base_query = (
             base_query.order_by(
-                AttendanceRecord.work_date.desc(),  # type: ignore[arg-type]
-                AttendanceRecord.created_at.desc(),  # type: ignore[arg-type]
+                AttendanceRecord.work_date.desc(),  # type: ignore[attr-defined]
+                AttendanceRecord.created_at.desc(),  # type: ignore[attr-defined]
             )
             .offset(offset)
             .limit(page_size)

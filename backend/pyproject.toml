@@ -66,6 +66,29 @@ ignore = [
 python_version = "3.11"
 strict = true
 
+[[tool.mypy.overrides]]
+module = [
+    "aioboto3",
+    "botocore.exceptions",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "src.modules.employee.infrastructure.excel_parser"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "src.modules.identity.infrastructure.jwt_utils"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "src.modules.recruitment.infrastructure.ocr_adapter"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "src.modules.recruitment.infrastructure.repositories"
+disable_error_code = ["unused-ignore"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

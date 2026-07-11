@@ -31,6 +31,7 @@ from src.modules.recruitment.infrastructure.repositories import (
 
 # ─── Factories ──────────────────────────────────────────────────────────
 
+
 def _make_candidate(
     *,
     status: str = CandidateStatus.NEW,
@@ -46,6 +47,7 @@ def _make_candidate(
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
     )
+
 
 def _make_job_opening(
     *,
@@ -63,7 +65,9 @@ def _make_job_opening(
         updated_at=datetime.now(UTC),
     )
 
+
 # ─── Fixtures ──────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def mock_candidate_repo() -> AsyncMock:
@@ -71,18 +75,22 @@ def mock_candidate_repo() -> AsyncMock:
     repo.update = AsyncMock(side_effect=lambda c: c)
     return repo
 
+
 @pytest.fixture
 def mock_cv_doc_repo() -> AsyncMock:
     return AsyncMock(spec=CVDocumentRepository)
+
 
 @pytest.fixture
 def mock_minio_client() -> AsyncMock:
     return AsyncMock()
 
+
 @pytest.fixture
 def mock_job_opening_repo() -> AsyncMock:
     repo = AsyncMock(spec=JobOpeningRepository)
     return repo
+
 
 @pytest.fixture
 def mock_session() -> AsyncMock:
@@ -92,14 +100,20 @@ def mock_session() -> AsyncMock:
     session.flush = AsyncMock()
     return session
 
+
 @pytest.fixture
 def user_id() -> UUID:
     return uuid4()
 
+
 @pytest.fixture
 def service(
-    mock_session, mock_candidate_repo, mock_cv_doc_repo,
-    mock_minio_client, mock_job_opening_repo, user_id,
+    mock_session,
+    mock_candidate_repo,
+    mock_cv_doc_repo,
+    mock_minio_client,
+    mock_job_opening_repo,
+    user_id,
 ) -> CandidateService:
     return CandidateService(
         candidate_repo=mock_candidate_repo,
@@ -110,7 +124,9 @@ def service(
         job_opening_repo=mock_job_opening_repo,
     )
 
+
 # ─── Assign ────────────────────────────────────────────────────────────
+
 
 class TestAssignCandidate:
     async def test_assign_unassigned_to_open_succeeds(
@@ -143,9 +159,7 @@ class TestAssignCandidate:
         with pytest.raises(JobOpeningNotOpenError):
             await service.assign_candidate(candidate.id, jo.id)
 
-    async def test_assign_to_draft_fails(
-        self, service, mock_candidate_repo, mock_job_opening_repo
-    ):
+    async def test_assign_to_draft_fails(self, service, mock_candidate_repo, mock_job_opening_repo):
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.DRAFT)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
@@ -234,11 +248,14 @@ class TestAssignCandidate:
         with pytest.raises(CandidateAssignmentBlockedError):
             await service.assign_candidate(candidate.id, jo.id)
 
-    @pytest.mark.parametrize("status", [
-        CandidateStatus.NEW,
-        CandidateStatus.REVIEWING,
-        CandidateStatus.INTERVIEW_SCHEDULED,
-    ])
+    @pytest.mark.parametrize(
+        "status",
+        [
+            CandidateStatus.NEW,
+            CandidateStatus.REVIEWING,
+            CandidateStatus.INTERVIEW_SCHEDULED,
+        ],
+    )
     async def test_assign_allowed_from_status(
         self, service, mock_candidate_repo, mock_job_opening_repo, mock_session, status
     ):
@@ -253,9 +270,7 @@ class TestAssignCandidate:
 
         assert result.job_opening_id == jo.id
 
-    async def test_assign_nonexistent_candidate_fails(
-        self, service, mock_candidate_repo
-    ):
+    async def test_assign_nonexistent_candidate_fails(self, service, mock_candidate_repo):
         mock_candidate_repo.get_by_id = AsyncMock(return_value=None)
         mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=None)
 
@@ -264,6 +279,7 @@ class TestAssignCandidate:
 
 
 # ─── Reassign ──────────────────────────────────────────────────────────
+
 
 class TestReassignCandidate:
     async def test_reassign_to_different_open_jo_succeeds(
@@ -337,11 +353,14 @@ class TestReassignCandidate:
         with pytest.raises(CandidateAssignmentBlockedError):
             await service.reassign_candidate(candidate.id, new_jo.id)
 
-    @pytest.mark.parametrize("status", [
-        CandidateStatus.NEW,
-        CandidateStatus.REVIEWING,
-        CandidateStatus.INTERVIEW_SCHEDULED,
-    ])
+    @pytest.mark.parametrize(
+        "status",
+        [
+            CandidateStatus.NEW,
+            CandidateStatus.REVIEWING,
+            CandidateStatus.INTERVIEW_SCHEDULED,
+        ],
+    )
     async def test_reassign_allowed_from_status(
         self, service, mock_candidate_repo, mock_job_opening_repo, status
     ):
@@ -360,10 +379,9 @@ class TestReassignCandidate:
 
 # ─── Unassign ──────────────────────────────────────────────────────────
 
+
 class TestUnassignCandidate:
-    async def test_unassign_succeeds(
-        self, service, mock_candidate_repo
-    ):
+    async def test_unassign_succeeds(self, service, mock_candidate_repo):
         jo_id = uuid4()
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=jo_id)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
@@ -374,9 +392,7 @@ class TestUnassignCandidate:
 
         assert result.job_opening_id is None
 
-    async def test_unassign_when_not_assigned_fails(
-        self, service, mock_candidate_repo
-    ):
+    async def test_unassign_when_not_assigned_fails(self, service, mock_candidate_repo):
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=None)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
         mock_candidate_repo.get_by_id_for_update = AsyncMock(return_value=candidate)
@@ -384,9 +400,7 @@ class TestUnassignCandidate:
         with pytest.raises(InvalidStatusTransitionError):
             await service.unassign_candidate(candidate.id)
 
-    async def test_unassign_terminal_status_blocked(
-        self, service, mock_candidate_repo
-    ):
+    async def test_unassign_terminal_status_blocked(self, service, mock_candidate_repo):
         jo_id = uuid4()
         candidate = _make_candidate(status=CandidateStatus.ACCEPTED, job_opening_id=jo_id)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
@@ -395,9 +409,7 @@ class TestUnassignCandidate:
         with pytest.raises(CandidateAssignmentBlockedError):
             await service.unassign_candidate(candidate.id)
 
-    async def test_unassign_rejected_blocked(
-        self, service, mock_candidate_repo
-    ):
+    async def test_unassign_rejected_blocked(self, service, mock_candidate_repo):
         jo_id = uuid4()
         candidate = _make_candidate(status=CandidateStatus.REJECTED, job_opening_id=jo_id)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
@@ -406,9 +418,7 @@ class TestUnassignCandidate:
         with pytest.raises(CandidateAssignmentBlockedError):
             await service.unassign_candidate(candidate.id)
 
-    async def test_unassign_archived_blocked(
-        self, service, mock_candidate_repo
-    ):
+    async def test_unassign_archived_blocked(self, service, mock_candidate_repo):
         jo_id = uuid4()
         candidate = _make_candidate(status=CandidateStatus.ARCHIVED, job_opening_id=jo_id)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
@@ -417,14 +427,15 @@ class TestUnassignCandidate:
         with pytest.raises(CandidateAssignmentBlockedError):
             await service.unassign_candidate(candidate.id)
 
-    @pytest.mark.parametrize("status", [
-        CandidateStatus.NEW,
-        CandidateStatus.REVIEWING,
-        CandidateStatus.INTERVIEW_SCHEDULED,
-    ])
-    async def test_unassign_allowed_from_status(
-        self, service, mock_candidate_repo, status
-    ):
+    @pytest.mark.parametrize(
+        "status",
+        [
+            CandidateStatus.NEW,
+            CandidateStatus.REVIEWING,
+            CandidateStatus.INTERVIEW_SCHEDULED,
+        ],
+    )
+    async def test_unassign_allowed_from_status(self, service, mock_candidate_repo, status):
         jo_id = uuid4()
         candidate = _make_candidate(status=status, job_opening_id=jo_id)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
@@ -437,6 +448,7 @@ class TestUnassignCandidate:
 
 
 # ─── Audit Logging ─────────────────────────────────────────────────────
+
 
 class TestAssignmentAuditLogging:
     async def test_assign_emits_audit_log(
@@ -452,7 +464,8 @@ class TestAssignmentAuditLogging:
         await service.assign_candidate(candidate.id, jo.id)
 
         audit_calls = [
-            c for c in mock_session.add.call_args_list
+            c
+            for c in mock_session.add.call_args_list
             if c[0] and hasattr(c[0][0], "operation_type")
         ]
         assert len(audit_calls) >= 1
@@ -473,7 +486,8 @@ class TestAssignmentAuditLogging:
         await service.reassign_candidate(candidate.id, new_jo.id)
 
         audit_calls = [
-            c for c in mock_session.add.call_args_list
+            c
+            for c in mock_session.add.call_args_list
             if c[0] and hasattr(c[0][0], "operation_type")
         ]
         assert len(audit_calls) >= 1
@@ -481,9 +495,7 @@ class TestAssignmentAuditLogging:
         assert audit_calls[0][0][0].previous_value == {"job_opening_id": str(old_jo_id)}
         assert audit_calls[0][0][0].new_value == {"job_opening_id": str(new_jo.id)}
 
-    async def test_unassign_emits_audit_log(
-        self, service, mock_candidate_repo, mock_session
-    ):
+    async def test_unassign_emits_audit_log(self, service, mock_candidate_repo, mock_session):
         jo_id = uuid4()
         candidate = _make_candidate(status=CandidateStatus.NEW, job_opening_id=jo_id)
         mock_candidate_repo.get_by_id = AsyncMock(return_value=candidate)
@@ -493,7 +505,8 @@ class TestAssignmentAuditLogging:
         await service.unassign_candidate(candidate.id)
 
         audit_calls = [
-            c for c in mock_session.add.call_args_list
+            c
+            for c in mock_session.add.call_args_list
             if c[0] and hasattr(c[0][0], "operation_type")
         ]
         assert len(audit_calls) >= 1
@@ -501,12 +514,12 @@ class TestAssignmentAuditLogging:
         assert audit_calls[0][0][0].previous_value == {"job_opening_id": str(jo_id)}
         assert audit_calls[0][0][0].new_value == {"job_opening_id": None}
 
+
 # ─── Headcount Sync Tests ──────────────────────────────────────────────
+
 
 class TestCandidateAcceptanceHeadcountSync:
     """Tests for Job Opening headcount sync when candidate is accepted."""
-
-
 
     async def test_accept_candidate_with_job_opening_updates_timestamp(
         self,
