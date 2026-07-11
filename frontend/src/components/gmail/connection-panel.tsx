@@ -108,8 +108,8 @@ export function ConnectionPanel({
     );
   }
 
-  // Token expired state
-  if (status === "token_expired") {
+  // Reauthorization required state
+  if (status === "reauthorization_required") {
     return (
       <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
         <div className="flex items-center justify-between">

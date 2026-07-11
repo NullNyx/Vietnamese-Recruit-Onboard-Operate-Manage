@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -32,21 +32,14 @@ import {
   type OAuthConfigUpdateFormData,
 } from "@/lib/api/admin-schemas";
 
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
-
 export interface OAuthConfigFormProps {
   config: OAuthConfig;
   onUpdated: (config: OAuthConfig) => void;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export function OAuthConfigForm({ config, onUpdated }: OAuthConfigFormProps) {
   const [backendError, setBackendError] = useState<string | null>(null);
+  const [connection, setConnection] = useState<{ status: "disconnected" | "connected" | "reauthorization_required"; email: string | null; redirect_url: string | null } | null>(null);
 
   const form = useForm<OAuthConfigUpdateFormData>({
     resolver: zodResolver(oauthConfigUpdateSchema),
@@ -58,11 +51,28 @@ export function OAuthConfigForm({ config, onUpdated }: OAuthConfigFormProps) {
     },
   });
 
+  const loadConnection = async () => {
+    try {
+      const res = await fetch("/api/auth/organization-google-connection");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail?.message ?? "Không thể tải trạng thái kết nối");
+      setConnection(data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Không thể tải trạng thái kết nối";
+      toast.error(message);
+    }
+  };
+
+  useEffect(() => {
+    void loadConnection();
+  }, []);
+
   const handleSubmit = async (values: OAuthConfigUpdateFormData) => {
     setBackendError(null);
     try {
       const updated = await updateOAuthConfig(values);
       onUpdated(updated);
+      await loadConnection();
       form.reset({ client_id: "", client_secret: "", redirect_uri: "" });
       toast.success("Đã cập nhật cấu hình OAuth");
     } catch (err) {
@@ -72,9 +82,43 @@ export function OAuthConfigForm({ config, onUpdated }: OAuthConfigFormProps) {
     }
   };
 
+  const handleReconnect = async () => {
+    if (!window.confirm("Kết nối lại Google Workspace?")) return;
+    try {
+      const res = await fetch("/api/auth/organization-google-connection/reconnect", { method: "POST" });
+      const next = await res.json();
+      if (!res.ok) throw new Error(next?.detail?.message ?? "Không thể tạo URL kết nối");
+      setConnection(next);
+      if (next.redirect_url) {
+        window.location.assign(next.redirect_url);
+        return;
+      }
+      toast.success("Đã tạo lại kết nối");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Không thể tạo lại kết nối";
+      toast.error(message);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!window.confirm("Ngắt kết nối Google Workspace?")) return;
+    try {
+      const res = await fetch("/api/auth/organization-google-connection", { method: "DELETE" });
+      const next = await res.json();
+      if (!res.ok) throw new Error(next?.detail?.message ?? "Không thể ngắt kết nối");
+      setConnection(next);
+      toast.success("Đã ngắt kết nối Google Workspace");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Không thể ngắt kết nối";
+      toast.error(message);
+    }
+  };
+
+  const statusLabel = connection?.status ?? "unknown";
+  const connectedEmail = connection?.email ?? null;
+
   return (
     <div className="space-y-6">
-      {/* Current Configuration Display */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -121,7 +165,34 @@ export function OAuthConfigForm({ config, onUpdated }: OAuthConfigFormProps) {
         </CardContent>
       </Card>
 
-      {/* Update Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Kết nối Google Workspace</CardTitle>
+          <CardDescription>
+            HR giữ kết nối dùng chung cho Gmail và Calendar.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={statusLabel === "connected" ? "default" : statusLabel === "reauthorization_required" ? "destructive" : "secondary"}>
+              {statusLabel}
+            </Badge>
+            <span className="text-sm text-muted-foreground">{connectedEmail ?? "Chưa kết nối"}</span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button type="button" variant="outline" onClick={() => void loadConnection()}>
+              Tải trạng thái
+            </Button>
+            <Button type="button" onClick={() => void handleReconnect()}>
+              Kết nối lại
+            </Button>
+            <Button type="button" variant="destructive" onClick={() => void handleDisconnect()}>
+              Ngắt kết nối
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Cập nhật thông tin</CardTitle>

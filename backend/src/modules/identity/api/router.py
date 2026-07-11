@@ -12,24 +12,33 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 
-from src.database import get_session
 from src.modules.employee.domain.entities import Employee
 from src.modules.identity.api.schemas import (
     AuthLoginRequest,
     AuthSessionResponse,
     ChangePasswordRequest,
     FirstRunSetupRequest,
-    GrantStatusResponse,
+    GoogleWorkspaceCallbackRequest,
+        GoogleWorkspaceConnectionResponse,
+        GrantStatusResponse,
+        OAuthConfigUpdateRequest,
     SetupStatusResponse,
     UserResponse,
 )
 from src.modules.identity.application.auth_service import AuthService
 from src.modules.identity.application.oauth_service import OAuthService
+from src.modules.identity.application.organization_google_connection_service import (
+    OrganizationGoogleConnectionService,
+)
 from src.modules.identity.application.token_service import TokenService
 from src.modules.identity.container import (
     get_auth_service,
+    get_crypto_utils,
     get_current_user,
-    get_oauth_service,
+    get_db_session,
+        get_jwt_utils,
+        get_oauth_config_manager,
+        get_oauth_service,
     get_rate_limiter,
     get_token_service,
 )
@@ -47,7 +56,6 @@ _ACCESS_TOKEN_MAX_AGE = 15 * 60  # 15 minutes
 _REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60  # 7 days
 _PASSWORD_CHANGE_MAX_AGE = _ACCESS_TOKEN_MAX_AGE
 
-
 # ---------------------------------------------------------------------------
 # Type aliases for injected dependencies
 # ---------------------------------------------------------------------------
@@ -58,10 +66,38 @@ OAuthServiceDep = Annotated[OAuthService, Depends(get_oauth_service)]
 RateLimiterDep = Annotated[RateLimiter, Depends(get_rate_limiter)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 
+# Compatibility alias for router tests and older dependency overrides.
+get_session = get_db_session
 
 # ---------------------------------------------------------------------------
-# Endpoints
+# Google connection dependency helper
 # ---------------------------------------------------------------------------
+
+def _get_connection_service(
+    session: Session = Depends(get_db_session),
+) -> OrganizationGoogleConnectionService:
+    from httpx import AsyncClient
+
+    from src.modules.identity.container import get_audit_service
+    from src.modules.identity.infrastructure.connection_state_repository import (
+        OrganizationGoogleConnectionRepository,
+    )
+    from src.modules.identity.infrastructure.oauth_config_repository import OAuthConfigRepository
+    from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
+    from src.modules.recruitment.infrastructure.org_settings_repository import (
+        OrganizationSettingsRepository,
+    )
+
+    return OrganizationGoogleConnectionService(
+        connection_repo=OrganizationGoogleConnectionRepository(session),
+        oauth_config_repo=OAuthConfigRepository(session),
+        oauth_grant_repo=OAuthGrantRepository(session),
+        audit_service=get_audit_service(session),
+        crypto=get_crypto_utils(),
+        state_jwt=get_jwt_utils(),
+        org_settings_repo=OrganizationSettingsRepository(session),
+        http_client=AsyncClient(),
+    )
 
 
 def _set_session_cookies(
@@ -156,6 +192,58 @@ async def setup(
     return response
 
 
+@router.post("/organization-google-connection")
+async def save_google_connection_config(
+    body: OAuthConfigUpdateRequest,
+    current_user: CurrentUserDep,
+    manager=Depends(get_oauth_config_manager),
+    connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
+) -> GoogleWorkspaceConnectionResponse:
+    await manager.update_config(client_id=body.client_id, client_secret=body.client_secret, redirect_uri=body.redirect_uri, admin=current_user)
+    return GoogleWorkspaceConnectionResponse(**(await connection_service.get_status()).__dict__)
+
+
+@router.get("/organization-google-connection/authorize-url")
+async def authorize_google_connection(
+    connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
+    current_user: CurrentUserDep = None,
+) -> GoogleWorkspaceConnectionResponse:
+    return GoogleWorkspaceConnectionResponse(**(await connection_service.initiate(current_user)).__dict__)
+
+
+@router.get("/organization-google-connection")
+async def get_google_connection(
+    connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
+    current_user: CurrentUserDep = None,
+) -> GoogleWorkspaceConnectionResponse:
+    return GoogleWorkspaceConnectionResponse(**(await connection_service.get_status()).__dict__)
+
+
+@router.post("/organization-google-connection/reconnect")
+async def reconnect_google_connection(
+    connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
+    current_user: CurrentUserDep = None,
+) -> GoogleWorkspaceConnectionResponse:
+    return GoogleWorkspaceConnectionResponse(**(await connection_service.initiate(current_user)).__dict__)
+
+
+@router.post("/organization-google-connection/callback")
+async def callback_google_connection(
+    body: GoogleWorkspaceCallbackRequest,
+    connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
+    current_user: CurrentUserDep = None,
+) -> GoogleWorkspaceConnectionResponse:
+    return GoogleWorkspaceConnectionResponse(**(await connection_service.callback(hr=current_user, state=body.state, code=body.code)).__dict__)
+
+
+@router.delete("/organization-google-connection")
+async def disconnect_google_connection(
+    connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
+    current_user: CurrentUserDep = None,
+) -> GoogleWorkspaceConnectionResponse:
+    return GoogleWorkspaceConnectionResponse(**(await connection_service.disconnect(current_user)).__dict__)
+
+
 @router.post("/login", response_model=AuthSessionResponse)
 async def local_login(
     request: Request,
@@ -241,31 +329,13 @@ async def refresh(
     request: Request,
     token_service: TokenServiceDep,
 ) -> JSONResponse:
-    """Refresh the access token using the refresh token cookie.
-
-    Extracts the refresh_token from the request cookies, validates it,
-    and issues a new access_token cookie if the refresh token is valid.
-
-    Args:
-        request: The incoming FastAPI request object.
-        token_service: The TokenService for token refresh.
-
-    Returns:
-        A JSON response with a success message and a new access_token
-        cookie set.
-
-    Raises:
-        InvalidTokenError: If the refresh token is missing, expired,
-            or revoked.
-    """
+    """Refresh access token using refresh token cookie."""
     refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:
         raise InvalidTokenError()
 
     new_access_token = await token_service.refresh_access_token(refresh_token)
-
     response = JSONResponse(content={"message": "Token refreshed"})
-
     response.set_cookie(
         key="access_token",
         value=new_access_token,
@@ -274,7 +344,6 @@ async def refresh(
         secure=True,
         samesite="lax",
     )
-
     return response
 
 
@@ -283,27 +352,12 @@ async def logout(
     request: Request,
     auth_service: AuthServiceDep,
 ) -> JSONResponse:
-    """Revoke the refresh token and clear all session cookies.
-
-    Extracts the refresh_token from the request cookies, revokes it
-    in the database, and clears the access_token, refresh_token, and
-    forced password-change cookies.
-
-    Args:
-        request: The incoming FastAPI request object.
-        auth_service: The AuthService for logout handling.
-
-    Returns:
-        A JSON response confirming logout with cookies cleared.
-    """
+    """Revoke refresh token and clear session cookies."""
     refresh_token = request.cookies.get("refresh_token")
     if refresh_token:
         await auth_service.logout(refresh_token)
-
     response = JSONResponse(content={"message": "Logged out"})
-
     _clear_auth_cookies(response)
-
     return response
 
 
@@ -313,19 +367,7 @@ async def me(
     oauth_service: OAuthServiceDep,
     session: Session = Depends(get_session),
 ) -> UserResponse:
-    """Get the current authenticated user's profile with grant status.
-
-    Combines the user entity data with the current OAuth grant status
-    to provide a complete profile response including Gmail and Calendar
-    grant validity.
-
-    Args:
-        current_user: The authenticated User entity from the JWT.
-        oauth_service: The OAuthService for grant status lookup.
-
-    Returns:
-        A UserResponse containing user profile and grant status.
-    """
+    """Get current authenticated user's profile with grant status."""
     grant_status = await _get_user_grant_status(current_user, oauth_service)
     employee = session.exec(select(Employee).where(Employee.email == current_user.email)).first()
     employee_id = current_user.employee_id or (employee.id if employee else None)
@@ -350,20 +392,8 @@ async def grant_status(
     current_user: CurrentUserDep,
     oauth_service: OAuthServiceDep,
 ) -> GrantStatusResponse:
-    """Check the current Gmail and Calendar grant validity.
-
-    Retrieves the user's OAuth grant from the database and determines
-    whether the required Gmail and Calendar scopes are still valid.
-
-    Args:
-        current_user: The authenticated User entity from the JWT.
-        oauth_service: The OAuthService for grant status lookup.
-
-    Returns:
-        A GrantStatusResponse indicating grant validity.
-    """
+    """Check current Gmail and Calendar grant validity."""
     status = await _get_user_grant_status(current_user, oauth_service)
-
     return GrantStatusResponse(
         gmail_grant_valid=status.gmail_grant_valid,
         calendar_grant_valid=status.calendar_grant_valid,
@@ -374,21 +404,8 @@ async def grant_status(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-
 async def _get_user_grant_status(user: User, oauth_service: OAuthService) -> GrantStatusResponse:
-    """Retrieve the OAuth grant status for a user.
-
-    Looks up the user's OAuth grant and determines which scopes are
-    currently valid. If no grant exists or the grant is marked invalid,
-    both gmail and calendar grants are reported as invalid.
-
-    Args:
-        user: The User entity to check grants for.
-        oauth_service: The OAuthService with grant repository access.
-
-    Returns:
-        A GrantStatusResponse with the current grant validity.
-    """
+    """Retrieve OAuth grant status for a user."""
     grant = await oauth_service._grant_repository.get_by_user_id(user.id)
 
     if grant is None or not grant.is_valid:

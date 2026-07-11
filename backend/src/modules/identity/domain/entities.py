@@ -9,17 +9,15 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import Column, DateTime, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlmodel import Field, SQLModel
-
 
 class UserRole(str, Enum):
     """Enumeration of user roles for access control."""
 
     ADMIN = "admin"
     USER = "user"
-
 
 class User(SQLModel, table=True):
     """Represents an authenticated HR user in the system.
@@ -54,13 +52,11 @@ class User(SQLModel, table=True):
         sa_column=Column(String(10), nullable=False, default="user", index=True),
     )
 
-
 class WhitelistEntryType(str, Enum):
     """Enumeration of whitelist entry types."""
 
     EXACT_EMAIL = "exact_email"
     DOMAIN_PATTERN = "domain_pattern"
-
 
 class WhitelistEntry(SQLModel, table=True):
     """Represents a whitelist entry for login access control.
@@ -81,7 +77,6 @@ class WhitelistEntry(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-
 
 class OAuthGrant(SQLModel, table=True):
     """Stores encrypted Google OAuth2 tokens for a user.
@@ -112,7 +107,6 @@ class OAuthGrant(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
 
-
 class RefreshToken(SQLModel, table=True):
     """Represents a system-issued refresh token for JWT session management.
 
@@ -138,7 +132,6 @@ class RefreshToken(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
     user_agent: str | None = Field(default=None)
-
 
 class OAuthConfig(SQLModel, table=True):
     """Stores OAuth provider credentials for admin-managed configuration.
@@ -167,6 +160,32 @@ class OAuthConfig(SQLModel, table=True):
     )
     updated_by_user_id: UUID = Field(foreign_key="users.id", nullable=False)
 
+class OrganizationGoogleConnection(SQLModel, table=True):
+    """Stores singleton Google connection for Organization."""
+
+    __tablename__ = "organization_google_connections"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    organization_singleton_key: str = Field(default="default", max_length=32, nullable=False, unique=True)
+    status: str = Field(default="disconnected", max_length=32, nullable=False)
+    email: str | None = Field(default=None, max_length=255)
+    google_sub: str | None = Field(default=None, max_length=255)
+    email_domain: str | None = Field(default=None, max_length=255)
+    selected_calendar_id: str | None = Field(default=None, max_length=255)
+    credential_format_version: int = Field(default=1, nullable=False)
+    credential_key_version: int = Field(default=1, nullable=False)
+    access_token_enc: str | None = Field(default=None)
+    refresh_token_enc: str | None = Field(default=None)
+    client_secret_enc: str | None = Field(default=None)
+    oauth_state_hash: str | None = Field(default=None, max_length=128, index=True)
+    oauth_state_nonce: str | None = Field(default=None, max_length=128)
+    oauth_state_session_id: str | None = Field(default=None, max_length=128, index=True)
+    oauth_state_expires_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    token_expires_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    connected_by_user_id: UUID | None = Field(default=None, foreign_key="users.id")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC), sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC), sa_column=Column(DateTime(timezone=True), nullable=False))
+
 
 class AuditActionType(str, Enum):
     """Enumeration of admin audit action types."""
@@ -188,7 +207,10 @@ class AuditActionType(str, Enum):
     PAYSLIP_UPDATE = "payslip_update"
     PAYSLIP_PUBLISH = "payslip_publish"
     PAYSLIP_DELETE = "payslip_delete"
-
+    ORG_GOOGLE_CONNECT = "org_google_connect"
+    ORG_GOOGLE_RECONNECT = "org_google_reconnect"
+    ORG_GOOGLE_SWITCH_ACCOUNT = "org_google_switch_account"
+    ORG_GOOGLE_DISCONNECT = "org_google_disconnect"
 
 class AuditLog(SQLModel, table=True):
     """Records admin actions for audit trail purposes.
