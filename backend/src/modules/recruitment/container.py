@@ -544,7 +544,7 @@ async def arq_retention_cleanup(ctx: dict[str, Any]) -> int:
 
 def get_calendar_sync_service(
     session: AsyncSession = Depends(get_db_session),
-) -> CalendarSyncService:
+) -> Any:
     """Provide a CalendarSyncService instance with all dependencies.
 
     Args:
