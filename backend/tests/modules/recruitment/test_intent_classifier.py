@@ -104,39 +104,39 @@ class TestClassifyEmail:
 
         assert result.intent == EmailIntent.OTHER
 
-        async def test_pii_redaction_applied_before_llm_call(
-            self, mock_llm_adapter, mock_session, mock_enqueue_func
-        ):
-            """PII in snippet is redacted before being sent to LLM."""
-            expected_result = IntentResult(
-                intent=EmailIntent.CV,
-                token_usage={"prompt_tokens": 50, "completion_tokens": 1, "total_tokens": 51},
-            )
-            mock_llm_adapter.classify_intent = AsyncMock(return_value=expected_result)
+    async def test_pii_redaction_applied_before_llm_call(
+        self, mock_llm_adapter, mock_session, mock_enqueue_func
+    ):
+        """PII in snippet is redacted before being sent to LLM."""
+        expected_result = IntentResult(
+            intent=EmailIntent.CV,
+            token_usage={"prompt_tokens": 50, "completion_tokens": 1, "total_tokens": 51},
+        )
+        mock_llm_adapter.classify_intent = AsyncMock(return_value=expected_result)
 
-            pii_redactor = PIIRedactor()
-            svc = IntentClassifierService(
-                llm_adapter=mock_llm_adapter,
-                pii_redactor=pii_redactor,
-                session=mock_session,
-                enqueue_func=mock_enqueue_func,
-            )
+        pii_redactor = PIIRedactor()
+        svc = IntentClassifierService(
+            llm_adapter=mock_llm_adapter,
+            pii_redactor=pii_redactor,
+            session=mock_session,
+            enqueue_func=mock_enqueue_func,
+        )
 
-            # Snippet contains a CCCD number (12 digits)
-            snippet_with_pii = "CCCD: 012345678901, xin ứng tuyển"
+        # Snippet contains a CCCD number (12 digits)
+        snippet_with_pii = "CCCD: 012345678901, xin ứng tuyển"
 
-            await svc.classify_email(
-                subject="Ứng tuyển",
-                sender="candidate@example.com",
-                snippet=snippet_with_pii,
-                attachment_filenames=["CV.pdf"],
-                gmail_message_id="msg_789",
-            )
+        await svc.classify_email(
+            subject="Ứng tuyển",
+            sender="candidate@example.com",
+            snippet=snippet_with_pii,
+            attachment_filenames=["CV.pdf"],
+            gmail_message_id="msg_789",
+        )
 
-            # Verify the LLM was called with redacted snippet
-            call_args = mock_llm_adapter.classify_intent.call_args
-            assert "[REDACTED]" in call_args.kwargs["snippet"]
-            assert "012345678901" not in call_args.kwargs["snippet"]
+        # Verify the LLM was called with redacted snippet
+        call_args = mock_llm_adapter.classify_intent.call_args
+        assert "[REDACTED]" in call_args.kwargs["snippet"]
+        assert "012345678901" not in call_args.kwargs["snippet"]
 
     async def test_llm_failure_returns_other_and_marks_failed(self, service, mock_llm_adapter):
         """When LLM fails after retries, returns OTHER and marks email as failed."""
@@ -158,33 +158,33 @@ class TestClassifyEmail:
         assert result.intent == EmailIntent.OTHER
         assert result.token_usage["total_tokens"] == 0
 
-        async def test_pii_redaction_failure_returns_other(
-            self, mock_llm_adapter, mock_session, mock_enqueue_func
-        ):
-            """When PII redaction fails, returns OTHER and marks email as failed."""
-            # Create a PIIRedactor that raises an exception
-            broken_redactor = MagicMock()
-            broken_redactor.redact = MagicMock(side_effect=RuntimeError("Regex engine crash"))
+    async def test_pii_redaction_failure_returns_other(
+        self, mock_llm_adapter, mock_session, mock_enqueue_func
+    ):
+        """When PII redaction fails, returns OTHER and marks email as failed."""
+        # Create a PIIRedactor that raises an exception
+        broken_redactor = MagicMock()
+        broken_redactor.redact = MagicMock(side_effect=RuntimeError("Regex engine crash"))
 
-            svc = IntentClassifierService(
-                llm_adapter=mock_llm_adapter,
-                pii_redactor=broken_redactor,
-                session=mock_session,
-                enqueue_func=mock_enqueue_func,
-            )
+        svc = IntentClassifierService(
+            llm_adapter=mock_llm_adapter,
+            pii_redactor=broken_redactor,
+            session=mock_session,
+            enqueue_func=mock_enqueue_func,
+        )
 
-            email_message_id = uuid4()
-            result = await svc.classify_email(
-                subject="Test",
-                sender="test@example.com",
-                snippet="Some content",
-                attachment_filenames=[],
-                gmail_message_id="msg_pii_fail",
-                email_message_id=email_message_id,
-            )
+        email_message_id = uuid4()
+        result = await svc.classify_email(
+            subject="Test",
+            sender="test@example.com",
+            snippet="Some content",
+            attachment_filenames=[],
+            gmail_message_id="msg_pii_fail",
+            email_message_id=email_message_id,
+        )
 
-            assert result.intent == EmailIntent.OTHER
-            assert result.token_usage["total_tokens"] == 0
+        assert result.intent == EmailIntent.OTHER
+        assert result.token_usage["total_tokens"] == 0
 
     async def test_classify_email_with_attachments(self, service, mock_llm_adapter):
         """Attachment filenames are passed to the LLM adapter."""
