@@ -1,6 +1,6 @@
 """Unit tests for AuditService."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 from uuid import uuid4
 

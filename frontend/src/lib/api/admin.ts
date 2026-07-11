@@ -41,6 +41,13 @@ export interface OAuthConfig {
   source: string;
 }
 
+export interface GoogleWorkspaceConnection {
+  status: 'disconnected' | 'connected' | 'reauthorization_required';
+  email: string | null;
+  has_secret: boolean;
+  redirect_url: string | null;
+}
+
 export type UserRole = 'admin' | 'user';
 
 export interface AdminUser {
@@ -60,7 +67,11 @@ export type AuditActionType =
   | 'oauth_update'
   | 'role_change'
   | 'org_domain_update'
-  | 'assistant_tool_config';
+  | 'assistant_tool_config'
+  | 'org_google_connect'
+  | 'org_google_reconnect'
+  | 'org_google_switch_account'
+  | 'org_google_disconnect';
 
 export interface DomainListResponse {
   allowed_domains: string[];
@@ -162,6 +173,36 @@ export async function updateOAuthConfig(data: {
     body: JSON.stringify(data),
   });
   return handleResponse<OAuthConfig>(res);
+}
+
+export async function getGoogleWorkspaceConnection(): Promise<GoogleWorkspaceConnection> {
+  const res = await fetch('/api/auth/organization-google-connection');
+  return handleResponse<GoogleWorkspaceConnection>(res);
+}
+
+export async function getGoogleWorkspaceAuthorizeUrl(): Promise<GoogleWorkspaceConnection> {
+  const res = await fetch('/api/auth/organization-google-connection/reconnect', {
+    method: 'POST',
+  });
+  return handleResponse<GoogleWorkspaceConnection>(res);
+}
+
+export async function saveGoogleWorkspaceConnection(): Promise<GoogleWorkspaceConnection> {
+  return getGoogleWorkspaceAuthorizeUrl();
+}
+
+export async function completeGoogleWorkspaceCallback(code: string, state: string): Promise<GoogleWorkspaceConnection> {
+  const res = await fetch('/api/auth/organization-google-connection/callback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, state }),
+  });
+  return handleResponse<GoogleWorkspaceConnection>(res);
+}
+
+export async function disconnectGoogleWorkspaceConnection(): Promise<GoogleWorkspaceConnection> {
+  const res = await fetch('/api/auth/organization-google-connection', { method: 'DELETE' });
+  return handleResponse<GoogleWorkspaceConnection>(res);
 }
 
 // ---------------------------------------------------------------------------

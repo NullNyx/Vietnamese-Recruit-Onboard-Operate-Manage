@@ -91,7 +91,7 @@ export interface PositionCreateData {
 // Gmail Integration Types
 // ---------------------------------------------------------------------------
 
-export type ConnectionStatus = "connected" | "disconnected" | "token_expired";
+export type ConnectionStatus = "connected" | "disconnected" | "reauthorization_required";
 
 export interface ConnectionStatusResponse {
   status: ConnectionStatus;

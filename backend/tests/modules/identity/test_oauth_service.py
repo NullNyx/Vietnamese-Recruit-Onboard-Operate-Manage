@@ -9,7 +9,6 @@ from src.modules.identity.application.oauth_service import OAuthService
 from src.modules.identity.infrastructure.config import AuthSettings
 from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
 
-
 # Full scope URLs used by Google OAuth2.
 GMAIL_READONLY = "https://www.googleapis.com/auth/gmail.readonly"
 GMAIL_MODIFY = "https://www.googleapis.com/auth/gmail.modify"

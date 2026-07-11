@@ -5,10 +5,8 @@ the AsyncSession to test repository logic without a real database.
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
-
-import pytest
 
 from src.modules.identity.domain.entities import RefreshToken
 from src.modules.identity.infrastructure.refresh_token_repository import (

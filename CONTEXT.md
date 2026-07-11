@@ -74,6 +74,9 @@ _Avoid_: dùng “Agent” để gọi Assistant hiện tại vì Assistant khô
 Một người đang được cân nhắc tuyển dụng, được tạo tự động hoặc thủ công từ CV đã parse. Candidate đi qua pipeline: new → reviewing → interview*scheduled → accepted/rejected/archived. Candidate CHƯA phải Employee. Candidate có thể chưa được gán hoặc được gán vào đúng một Job Opening; việc gán có thể thay đổi cho đến trước khi Candidate đạt accepted/rejected/archived.
 _Avoid_: Applicant, Employee (Employee chỉ tồn tại sau onboarding)
 
+**Interview**: Một buổi phỏng vấn cụ thể của một Candidate. Một Candidate có thể có nhiều Interview để biểu diễn nhiều vòng hoặc lần lên lịch lại mà không ghi đè lịch sử phỏng vấn. Vòng đời: scheduled → completed/cancelled. Việc đổi lịch giữ nguyên Interview; nếu hủy buổi cũ và tạo buổi thay thế thì tạo Interview mới. Interview không tự động thay đổi Candidate pipeline.
+_Avoid_: lưu lịch phỏng vấn trực tiếp như một thuộc tính duy nhất của Candidate, Interview Stage
+
 **Job Opening**:
 Một nhu cầu tuyển dụng cụ thể cho một Position trong Organization. Department được suy ra từ Position trong model ban đầu. Job Opening có thể nhóm các Candidate đang được cân nhắc cho nhu cầu đó và theo dõi target headcount riêng với Candidate pipeline; Candidate có thể tồn tại mà không cần Job Opening. Vòng đời: draft → open → closed/cancelled; chỉ Job Opening open mới nhận Candidate assignment mới. Headcount được tính theo Candidate accepted, không theo onboarding completion hoặc Employee active.
 _Avoid_: Recruitment Plan, Hiring Plan, Vacancy, Requisition
@@ -107,3 +110,11 @@ _Avoid_: Write-tool, Action-tool
 **Draft Action**:
 Proposal có cấu trúc do Draft-Tool trả về. HR review proposal và khi confirm, frontend gọi trực tiếp write endpoint thật hiện có (không gọi thông qua LLM). Đây là cơ chế giữ AI Assistant trong mô hình human-in-the-loop.
 _Avoid_: Auto-action, Command
+
+## Google Integration
+
+**Organization Google Connection**: Kết nối Google Workspace dùng chung của Organization, được HR thiết lập để phục vụ các tác vụ Gmail và Calendar của Organization. Kết nối này không thuộc về một Employee cụ thể, dù HR là người thực hiện cấp quyền. Mỗi Organization chỉ có một kết nối hoạt động.
+_Avoid_: HR Google Account, Employee Google Connection, Personal Google Connection
+
+**Organization Shared Google Account**: Tài khoản Google Workspace dùng chung đại diện cho hoạt động tuyển dụng của Organization, ví dụ mailbox tuyển dụng và calendar phỏng vấn. Đây là tài khoản được Organization Google Connection kết nối tới.
+_Avoid_: Gmail cá nhân của HR, Employee Account

@@ -1,15 +1,12 @@
 """Unit tests for JWTUtils JWT token operations."""
 
-from datetime import timedelta
-from unittest.mock import patch
-from datetime import datetime, UTC
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from jose import jwt
 
 from src.modules.identity.domain.exceptions import InvalidStateError, InvalidTokenError
 from src.modules.identity.infrastructure.jwt_utils import JWTUtils
-
 
 SECRET_KEY = "test-secret-key-for-jwt-utils"
 ALGORITHM = "HS256"

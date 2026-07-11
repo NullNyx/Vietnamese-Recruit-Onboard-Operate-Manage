@@ -2,14 +2,13 @@
 
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
 
 from src.modules.identity.application.whitelist_manager import (
     WhitelistManager,
-    WhitelistEntryResponse,
 )
 from src.modules.identity.domain.entities import (
     User,
