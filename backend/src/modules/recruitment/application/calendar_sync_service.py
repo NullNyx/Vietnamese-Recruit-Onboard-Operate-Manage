@@ -228,9 +228,7 @@ class CalendarSyncService:
 
         for cal_event in changes.events:
             # Find matching Interview.
-            stmt = select(Interview).where(
-                Interview.calendar_event_id == cal_event.event_id
-            )
+            stmt = select(Interview).where(Interview.calendar_event_id == cal_event.event_id)
             result = await session.execute(stmt)
             interview = result.scalars().first()
 
@@ -263,9 +261,7 @@ class CalendarSyncService:
                     interview.meeting_link = cal_event.meet_link
 
             # Update participant RSVPs.
-            await self._update_participant_rsvps(
-                session, interview.id, cal_event.attendees
-            )
+            await self._update_participant_rsvps(session, interview.id, cal_event.attendees)
 
             session.add(interview)
             count += 1

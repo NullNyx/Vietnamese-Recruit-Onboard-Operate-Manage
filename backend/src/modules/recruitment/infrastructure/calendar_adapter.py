@@ -406,9 +406,9 @@ class CalendarAdapter:
         async def _request() -> httpx.Response:
             response = await self._http_client.post(
                 url,
-                    headers=self._auth_headers(access_token),
-                    params=params,
-                    json=body,
+                headers=self._auth_headers(access_token),
+                params=params,
+                json=body,
             )
             response.raise_for_status()
             return response

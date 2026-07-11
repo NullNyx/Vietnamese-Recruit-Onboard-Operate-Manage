@@ -62,7 +62,6 @@ class CalendarConflictNotFoundError(RecruitmentError):
     message = "Calendar conflict not found"
 
 
-
 class CandidateNotFoundError(RecruitmentError):
     """Candidate with given ID does not exist.
 
@@ -260,8 +259,6 @@ class InterviewerMissingEmailError(RecruitmentError):
         super().__init__(details=details)
 
 
-
-
 class CalendarEventSyncError(RecruitmentError):
     """Google Calendar event sync (events.list) failed.
 
@@ -273,6 +270,7 @@ class CalendarEventSyncError(RecruitmentError):
     status_code = 502
     error_code = "CALENDAR_SYNC_FAILED"
     message = "Failed to sync calendar events"
+
 
 class CalendarEventCreateFailedError(RecruitmentError):
     """Google Calendar event creation failed.

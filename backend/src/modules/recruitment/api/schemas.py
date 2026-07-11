@@ -651,4 +651,3 @@ class ResolveConflictRequest(BaseModel):
     """
 
     choice: str = Field(pattern=r"^(keep_google|overwrite_vroom)$")
-

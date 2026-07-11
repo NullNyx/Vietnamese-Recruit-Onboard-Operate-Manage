@@ -2665,7 +2665,6 @@ class CandidateService:
 
         return new_interview
 
-
     # ─── Calendar conflict capture and resolution ──────────────────────
 
     async def _capture_calendar_conflict(
@@ -2782,9 +2781,7 @@ class CandidateService:
         Returns:
             List of CalendarConflict entities matching the filters.
         """
-        stmt = select(CalendarConflict).order_by(
-            CalendarConflict.created_at.desc()
-        )
+        stmt = select(CalendarConflict).order_by(CalendarConflict.created_at.desc())
 
         if status is not None:
             stmt = stmt.where(CalendarConflict.status == status)
@@ -2837,9 +2834,7 @@ class CandidateService:
         conflict = result.scalars().first()
 
         if conflict is None:
-            raise CalendarConflictNotFoundError(
-                f"Calendar conflict not found: {conflict_id}"
-            )
+            raise CalendarConflictNotFoundError(f"Calendar conflict not found: {conflict_id}")
 
         if conflict.status != "unresolved":
             raise ValueError(

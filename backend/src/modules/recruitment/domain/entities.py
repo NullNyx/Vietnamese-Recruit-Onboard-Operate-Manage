@@ -139,8 +139,6 @@ class RecruitmentAuditLog(SQLModel, table=True):
     )
 
 
-
-
 class CalendarSyncCursor(SQLModel, table=True):
     """Tracks the sync token for incremental calendar synchronization.
 
@@ -158,9 +156,7 @@ class CalendarSyncCursor(SQLModel, table=True):
     )
     sync_token: str | None = Field(default=None, max_length=1024)
     page_token: str | None = Field(default=None, max_length=1024)
-    last_sync_at: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
+    last_sync_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -169,6 +165,7 @@ class CalendarSyncCursor(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+
 
 class OrganizationSettings(SQLModel, table=True):
     """Single-row settings for the Organization (the company deployment).
@@ -314,15 +311,9 @@ class CalendarConflict(SQLModel, table=True):
         default_factory=dict, sa_column=Column(JSONB, nullable=False)
     )
     # status: unresolved, resolved_keep_google, resolved_overwrite_vroom
-    status: str = Field(
-        default="unresolved", max_length=30, nullable=False, index=True
-    )
-    resolved_by: UUID | None = Field(
-        default=None, foreign_key="users.id"
-    )
-    resolved_at: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
+    status: str = Field(default="unresolved", max_length=30, nullable=False, index=True)
+    resolved_by: UUID | None = Field(default=None, foreign_key="users.id")
+    resolved_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

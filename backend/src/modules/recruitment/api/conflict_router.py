@@ -86,9 +86,7 @@ async def list_calendar_conflicts(
     )
 
     return CalendarConflictListResponse(
-        conflicts=[
-            CalendarConflictResponse.model_validate(c) for c in conflicts
-        ],
+        conflicts=[CalendarConflictResponse.model_validate(c) for c in conflicts],
         total_count=len(conflicts),
     )
 
