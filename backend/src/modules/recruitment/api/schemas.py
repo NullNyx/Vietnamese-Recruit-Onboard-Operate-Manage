@@ -186,6 +186,7 @@ class CandidateListResponse(BaseModel):
 
 class InterviewParticipantResponse(BaseModel):
     """Response schema for an interview participant."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -198,6 +199,7 @@ class InterviewParticipantResponse(BaseModel):
 
 class InterviewResponse(BaseModel):
     """Response schema for an interview."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -260,7 +262,6 @@ class CandidateDetailResponse(BaseModel):
     job_opening_title: str = ""
     cv_documents: list[CVDocumentResponse] = Field(default_factory=list)
     interviews: list[InterviewResponse] = Field(default_factory=list)
-
 
 
 class CVReviewItemResponse(BaseModel):

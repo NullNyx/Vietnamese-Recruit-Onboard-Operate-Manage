@@ -1484,12 +1484,13 @@ class CandidateService:
 
                 # Delete old participants except candidate
                 from sqlalchemy import text
+
                 await self._session.execute(
                     text(
                         "DELETE FROM interview_participants "
                         "WHERE interview_id = :interview_id AND type != 'candidate'"
                     ),
-                    {"interview_id": interview.id}
+                    {"interview_id": interview.id},
                 )
 
                 for emp_id in interviewer_ids:
@@ -2100,14 +2101,11 @@ class CandidateService:
         )
         await self._session.commit()
 
-
-
     async def _get_interview_by_event_id(
         self, candidate_id: UUID, event_id: str
     ) -> Interview | None:
         stmt = select(Interview).where(
-            Interview.candidate_id == candidate_id,
-            Interview.calendar_event_id == event_id
+            Interview.candidate_id == candidate_id, Interview.calendar_event_id == event_id
         )
         res = await self._session.execute(stmt)
         scalars = res.scalars()
@@ -2117,4 +2115,3 @@ class CandidateService:
             except Exception:
                 return None
         return None
-

@@ -162,7 +162,7 @@ def test_migration_backfill_and_rollback(migrated_engine: Engine) -> None:
                     "calendar_event_id": "evt_legacy_123",
                     "interview_start_at": datetime.now(UTC),
                     "interview_timezone": "Asia/Ho_Chi_Minh",
-                }
+                },
             )
 
         # 3. Upgrade to head
@@ -172,7 +172,7 @@ def test_migration_backfill_and_rollback(migrated_engine: Engine) -> None:
         with migrated_engine.begin() as conn:
             interviews = conn.execute(
                 sa.text("SELECT * FROM interviews WHERE candidate_id = :candidate_id"),
-                {"candidate_id": cand_id}
+                {"candidate_id": cand_id},
             ).fetchall()
             assert len(interviews) == 1
             iv = interviews[0]
@@ -181,7 +181,7 @@ def test_migration_backfill_and_rollback(migrated_engine: Engine) -> None:
 
             participants = conn.execute(
                 sa.text("SELECT * FROM interview_participants WHERE interview_id = :interview_id"),
-                {"interview_id": iv.id}
+                {"interview_id": iv.id},
             ).fetchall()
             assert len(participants) == 1
             part = participants[0]

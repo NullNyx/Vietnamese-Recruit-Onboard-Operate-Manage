@@ -519,10 +519,10 @@ async def test_schedule_reschedule_reject_against_mocked_google_layer(
     # Assert Interview created (GH issue 150)
     async with session_maker() as session:
         interviews = (
-            await session.execute(
-                select(Interview).where(Interview.candidate_id == candidate_id)
-            )
-        ).scalars().all()
+            (await session.execute(select(Interview).where(Interview.candidate_id == candidate_id)))
+            .scalars()
+            .all()
+        )
         assert len(interviews) == 1
         iv = interviews[0]
         assert iv.status == "scheduled"
@@ -530,12 +530,14 @@ async def test_schedule_reschedule_reject_against_mocked_google_layer(
         assert _same_instant(iv.start_at, schedule_start)
 
         participants = (
-            await session.execute(
-                select(InterviewParticipant).where(
-                    InterviewParticipant.interview_id == iv.id
+            (
+                await session.execute(
+                    select(InterviewParticipant).where(InterviewParticipant.interview_id == iv.id)
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(participants) == 2
         assert {p.type for p in participants} == {"candidate", "employee"}
 
@@ -585,10 +587,10 @@ async def test_schedule_reschedule_reject_against_mocked_google_layer(
     # Assert Interview updated (GH issue 150)
     async with session_maker() as session:
         interviews = (
-            await session.execute(
-                select(Interview).where(Interview.candidate_id == candidate_id)
-            )
-        ).scalars().all()
+            (await session.execute(select(Interview).where(Interview.candidate_id == candidate_id)))
+            .scalars()
+            .all()
+        )
         assert len(interviews) == 1
         iv = interviews[0]
         assert iv.status == "scheduled"
@@ -630,10 +632,10 @@ async def test_schedule_reschedule_reject_against_mocked_google_layer(
     # Assert Interview cancelled (GH issue 150)
     async with session_maker() as session:
         interviews = (
-            await session.execute(
-                select(Interview).where(Interview.candidate_id == candidate_id)
-            )
-        ).scalars().all()
+            (await session.execute(select(Interview).where(Interview.candidate_id == candidate_id)))
+            .scalars()
+            .all()
+        )
         assert len(interviews) == 1
         iv = interviews[0]
         assert iv.status == "cancelled"
