@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from src.modules.employee.domain.entities import Employee
 from src.modules.identity.api.admin_router import require_admin
@@ -460,11 +460,12 @@ async def logout(
 async def me(
     current_user: CurrentUserDep,
     oauth_service: OAuthServiceDep,
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> UserResponse:
     """Get current authenticated user's profile with grant status."""
     grant_status = await _get_user_grant_status(current_user, oauth_service)
-    employee = session.exec(select(Employee).where(Employee.email == current_user.email)).first()
+    result = await session.execute(select(Employee).where(Employee.email == current_user.email))
+    employee = result.scalar_one_or_none()
     employee_id = current_user.employee_id or (employee.id if employee else None)
 
     return UserResponse(

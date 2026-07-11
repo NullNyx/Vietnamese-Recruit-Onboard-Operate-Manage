@@ -108,7 +108,7 @@ def app(
     rate_limiter.check_rate_limit = AsyncMock(return_value=True)
     app.dependency_overrides[get_rate_limiter] = lambda: rate_limiter
     session = MagicMock()
-    session.exec.return_value.first.return_value = None
+    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
     app.dependency_overrides[get_session] = lambda: session
 
     return app

@@ -105,7 +105,7 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     logger.info("Gmail ARQ worker shut down")
 
 
-async def _refresh_heartbeat(ctx: dict[str, Any]) -> None:
+async def refresh_heartbeat(ctx: dict[str, Any]) -> None:
     """Refresh the runtime heartbeat key in Redis."""
     redis_client: redis.Redis | None = ctx.get("redis_client")
     if redis_client:
@@ -119,7 +119,7 @@ async def _refresh_heartbeat(ctx: dict[str, Any]) -> None:
 
 async def poll_gmail_emails(ctx: dict[str, Any]) -> None:
     # Refresh heartbeat so runtime health stays accurate
-    await _refresh_heartbeat(ctx)
+    await refresh_heartbeat(ctx)
 
     """ARQ cron job: fetch new emails for all connected Gmail users.
 
@@ -318,7 +318,7 @@ class WorkerSettings:
             minute=_build_cron_schedule(_gmail_settings.poll_interval_seconds),
             second={0},
         ),
-        cron(_refresh_heartbeat, minute=set(range(0, 60, 3)), second={0}),
+        cron(refresh_heartbeat, minute=set(range(0, 60, 3)), second={0}),
     ]
 
     redis_settings = RedisSettings.from_dsn(_auth_settings.redis_url)
