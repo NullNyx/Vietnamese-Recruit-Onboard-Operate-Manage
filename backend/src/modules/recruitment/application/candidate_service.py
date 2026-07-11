@@ -2182,8 +2182,6 @@ class CandidateService:
             raise ValueError("notes must be at most 1000 characters")
         resolved_interviewer_ids = interviewer_ids or []
         resolved_external_emails = external_participant_emails or []
-        if not resolved_interviewer_ids and not resolved_external_emails:
-            raise ValueError("At least one interviewer or external participant is required")
         if len(resolved_interviewer_ids) > 20:
             raise ValueError("interviewer_ids must not exceed 20")
         if len(resolved_external_emails) > 20:
