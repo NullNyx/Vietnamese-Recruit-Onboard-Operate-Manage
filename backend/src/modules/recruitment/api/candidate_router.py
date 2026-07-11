@@ -538,8 +538,7 @@ async def reschedule_interview(
         from sqlmodel import select
 
         parts_stmt = select(InterviewParticipant).where(
-            InterviewParticipant.interview_id
-            == interview.id
+            InterviewParticipant.interview_id == interview.id
         )
         parts_res = await candidate_service._session.execute(parts_stmt)
         parts_list = parts_res.scalars().all()

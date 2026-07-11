@@ -330,9 +330,7 @@ async def callback_google_connection(
     async def save_selected_calendar(
         body: SelectCalendarRequest,
         current_user: AdminOnlyDep,
-        connection_service: OrganizationGoogleConnectionService = Depends(
-        _get_connection_service
-    ),
+        connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
     ) -> None:
         """Save the selected calendar ID for interview scheduling."""
         await connection_service.update_selected_calendar(
