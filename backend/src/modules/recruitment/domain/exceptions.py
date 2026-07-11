@@ -370,3 +370,38 @@ class CandidateAssignmentBlockedError(RecruitmentError):
     status_code = 409
     error_code = "CANDIDATE_ASSIGNMENT_BLOCKED"
     message = "Cannot change assignment for a candidate in terminal status"
+
+class InterviewNotFoundError(RecruitmentError):
+    """Interview with given ID does not exist.
+
+    Raised when an operation targets an Interview ID that cannot be
+    found in the database.
+    """
+
+    status_code = 404
+    error_code = "INTERVIEW_NOT_FOUND"
+    message = "Interview not found"
+
+
+class InterviewStatusTransitionError(RecruitmentError):
+    """Attempted status transition is not allowed for Interview.
+
+    Raised when an action would result in an invalid state machine
+    transition for an Interview's lifecycle status.
+
+    Attributes:
+        current_status: The Interview's current status.
+        attempted_action: The action that was attempted.
+    """
+
+    status_code = 409
+    error_code = "INTERVIEW_INVALID_STATUS_TRANSITION"
+    message = "Invalid status transition for Interview"
+
+    def __init__(self, current_status: str, attempted_action: str) -> None:
+        self.current_status = current_status
+        self.attempted_action = attempted_action
+        self.message = (
+            f"Cannot perform '{attempted_action}' on Interview with status '{current_status}'"
+        )
+        super().__init__(self.message)

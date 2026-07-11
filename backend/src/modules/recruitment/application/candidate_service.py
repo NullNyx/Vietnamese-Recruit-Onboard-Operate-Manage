@@ -2091,7 +2091,28 @@ class CandidateService:
                 return scalars.first()
             except Exception:
                 return None
-        return None
+
+
+    async def _get_interview_or_raise(self, interview_id: UUID) -> Interview:
+        """Retrieve an Interview by ID or raise InterviewNotFoundError."""
+        stmt = select(Interview).where(Interview.id == interview_id)
+        res = await self._session.execute(stmt)
+        interview = res.scalars().first()
+        if interview is None:
+            from src.modules.recruitment.domain.exceptions import InterviewNotFoundError
+
+            raise InterviewNotFoundError(f"Interview not found: {interview_id}")
+        return interview
+
+    @staticmethod
+    def _assert_interview_is_scheduled(interview: Interview, action: str) -> None:
+        """Validate the Interview is in 'scheduled' status for the given action."""
+        if interview.status != "scheduled":
+            from src.modules.recruitment.domain.exceptions import (
+                InterviewStatusTransitionError,
+            )
+
+            raise InterviewStatusTransitionError(interview.status, action)
 
     # ─── Interview creation (GH #154) ──────────────────────────────────────────
 
@@ -2369,4 +2390,223 @@ class CandidateService:
 
         return interview
 
-        return None
+
+    # ─── Interview lifecycle: complete, cancel, replacement (GH #155) ──────────
+
+    async def complete_interview(self, interview_id: UUID) -> Interview:
+        """Mark an Interview as completed.
+
+        Transitions the Interview status from 'scheduled' to 'completed'.
+        Does NOT change the Candidate status. No Calendar operation is performed.
+
+        Args:
+            interview_id: UUID of the Interview to complete.
+
+        Returns:
+            The updated Interview entity.
+
+        Raises:
+            InterviewNotFoundError: If the Interview doesn't exist.
+            InterviewStatusTransitionError: If the Interview is not in 'scheduled' status.
+        """
+        if self._user_id is None:
+            raise RuntimeError("Acting HR user id is not configured")
+        user_id = self._user_id
+
+        interview = await self._get_interview_or_raise(interview_id)
+        self._assert_interview_is_scheduled(interview, "complete")
+
+        previous_status = interview.status
+        interview.status = "completed"
+        self._session.add(interview)
+        await self._session.commit()
+
+        await log_audit(
+            session=self._session,
+            operation_type="interview_completed",
+            entity_type="interview",
+            entity_id=interview.id,
+            user_id=user_id,
+            previous_value={"status": previous_status},
+            new_value={"status": "completed", "interview_id": str(interview.id)},
+            change_summary=f"Interview completed: {interview.round_name}",
+            success=True,
+        )
+        await self._session.commit()
+
+        return interview
+
+    async def cancel_interview(self, interview_id: UUID) -> Interview:
+        """Cancel an Interview and send Calendar cancellation.
+
+        Transitions the Interview from 'scheduled' to 'cancelled'. If the Interview
+        has a stored calendar_event_id, the Google Calendar event is deleted with
+        sendUpdates=all. 404/410 from Google are treated as idempotent success.
+        Does NOT change the Candidate status.
+
+        Args:
+            interview_id: UUID of the Interview to cancel.
+
+        Returns:
+            The updated Interview entity.
+
+        Raises:
+            InterviewNotFoundError: If the Interview doesn't exist.
+            InterviewStatusTransitionError: If the Interview is not in 'scheduled' status.
+        """
+        if self._user_id is None:
+            raise RuntimeError("Acting HR user id is not configured")
+        user_id = self._user_id
+
+        interview = await self._get_interview_or_raise(interview_id)
+        self._assert_interview_is_scheduled(interview, "cancel")
+
+        previous_status = interview.status
+
+        # Attempt to cancel the Calendar event if one exists (best-effort, idempotent).
+        calendar_port = self._calendar_port
+        event_id = interview.calendar_event_id
+        if event_id is not None and calendar_port is not None:
+            try:
+                await self._with_calendar_token(
+                    user_id,
+                    lambda token: calendar_port.delete_event(
+                        token, event_id
+                    ),
+                )
+            except Exception as exc:
+                # Check if the event is already gone (404/410) -- treat as success.
+                is_gone = False
+                if (
+                    isinstance(exc, httpx.HTTPStatusError)
+                    and exc.response.status_code in (404, 410)
+                ):
+                    is_gone = True
+                elif "404" in str(exc) or "410" in str(exc):
+                    is_gone = True
+
+                if not is_gone:
+                    # Log the failure but proceed with the cancellation anyway.
+                    logger.warning(
+                        "Calendar event deletion failed for interview %s (event %s): %s",
+                        interview.id,
+                        event_id,
+                        exc,
+                    )
+
+        interview.status = "cancelled"
+        self._session.add(interview)
+        await self._session.commit()
+
+        await log_audit(
+            session=self._session,
+            operation_type="interview_cancelled",
+            entity_type="interview",
+            entity_id=interview.id,
+            user_id=user_id,
+            previous_value={"status": previous_status},
+            new_value={
+                "status": "cancelled",
+                "interview_id": str(interview.id),
+                "calendar_event_id": event_id,
+            },
+            change_summary=f"Interview cancelled: {interview.round_name}",
+            success=True,
+        )
+        await self._session.commit()
+
+        return interview
+
+    async def create_replacement_interview(
+        self,
+        cancelled_interview_id: UUID,
+        *,
+        round_name: str,
+        start: datetime,
+        end: datetime,
+        timezone: str,
+        mode: str,
+        meeting_link: str | None = None,
+        interviewer_ids: list[UUID] | None = None,
+        external_participant_emails: list[str] | None = None,
+        notes: str | None = None,
+    ) -> Interview:
+        """Create a replacement Interview after cancellation.
+
+        After an Interview has been cancelled, this method creates a new Interview
+        record with a new Calendar event, keeping the old Interview in history.
+
+        Args:
+            cancelled_interview_id: UUID of the cancelled Interview to replace.
+            round_name: Interview round name.
+            start: Interview start datetime (tz-aware).
+            end: Interview end datetime (tz-aware).
+            timezone: IANA timezone.
+            mode: Meeting mode.
+            meeting_link: Custom meeting link (required for custom_link mode).
+            interviewer_ids: Employee UUIDs conducting the interview.
+            external_participant_emails: External participant email addresses.
+            notes: Optional interview notes.
+
+        Returns:
+            The new Interview entity.
+
+        Raises:
+            InterviewNotFoundError: If the source interview doesn't exist.
+            InterviewStatusTransitionError: If the source interview is not cancelled.
+            ValueError: If request fields violate bounds.
+            CalendarEventCreateFailedError: If Calendar event creation fails.
+        """
+        if self._calendar_port is None:
+            raise RuntimeError("Calendar port is not configured")
+        if self._user_id is None:
+            raise RuntimeError("Acting HR user id is not configured")
+        user_id = self._user_id
+
+        # Load the cancelled interview.
+        old_interview = await self._get_interview_or_raise(cancelled_interview_id)
+        if old_interview.status != "cancelled":
+            from src.modules.recruitment.domain.exceptions import (
+                InterviewStatusTransitionError,
+            )
+
+            raise InterviewStatusTransitionError(old_interview.status, "create_replacement")
+
+        candidate_id = old_interview.candidate_id
+
+        # Use create_interview logic to create the new interview.
+        new_interview = await self.create_interview(
+            candidate_id,
+            round_name=round_name,
+            start=start,
+            end=end,
+            timezone=timezone,
+            mode=mode,
+            meeting_link=meeting_link,
+            interviewer_ids=interviewer_ids,
+            external_participant_emails=external_participant_emails,
+            notes=notes,
+        )
+
+        # Write a replacement audit entry.
+        await log_audit(
+            session=self._session,
+            operation_type="interview_replacement_created",
+            entity_type="interview",
+            entity_id=new_interview.id,
+            user_id=user_id,
+            previous_value={"replaced_interview_id": str(cancelled_interview_id)},
+            new_value={
+                "interview_id": str(new_interview.id),
+                "calendar_event_id": new_interview.calendar_event_id,
+                "replaces": str(cancelled_interview_id),
+            },
+            change_summary=(
+                f"Replacement interview created for cancelled interview {cancelled_interview_id}"
+            ),
+            success=True,
+        )
+        await self._session.commit()
+
+        return new_interview
+
