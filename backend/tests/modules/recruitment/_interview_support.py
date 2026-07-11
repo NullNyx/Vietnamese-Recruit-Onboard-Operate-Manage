@@ -60,6 +60,11 @@ from src.modules.recruitment.application.candidate_service import (
 from src.modules.recruitment.domain.entities import Candidate
 from src.modules.recruitment.domain.enums import CandidateStatus
 from src.modules.recruitment.domain.value_objects import CalendarEvent, CalendarEventSpec
+from src.modules.recruitment.domain.value_objects import (
+    CalendarEvent,
+    CalendarEventSpec,
+    SyncEventChanges,
+)
 
 # The Calendar scope that makes ``calendar_grant_valid`` true (mirrors the
 # identity ``OAuthService._CALENDAR_SCOPES`` set).
@@ -100,6 +105,8 @@ EventOutcome = CalendarEvent | BaseException | Callable[[RecordedCalendarCall], 
 # A scripted outcome for a delete call: ``None`` (success), an exception to
 # raise, or a callable side effect.
 DeleteOutcome = BaseException | Callable[[RecordedCalendarCall], None] | None
+# A scripted outcome for a sync (list_events) call.
+SyncOutcome = SyncEventChanges | BaseException | Callable[[RecordedCalendarCall], SyncEventChanges]
 
 
 class _Default:
@@ -164,6 +171,7 @@ class FakeCalendarPort:
         create_outcomes: Sequence[EventOutcome] | None = None,
         patch_outcomes: Sequence[EventOutcome] | None = None,
         delete_outcomes: Sequence[DeleteOutcome] | None = None,
+        sync_outcomes: Sequence[SyncOutcome] | None = None,
         meet_link: str | None = DEFAULT_MEET_LINK,
         html_link: str | None = DEFAULT_HTML_LINK,
     ) -> None:
@@ -173,6 +181,7 @@ class FakeCalendarPort:
             create_outcomes: Scripted outcomes for ``create_event`` calls.
             patch_outcomes: Scripted outcomes for ``patch_event`` calls.
             delete_outcomes: Scripted outcomes for ``delete_event`` calls.
+            sync_outcomes: Scripted outcomes for ``list_events`` calls.
             meet_link: Default Meet link returned when a spec requests one and
                 no explicit outcome is scripted.
             html_link: Default ``htmlLink`` returned by default outcomes.
@@ -186,6 +195,9 @@ class FakeCalendarPort:
         )
         self._delete_outcomes: list[DeleteOutcome] | None = (
             list(delete_outcomes) if delete_outcomes is not None else None
+        )
+        self._sync_outcomes: list[SyncOutcome] | None = (
+            list(sync_outcomes) if sync_outcomes is not None else None
         )
         self._meet_link = meet_link
         self._html_link = html_link
@@ -228,9 +240,38 @@ class FakeCalendarPort:
             return
         if isinstance(outcome, BaseException):
             raise outcome
-        outcome(call)
+            outcome(call)
 
-    # -- Recording helpers ----------------------------------------------
+        async def list_events(
+            self,
+            access_token: str,
+            calendar_id: str = "primary",
+            *,
+            sync_token: str | None = None,
+            page_token: str | None = None,
+            max_results: int = 250,
+        ) -> SyncEventChanges:
+            """Record a list_events call and return/raise its scripted outcome."""
+            call = RecordedCalendarCall(
+                method="list_events",
+                access_token=access_token,
+                event_id=None,
+                spec=None,
+            )
+            self.calls.append(call)
+            outcome = self._take(self._sync_outcomes)
+            if isinstance(outcome, _Default):
+                return SyncEventChanges(
+                    events=(),
+                    next_sync_token="tok-default-sync",
+                )
+            if isinstance(outcome, BaseException):
+                raise outcome
+            if isinstance(outcome, SyncEventChanges):
+                return outcome
+            return outcome(call)
+
+        # -- Recording helpers ----------------------------------------------
 
     @property
     def create_calls(self) -> list[RecordedCalendarCall]:
@@ -246,6 +287,11 @@ class FakeCalendarPort:
     def delete_calls(self) -> list[RecordedCalendarCall]:
         """All recorded ``delete_event`` calls, in order."""
         return [c for c in self.calls if c.method == "delete_event"]
+
+    @property
+    def sync_calls(self) -> list[RecordedCalendarCall]:
+        """All recorded ``list_events`` calls, in order."""
+        return [c for c in self.calls if c.method == "list_events"]
 
     @property
     def was_called(self) -> bool:

@@ -50,6 +50,9 @@ from src.modules.recruitment.infrastructure.repositories import (
     CVDocumentRepository,
     JobOpeningRepository,
 )
+from src.modules.recruitment.infrastructure.sync_cursor_repository import (
+    CalendarSyncCursorRepository,
+)
 
 # ---------------------------------------------------------------------------
 # Singleton infrastructure components
@@ -532,6 +535,34 @@ async def arq_retention_cleanup(ctx: dict[str, Any]) -> int:
         deleted_count = await retention_cleanup(retention_ctx)
         logger.info("ARQ task completed: retention cleanup deleted %d candidates", deleted_count)
         return deleted_count
+
+
+# ---------------------------------------------------------------------------
+# Calendar Sync Service
+# ---------------------------------------------------------------------------
+
+
+def get_calendar_sync_service(
+    session: AsyncSession = Depends(get_db_session),
+) -> CalendarSyncService:
+    """Provide a CalendarSyncService instance with all dependencies.
+
+    Args:
+        session: The async database session from DI.
+
+    Returns:
+        A configured CalendarSyncService.
+    """
+    from src.modules.recruitment.application.calendar_sync_service import (
+        CalendarSyncService,
+    )
+
+    calendar_adapter = get_calendar_adapter()
+    sync_cursor_repo = CalendarSyncCursorRepository(session)
+    return CalendarSyncService(
+        adapter=calendar_adapter,
+        sync_cursor_repo=sync_cursor_repo,
+    )
 
 
 def get_arq_tasks() -> list[Any]:

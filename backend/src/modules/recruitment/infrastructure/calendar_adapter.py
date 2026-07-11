@@ -25,9 +25,14 @@ import httpx
 
 from src.modules.recruitment.domain.exceptions import (
     CalendarEventCreateFailedError,
+    CalendarEventSyncError,
     CalendarEventUpdateFailedError,
 )
-from src.modules.recruitment.domain.value_objects import CalendarEvent, CalendarEventSpec
+from src.modules.recruitment.domain.value_objects import (
+    CalendarEvent,
+    CalendarEventSpec,
+    SyncEventChanges,
+)
 from src.modules.recruitment.infrastructure.config import RecruitmentSettings
 
 logger = logging.getLogger(__name__)
@@ -280,6 +285,9 @@ class CalendarAdapter:
     def _parse_event(self, data: dict[str, Any]) -> CalendarEvent:
         """Parse a Calendar API event response into a :class:`CalendarEvent`.
 
+        Extracts all relevant fields including ``location`` (physical address/
+        remote meeting info) and ``attendees`` for RSVP tracking.
+
         Args:
             data: Raw JSON response from ``events.insert`` or ``events.patch``.
 
@@ -290,9 +298,12 @@ class CalendarAdapter:
             event_id=str(data.get("id", "")),
             html_link=self._optional_str(data.get("htmlLink")),
             meet_link=self._extract_meet_link(data),
+            location=self._optional_str(data.get("location")),
             etag=self._optional_str(data.get("etag")),
             updated=self._parse_datetime(data.get("updated")),
             invited_emails=self._extract_attendees(data),
+            status=self._optional_str(data.get("status")),
+            attendees=tuple(data.get("attendees") or ()),
         )
 
     def _optional_str(self, value: Any) -> str | None:
@@ -552,3 +563,92 @@ class CalendarAdapter:
         data: dict[str, Any] = response.json()
         items: list[dict[str, Any]] = data.get("items", [])
         return items
+
+    async def list_events(
+        self,
+        access_token: str,
+        calendar_id: str,
+        *,
+        sync_token: str | None = None,
+        page_token: str | None = None,
+        max_results: int = 250,
+        time_min: str | None = None,
+        time_max: str | None = None,
+    ) -> SyncEventChanges:
+        """Fetch events changes via ``events.list`` with optional sync token.
+
+        Supports incremental sync: when ``sync_token`` is provided, only
+        events changed since the token are returned. When ``sync_token`` is
+        None, a full snapshot is returned (used for initial sync or 410
+        recovery). Pagination is handled via ``page_token``.
+
+        When no ``sync_token`` is given (bounded full sync), ``time_min``
+        and ``time_max`` may optionally bound the fetch window to keep the
+        response size manageable. Defaults to last 30 days through +90 days
+        (future event window) when set in the service layer.
+
+        Args:
+            access_token: OAuth2 access token with the calendar scope.
+            calendar_id: The Google Calendar ID to list events from.
+            sync_token: Sync token for incremental sync, or None for full sync.
+            page_token: Page token for pagination within one sync response.
+            max_results: Maximum results per page (default 250, max 2500).
+            time_min: RFC3339 datetime lower bound for full sync.
+            time_max: RFC3339 datetime upper bound for full sync.
+
+        Returns:
+            :class:`SyncEventChanges` with the parsed events and next tokens.
+
+        Raises:
+            CalendarEventSyncError: If the sync fails after retries (wraps
+                non-401 errors).
+            httpx.HTTPStatusError: If ``401`` (for token refresh), or ``410``
+                (sync token expired \u2014 caller should clear cursor and retry).
+        """
+        url = f"{self._base_url}/calendars/{calendar_id}/events"
+        params: dict[str, str | int] = {
+            "showDeleted": "true",
+            "maxResults": max_results,
+            "singleEvents": "true",
+        }
+        if sync_token is not None:
+            params["syncToken"] = sync_token
+        if page_token is not None:
+            params["pageToken"] = page_token
+        if sync_token is None:
+            if time_min is not None:
+                params["timeMin"] = time_min
+            if time_max is not None:
+                params["timeMax"] = time_max
+
+        async def _request() -> httpx.Response:
+            response = await self._http_client.get(
+                url,
+                headers=self._auth_headers(access_token),
+                params=params,
+            )
+            response.raise_for_status()
+            return response
+
+        try:
+            response = await self.retry_with_backoff(_request)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code in (401, 410):
+                # 401: token refresh needed \u2014 re-raise for caller.
+                # 410: sync token expired \u2014 re-raise for caller to clear cursor.
+                raise
+            raise CalendarEventSyncError(
+                f"Failed to list calendar events: {exc.response.status_code} {exc.response.text}"
+            ) from exc
+        except (TimeoutError, httpx.HTTPError, OSError) as exc:
+            raise CalendarEventSyncError(f"Failed to list calendar events: {exc}") from exc
+
+        data: dict[str, Any] = response.json()
+        raw_items: list[dict[str, Any]] = data.get("items", [])
+        events = tuple(self._parse_event(item) for item in raw_items)
+
+        return SyncEventChanges(
+            events=events,
+            next_sync_token=self._optional_str(data.get("nextSyncToken")),
+            next_page_token=self._optional_str(data.get("nextPageToken")),
+        )
