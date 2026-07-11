@@ -44,18 +44,11 @@ def crypto() -> MagicMock:
 
 
 @pytest.fixture
-def label_service() -> AsyncMock:
-    """Create a mocked LabelService."""
-    return AsyncMock()
-
-
-@pytest.fixture
 def connection_service(
     settings: GmailSettings,
     oauth_grant_repo: AsyncMock,
     gmail_adapter: AsyncMock,
     crypto: MagicMock,
-    label_service: AsyncMock,
 ) -> ConnectionService:
     """Create a ConnectionService with mocked dependencies."""
     return ConnectionService(
@@ -66,7 +59,6 @@ def connection_service(
         oauth_grant_repo=oauth_grant_repo,
         gmail_adapter=gmail_adapter,
         crypto=crypto,
-        label_service=label_service,
     )
 
 
@@ -241,7 +233,6 @@ class TestHandleCallback:
         connection_service: ConnectionService,
         oauth_grant_repo: AsyncMock,
         crypto: MagicMock,
-        label_service: AsyncMock,
     ) -> None:
         """Stores encrypted tokens and returns connected on successful callback."""
         user_id = uuid4()
@@ -266,35 +257,6 @@ class TestHandleCallback:
         crypto.encrypt.assert_any_call("new_access_token")
         crypto.encrypt.assert_any_call("new_refresh_token")
         oauth_grant_repo.upsert.assert_called_once()
-
-    async def test_triggers_label_initialization(
-        self,
-        connection_service: ConnectionService,
-        oauth_grant_repo: AsyncMock,
-        label_service: AsyncMock,
-    ) -> None:
-        """Triggers label initialization after successful callback."""
-        user_id = uuid4()
-        scope_str = " ".join(GMAIL_SCOPES)
-
-        with patch("httpx.AsyncClient") as mock_client_cls:
-            mock_client = AsyncMock()
-            mock_client_cls.return_value.__aenter__.return_value = mock_client
-            mock_response = MagicMock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "access_token": "new_access_token",
-                "refresh_token": "new_refresh_token",
-                "expires_in": 3600,
-                "scope": scope_str,
-            }
-            mock_client.post.return_value = mock_response
-
-            await connection_service.handle_callback(user_id, "auth_code")
-
-        label_service.initialize_labels.assert_called_once_with(
-            user_id=user_id, access_token="new_access_token"
-        )
 
     async def test_raises_on_token_exchange_failure(
         self, connection_service: ConnectionService
@@ -332,35 +294,6 @@ class TestHandleCallback:
 
             with pytest.raises(GmailConnectFailedException):
                 await connection_service.handle_callback(user_id, "auth_code")
-
-    async def test_proceeds_when_label_init_fails(
-        self,
-        connection_service: ConnectionService,
-        oauth_grant_repo: AsyncMock,
-        label_service: AsyncMock,
-    ) -> None:
-        """Proceeds with connected status even if label initialization fails."""
-        user_id = uuid4()
-        scope_str = " ".join(GMAIL_SCOPES)
-        label_service.initialize_labels.side_effect = Exception("Label API error")
-
-        with patch("httpx.AsyncClient") as mock_client_cls:
-            mock_client = AsyncMock()
-            mock_client_cls.return_value.__aenter__.return_value = mock_client
-            mock_response = MagicMock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "access_token": "new_access_token",
-                "refresh_token": "new_refresh_token",
-                "expires_in": 3600,
-                "scope": scope_str,
-            }
-            mock_client.post.return_value = mock_response
-
-            result = await connection_service.handle_callback(user_id, "auth_code")
-
-        assert result.status == ConnectionStatus.connected
-
 
 class TestDisconnect:
     """Tests for ConnectionService.disconnect."""

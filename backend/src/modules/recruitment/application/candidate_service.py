@@ -163,25 +163,6 @@ def validate_candidate_fields(parsed_cv: ParsedCV) -> list[dict[str, Any]]:
 # ─── Protocols for cross-module communication ──────────────────────────
 
 
-@runtime_checkable
-class GmailLabelProtocol(Protocol):
-    """Protocol for applying Gmail labels to messages.
-
-    Abstracts the Gmail module's label service to avoid direct imports.
-    """
-
-    async def add_label(
-        self,
-        user_id: UUID,
-        message_id: str,
-        label_name: str,
-        access_token: str,
-    ) -> None:
-        """Add a label to a Gmail message."""
-        ...
-
-
-@runtime_checkable
 class GmailSendProtocol(Protocol):
     """Protocol for sending emails via Gmail.
 
@@ -392,7 +373,6 @@ class CandidateService:
         cv_document_repo: Repository for CV document persistence.
         minio_client: MinIO client for generating presigned URLs.
         session: Async database session.
-        gmail_label_service: Optional protocol-based Gmail label service.
         access_token_provider: Optional callable returning the current OAuth token.
         user_id_provider: Optional callable returning the current user UUID.
         calendar_port: Optional Calendar adapter (protocol) for event operations.
@@ -408,7 +388,6 @@ class CandidateService:
         cv_document_repo: CVDocumentRepository,
         minio_client: RecruitmentMinIOClient,
         session: AsyncSession,
-        gmail_label_service: GmailLabelProtocol | None = None,
         gmail_sender: GmailSendProtocol | None = None,
         gmail_checker: GmailConnectionChecker | None = None,
         event_publisher: DomainEventPublisher | None = None,
@@ -426,7 +405,6 @@ class CandidateService:
         self._cv_document_repo = cv_document_repo
         self._minio_client = minio_client
         self._session = session
-        self._gmail_label_service = gmail_label_service
         self._gmail_sender = gmail_sender
         self._gmail_checker = gmail_checker
         self._event_publisher = event_publisher
@@ -458,8 +436,7 @@ class CandidateService:
         4. If new: creates with status="new"
         5. Links the CV document to the candidate
         6. Stores confidence_score and parsed_cv_json
-        7. Applies "VroomHR/processed" Gmail label
-        8. Logs audit entry
+            7. Logs audit entry
 
         Args:
             parsed_cv: Structured CV data from LLM parsing.
@@ -513,10 +490,8 @@ class CandidateService:
         # Commit all changes
         await self._session.commit()
 
-        # Step 6: Apply Gmail label "VroomHR/processed" (best-effort)
-        await self._apply_processed_label(source_email_id)
+        # Step 6: Log audit entry
 
-        # Step 7: Log audit entry
         await log_audit(
             session=self._session,
             operation_type=operation,
@@ -771,18 +746,6 @@ class CandidateService:
         if cv_doc is not None:
             cv_doc.candidate_id = candidate_id
             await self._cv_document_repo.update(cv_doc)
-
-    async def _apply_processed_label(self, source_email_id: UUID | None) -> None:
-        """Apply "VroomHR/processed" Gmail label to the source email.
-
-        This is a best-effort operation — failures are logged but do not
-        block candidate creation.
-
-        Args:
-            source_email_id: UUID of the source email message, or None.
-        """
-        # Gmail labels creation/modification is bypassed in VroomHR
-        return
 
     # ─── Status transition validation ──────────────────────────────────
 

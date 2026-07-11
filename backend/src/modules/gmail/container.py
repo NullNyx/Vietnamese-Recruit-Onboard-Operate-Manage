@@ -22,14 +22,12 @@ from src.modules.gmail.application.classification_service import ClassificationS
 from src.modules.gmail.application.connection_service import ConnectionService
 from src.modules.gmail.application.email_sync_service import EmailSyncService
 from src.modules.gmail.application.import_service import HistoricalImportService
-from src.modules.gmail.application.label_service import LabelService
 from src.modules.gmail.application.outbound_email_service import OutboundEmailService
 from src.modules.gmail.application.send_service import SendService
 from src.modules.gmail.infrastructure.audit_logger import AuditLogger
 from src.modules.gmail.infrastructure.config import GmailSettings
 from src.modules.gmail.infrastructure.email_repository import EmailRepository
 from src.modules.gmail.infrastructure.gmail_adapter import GmailAdapter
-from src.modules.gmail.infrastructure.label_repository import LabelRepository
 from src.modules.gmail.infrastructure.outbound_email_repository import (
     OutboundEmailRepository,
 )
@@ -150,20 +148,6 @@ async def get_sync_cursor_repository(
     return SyncCursorRepository(session)
 
 
-async def get_label_repository(
-    session: AsyncSession = Depends(get_db_session),
-) -> LabelRepository:
-    """Provide a LabelRepository instance.
-
-    Args:
-        session: The async database session from DI.
-
-    Returns:
-        A LabelRepository bound to the current session.
-    """
-    return LabelRepository(session)
-
-
 async def get_outbound_email_repository(
     session: AsyncSession = Depends(get_db_session),
 ) -> OutboundEmailRepository:
@@ -218,27 +202,6 @@ async def get_gmail_adapter() -> GmailAdapter:
         user_id=UUID("00000000-0000-0000-0000-000000000000"),
     )
 
-
-async def get_label_service(
-    label_repo: LabelRepository = Depends(get_label_repository),
-    audit_logger: AuditLogger = Depends(get_audit_logger),
-) -> LabelService:
-    """Provide a LabelService instance.
-
-    Args:
-        label_repo: The label repository from DI.
-        audit_logger: The audit logger from DI.
-
-    Returns:
-        A LabelService configured with all dependencies.
-    """
-    gmail_adapter = await get_gmail_adapter()
-    return LabelService(
-        gmail_adapter=gmail_adapter,
-        label_repo=label_repo,
-        settings=get_gmail_settings(),
-        audit_logger=audit_logger,
-    )
 
 async def get_connection_service(
     oauth_grant_repo: OAuthGrantRepository = Depends(get_oauth_grant_repository),

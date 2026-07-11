@@ -2,8 +2,7 @@
 
 Manages the Gmail connection status, OAuth2 connect/disconnect flows,
 and callback handling. Works with the existing OAuth_Grant table from
-the Identity module and integrates with LabelService for post-connection
-label initialization.
+the Identity module.
 """
 
 from __future__ import annotations

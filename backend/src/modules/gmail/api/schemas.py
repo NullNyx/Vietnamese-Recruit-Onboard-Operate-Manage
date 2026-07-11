@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.modules.gmail.domain.enums import ConnectionStatus
 
@@ -120,30 +120,6 @@ class MessageBodyResponse(BaseModel):
 
     plain_text: str | None = None
     html: str | None = None
-
-
-# ---------------------------------------------------------------------------
-# Label schemas
-# ---------------------------------------------------------------------------
-
-
-class LabelRemoveRequest(BaseModel):
-    """Request schema for removing a label from an email.
-
-    Attributes:
-        label_name: Name of the label to remove (must be in VroomHR/ namespace).
-    """
-
-    label_name: str
-
-    @field_validator("label_name")
-    @classmethod
-    def validate_namespace(cls, v: str) -> str:
-        """Ensure label is within the VroomHR/ namespace."""
-        if not v.startswith("VroomHR/"):
-            msg = "Label must be within the VroomHR/ namespace"
-            raise ValueError(msg)
-        return v
 
 
 # ---------------------------------------------------------------------------

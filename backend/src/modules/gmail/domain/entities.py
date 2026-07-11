@@ -1,7 +1,7 @@
 """Domain entities for the Gmail Integration module.
 
 Defines the SQLModel table classes for EmailMessage, SyncCursor,
-GmailLabelMapping, EmailAttachment, GmailAuditLog, and OutboundEmail
+EmailAttachment, GmailAuditLog, and OutboundEmail
 that map to PostgreSQL tables used for Gmail email management,
 synchronization, and outbound sending.
 """
@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, UniqueConstraint
+from sqlalchemy import Column, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -68,31 +68,6 @@ class SyncCursor(SQLModel, table=True):
     user_id: UUID = Field(foreign_key="users.id", unique=True, nullable=False)
     history_id: str = Field(max_length=50, nullable=False)
     last_poll_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
-        sa_column=Column(DateTime(timezone=True), nullable=False),
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
-        sa_column=Column(DateTime(timezone=True), nullable=False),
-    )
-
-
-class GmailLabelMapping(SQLModel, table=True):
-    """Maps VroomHR label names to Gmail internal label IDs.
-
-    Stores the relationship between human-readable label names
-    (e.g., "VroomHR/processed") and Gmail's opaque label IDs per user.
-    """
-
-    __tablename__ = "gmail_label_mappings"
-    __table_args__ = (UniqueConstraint("user_id", "label_name"),)
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(foreign_key="users.id", nullable=False, index=True)
-    label_name: str = Field(max_length=100, nullable=False)
-    gmail_label_id: str = Field(max_length=255, nullable=False)
-    is_initialized: bool = Field(default=False, nullable=False)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
