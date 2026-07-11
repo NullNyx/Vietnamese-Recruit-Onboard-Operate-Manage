@@ -37,6 +37,7 @@ from src.modules.gmail.api.error_handler import (  # noqa: E402
     register_gmail_error_handlers,
 )
 from src.modules.gmail.api.router import router as gmail_router  # noqa: E402
+from src.modules.gmail.api.outbound_router import router as outbound_email_router
 from src.modules.identity.api.admin_router import admin_router  # noqa: E402
 from src.modules.identity.api.error_handler import (  # noqa: E402
     register_auth_error_handlers,
@@ -210,6 +211,7 @@ app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(employee_router)
 app.include_router(gmail_router)
+app.include_router(outbound_email_router)
 app.include_router(candidate_router)
 app.include_router(cv_review_router)
 app.include_router(metrics_router)

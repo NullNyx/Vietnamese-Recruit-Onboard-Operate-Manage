@@ -1,8 +1,9 @@
 """Domain entities for the Gmail Integration module.
 
 Defines the SQLModel table classes for EmailMessage, SyncCursor,
-GmailLabelMapping, EmailAttachment, and GmailAuditLog that map to
-PostgreSQL tables used for Gmail email management and synchronization.
+GmailLabelMapping, EmailAttachment, GmailAuditLog, and OutboundEmail
+that map to PostgreSQL tables used for Gmail email management,
+synchronization, and outbound sending.
 """
 
 from datetime import UTC, datetime
@@ -145,4 +146,48 @@ class GmailAuditLog(SQLModel, table=True):
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )
+
+
+class OutboundEmail(SQLModel, table=True):
+    """Tracks an outbound email command created by HR confirmation.
+
+    Each row represents one send command. The lifecycle is:
+    pending -> sending -> sent | failed.
+
+    The idempotency_key prevents duplicate sends on retry.
+    The email is sent using the Organization Google Connection
+    token, not the creating HR user's personal token.
+    """
+
+    __tablename__ = "outbound_emails"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    idempotency_key: str = Field(
+        max_length=64, unique=True, nullable=False, index=True
+    )
+    candidate_id: UUID | None = Field(
+        default=None, foreign_key="recruitment_candidates.id", nullable=True
+    )
+    subject: str = Field(max_length=998, nullable=False)
+    body_html: str = Field(nullable=False)
+    recipient_email: str = Field(max_length=255, nullable=False)
+    sender_email: str | None = Field(default=None, max_length=255)
+    status: str = Field(default="pending", max_length=20, nullable=False, index=True)
+    gmail_message_id: str | None = Field(default=None, max_length=255)
+    gmail_thread_id: str | None = Field(default=None, max_length=255)
+    error_message: str | None = Field(default=None)
+    retry_count: int = Field(default=0, nullable=False)
+    max_retries: int = Field(default=3, nullable=False)
+    last_retry_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    created_by_user_id: UUID = Field(foreign_key="users.id", nullable=False)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )

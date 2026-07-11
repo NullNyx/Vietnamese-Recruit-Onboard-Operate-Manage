@@ -1,7 +1,7 @@
 """Domain enums for the Gmail Integration module.
 
 Defines enumeration types used throughout the Gmail module to represent
-connection states and email classification categories.
+connection states, email classification categories, and outbound email lifecycles.
 """
 
 from enum import StrEnum
@@ -51,3 +51,18 @@ class EmailCategory(StrEnum):
     # System
     notification = "notification"
     uncategorized = "uncategorized"
+
+
+class OutboundEmailStatus(StrEnum):
+    """Represents the lifecycle status of an outbound email.
+
+    - pending: Created but not yet sent.
+    - sending: Currently being sent.
+    - sent: Successfully sent via Gmail.
+    - failed: Send failed after all retries.
+    """
+
+    pending = "pending"
+    sending = "sending"
+    sent = "sent"
+    failed = "failed"

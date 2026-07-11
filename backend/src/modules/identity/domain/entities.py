@@ -231,6 +231,10 @@ class AuditActionType(str, Enum):
     ORG_GOOGLE_RECONNECT = "org_google_reconnect"
     ORG_GOOGLE_SWITCH_ACCOUNT = "org_google_switch_account"
     ORG_GOOGLE_DISCONNECT = "org_google_disconnect"
+    OUTBOUND_EMAIL_CREATED = "outbound_email_created"
+    OUTBOUND_EMAIL_SENT = "outbound_email_sent"
+    OUTBOUND_EMAIL_FAILED = "outbound_email_failed"
+    OUTBOUND_EMAIL_RETRY = "outbound_email_retry"
 
 
 class AuditLog(SQLModel, table=True):

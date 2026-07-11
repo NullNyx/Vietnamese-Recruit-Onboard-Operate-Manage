@@ -5,10 +5,11 @@ for structured data validation and serialization.
 """
 
 from typing import Any
-
-from pydantic import BaseModel, Field, field_validator, model_validator
-
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from datetime import datetime
+from uuid import UUID
 from src.modules.gmail.domain.enums import ConnectionStatus
+
 
 # ---------------------------------------------------------------------------
 # Connection schemas
@@ -312,5 +313,95 @@ class ImportCancelResponse(BaseModel):
         message: Human-readable description.
     """
 
+    status: str
+    message: str
+
+# ---------------------------------------------------------------------------
+# Outbound Email schemas
+# ---------------------------------------------------------------------------
+
+
+class OutboundEmailCreateRequest(BaseModel):
+    """Request schema for creating an outbound email.
+
+    Attributes:
+        candidate_id: Optional UUID of the candidate to track sending.
+        recipient_email: The target recipient email address.
+        subject: Email subject line (max 500).
+        body_html: HTML body content.
+    """
+
+    candidate_id: UUID | None = None
+    recipient_email: str = Field(..., max_length=255)
+    subject: str = Field(..., max_length=500)
+    body_html: str = Field(...)
+
+
+class OutboundEmailResponse(BaseModel):
+    """Response schema for outbound email status.
+
+    Attributes:
+        id: UUID of the outbound email record.
+        candidate_id: Optional candidate UUID.
+        subject: Email subject line.
+        recipient_email: Recipient email address.
+        sender_email: Sender email (from Organization Connection) if sent.
+        status: Current lifecycle status.
+        gmail_message_id: Gmail message ID if sent successfully.
+        gmail_thread_id: Gmail thread ID if sent successfully.
+        error_message: Error message if failed.
+        retry_count: Number of retries attempted.
+        max_retries: Maximum allowed retries.
+        last_retry_at: Timestamp of last retry.
+        created_by_user_id: UUID of the HR user who created this.
+        created_at: Creation timestamp.
+        updated_at: Last update timestamp.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    candidate_id: UUID | None = None
+    subject: str
+    recipient_email: str
+    sender_email: str | None = None
+    status: str
+    gmail_message_id: str | None = None
+    gmail_thread_id: str | None = None
+    error_message: str | None = None
+    retry_count: int = 0
+    max_retries: int = 3
+    last_retry_at: datetime | None = None
+    created_by_user_id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class OutboundEmailListResponse(BaseModel):
+    """Paginated response for listing outbound emails.
+
+    Attributes:
+        items: List of outbound email records.
+        total: Total count of matching records.
+        page: Current page number.
+        page_size: Items per page.
+    """
+
+    items: list[OutboundEmailResponse]
+    total: int
+    page: int
+    page_size: int
+
+
+class OutboundEmailRetryResponse(BaseModel):
+    """Response schema for retrying an outbound email.
+
+    Attributes:
+        id: UUID of the retried outbound email.
+        status: Updated status after retry.
+        message: Result message.
+    """
+
+    id: UUID
     status: str
     message: str

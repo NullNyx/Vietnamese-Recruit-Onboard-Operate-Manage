@@ -23,6 +23,7 @@ from src.modules.gmail.application.classification_service import ClassificationS
 from src.modules.gmail.application.connection_service import ConnectionService
 from src.modules.gmail.application.email_sync_service import EmailSyncService
 from src.modules.gmail.application.import_service import HistoricalImportService
+from src.modules.gmail.application.outbound_email_service import OutboundEmailService
 from src.modules.gmail.application.label_service import LabelService
 from src.modules.gmail.application.send_service import SendService
 from src.modules.gmail.infrastructure.audit_logger import AuditLogger
@@ -30,6 +31,9 @@ from src.modules.gmail.infrastructure.config import GmailSettings
 from src.modules.gmail.infrastructure.email_repository import EmailRepository
 from src.modules.gmail.infrastructure.gmail_adapter import GmailAdapter
 from src.modules.gmail.infrastructure.label_repository import LabelRepository
+from src.modules.gmail.infrastructure.outbound_email_repository import (
+    OutboundEmailRepository,
+)
 from src.modules.gmail.infrastructure.quota_tracker import QuotaTracker
 from src.modules.gmail.infrastructure.sync_cursor_repository import SyncCursorRepository
 from src.modules.identity.container import (
@@ -44,6 +48,9 @@ from src.modules.identity.infrastructure.connection_state_repository import (
     OrganizationGoogleConnectionRepository,
 )
 from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
+from src.modules.recruitment.infrastructure.repositories import (
+    CandidateRepository,
+)
 
 # ---------------------------------------------------------------------------
 # Singleton infrastructure components
@@ -156,6 +163,21 @@ async def get_label_repository(
     """
     return LabelRepository(session)
 
+
+
+
+async def get_outbound_email_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> OutboundEmailRepository:
+    """Provide an OutboundEmailRepository instance.
+
+    Args:
+        session: The async database session from DI.
+
+    Returns:
+        An OutboundEmailRepository bound to the current session.
+    """
+    return OutboundEmailRepository(session)
 
 async def get_audit_logger(
     session: AsyncSession = Depends(get_db_session),
@@ -395,3 +417,60 @@ async def get_historical_import_service(
         client_id=auth_settings.google_client_id,
         client_secret=auth_settings.google_client_secret,
     )
+
+
+async def build_outbound_email_service(session: AsyncSession) -> OutboundEmailService:
+    """Build an OutboundEmailService instance with all dependencies.
+
+    Args:
+        session: An async database session.
+
+    Returns:
+        A fully configured OutboundEmailService.
+    """
+    from src.modules.gmail.infrastructure.outbound_email_repository import (
+        OutboundEmailRepository,
+    )
+    from src.modules.identity.application.audit_service import AuditService
+    from src.modules.identity.domain.entities import AuditActionType
+    from src.modules.identity.infrastructure.audit_log_repository import (
+        AuditLogRepository,
+    )
+    from src.modules.recruitment.infrastructure.repositories import (
+        CandidateRepository,
+    )
+
+    auth_settings = get_auth_settings()
+    gmail_adapter = await get_gmail_adapter()
+    connection_repo = OrganizationGoogleConnectionRepository(session)
+    outbound_repo = OutboundEmailRepository(session)
+    candidate_repo = CandidateRepository(session)
+    audit_log_repo = AuditLogRepository(session)
+    audit_service = AuditService(repository=audit_log_repo)
+
+    return OutboundEmailService(
+        session=session,
+        outbound_repo=outbound_repo,
+        connection_repo=connection_repo,
+        candidate_repo=candidate_repo,
+        gmail_adapter=gmail_adapter,
+        crypto=get_crypto_utils(),
+        audit_service=audit_service,
+        oauth_config_client_id=auth_settings.google_client_id,
+        http_client=get_http_client(),
+            audit_action_type=AuditActionType,
+    )
+
+
+async def get_outbound_email_service(
+    session: AsyncSession = Depends(get_db_session),
+) -> OutboundEmailService:
+    """FastAPI dependency: provide an OutboundEmailService.
+
+    Args:
+        session: The async database session from DI.
+
+    Returns:
+        A fully configured OutboundEmailService.
+    """
+    return await build_outbound_email_service(session)
