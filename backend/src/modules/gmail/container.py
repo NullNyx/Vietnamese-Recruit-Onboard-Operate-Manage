@@ -91,6 +91,7 @@ async def get_arq_pool() -> ArqRedis:
     """
     from arq import create_pool
     from arq.connections import RedisSettings
+
     pool = await create_pool(RedisSettings.from_dsn(get_auth_settings().redis_url))
     return pool
 

@@ -90,7 +90,6 @@ HistoricalImportServiceDep = Annotated[
 ]
 
 
-
 # ---------------------------------------------------------------------------
 # Router
 # ---------------------------------------------------------------------------
@@ -343,16 +342,14 @@ async def start_import(
         await import_service._cleanup_job_state()
         logger.error(
             "Failed to enqueue ARQ job for historical import %s: %s",
-            job_id, exc,
+            job_id,
+            exc,
         )
         from fastapi import HTTPException
 
         raise HTTPException(
             status_code=500,
-            detail=(
-                f"Không thể xếp hàng đợi import: {exc}. "
-                "Vui lòng thử lại sau."
-            ),
+            detail=(f"Không thể xếp hàng đợi import: {exc}. Vui lòng thử lại sau."),
         )
     return ImportStartResponse(
         job_id=job_id,
@@ -361,7 +358,6 @@ async def start_import(
         message=f"Import {body.days}-ngày đã được khởi tạo. "
         f"Kiểm tra trạng thái để theo dõi tiến độ.",
     )
-
 
 
 @router.get(
