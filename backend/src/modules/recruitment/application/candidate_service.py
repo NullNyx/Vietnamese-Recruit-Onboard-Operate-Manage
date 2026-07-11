@@ -2233,14 +2233,14 @@ class CandidateService:
 
         # Step 7: resolve calendar_id from Organization Google Connection.
         calendar_id = "primary"
-        from src.modules.identity.infrastructure.connection_state_repository import (
-            OrganizationGoogleConnectionRepository,
-        )
+        from src.modules.identity.domain.entities import OrganizationGoogleConnection
 
-        conn_repo = OrganizationGoogleConnectionRepository(self._session)
-        connection = await conn_repo.get_singleton()
-        if connection and connection.selected_calendar_id:
-            calendar_id = connection.selected_calendar_id
+        selected_calendar = await self._session.execute(
+            select(OrganizationGoogleConnection.selected_calendar_id).limit(1)
+        )
+        selected_calendar_id = selected_calendar.scalar_one_or_none()
+        if selected_calendar_id:
+            calendar_id = selected_calendar_id
 
         # Step 8: build CalendarEventSpec.
         request_meet = mode == "google_meet"
