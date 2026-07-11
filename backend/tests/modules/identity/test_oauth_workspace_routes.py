@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import asyncio
 import base64
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
-from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import FastAPI
@@ -94,14 +93,7 @@ def hr_user() -> User:
     )
 
 
-@pytest.fixture
-def connection_repo() -> AsyncMock:
-    repo = AsyncMock(spec=OrganizationGoogleConnectionRepository)
-    repo.get_singleton = AsyncMock(return_value=None)
-    repo.upsert_singleton = AsyncMock(side_effect=lambda connection: connection)
-    repo.state = None
-    repo.disconnect = AsyncMock()
-    return repo
+
 
 
 
@@ -275,19 +267,35 @@ async def test_disconnect_revoke_best_effort(
     assert any(url == GOOGLE_REVOKE_URL for url, _ in http_client.posts)
 
 
-    @pytest.mark.asyncio
-    async def test_callback_logs_switch_account_when_email_changes(self, service: OrganizationGoogleConnectionService, hr_user: User, connection_repo: DurableConnectionRepo, audit_service: AsyncMock, org_settings_repo: AsyncMock, http_client: FakeHttpClient) -> None:
-        await service.initiate(hr_user)
-        connection_repo.state.email = "old@example.com"
-        state = parse_qs(urlparse((await service.initiate(hr_user)).redirect_url or "").query)["state"][0]
-        http_client.userinfo = FakeResponse(200, {"email": "new@example.com", "hd": "example.com", "sub": "sub-123"})
-        await service.callback(hr=hr_user, state=state, code="code")
-        assert audit_service.log_action.await_args.kwargs["action_type"].value == "org_google_switch_account"
+@pytest.mark.asyncio
+async def test_callback_logs_switch_account_when_email_changes(
+    service: OrganizationGoogleConnectionService,
+    hr_user: User,
+    connection_repo: DurableConnectionRepo,
+    audit_service: AsyncMock,
+    org_settings_repo: AsyncMock,
+    http_client: FakeHttpClient,
+) -> None:
+    await service.initiate(hr_user)
+    connection_repo.state.email = "old@example.com"
+    init_res = await service.initiate(hr_user)
+    state = parse_qs(urlparse(init_res.redirect_url or "").query)["state"][0]
+    http_client.userinfo = FakeResponse(
+        200, {"email": "new@example.com", "hd": "example.com", "sub": "sub-123"}
+    )
+    await service.callback(hr=hr_user, state=state, code="code")
+    assert audit_service.log_action.await_args.kwargs["action_type"].value == "org_google_switch_account"
 
-    @pytest.mark.asyncio
-    async def test_callback_fails_closed_when_allowed_domains_empty(self, service: OrganizationGoogleConnectionService, hr_user: User, org_settings_repo: AsyncMock) -> None:
-        org_settings_repo.get_allowed_domains = AsyncMock(return_value=[])
-        init = await service.initiate(hr_user)
-        state = parse_qs(urlparse(init.redirect_url or "").query)["state"][0]
-        with pytest.raises(DomainAccessDeniedError):
-            await service.callback(hr=hr_user, state=state, code="code")
+
+@pytest.mark.asyncio
+async def test_callback_fails_closed_when_allowed_domains_empty(
+    service: OrganizationGoogleConnectionService,
+    hr_user: User,
+    org_settings_repo: AsyncMock,
+) -> None:
+    org_settings_repo.get_allowed_domains = AsyncMock(return_value=[])
+    init = await service.initiate(hr_user)
+    state = parse_qs(urlparse(init.redirect_url or "").query)["state"][0]
+    with pytest.raises(DomainAccessDeniedError):
+        await service.callback(hr=hr_user, state=state, code="code")
+

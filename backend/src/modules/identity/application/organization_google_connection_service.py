@@ -10,13 +10,21 @@ import httpx
 
 from src.modules.identity.application.audit_service import AuditService
 from src.modules.identity.domain.entities import AuditActionType, OrganizationGoogleConnection, User
-from src.modules.identity.domain.exceptions import DomainAccessDeniedError, GoogleAuthError, InvalidStateError
-from src.modules.identity.infrastructure.connection_state_repository import OrganizationGoogleConnectionRepository
+from src.modules.identity.domain.exceptions import (
+    DomainAccessDeniedError,
+    GoogleAuthError,
+    InvalidStateError,
+)
+from src.modules.identity.infrastructure.connection_state_repository import (
+    OrganizationGoogleConnectionRepository,
+)
 from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
 from src.modules.identity.infrastructure.jwt_utils import JWTUtils
 from src.modules.identity.infrastructure.oauth_config_repository import OAuthConfigRepository
 from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
-from src.modules.recruitment.infrastructure.org_settings_repository import OrganizationSettingsRepository
+from src.modules.recruitment.infrastructure.org_settings_repository import (
+    OrganizationSettingsRepository,
+)
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -81,7 +89,9 @@ class OrganizationGoogleConnectionService:
             raise GoogleAuthError("Google OAuth config missing")
         state_nonce = str(uuid4())
         session_id = str(getattr(hr, "session_id", hr.id))
-        state = self._state_jwt.create_state_token({"nonce": state_nonce, "hr_id": str(hr.id), "session_id": session_id})
+        state = self._state_jwt.create_state_token(
+            {"nonce": state_nonce, "hr_id": str(hr.id), "session_id": session_id}
+        )
         current = await self._connection_repo.get_singleton()
         await self._connection_repo.upsert_singleton(
             OrganizationGoogleConnection(
@@ -115,14 +125,19 @@ class OrganizationGoogleConnectionService:
                 "include_granted_scopes": "false",
             }
         )
-        return OrganizationGoogleConnectionResponse(status="disconnected", redirect_url=f"{GOOGLE_AUTH_URL}?{params}")
+        return OrganizationGoogleConnectionResponse(
+            status="disconnected", redirect_url=f"{GOOGLE_AUTH_URL}?{params}"
+        )
 
-    async def callback(self, *, hr: User, state: str, code: str) -> OrganizationGoogleConnectionResponse:
+    async def callback(
+        self, *, hr: User, state: str, code: str
+    ) -> OrganizationGoogleConnectionResponse:
         payload = self._state_jwt.verify_state_token(state)
         current = await self._connection_repo.get_singleton()
         if current is None or current.oauth_state_hash != self._state_hash(state):
             raise InvalidStateError()
-        if payload.get("hr_id") != str(hr.id) or payload.get("session_id") != str(getattr(hr, "session_id", hr.id)):
+        session_id_check = str(getattr(hr, "session_id", hr.id))
+        if payload.get("hr_id") != str(hr.id) or payload.get("session_id") != session_id_check:
             raise InvalidStateError()
         if current.oauth_state_expires_at and current.oauth_state_expires_at < datetime.now(UTC):
             raise InvalidStateError()
@@ -192,9 +207,17 @@ class OrganizationGoogleConnectionService:
             credential_format_version=1,
             credential_key_version=1,
             access_token_enc=self._crypto.encrypt(data["access_token"]),
-            refresh_token_enc=self._crypto.encrypt(refresh_token) if refresh_token else current.refresh_token_enc if current else None,
+            refresh_token_enc=(
+                self._crypto.encrypt(refresh_token)
+                if refresh_token
+                else current.refresh_token_enc
+                if current
+                else None
+            ),
             client_secret_enc=config.client_secret_enc,
-            token_expires_at=datetime.now(UTC) + timedelta(seconds=int(data.get("expires_in", 3600))),
+            token_expires_at=(
+                datetime.now(UTC) + timedelta(seconds=int(data.get("expires_in", 3600)))
+            ),
             connected_by_user_id=hr.id,
         )
         await self._connection_repo.upsert_singleton(connection)
@@ -207,8 +230,10 @@ class OrganizationGoogleConnectionService:
             admin=hr,
             action_type=action_type,
             details={"result": "connected"},
-            )
-        return OrganizationGoogleConnectionResponse(status="connected", email=email, has_secret=True)
+        )
+        return OrganizationGoogleConnectionResponse(
+            status="connected", email=email, has_secret=True
+        )
 
     async def disconnect(self, hr: User) -> OrganizationGoogleConnectionResponse:
         current = await self._connection_repo.get_singleton()

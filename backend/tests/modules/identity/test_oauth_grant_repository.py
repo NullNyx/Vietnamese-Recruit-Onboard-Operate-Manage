@@ -8,8 +8,6 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
-import pytest
-
 from src.modules.identity.domain.entities import OAuthGrant
 from src.modules.identity.infrastructure.oauth_grant_repository import (
     OAuthGrantRepository,

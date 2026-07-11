@@ -13,16 +13,16 @@ from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 
 from src.modules.employee.domain.entities import Employee
-from src.modules.identity.api.admin_router import AdminUserDep, require_admin
+from src.modules.identity.api.admin_router import require_admin
 from src.modules.identity.api.schemas import (
     AuthLoginRequest,
     AuthSessionResponse,
     ChangePasswordRequest,
     FirstRunSetupRequest,
     GoogleWorkspaceCallbackRequest,
-        GoogleWorkspaceConnectionResponse,
-        GrantStatusResponse,
-        OAuthConfigUpdateRequest,
+    GoogleWorkspaceConnectionResponse,
+    GrantStatusResponse,
+    OAuthConfigUpdateRequest,
     SetupStatusResponse,
     UserResponse,
 )
@@ -37,9 +37,9 @@ from src.modules.identity.container import (
     get_crypto_utils,
     get_current_user,
     get_db_session,
-        get_jwt_utils,
-        get_oauth_config_manager,
-        get_oauth_service,
+    get_jwt_utils,
+    get_oauth_config_manager,
+    get_oauth_service,
     get_rate_limiter,
     get_token_service,
 )
@@ -74,6 +74,7 @@ get_session = get_db_session
 # ---------------------------------------------------------------------------
 # Google connection dependency helper
 # ---------------------------------------------------------------------------
+
 
 def _get_connection_service(
     session: Session = Depends(get_db_session),
@@ -201,8 +202,14 @@ async def save_google_connection_config(
     manager=Depends(get_oauth_config_manager),
     connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
 ) -> GoogleWorkspaceConnectionResponse:
-    await manager.update_config(client_id=body.client_id, client_secret=body.client_secret, redirect_uri=body.redirect_uri, admin=current_user)
-    return GoogleWorkspaceConnectionResponse(**(await connection_service.get_status()).__dict__)
+    await manager.update_config(
+        client_id=body.client_id,
+        client_secret=body.client_secret,
+        redirect_uri=body.redirect_uri,
+        admin=current_user,
+    )
+    res = await connection_service.get_status()
+    return GoogleWorkspaceConnectionResponse(**res.__dict__)
 
 
 @router.get("/organization-google-connection/authorize-url")
@@ -210,7 +217,8 @@ async def authorize_google_connection(
     current_user: AdminOnlyDep,
     connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
 ) -> GoogleWorkspaceConnectionResponse:
-    return GoogleWorkspaceConnectionResponse(**(await connection_service.initiate(current_user)).__dict__)
+    res = await connection_service.initiate(current_user)
+    return GoogleWorkspaceConnectionResponse(**res.__dict__)
 
 
 @router.get("/organization-google-connection")
@@ -218,7 +226,8 @@ async def get_google_connection(
     current_user: AdminOnlyDep,
     connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
 ) -> GoogleWorkspaceConnectionResponse:
-    return GoogleWorkspaceConnectionResponse(**(await connection_service.get_status()).__dict__)
+    res = await connection_service.get_status()
+    return GoogleWorkspaceConnectionResponse(**res.__dict__)
 
 
 @router.post("/organization-google-connection/reconnect")
@@ -226,7 +235,8 @@ async def reconnect_google_connection(
     current_user: AdminOnlyDep,
     connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
 ) -> GoogleWorkspaceConnectionResponse:
-    return GoogleWorkspaceConnectionResponse(**(await connection_service.initiate(current_user)).__dict__)
+    res = await connection_service.initiate(current_user)
+    return GoogleWorkspaceConnectionResponse(**res.__dict__)
 
 
 @router.post("/organization-google-connection/callback")
@@ -235,7 +245,8 @@ async def callback_google_connection(
     current_user: AdminOnlyDep,
     connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
 ) -> GoogleWorkspaceConnectionResponse:
-    return GoogleWorkspaceConnectionResponse(**(await connection_service.callback(hr=current_user, state=body.state, code=body.code)).__dict__)
+    res = await connection_service.callback(hr=current_user, state=body.state, code=body.code)
+    return GoogleWorkspaceConnectionResponse(**res.__dict__)
 
 
 @router.delete("/organization-google-connection")
@@ -243,7 +254,8 @@ async def disconnect_google_connection(
     current_user: AdminOnlyDep,
     connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
 ) -> GoogleWorkspaceConnectionResponse:
-    return GoogleWorkspaceConnectionResponse(**(await connection_service.disconnect(current_user)).__dict__)
+    res = await connection_service.disconnect(current_user)
+    return GoogleWorkspaceConnectionResponse(**res.__dict__)
 
 
 @router.post("/login", response_model=AuthSessionResponse)
@@ -405,6 +417,7 @@ async def grant_status(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 async def _get_user_grant_status(user: User, oauth_service: OAuthService) -> GrantStatusResponse:
     """Retrieve OAuth grant status for a user."""

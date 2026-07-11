@@ -24,7 +24,6 @@ from src.modules.identity.api.router import (
     get_token_service,
     router,
 )
-
 from src.modules.identity.api.schemas import GrantStatus
 from src.modules.identity.domain.exceptions import InvalidTokenError
 
@@ -267,36 +266,7 @@ class TestGrantStatusEndpoint:
         assert response.status_code == 200
         mock_auth_service.logout.assert_not_called()
 
-class TestGrantStatusEndpoint:
-    def test_returns_200_with_grant_status(self, client):
-        response = client.get("/api/auth/grant-status")
-        assert response.status_code == 200
-        data = response.json()
-        assert "gmail_grant_valid" in data
-        assert "calendar_grant_valid" in data
 
-    def test_returns_valid_grants(self, client):
-        response = client.get("/api/auth/grant-status")
-        data = response.json()
-        assert data["gmail_grant_valid"] is True
-        assert data["calendar_grant_valid"] is True
-
-    def test_returns_invalid_grants_when_no_grant(self, app, mock_oauth_service):
-        mock_oauth_service._grant_repository.get_by_user_id = AsyncMock(return_value=None)
-        client = TestClient(app)
-        response = client.get("/api/auth/grant-status")
-        data = response.json()
-        assert data["gmail_grant_valid"] is False
-        assert data["calendar_grant_valid"] is False
-
-    def test_succeeds_without_refresh_token(self, client, mock_auth_service):
-        response = client.post("/api/auth/logout")
-        assert response.status_code == 200
-        mock_auth_service.logout.assert_not_called()
-
-        response = client.post("/api/auth/logout")
-        assert response.status_code == 200
-        mock_auth_service.logout.assert_not_called()
 
 class TestAdminSchemasCompat:
     def test_identity_api_schemas_exports_admin_dtos(self):

@@ -18,7 +18,9 @@ class OrganizationGoogleConnectionRepository:
         result = await self.session.execute(select(OrganizationGoogleConnection).limit(1))
         return result.scalars().first()
 
-    async def upsert_singleton(self, connection: OrganizationGoogleConnection) -> OrganizationGoogleConnection:
+    async def upsert_singleton(
+        self, connection: OrganizationGoogleConnection
+    ) -> OrganizationGoogleConnection:
         existing = await self.get_singleton()
         connection.updated_at = datetime.now(UTC)
         if existing is None:

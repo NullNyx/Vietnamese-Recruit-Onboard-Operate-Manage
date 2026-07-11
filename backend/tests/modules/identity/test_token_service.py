@@ -3,7 +3,7 @@
 import hashlib
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -12,7 +12,6 @@ from src.modules.identity.application.token_service import TokenService
 from src.modules.identity.domain.exceptions import InvalidTokenError
 from src.modules.identity.infrastructure.config import AuthSettings
 from src.modules.identity.infrastructure.jwt_utils import JWTUtils
-
 
 SECRET_KEY = "test-secret-key-for-token-service"
 ALGORITHM = "HS256"

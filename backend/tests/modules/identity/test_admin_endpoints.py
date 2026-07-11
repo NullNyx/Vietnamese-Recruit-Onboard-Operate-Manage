@@ -10,7 +10,6 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -19,12 +18,6 @@ from src.modules.identity.api.admin_router import (
     get_audit_service,
     get_role_service,
     require_admin,
-)
-from src.modules.identity.api.admin_schemas import (
-    AdminUserResponse,
-    AuditLogResponse,
-    PaginatedAuditLogsResponse,
-    RoleUpdateRequest,
 )
 from src.modules.identity.application.audit_service import AuditService, PaginatedAuditLogs
 from src.modules.identity.application.role_service import (
