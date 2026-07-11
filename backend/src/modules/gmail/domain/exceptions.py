@@ -153,3 +153,15 @@ class RateLimitedException(GmailError):
         if message is None and retry_after > 0:
             message = f"Rate limit exceeded, retry after {retry_after} seconds"
         super().__init__(message)
+
+
+class GmailImportException(GmailError):
+    """Historical email import operation failed.
+
+    Raised when the import cannot start (already running, invalid window),
+    encounters a permanent error, or the connection is invalid.
+    """
+
+    status_code = 409
+    error_code = "GMAIL_IMPORT_ERROR"
+    message = "Historical email import operation failed"

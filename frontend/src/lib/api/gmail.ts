@@ -164,11 +164,94 @@ export interface ProcessAttachmentsResponse {
 /**
  * Fetch attachments and trigger CV processing pipeline for an email.
  */
-export async function processAttachments(
-  messageId: string,
-): Promise<ProcessAttachmentsResponse> {
-  const res = await fetch(`${BASE}/messages/${encodeURIComponent(messageId)}/process-attachments`, {
-    method: "POST",
-  });
-  return handleResponse<ProcessAttachmentsResponse>(res);
-}
+    export async function processAttachments(
+      messageId: string,
+    ): Promise<ProcessAttachmentsResponse> {
+      const res = await fetch(`${BASE}/messages/${encodeURIComponent(messageId)}/process-attachments`, {
+        method: "POST",
+      });
+      return handleResponse<ProcessAttachmentsResponse>(res);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Historical import API
+    // ---------------------------------------------------------------------------
+
+    export interface ImportPreviewResponse {
+      days: number;
+      estimated_count: number;
+      already_imported_count: number;
+      query_window_start: string;
+      query_window_end: string;
+    }
+
+    export interface ImportStartResponse {
+      job_id: string;
+      status: string;
+      days: number;
+      message: string;
+    }
+
+    export interface ImportStatusResponse {
+      job_id: string | null;
+      status: string;
+      days: number | null;
+      total_count: number;
+      processed_count: number;
+      cv_count: number;
+      errors: number;
+      started_at: string | null;
+      completed_at: string | null;
+      error_message: string | null;
+    }
+
+    export interface ImportCancelResponse {
+      status: string;
+      message: string;
+    }
+
+    /**
+     * Preview the number of importable emails in a time window.
+     */
+    export async function previewImport(
+      days: number,
+    ): Promise<ImportPreviewResponse> {
+      const res = await fetch(`${BASE}/import/preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ days }),
+      });
+      return handleResponse<ImportPreviewResponse>(res);
+    }
+
+    /**
+     * Start a historical email import job.
+     */
+    export async function startImport(
+      days: number,
+    ): Promise<ImportStartResponse> {
+      const res = await fetch(`${BASE}/import/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ days }),
+      });
+      return handleResponse<ImportStartResponse>(res);
+    }
+
+    /**
+     * Get the status of current or last historical import job.
+     */
+    export async function getImportStatus(): Promise<ImportStatusResponse> {
+      const res = await fetch(`${BASE}/import/status`);
+      return handleResponse<ImportStatusResponse>(res);
+    }
+
+    /**
+     * Cancel a running historical import job.
+     */
+    export async function cancelImport(): Promise<ImportCancelResponse> {
+      const res = await fetch(`${BASE}/import/cancel`, {
+        method: "POST",
+      });
+      return handleResponse<ImportCancelResponse>(res);
+    }

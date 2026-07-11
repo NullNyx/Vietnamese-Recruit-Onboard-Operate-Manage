@@ -11,6 +11,7 @@ import { ToastProvider, useToast } from "@/components/gmail/toast-provider";
 import { ConnectionPanel } from "@/components/gmail/connection-panel";
 import { ConfirmDialog } from "@/components/gmail/confirm-dialog";
 import { EmailList } from "@/components/gmail/email-list";
+import { HistoricalImportPanel } from "@/components/gmail/historical-import-panel";
 import { SyncIndicator } from "@/components/gmail/sync-indicator";
 import { EmailDetail } from "@/components/gmail/email-detail";
 import { ComposeDialog } from "@/components/gmail/compose-dialog";
@@ -407,10 +408,13 @@ function GmailPageContent() {
                     : `Phân loại (${emails.filter((e) => !e.category || e.category === "uncategorized").length})`}
                 </button>
               )}
-            <SyncIndicator
-              onSyncComplete={handleSyncComplete}
-              onConnectionLost={handleConnectionLost}
-            />
+                <SyncIndicator
+                  onSyncComplete={handleSyncComplete}
+                  onConnectionLost={handleConnectionLost}
+                />
+
+                {/* Historical Import Panel */}
+                <HistoricalImportPanel />
           </div>
         )}
       </div>
