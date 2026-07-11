@@ -187,11 +187,7 @@ export async function getGoogleWorkspaceAuthorizeUrl(): Promise<GoogleWorkspaceC
   return handleResponse<GoogleWorkspaceConnection>(res);
 }
 
-export async function saveGoogleWorkspaceConnection(data: {
-  client_id: string;
-  client_secret: string;
-  redirect_uri: string;
-}): Promise<GoogleWorkspaceConnection> {
+export async function saveGoogleWorkspaceConnection(): Promise<GoogleWorkspaceConnection> {
   return getGoogleWorkspaceAuthorizeUrl();
 }
 
