@@ -330,15 +330,15 @@ class GmailAdapter:
             message_stubs is a list of dicts with 'id' or 'threadId' keys.
             next_page_token is None if no more pages.
         """
-        params: dict[str, str | int] = {'maxResults': max_results}
+        params: dict[str, str | int] = {"maxResults": max_results}
         if query:
-            params['q'] = query
+            params["q"] = query
         if page_token:
-            params['pageToken'] = page_token
+            params["pageToken"] = page_token
 
         async def _request() -> dict[str, Any]:
             response = await self._http_client.get(
-                f'{GMAIL_API_BASE}messages',
+                f"{GMAIL_API_BASE}messages",
                 headers=self._auth_headers(access_token),
                 params=params,
             )
@@ -346,8 +346,8 @@ class GmailAdapter:
             return response.json()  # type: ignore[no-any-return]
 
         data = await self.retry_with_backoff(_request, quota_units=5)
-        messages = data.get('messages', [])
-        next_token = data.get('nextPageToken')
+        messages = data.get("messages", [])
+        next_token = data.get("nextPageToken")
         return messages, next_token
 
     async def _list_message_ids(
@@ -372,7 +372,6 @@ class GmailAdapter:
             access_token, query=query, max_results=max_results, page_token=None
         )
         return stubs
-
 
     async def get_single_message_metadata(
         self, access_token: str, message_id: str

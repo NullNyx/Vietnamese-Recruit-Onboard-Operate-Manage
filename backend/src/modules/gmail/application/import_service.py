@@ -256,8 +256,7 @@ class HistoricalImportService:
         """
         if days not in IMPORT_ALLOWED_DAYS:
             raise GmailImportException(
-                f"Invalid time window: {days} days. "
-                f"Allowed: {sorted(IMPORT_ALLOWED_DAYS)}"
+                f"Invalid time window: {days} days. Allowed: {sorted(IMPORT_ALLOWED_DAYS)}"
             )
 
         # Check if an import is already running.
@@ -293,9 +292,7 @@ class HistoricalImportService:
 
         await self._hset_str(_REDIS_JOB_KEY, job_metadata)
         await self._redis.expire(_REDIS_JOB_KEY, IMPORT_REDIS_TTL_SECONDS)
-        await self._redis.delete(
-            _REDIS_PROGRESS_KEY, _REDIS_CANCEL_FLAG, _REDIS_RESULT_KEY
-        )
+        await self._redis.delete(_REDIS_PROGRESS_KEY, _REDIS_CANCEL_FLAG, _REDIS_RESULT_KEY)
 
         logger.info(
             "Historical import job %s started: %d days by user %s",
@@ -331,18 +328,10 @@ class HistoricalImportService:
         completed_at = job.get("completed_at", "")
 
         progress = await self._hgetall_str(_REDIS_PROGRESS_KEY)
-        total_count = int(
-            progress.get("total_count", job.get("total_count", "0"))
-        )
-        processed_count = int(
-            progress.get("processed_count", job.get("processed_count", "0"))
-        )
-        cv_count = int(
-            progress.get("cv_count", job.get("cv_count", "0"))
-        )
-        errors = int(
-            progress.get("errors", job.get("errors", "0"))
-        )
+        total_count = int(progress.get("total_count", job.get("total_count", "0")))
+        processed_count = int(progress.get("processed_count", job.get("processed_count", "0")))
+        cv_count = int(progress.get("cv_count", job.get("cv_count", "0")))
+        errors = int(progress.get("errors", job.get("errors", "0")))
         error_message = progress.get("error_message", "") or None
 
         return ImportStatus(
@@ -378,9 +367,7 @@ class HistoricalImportService:
         if current_status != "running":
             return False
 
-        await self._redis.set(
-            _REDIS_CANCEL_FLAG, "1", ex=IMPORT_REDIS_TTL_SECONDS
-        )
+        await self._redis.set(_REDIS_CANCEL_FLAG, "1", ex=IMPORT_REDIS_TTL_SECONDS)
 
         job_id = job.get("job_id", "")
 
@@ -442,9 +429,7 @@ class HistoricalImportService:
 
         access_token = await self._resolve_access_token(user_id)
         if not access_token:
-            await self._mark_failed(
-                job_id, "Could not resolve access token"
-            )
+            await self._mark_failed(job_id, "Could not resolve access token")
             return {"status": "failed", "error": "No access token"}
 
         # Capture the connection generation for integrity checks.
@@ -461,29 +446,20 @@ class HistoricalImportService:
             all_ids = await self._fetch_all_message_ids(access_token, query)
             total_count = len(all_ids)
 
-
             # If generation capture failed, the connection is gone.
             if self._connection_generation is None:
-                await self._mark_failed(
-                    job_id, "Connection unavailable at job start"
-                )
+                await self._mark_failed(job_id, "Connection unavailable at job start")
                 return {"status": "failed", "error": "No connection"}
 
-            await self._hset_field_str(
-                _REDIS_JOB_KEY, "total_count", str(total_count)
-            )
-            await self._hset_field_str(
-                _REDIS_PROGRESS_KEY, "total_count", str(total_count)
-            )
+            await self._hset_field_str(_REDIS_JOB_KEY, "total_count", str(total_count))
+            await self._hset_field_str(_REDIS_PROGRESS_KEY, "total_count", str(total_count))
 
             if total_count == 0:
                 logger.info(
                     "Historical import job %s: no messages in window",
                     job_id,
                 )
-                await self._mark_final(
-                    job_id, "completed", total_processed, total_cv, total_errors
-                )
+                await self._mark_final(job_id, "completed", total_processed, total_cv, total_errors)
                 return {
                     "status": "completed",
                     "total": 0,
@@ -519,7 +495,8 @@ class HistoricalImportService:
                         job_id,
                     )
                     await self._mark_failed(
-                        job_id, "Connection changed during import",
+                        job_id,
+                        "Connection changed during import",
                     )
                     return {
                         "status": "failed",
@@ -533,19 +510,15 @@ class HistoricalImportService:
                 # Deduplicate: skip already-imported messages.
                 existing = await self._email_repo.get_by_gmail_ids(batch_ids)
                 existing_ids = {e.gmail_message_id for e in existing}
-                new_ids = [
-                    mid for mid in batch_ids if mid not in existing_ids
-                ]
+                new_ids = [mid for mid in batch_ids if mid not in existing_ids]
 
                 if not new_ids:
                     continue
 
                 for msg_id in new_ids:
                     try:
-                        metadata = (
-                            await self._gmail_adapter.get_single_message_metadata(
-                                access_token, msg_id
-                            )
+                        metadata = await self._gmail_adapter.get_single_message_metadata(
+                            access_token, msg_id
                         )
                         if metadata is None:
                             total_errors += 1
@@ -568,7 +541,8 @@ class HistoricalImportService:
                         )
 
                 await self._hset_str(
-                    _REDIS_PROGRESS_KEY, {
+                    _REDIS_PROGRESS_KEY,
+                    {
                         "processed_count": str(total_processed),
                         "errors": str(total_errors),
                     },
@@ -577,26 +551,19 @@ class HistoricalImportService:
             # Classify newly imported emails.
             if total_processed > 0 and self._settings.classification_enabled:
                 try:
-                    total_cv = await self._classify_recent_emails(
-                        user_id, total_processed
-                    )
+                    total_cv = await self._classify_recent_emails(user_id, total_processed)
                 except Exception as exc:
                     logger.error(
                         "Classification after historical import failed: %s",
                         exc,
                     )
 
-            await self._hset_field_str(
-                _REDIS_PROGRESS_KEY, "cv_count", str(total_cv)
-            )
+            await self._hset_field_str(_REDIS_PROGRESS_KEY, "cv_count", str(total_cv))
 
-            await self._mark_final(
-                job_id, "completed", total_processed, total_cv, total_errors
-            )
+            await self._mark_final(job_id, "completed", total_processed, total_cv, total_errors)
 
             logger.info(
-                "Historical import job %s completed: %d processed, "
-                "%d cv, %d errors",
+                "Historical import job %s completed: %d processed, %d cv, %d errors",
                 job_id,
                 total_processed,
                 total_cv,
@@ -625,9 +592,7 @@ class HistoricalImportService:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    async def _resolve_access_token(
-        self, user_id: UUID
-    ) -> str | None:
+    async def _resolve_access_token(self, user_id: UUID) -> str | None:
         """Resolve a valid access token from the Organization Google Connection.
 
         Handles token refresh if expired.
@@ -666,36 +631,26 @@ class HistoricalImportService:
         """
         try:
             if not connection.refresh_token_enc:
-                logger.error(
-                    "No refresh token in connection for historical import"
-                )
+                logger.error("No refresh token in connection for historical import")
                 return None
 
-            refresh_token = self._crypto.decrypt(
-                connection.refresh_token_enc
-            )
+            refresh_token = self._crypto.decrypt(connection.refresh_token_enc)
             if not refresh_token:
                 return None
 
             client_secret = self._client_secret
             if connection.client_secret_enc:
-                decrypted_secret = self._crypto.decrypt(
-                    connection.client_secret_enc
-                )
+                decrypted_secret = self._crypto.decrypt(connection.client_secret_enc)
                 if decrypted_secret:
                     client_secret = decrypted_secret
 
-            new_access_token, expires_at = (
-                await self._gmail_adapter.refresh_access_token(
-                    refresh_token=refresh_token,
-                    client_id=self._client_id,
-                    client_secret=client_secret,
-                )
+            new_access_token, expires_at = await self._gmail_adapter.refresh_access_token(
+                refresh_token=refresh_token,
+                client_id=self._client_id,
+                client_secret=client_secret,
             )
 
-            connection.access_token_enc = self._crypto.encrypt(
-                new_access_token
-            )
+            connection.access_token_enc = self._crypto.encrypt(new_access_token)
             connection.token_expires_at = expires_at
             connection.updated_at = datetime.now(UTC)
             await self._connection_repo.upsert_singleton(connection)
@@ -709,9 +664,7 @@ class HistoricalImportService:
             )
             return None
 
-    async def _fetch_all_message_ids(
-        self, access_token: str, query: str
-    ) -> list[str]:
+    async def _fetch_all_message_ids(self, access_token: str, query: str) -> list[str]:
         """Fetch all message IDs matching a query via pagination.
 
         Uses the GmailAdapter's public ``list_message_ids`` method to
@@ -826,20 +779,23 @@ class HistoricalImportService:
         """
         now_ts = str(time.time())
         await self._hset_str(
-            _REDIS_JOB_KEY, {
+            _REDIS_JOB_KEY,
+            {
                 "status": status,
                 "completed_at": now_ts,
             },
         )
         await self._hset_str(
-            _REDIS_PROGRESS_KEY, {
+            _REDIS_PROGRESS_KEY,
+            {
                 "processed_count": str(processed),
                 "cv_count": str(cv),
                 "errors": str(errors),
             },
         )
         await self._hset_str(
-            _REDIS_RESULT_KEY, {
+            _REDIS_RESULT_KEY,
+            {
                 "job_id": job_id,
                 "status": status,
                 "processed_count": str(processed),
@@ -851,9 +807,7 @@ class HistoricalImportService:
         await self._redis.expire(_REDIS_RESULT_KEY, IMPORT_REDIS_TTL_SECONDS)
         await self._redis.delete(_REDIS_CANCEL_FLAG)
 
-    async def _mark_failed(
-        self, job_id: str, error_message: str
-    ) -> None:
+    async def _mark_failed(self, job_id: str, error_message: str) -> None:
         """Mark the job as failed in Redis.
 
         Args:
@@ -862,20 +816,20 @@ class HistoricalImportService:
         """
         now_ts = str(time.time())
         await self._hset_str(
-            _REDIS_JOB_KEY, {
+            _REDIS_JOB_KEY,
+            {
                 "status": "failed",
                 "completed_at": now_ts,
             },
         )
         await self._hset_str(
-            _REDIS_PROGRESS_KEY, {
+            _REDIS_PROGRESS_KEY,
+            {
                 "error_message": error_message[:500],
             },
         )
 
-    async def _classify_recent_emails(
-        self, user_id: UUID, limit: int
-    ) -> int:
+    async def _classify_recent_emails(self, user_id: UUID, limit: int) -> int:
         """Run classification on the most recently imported emails.
 
         Uses the same ClassificationService as the live sync pipeline.
@@ -927,14 +881,9 @@ class HistoricalImportService:
             session=self._session,
         )
 
-        await classification_service.classify_batch(
-            user_id=user_id, emails=imported_emails
-        )
+        await classification_service.classify_batch(user_id=user_id, emails=imported_emails)
 
-        cv_count = sum(
-            1 for e in imported_emails
-            if getattr(e, "category", None) == "recruitment"
-        )
+        cv_count = sum(1 for e in imported_emails if getattr(e, "category", None) == "recruitment")
 
         logger.info(
             "Classified %d imported emails (%d as cv/recruitment)",
@@ -944,9 +893,7 @@ class HistoricalImportService:
 
         return cv_count
 
-    def _metadata_to_entity(
-        self, user_id: UUID, metadata: GmailMessageMetadata
-    ) -> Any:
+    def _metadata_to_entity(self, user_id: UUID, metadata: GmailMessageMetadata) -> Any:
         """Convert GmailMessageMetadata to an EmailMessage domain entity.
 
         Args:
@@ -962,19 +909,13 @@ class HistoricalImportService:
             user_id=user_id,
             gmail_message_id=metadata.id,
             gmail_thread_id=metadata.thread_id,
-            subject=(
-                metadata.subject[:998] if metadata.subject else ""
-            ),
+            subject=(metadata.subject[:998] if metadata.subject else ""),
             sender_email=metadata.sender_email or "",
             sender_name=metadata.sender_name or "",
             recipient_emails=metadata.recipient_emails[:50],
             cc_emails=metadata.cc_emails[:50],
-            received_at=(
-                metadata.received_at or datetime.now(UTC)
-            ),
-            snippet=(
-                metadata.snippet[:200] if metadata.snippet else ""
-            ),
+            received_at=(metadata.received_at or datetime.now(UTC)),
+            snippet=(metadata.snippet[:200] if metadata.snippet else ""),
             label_ids=metadata.label_ids or [],
             has_attachments=metadata.has_attachments,
         )
@@ -994,9 +935,7 @@ class HistoricalImportService:
         return window_start, now
 
     @staticmethod
-    def _build_query(
-        window_start: datetime, window_end: datetime
-    ) -> str:
+    def _build_query(window_start: datetime, window_end: datetime) -> str:
         """Build a Gmail search query for the time window.
 
         Args:
