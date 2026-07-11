@@ -2044,7 +2044,6 @@ class CandidateService:
         candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
         candidate = await self._candidate_repo.update(candidate)
         await self._session.commit()
-        return candidate
 
     async def _send_interview_email_notification(
         self,
