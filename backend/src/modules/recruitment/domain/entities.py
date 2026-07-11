@@ -215,6 +215,13 @@ class Interview(SQLModel, table=True):
     timezone: str = Field(max_length=64, nullable=False)
     calendar_event_id: str | None = Field(default=None, max_length=1024, index=True)
     needs_relink: bool = Field(default=False, nullable=False)
+    calendar_etag: str | None = Field(default=None, max_length=255)
+    calendar_updated: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True)),
+    )
+    meeting_mode: str = Field(default="google_meet", max_length=20, nullable=False)
+    meeting_link: str | None = Field(default=None, max_length=1024)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -234,8 +241,14 @@ class InterviewParticipant(SQLModel, table=True):
     interview_id: UUID = Field(foreign_key="interviews.id", index=True, nullable=False)
     type: str = Field(max_length=20, nullable=False, index=True)  # candidate, employee, external
     email: str = Field(max_length=255, nullable=False)
-    name: str | None = Field(default=None, max_length=255)
+    name: str | None = Field(
+        default=None,
+        max_length=255,
+    )
     employee_id: UUID | None = Field(default=None, foreign_key="employees.id", index=True)
+    response_status: str | None = Field(
+        default=None, max_length=30
+    )  # needsAction, accepted, declined, tentative
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

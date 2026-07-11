@@ -63,6 +63,36 @@ class ScheduleInterviewRequest(BaseModel):
     notes: str | None = Field(default=None, max_length=1000)
 
 
+class CreateInterviewRequest(BaseModel):
+    """Request schema for creating a new interview with calendar event.
+
+    This is the GH #154 interview create command, separate from the legacy
+    ``ScheduleInterviewRequest``. Supports round name, IANA timezone, meeting
+    mode, employee and external participants.
+
+    Attributes:
+        round_name: Name/round of the interview (e.g. "Technical Round 1").
+        start: Interview start datetime (timezone-aware preferred).
+        end: Interview end datetime (timezone-aware).
+        timezone: IANA timezone name (e.g. "Asia/Ho_Chi_Minh").
+        mode: Meeting mode (google_meet, in_person, custom_link).
+        meeting_link: Custom meeting link for custom_link mode.
+        interviewer_ids: Employee UUIDs conducting the interview.
+        external_participant_emails: External participant email addresses.
+        notes: Optional notes for the interview.
+    """
+
+    round_name: str = Field(min_length=1, max_length=255)
+    start: datetime
+    end: datetime
+    timezone: str = Field(default="Asia/Ho_Chi_Minh", max_length=64)
+    mode: str = Field(default="google_meet", max_length=20)
+    meeting_link: str | None = Field(default=None, max_length=1024)
+    interviewer_ids: list[UUID] = Field(default_factory=list, max_length=20)
+    external_participant_emails: list[str] = Field(default_factory=list, max_length=20)
+    notes: str | None = Field(default=None, max_length=1000)
+
+
 class SendEmailRequest(BaseModel):
     """Request schema for sending an email to a candidate.
 

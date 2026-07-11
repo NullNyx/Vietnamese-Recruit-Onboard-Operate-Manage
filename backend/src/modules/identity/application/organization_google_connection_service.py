@@ -252,3 +252,71 @@ class OrganizationGoogleConnectionService:
             details={"result": "disconnected"},
         )
         return OrganizationGoogleConnectionResponse(status="disconnected")
+
+    async def list_calendars(self, hr: User) -> list[dict[str, object]]:
+        """List available calendars via the Organization Google Connection.
+
+        Uses the stored access token to call the Calendar API calendarList.list
+        endpoint. Returns calendars the connection has at least ``writer`` access
+        to so the HR user can select one for interview scheduling.
+
+        Args:
+            hr: The acting HR user (used only for audit/naming).
+
+        Returns:
+            List of calendar dicts with ``id``, ``summary``, ``description``,
+            ``primary``, and ``accessRole`` keys.
+
+        Raises:
+            GoogleAuthError: If the connection is not active.
+        """
+        current = await self._connection_repo.get_singleton()
+        if current is None or current.status != "connected":
+            raise DomainAccessDeniedError("Google connection is not active")
+        if not current.access_token_enc:
+            raise GoogleAuthError("No access token available")
+
+        access_token = self._crypto.decrypt(current.access_token_enc)
+        from src.modules.recruitment.infrastructure.calendar_adapter import CalendarAdapter
+        from src.modules.recruitment.infrastructure.config import RecruitmentSettings
+
+        adapter = CalendarAdapter(RecruitmentSettings(), self._http_client)
+        try:
+            calendars = await adapter.list_calendars(access_token)
+            return calendars
+        except Exception as exc:
+            raise GoogleAuthError(f"Failed to list calendars: {exc}") from exc
+
+    async def update_selected_calendar(self, calendar_id: str, hr: User) -> None:
+        """Save the selected calendar ID on the Organization Google Connection.
+
+        Args:
+            calendar_id: The Google Calendar ID to set as selected.
+            hr: The acting HR user.
+
+        Raises:
+            GoogleAuthError: If the connection is not active.
+        """
+        current = await self._connection_repo.get_singleton()
+        if current is None or current.status != "connected":
+            raise DomainAccessDeniedError("Google connection is not active")
+        connection = OrganizationGoogleConnection(
+            status=current.status,
+            email=current.email,
+            google_sub=current.google_sub,
+            email_domain=current.email_domain,
+            selected_calendar_id=calendar_id,
+            credential_format_version=current.credential_format_version,
+            credential_key_version=current.credential_key_version,
+            access_token_enc=current.access_token_enc,
+            refresh_token_enc=current.refresh_token_enc,
+            client_secret_enc=current.client_secret_enc,
+            token_expires_at=current.token_expires_at,
+            connected_by_user_id=current.connected_by_user_id,
+        )
+        await self._connection_repo.upsert_singleton(connection)
+        await self._audit_service.log_action(
+            admin=hr,
+            action_type=AuditActionType.ORG_GOOGLE_CONNECT,
+            details={"result": "calendar_selected", "calendar_id": calendar_id},
+        )

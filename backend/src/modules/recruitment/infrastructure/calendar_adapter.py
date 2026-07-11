@@ -6,13 +6,15 @@ with an ``httpx.AsyncClient`` plus module settings, implements
 ``retry_with_backoff`` (retry on 5xx/429, never retry non-429 4xx) and re-raises
 ``401`` so the calling service can refresh the OAuth token and retry once.
 
-Per ADR-0008 the adapter creates the interview event on the acting HR user's own
-calendar, invites the Candidate plus interviewer Employees, and attaches a Google
-Meet link. Reschedule patches the existing event while preserving the Meet link,
-and cancellation deletes the event idempotently.
+Per ADR-0008 the adapter creates the interview event on the selected calendar
+(defaulting to ``primary``), invites the Candidate plus interviewer Employees,
+and attaches a Google Meet link when requested. Reschedule patches the existing
+event while preserving the Meet link, and cancellation deletes the event
+idempotently.
 """
 
 import asyncio
+import hashlib
 import logging
 from collections.abc import Awaitable, Callable
 from datetime import datetime
@@ -207,6 +209,22 @@ class CalendarAdapter:
         """
         return {"dateTime": value.isoformat(), "timeZone": timezone}
 
+    def _build_meet_request_id(self, spec: CalendarEventSpec) -> str:
+        """Build a deterministic meeting request ID from the spec.
+
+        Uses a SHA-256 of the event summary, start time, and a random salt so the
+        request ID is stable for the same interview (enabling idempotent Meet creation
+        on retry) but unpredictable across different events.
+
+        Args:
+            spec: The timezone-resolved event specification.
+
+        Returns:
+            A 64-character hex request ID.
+        """
+        raw = f"{spec.summary}|{spec.start.isoformat()}|{uuid4().hex}"
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
     def _build_create_body(self, spec: CalendarEventSpec) -> dict[str, Any]:
         """Build the request body for ``events.insert``.
 
@@ -232,7 +250,7 @@ class CalendarAdapter:
         if spec.request_meet_link:
             body["conferenceData"] = {
                 "createRequest": {
-                    "requestId": uuid4().hex,
+                    "requestId": self._build_meet_request_id(spec),
                     "conferenceSolutionKey": {"type": _MEET_CONFERENCE_TYPE},
                 }
             }
@@ -272,6 +290,8 @@ class CalendarAdapter:
             event_id=str(data.get("id", "")),
             html_link=self._optional_str(data.get("htmlLink")),
             meet_link=self._extract_meet_link(data),
+            etag=self._optional_str(data.get("etag")),
+            updated=self._parse_datetime(data.get("updated")),
             invited_emails=self._extract_attendees(data),
         )
 
@@ -285,6 +305,22 @@ class CalendarAdapter:
             The string value, or ``None`` if it is absent or not a string.
         """
         return value if isinstance(value, str) else None
+
+    def _parse_datetime(self, value: Any) -> datetime | None:
+        """Parse a raw JSON value as an RFC3339 datetime.
+
+        Args:
+            value: A value read from the API response.
+
+        Returns:
+            The parsed datetime, or ``None`` if it cannot be parsed.
+        """
+        if not isinstance(value, str):
+            return None
+        try:
+            return datetime.fromisoformat(value)
+        except (ValueError, TypeError):
+            return None
 
     def _extract_meet_link(self, data: dict[str, Any]) -> str | None:
         """Extract the Google Meet link from a Calendar event response.
@@ -334,9 +370,10 @@ class CalendarAdapter:
     async def create_event(self, access_token: str, spec: CalendarEventSpec) -> CalendarEvent:
         """Create a Google Calendar event with a Meet link and attendees.
 
-        Sends ``POST {CAL_BASE}/calendars/primary/events`` with
+        Sends ``POST {CAL_BASE}/calendars/{calendar_id}/events`` with
         ``conferenceDataVersion=1`` (required for Meet) and ``sendUpdates=all``
-        (sends invitation emails).
+        (sends invitation emails). The ``calendar_id`` is read from the spec,
+        defaulting to ``primary``.
 
         Args:
             access_token: OAuth2 access token for the acting HR user.
@@ -344,13 +381,14 @@ class CalendarAdapter:
 
         Returns:
             The created :class:`CalendarEvent` (event id, html link, Meet link,
-            invited emails).
+            invited emails, etag, updated).
 
         Raises:
             CalendarEventCreateFailedError: If creation fails after retries.
             httpx.HTTPStatusError: If ``401`` (for token refresh handling).
         """
-        url = f"{self._base_url}/calendars/primary/events"
+        calendar_id = spec.calendar_id
+        url = f"{self._base_url}/calendars/{calendar_id}/events"
         params: dict[str, str | int] = {"conferenceDataVersion": 1, "sendUpdates": "all"}
         body = self._build_create_body(spec)
 
@@ -383,7 +421,7 @@ class CalendarAdapter:
     ) -> CalendarEvent:
         """Patch an existing Calendar event's time window (reschedule).
 
-        Sends ``PATCH {CAL_BASE}/calendars/primary/events/{event_id}`` with
+        Sends ``PATCH {CAL_BASE}/calendars/{calendar_id}/events/{event_id}`` with
         ``conferenceDataVersion=1`` and ``sendUpdates=all``. The body contains
         only ``start``/``end`` (and notes) and OMITS ``conferenceData`` so the
         existing Google Meet link is preserved (R7.2).
@@ -400,7 +438,8 @@ class CalendarAdapter:
             CalendarEventUpdateFailedError: If the patch fails after retries.
             httpx.HTTPStatusError: If ``401`` (for token refresh handling).
         """
-        url = f"{self._base_url}/calendars/primary/events/{event_id}"
+        calendar_id = spec.calendar_id
+        url = f"{self._base_url}/calendars/{calendar_id}/events/{event_id}"
         params: dict[str, str | int] = {"conferenceDataVersion": 1, "sendUpdates": "all"}
         body = self._build_patch_body(spec)
 
@@ -431,10 +470,12 @@ class CalendarAdapter:
         data: dict[str, Any] = response.json()
         return self._parse_event(data)
 
-    async def delete_event(self, access_token: str, event_id: str) -> None:
+    async def delete_event(
+        self, access_token: str, event_id: str, calendar_id: str = "primary"
+    ) -> None:
         """Delete (cancel) a Calendar event idempotently.
 
-        Sends ``DELETE {CAL_BASE}/calendars/primary/events/{event_id}`` with
+        Sends ``DELETE {CAL_BASE}/calendars/{calendar_id}/events/{event_id}`` with
         ``sendUpdates=all`` so cancellation notices are emailed. A ``404``/``410``
         response (the event is already gone) is treated as success so cancel is
         idempotent.
@@ -442,12 +483,13 @@ class CalendarAdapter:
         Args:
             access_token: OAuth2 access token for the acting HR user.
             event_id: The Google Calendar event identifier to delete.
+            calendar_id: The Google Calendar ID (default ``primary``).
 
         Raises:
             httpx.HTTPStatusError: For non-2xx responses other than 404/410,
                 including ``401`` (for token refresh handling).
         """
-        url = f"{self._base_url}/calendars/primary/events/{event_id}"
+        url = f"{self._base_url}/calendars/{calendar_id}/events/{event_id}"
         params: dict[str, str] = {"sendUpdates": "all"}
 
         async def _request() -> httpx.Response:
@@ -471,3 +513,42 @@ class CalendarAdapter:
                 )
                 return
             raise
+
+    async def list_calendars(
+        self, access_token: str, *, min_access_role: str = "writer"
+    ) -> list[dict[str, Any]]:
+        """List calendars available via ``calendarList.list``.
+
+        Returns calendars where the authenticated user has at least the specified
+        ``minAccessRole`` (default ``"writer"``), so only calendars writable by the
+        Organization Google Connection are shown.
+
+        Args:
+            access_token: OAuth2 access token with the
+                ``calendar.calendarlist.readonly`` scope.
+            min_access_role: Minimum access role filter (``"freeBusyReader"``,
+                ``"reader"``, ``"writer"``, ``"owner"``). Defaults to ``"writer"``.
+
+        Returns:
+            List of calendar list entry dicts, each with ``id``, ``summary``,
+            ``description``, ``primary``, and ``accessRole`` keys.
+
+        Raises:
+            httpx.HTTPStatusError: If ``401`` (for token refresh handling).
+        """
+        url = f"{self._base_url}/users/me/calendarList"
+        params: dict[str, str | int] = {"minAccessRole": min_access_role}
+
+        async def _request() -> httpx.Response:
+            response = await self._http_client.get(
+                url,
+                headers=self._auth_headers(access_token),
+                params=params,
+            )
+            response.raise_for_status()
+            return response
+
+        response = await self.retry_with_backoff(_request)
+        data: dict[str, Any] = response.json()
+        items: list[dict[str, Any]] = data.get("items", [])
+        return items

@@ -28,6 +28,7 @@ from src.modules.recruitment.api.schemas import (
     CandidateListItemResponse,
     CandidateListResponse,
     CandidateResponse,
+    CreateInterviewRequest,
     CVDocumentResponse,
     CVPresignedUrlResponse,
     InterviewParticipantResponse,
@@ -484,6 +485,88 @@ async def reschedule_interview(
     )
 
     return CandidateResponse.model_validate(candidate)
+
+    # ---------------------------------------------------------------------------
+    # Create interview (GH #154)
+    # ---------------------------------------------------------------------------
+
+    @candidate_router.post(
+        "/{candidate_id}/create-interview",
+        status_code=201,
+        response_model=InterviewResponse,
+    )
+    async def create_interview(
+        candidate_id: UUID,
+        body: CreateInterviewRequest,
+        current_user: AdminUserDep,
+        candidate_service: CandidateServiceDep,
+    ) -> InterviewResponse:
+        """Create a new interview with a Calendar event on the selected calendar.
+
+        This is the GH #154 interview creation command. It creates an Interview
+        record with the specified round name, timezone, meeting mode, participants,
+        and a Calendar event. The Candidate status is NOT changed by this command --
+        the HR explicitly transitions the candidate separately.
+
+        Args:
+            candidate_id: UUID of the candidate.
+            body: Interview creation parameters.
+            current_user: The authenticated admin user.
+            candidate_service: The candidate service.
+
+        Returns:
+            The created Interview record.
+
+        Raises:
+            CandidateNotFoundError: If the candidate doesn't exist.
+            CalendarEventCreateFailedError: If Calendar event creation fails.
+        """
+        interview = await candidate_service.create_interview(
+            candidate_id,
+            round_name=body.round_name,
+            start=body.start,
+            end=body.end,
+            timezone=body.timezone,
+            mode=body.mode,
+            meeting_link=body.meeting_link,
+            interviewer_ids=body.interviewer_ids,
+            external_participant_emails=body.external_participant_emails,
+            notes=body.notes,
+        )
+
+        # Fetch participants for the response
+        from sqlmodel import select
+
+        parts_stmt = select(InterviewParticipant).where(
+            InterviewParticipant.interview_id
+            == interview.id
+        )
+        parts_res = await candidate_service._session.execute(parts_stmt)
+        parts_list = parts_res.scalars().all()
+        part_responses = [
+            InterviewParticipantResponse(
+                id=p.id,
+                interview_id=p.interview_id,
+                type=p.type,
+                email=p.email,
+                name=p.name,
+                employee_id=p.employee_id,
+            )
+            for p in parts_list
+        ]
+
+        return InterviewResponse(
+            id=interview.id,
+            candidate_id=interview.candidate_id,
+            status=interview.status,
+            round_name=interview.round_name,
+            start_at=interview.start_at,
+            end_at=interview.end_at,
+            timezone=interview.timezone,
+            calendar_event_id=interview.calendar_event_id,
+            needs_relink=interview.needs_relink,
+            participants=part_responses,
+        )
 
 
 # ---------------------------------------------------------------------------
