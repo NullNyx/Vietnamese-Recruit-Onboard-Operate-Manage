@@ -14,10 +14,11 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import exists
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from src.modules.recruitment.domain.entities import Candidate
+from src.modules.recruitment.domain.entities import Candidate, Interview
 from src.modules.recruitment.domain.enums import CandidateStatus
 from src.modules.recruitment.infrastructure.audit_repository import log_audit
 from src.modules.recruitment.infrastructure.config import RecruitmentSettings
@@ -68,9 +69,18 @@ async def _get_expired_candidates(
     statement = (
         select(Candidate)
         .where(
-            Candidate.status == CandidateStatus.REJECTED,
-            Candidate.rejected_at < cutoff,  # type: ignore[operator]
-        )
+                Candidate.status == CandidateStatus.REJECTED,
+                Candidate.rejected_at < cutoff,  # type: ignore[operator]
+                # A scheduled Interview owns a live Calendar event. Retention
+                # must never remove its Candidate first: HR must explicitly
+                # cancel it (which sends Google's cancellation) beforehand.
+                ~exists(
+                    select(Interview.id).where(
+                        Interview.candidate_id == Candidate.id,
+                        Interview.status == "scheduled",
+                    )
+                ),
+            )
         .limit(batch_size)
     )
 
