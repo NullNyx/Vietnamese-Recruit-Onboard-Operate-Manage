@@ -55,13 +55,13 @@ from src.modules.gmail.application.send_service import (
     SendService,
 )
 from src.modules.gmail.container import (
+    get_arq_pool,
     get_attachment_service,
     get_connection_service,
     get_email_repository,
     get_email_sync_service,
     get_gmail_adapter,
     get_historical_import_service,
-    get_arq_pool,
     get_label_service,
     get_send_service,
 )
