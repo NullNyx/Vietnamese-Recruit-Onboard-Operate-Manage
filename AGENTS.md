@@ -18,7 +18,7 @@ Repo single-context. Đọc `CONTEXT.md` ở root và `docs/adr/` cho quyết đ
 
 ### Learning Documents
 
-Sau mỗi task triển khai, tạo file:
+Sau mỗi task triển khai, tạo file với nội dung tiếng việt:
 
 ```
 docs/learning-notes/<YYYY-MM-DD>-<tên-task-ngắn>.md
