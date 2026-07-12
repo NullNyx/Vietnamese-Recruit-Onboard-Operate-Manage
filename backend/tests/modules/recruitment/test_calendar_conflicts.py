@@ -25,15 +25,16 @@ from src.modules.recruitment.domain.exceptions import (
 )
 from src.modules.recruitment.domain.value_objects import CalendarEvent, CalendarEventSpec
 from tests.modules.recruitment._interview_support import (
+    DEFAULT_HTML_LINK,
+    DEFAULT_MEET_LINK,
+    CalendarServiceHarness,
     FakeCalendarPort,
+    RecordedCalendarCall,
     build_calendar_harness,
     make_candidate,
     make_employee,
     make_http_status_error,
-    RecordedCalendarCall,
-    CalendarServiceHarness,
-    DEFAULT_MEET_LINK,
-    DEFAULT_HTML_LINK,
+    make_interview,
 )
 
 _EXISTING_EVENT_ID = "evt-existing-1"
@@ -59,14 +60,16 @@ def _make_get_event_response(
 
 def test_412_during_patch_triggers_conflict_capture() -> None:
     """When patch_event raises 412, _capture_calendar_conflict is invoked."""
+
     async def _run() -> None:
         candidate = make_candidate(
             status=CandidateStatus.INTERVIEW_SCHEDULED,
-            calendar_event_id=_EXISTING_EVENT_ID,
-            interview_start_at=_FUTURE_START,
-            interview_timezone="Asia/Ho_Chi_Minh",
         )
         employee = make_employee()
+        interview = make_interview(
+            candidate_id=candidate.id,
+            calendar_event_id=_EXISTING_EVENT_ID,
+        )
         harness = build_calendar_harness(
             candidates=[candidate],
             employees=[employee],
@@ -76,6 +79,8 @@ def test_412_during_patch_triggers_conflict_capture() -> None:
             ),
             org_timezone="Asia/Ho_Chi_Minh",
         )
+        # Seed the Interview so _get_interview_by_event_id can find it
+        harness.session.interviews[interview.id] = interview
 
         captured_args: dict[str, object] = {}
 
@@ -91,9 +96,7 @@ def test_412_during_patch_triggers_conflict_capture() -> None:
             captured_args["operation"] = operation
 
         with patch.object(candidate_service, "log_audit", harness.audit_sink):
-            with patch.object(
-                harness.service, "_capture_calendar_conflict", _capture_spy
-            ):
+            with patch.object(harness.service, "_capture_calendar_conflict", _capture_spy):
                 try:
                     spec = CalendarEventSpec(
                         summary="Test",
@@ -127,6 +130,7 @@ def test_412_during_patch_triggers_conflict_capture() -> None:
 
 def test_list_calendar_conflicts_with_mock() -> None:
     """list_calendar_conflicts returns conflicts from session query."""
+
     async def _run() -> None:
         candidate = make_candidate()
         harness = build_calendar_harness(candidates=[candidate])
@@ -149,9 +153,7 @@ def test_list_calendar_conflicts_with_mock() -> None:
         mock_result.scalars = sync_scalars
 
         with patch.object(candidate_service, "log_audit", harness.audit_sink):
-            with patch.object(
-                harness.service._session, "execute", return_value=mock_result
-            ):
+            with patch.object(harness.service._session, "execute", return_value=mock_result):
                 conflicts = await harness.service.list_calendar_conflicts()
 
         assert len(conflicts) == 1
@@ -166,6 +168,7 @@ def test_list_calendar_conflicts_with_mock() -> None:
 
 def test_resolve_keep_google_updates_interview_etag() -> None:
     """Resolving keep_google updates the Interview etag from the remote snapshot."""
+
     async def _run() -> None:
         candidate = make_candidate()
         harness = build_calendar_harness(candidates=[candidate])
@@ -200,9 +203,7 @@ def test_resolve_keep_google_updates_interview_etag() -> None:
         mock_result.scalars = sync_scalars
 
         with patch.object(candidate_service, "log_audit", harness.audit_sink):
-            with patch.object(
-                harness.service._session, "execute", return_value=mock_result
-            ):
+            with patch.object(harness.service._session, "execute", return_value=mock_result):
                 with patch.object(
                     harness.service,
                     "_get_interview_by_event_id",
@@ -225,6 +226,7 @@ def test_resolve_keep_google_updates_interview_etag() -> None:
 
 def test_resolve_overwrite_vroom_pushes_to_google() -> None:
     """Resolving overwrite_vroom pushes to Google and updates the etag."""
+
     async def _run() -> None:
         candidate = make_candidate()
         employee = make_employee()
@@ -278,9 +280,7 @@ def test_resolve_overwrite_vroom_pushes_to_google() -> None:
         mock_result.scalars = sync_scalars
 
         with patch.object(candidate_service, "log_audit", harness.audit_sink):
-            with patch.object(
-                harness.service._session, "execute", return_value=mock_result
-            ):
+            with patch.object(harness.service._session, "execute", return_value=mock_result):
                 with patch.object(
                     harness.service,
                     "_get_interview_by_event_id",
@@ -305,6 +305,7 @@ def test_resolve_overwrite_vroom_pushes_to_google() -> None:
 
 def test_resolve_invalid_choice_raises_value_error() -> None:
     """An invalid resolution choice raises ValueError."""
+
     async def _run() -> None:
         candidate = make_candidate()
         harness = build_calendar_harness(candidates=[candidate])
@@ -324,9 +325,7 @@ def test_resolve_invalid_choice_raises_value_error() -> None:
         mock_result.scalars = sync_scalars
 
         with patch.object(candidate_service, "log_audit", harness.audit_sink):
-            with patch.object(
-                harness.service._session, "execute", return_value=mock_result
-            ):
+            with patch.object(harness.service._session, "execute", return_value=mock_result):
                 with pytest.raises(ValueError, match="Invalid resolution choice"):
                     await harness.service.resolve_calendar_conflict(
                         conflict_id=conflict.id,
@@ -342,6 +341,7 @@ def test_resolve_invalid_choice_raises_value_error() -> None:
 
 def test_resolve_missing_conflict_raises_not_found() -> None:
     """Resolving a non-existent conflict raises CalendarConflictNotFoundError."""
+
     async def _run() -> None:
         candidate = make_candidate()
         harness = build_calendar_harness(candidates=[candidate])
@@ -354,9 +354,7 @@ def test_resolve_missing_conflict_raises_not_found() -> None:
         mock_result.scalars = sync_scalars
 
         with patch.object(candidate_service, "log_audit", harness.audit_sink):
-            with patch.object(
-                harness.service._session, "execute", return_value=mock_result
-            ):
+            with patch.object(harness.service._session, "execute", return_value=mock_result):
                 with pytest.raises(CalendarConflictNotFoundError):
                     await harness.service.resolve_calendar_conflict(
                         conflict_id=uuid4(),
@@ -372,6 +370,7 @@ def test_resolve_missing_conflict_raises_not_found() -> None:
 
 def test_resolve_already_resolved_raises_value_error() -> None:
     """Resolving an already-resolved conflict raises ValueError."""
+
     async def _run() -> None:
         candidate = make_candidate()
         harness = build_calendar_harness(candidates=[candidate])
@@ -391,9 +390,7 @@ def test_resolve_already_resolved_raises_value_error() -> None:
         mock_result.scalars = sync_scalars
 
         with patch.object(candidate_service, "log_audit", harness.audit_sink):
-            with patch.object(
-                harness.service._session, "execute", return_value=mock_result
-            ):
+            with patch.object(harness.service._session, "execute", return_value=mock_result):
                 with pytest.raises(ValueError, match="already resolved"):
                     await harness.service.resolve_calendar_conflict(
                         conflict_id=conflict.id,

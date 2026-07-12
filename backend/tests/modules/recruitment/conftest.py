@@ -18,6 +18,7 @@ from tests.modules.recruitment._interview_support import (
     FakeCalendarPort,
     FixedClock,
     SpyAuditSink,
+    make_interview,
 )
 
 

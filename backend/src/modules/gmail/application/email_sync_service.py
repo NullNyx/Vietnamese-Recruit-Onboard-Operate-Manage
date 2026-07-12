@@ -4,6 +4,9 @@ Orchestrates email fetching from Gmail via polling (ARQ cron) and manual
 sync triggers. Handles first-poll logic (7-day lookback), incremental sync
 (history_id-based), token refresh on 401, partial failure handling, and
 manual sync rate limiting via Redis.
+
+Note: Token handling uses the singleton OrganizationGoogleConnection
+for the org-level token; per-user OAuth grants are no longer used.
 """
 
 from __future__ import annotations
@@ -36,9 +39,6 @@ if TYPE_CHECKING:
     from src.modules.gmail.infrastructure.sync_cursor_repository import (
         SyncCursorRepository,
     )
-    from src.modules.identity.infrastructure.oauth_grant_repository import (
-        OAuthGrantRepository,
-    )
 
 from src.modules.identity.infrastructure.connection_state_repository import (
     OrganizationGoogleConnectionRepository,
@@ -58,14 +58,15 @@ class EmailSyncService:
         gmail_adapter: Gmail API adapter for fetching messages.
         email_repo: Repository for persisting email messages.
         sync_cursor_repo: Repository for sync cursor management.
-        oauth_grant_repo: Repository for per-user OAuth grant tokens. Optional;
-            only required when the legacy per-HR grant flow is still in use.
         crypto: AES-256-GCM encryption utilities for token decryption.
         audit_logger: Structured audit logger for operation tracking.
         settings: Gmail module configuration.
         redis_client: Async Redis client for manual sync rate limiting.
         client_id: Google OAuth2 client ID for token refresh.
         client_secret: Google OAuth2 client secret for token refresh.
+        connection_repo: Repository for the singleton Organization Google
+            Connection. If not provided it is constructed from the
+            email_repo session at runtime.
     """
 
     def __init__(
@@ -79,7 +80,6 @@ class EmailSyncService:
         redis_client: redis.Redis,
         client_id: str,
         client_secret: str,
-        oauth_grant_repo: OAuthGrantRepository | None = None,
         connection_repo: OrganizationGoogleConnectionRepository | None = None,
     ) -> None:
         """Initialize EmailSyncService with dependencies.
@@ -94,8 +94,6 @@ class EmailSyncService:
             redis_client: Async Redis client for manual sync rate limiting.
             client_id: Google OAuth2 client ID for token refresh.
             client_secret: Google OAuth2 client secret for token refresh.
-            oauth_grant_repo: Repository for per-user OAuth grant tokens.
-                Optional; only required for the legacy per-HR grant flow.
             connection_repo: Repository for the singleton Organization Google
                 Connection. If not provided it is constructed from the
                 email_repo session at runtime.
@@ -103,7 +101,6 @@ class EmailSyncService:
         self._gmail_adapter = gmail_adapter
         self._email_repo = email_repo
         self._sync_cursor_repo = sync_cursor_repo
-        self._oauth_grant_repo = oauth_grant_repo
         self._crypto = crypto
         self._audit_logger = audit_logger
         self._settings = settings
@@ -420,65 +417,6 @@ class EmailSyncService:
             await self._classify_new_emails(user_id, [e.gmail_message_id for e in email_entities])
 
         return persisted_count
-
-    async def _handle_token_refresh(self, user_id: UUID) -> str | None:
-        """Attempt to refresh the Gmail access token on 401 error.
-
-        Decrypts the stored refresh token, calls Google's token refresh
-        endpoint, encrypts the new access token, and updates the OAuth grant.
-        If refresh fails, marks the grant as invalid.
-
-        Args:
-            user_id: The UUID of the user whose token to refresh.
-
-        Returns:
-            The new decrypted access token on success, or None on failure.
-        """
-        if self._oauth_grant_repo is None:
-            return None
-        grant = await self._oauth_grant_repo.get_by_user_id(user_id)
-        if grant is None:
-            return None
-
-        try:
-            # Decrypt the refresh token
-            refresh_token = self._crypto.decrypt(grant.refresh_token_enc)
-
-            # Call Google token refresh endpoint
-            new_access_token, expires_at = await self._gmail_adapter.refresh_access_token(
-                refresh_token=refresh_token,
-                client_id=self._client_id,
-                client_secret=self._client_secret,
-            )
-
-            # Encrypt and store the new access token
-            encrypted_access = self._crypto.encrypt(new_access_token)
-
-            await self._oauth_grant_repo.upsert(
-                user_id=user_id,
-                access_token_enc=encrypted_access,
-                refresh_token_enc=grant.refresh_token_enc,
-                scopes=grant.scopes,
-                token_expires_at=expires_at,
-            )
-
-            logger.info("Successfully refreshed access token for user %s", user_id)
-            return new_access_token
-
-        except Exception as exc:
-            logger.error("Token refresh failed for user %s: %s", user_id, exc)
-            # Mark grant as invalid — connection status becomes token_expired
-            await self._oauth_grant_repo.mark_invalid(user_id)
-
-            await self._audit_logger.log_operation(
-                operation_type="fetch",
-                user_id=user_id,
-                message_count=0,
-                success=False,
-                metadata={"error": "token_refresh_failed", "reason": str(exc)},
-            )
-
-            return None
 
     async def _check_manual_sync_rate_limit(self, user_id: UUID) -> None:
         """Check if the user is within the manual sync cooldown period.

@@ -71,18 +71,6 @@ class GmailConnectFailedException(GmailError):
     message = "Gmail connection failed"
 
 
-class LabelNamespaceViolationException(GmailError):
-    """Attempted to modify a label outside the VroomHR/ namespace.
-
-    Raised when a label removal or modification request targets a label
-    that does not start with the "VroomHR/" prefix.
-    """
-
-    status_code = 400
-    error_code = "LABEL_NAMESPACE_VIOLATION"
-    message = "Label must be within the VroomHR/ namespace"
-
-
 class GmailFetchError(GmailError):
     """Gmail API call failed when fetching message data.
 
@@ -105,18 +93,6 @@ class MessageNotFoundException(GmailError):
     status_code = 404
     error_code = "MESSAGE_NOT_FOUND"
     message = "Gmail message not found"
-
-
-class GmailLabelRemoveFailedException(GmailError):
-    """Label removal failed after all retries.
-
-    Raised when a label removal operation on the Gmail API fails
-    after exhausting all retry attempts.
-    """
-
-    status_code = 502
-    error_code = "GMAIL_LABEL_REMOVE_FAILED"
-    message = "Failed to remove label from Gmail message"
 
 
 class GmailSendFailedException(GmailError):

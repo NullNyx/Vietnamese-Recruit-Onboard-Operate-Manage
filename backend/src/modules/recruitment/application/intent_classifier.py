@@ -1,8 +1,7 @@
 """Intent Classifier Service for the Recruitment module.
 
 Orchestrates email intent classification using LLM with PII redaction.
-Applies Gmail labels and enqueues CV processing for emails classified
-as containing CVs.
+    Enqueues CV processing for emails classified as containing CVs.
 
 Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10
 """
@@ -26,24 +25,6 @@ logger = logging.getLogger(__name__)
 
 
 # ─── Protocols for cross-module communication ──────────────────────────
-
-
-@runtime_checkable
-class GmailLabelProtocol(Protocol):
-    """Protocol for applying Gmail labels to messages.
-
-    Abstracts the Gmail module's label service to avoid direct imports.
-    """
-
-    async def add_label(
-        self,
-        user_id: UUID,
-        message_id: str,
-        label_name: str,
-        access_token: str,
-    ) -> None:
-        """Add a label to a Gmail message."""
-        ...
 
 
 @runtime_checkable
@@ -123,13 +104,12 @@ class IntentClassifierService:
     2. Apply PII redaction to snippet
     3. Call LLM for intent classification
     4. Log audit entry
-    5. Process result (apply label, enqueue CV processing)
+        5. Process result (enqueue CV processing)
 
     Args:
         llm_adapter: LLM adapter for intent classification calls.
         pii_redactor: PII redactor for sanitizing text before LLM.
         session: Async database session for persistence operations.
-        gmail_label_service: Protocol-based Gmail label service.
         email_metadata_provider: Protocol-based email metadata provider.
         enqueue_func: Callable to enqueue background tasks via ARQ.
         access_token_provider: Callable to get the current OAuth access token.
@@ -140,7 +120,6 @@ class IntentClassifierService:
         llm_adapter: LLMAdapter,
         pii_redactor: PIIRedactor,
         session: AsyncSession,
-        gmail_label_service: GmailLabelProtocol | None = None,
         email_metadata_provider: EmailMetadataProvider | None = None,
         enqueue_func: EnqueueProtocol | None = None,
         access_token_provider: object | None = None,
@@ -148,7 +127,6 @@ class IntentClassifierService:
         self._llm_adapter = llm_adapter
         self._pii_redactor = pii_redactor
         self._session = session
-        self._gmail_label_service = gmail_label_service
         self._email_metadata_provider = email_metadata_provider
         self._enqueue_func = enqueue_func
         self._access_token_provider = access_token_provider
@@ -280,10 +258,9 @@ class IntentClassifierService:
         user_id: UUID | None = None,
         access_token: str | None = None,
     ) -> None:
-        """Process the classification result: apply labels and enqueue if CV.
+        """Process the classification result and enqueue if CV.
 
         For CV intent:
-        - Apply Gmail label "VroomHR/recruitment" to the email
         - Enqueue CV processing via ARQ
 
         For other intents:
@@ -299,7 +276,6 @@ class IntentClassifierService:
         intent = intent_result.intent
 
         if intent == EmailIntent.CV:
-            # Gmail labels creation/modification is bypassed in VroomHR
             pass
 
             # Enqueue CV processing via ARQ

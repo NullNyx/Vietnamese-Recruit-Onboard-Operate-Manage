@@ -44,12 +44,6 @@ def sync_cursor_repo() -> AsyncMock:
 
 
 @pytest.fixture
-def oauth_grant_repo() -> AsyncMock:
-    """Create a mocked OAuthGrantRepository."""
-    return AsyncMock()
-
-
-@pytest.fixture
 def crypto() -> MagicMock:
     """Create a mocked CryptoUtils."""
     mock = MagicMock(spec=CryptoUtils)
@@ -97,7 +91,6 @@ def sync_service(
     gmail_adapter: AsyncMock,
     email_repo: AsyncMock,
     sync_cursor_repo: AsyncMock,
-    oauth_grant_repo: AsyncMock,
     crypto: MagicMock,
     audit_logger: AsyncMock,
     settings: GmailSettings,
@@ -115,31 +108,25 @@ def sync_service(
         redis_client=mock_redis,
         client_id="test-client-id",
         client_secret="test-client-secret",
-        oauth_grant_repo=oauth_grant_repo,
         connection_repo=mock_connection_repo,
     )
 
 
-def _make_grant(
+def _make_connection(
     *,
-    is_valid: bool = True,
+    status: str = "connected",
     access_token_enc: str = "encrypted_test_access_token",
     refresh_token_enc: str = "encrypted_test_refresh_token",
-    scopes: list[str] | None = None,
     token_expires_at: datetime | None = None,
 ):
-    """Create a mock OAuth grant."""
-    grant = MagicMock()
-    grant.is_valid = is_valid
-    grant.access_token_enc = access_token_enc
-    grant.refresh_token_enc = refresh_token_enc
-    grant.scopes = scopes or [
-        "https://www.googleapis.com/auth/gmail.readonly",
-        "https://www.googleapis.com/auth/gmail.modify",
-        "https://www.googleapis.com/auth/gmail.send",
-    ]
-    grant.token_expires_at = token_expires_at or (datetime.now(UTC) + timedelta(hours=1))
-    return grant
+    """Create a mock Organization Google Connection."""
+    conn = MagicMock()
+    conn.status = status
+    conn.access_token_enc = access_token_enc
+    conn.refresh_token_enc = refresh_token_enc
+    conn.client_secret_enc = None
+    conn.token_expires_at = token_expires_at or (datetime.now(UTC) + timedelta(hours=1))
+    return conn
 
 
 def _make_message_metadata(
@@ -190,14 +177,14 @@ class TestPollEmails:
     async def test_first_poll_establishes_baseline(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
+        mock_connection_repo: AsyncMock,
         sync_cursor_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         email_repo: AsyncMock,
         user_id,
     ) -> None:
         """First poll (no cursor) should establish baseline and not fetch emails."""
-        oauth_grant_repo.get_by_user_id.return_value = _make_grant()
+        # Connection is set up via mock_connection_repo fixture
         sync_cursor_repo.get_cursor.return_value = None
         gmail_adapter.get_latest_history_id.return_value = "55555"
 
@@ -211,14 +198,14 @@ class TestPollEmails:
     async def test_no_new_emails_returns_zero(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
+        mock_connection_repo: AsyncMock,
         sync_cursor_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         email_repo: AsyncMock,
         user_id,
     ) -> None:
         """Should return 0 when no new emails are found."""
-        oauth_grant_repo.get_by_user_id.return_value = _make_grant()
+        # Connection is set up via mock_connection_repo fixture
         sync_cursor_repo.get_cursor.return_value = None
         gmail_adapter.fetch_messages.return_value = []
 
@@ -230,14 +217,14 @@ class TestPollEmails:
     async def test_incremental_sync_uses_history(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
+        mock_connection_repo: AsyncMock,
         sync_cursor_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         email_repo: AsyncMock,
         user_id,
     ) -> None:
         """Incremental sync (cursor exists) should use fetch_history."""
-        oauth_grant_repo.get_by_user_id.return_value = _make_grant()
+        # Connection is set up via mock_connection_repo fixture
         cursor = MagicMock(spec=SyncCursor)
         cursor.history_id = "99999"
         sync_cursor_repo.get_cursor.return_value = cursor
@@ -259,15 +246,13 @@ class TestPollEmails:
     async def test_token_refresh_on_401(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
+        mock_connection_repo: AsyncMock,
         sync_cursor_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         email_repo: AsyncMock,
         user_id,
     ) -> None:
         """Should attempt token refresh on 401 and retry."""
-        grant = _make_grant()
-        oauth_grant_repo.get_by_user_id.return_value = grant
 
         cursor = MagicMock(spec=SyncCursor)
         cursor.history_id = "12345"
@@ -319,7 +304,7 @@ class TestPollEmails:
     async def test_logs_audit_on_success(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
+        mock_connection_repo: AsyncMock,
         sync_cursor_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         email_repo: AsyncMock,
@@ -327,7 +312,7 @@ class TestPollEmails:
         user_id,
     ) -> None:
         """Should log audit entry on successful poll."""
-        oauth_grant_repo.get_by_user_id.return_value = _make_grant()
+        # Connection is set up via mock_connection_repo fixture
 
         cursor = MagicMock(spec=SyncCursor)
         cursor.history_id = "12345"
@@ -368,7 +353,7 @@ class TestManualSync:
     async def test_allows_sync_after_cooldown(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
+        mock_connection_repo: AsyncMock,
         sync_cursor_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         email_repo: AsyncMock,
@@ -380,7 +365,7 @@ class TestManualSync:
 
         # Simulate last sync was 60 seconds ago (beyond 30s cooldown)
         mock_redis.get.return_value = str(time.time() - 60).encode()
-        oauth_grant_repo.get_by_user_id.return_value = _make_grant()
+        # Connection is set up via mock_connection_repo fixture
 
         cursor = MagicMock(spec=SyncCursor)
         cursor.history_id = "12345"
@@ -396,7 +381,7 @@ class TestManualSync:
     async def test_allows_first_manual_sync(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
+        mock_connection_repo: AsyncMock,
         sync_cursor_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         email_repo: AsyncMock,
@@ -405,7 +390,7 @@ class TestManualSync:
     ) -> None:
         """Should allow manual sync when no previous sync recorded."""
         mock_redis.get.return_value = None
-        oauth_grant_repo.get_by_user_id.return_value = _make_grant()
+        # Connection is set up via mock_connection_repo fixture
 
         cursor = MagicMock(spec=SyncCursor)
         cursor.history_id = "12345"
@@ -421,7 +406,7 @@ class TestManualSync:
     async def test_records_timestamp_after_sync(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
+        mock_connection_repo: AsyncMock,
         sync_cursor_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         email_repo: AsyncMock,
@@ -430,7 +415,7 @@ class TestManualSync:
     ) -> None:
         """Should record manual sync timestamp in Redis after success."""
         mock_redis.get.return_value = None
-        oauth_grant_repo.get_by_user_id.return_value = _make_grant()
+        # Connection is set up via mock_connection_repo fixture
 
         cursor = MagicMock(spec=SyncCursor)
         cursor.history_id = "12345"
@@ -461,7 +446,7 @@ class TestManualSync:
     async def test_logs_audit_with_manual_type(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
+        mock_connection_repo: AsyncMock,
         sync_cursor_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         email_repo: AsyncMock,
@@ -471,7 +456,7 @@ class TestManualSync:
     ) -> None:
         """Should log audit entry with sync_type=manual."""
         mock_redis.get.return_value = None
-        oauth_grant_repo.get_by_user_id.return_value = _make_grant()
+        # Connection is set up via mock_connection_repo fixture
 
         cursor = MagicMock(spec=SyncCursor)
         cursor.history_id = "12345"
@@ -563,59 +548,63 @@ class TestFetchAndPersist:
         assert entities[1].gmail_message_id == "msg_2"
 
 
-class TestHandleTokenRefresh:
-    """Tests for _handle_token_refresh method."""
+class TestHandleConnectionTokenRefresh:
+    """Tests for _handle_connection_token_refresh method."""
 
     async def test_successful_refresh(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
+        mock_connection_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         crypto: MagicMock,
         user_id,
     ) -> None:
         """Should return new access token on successful refresh."""
-        grant = _make_grant()
-        oauth_grant_repo.get_by_user_id.return_value = grant
+        connection = mock_connection_repo.get_singleton.return_value
         new_expires = datetime.now(UTC) + timedelta(hours=1)
         gmail_adapter.refresh_access_token.return_value = (
             "new_token",
             new_expires,
         )
 
-        result = await sync_service._handle_token_refresh(user_id)
+        result = await sync_service._handle_connection_token_refresh(
+            connection, mock_connection_repo
+        )
 
         assert result == "new_token"
-        oauth_grant_repo.upsert.assert_called_once()
+        mock_connection_repo.upsert_singleton.assert_called_once()
 
-    async def test_refresh_failure_marks_invalid(
+    async def test_refresh_failure_marks_reauthorization_required(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
+        mock_connection_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         audit_logger: AsyncMock,
         user_id,
     ) -> None:
-        """Should mark grant invalid and return None on refresh failure."""
-        grant = _make_grant()
-        oauth_grant_repo.get_by_user_id.return_value = grant
+        """Should mark connection reauthorization_required and return None on refresh failure."""
+        connection = mock_connection_repo.get_singleton.return_value
         gmail_adapter.refresh_access_token.side_effect = Exception("Failed")
 
-        result = await sync_service._handle_token_refresh(user_id)
+        result = await sync_service._handle_connection_token_refresh(
+            connection, mock_connection_repo
+        )
 
         assert result is None
-        oauth_grant_repo.mark_invalid.assert_called_once_with(user_id)
 
-    async def test_returns_none_when_no_grant(
+    async def test_returns_none_when_no_refresh_token(
         self,
         sync_service: EmailSyncService,
-        oauth_grant_repo: AsyncMock,
+        mock_connection_repo: AsyncMock,
         user_id,
     ) -> None:
-        """Should return None when no grant exists."""
-        oauth_grant_repo.get_by_user_id.return_value = None
+        """Should return None when connection has no refresh token."""
+        connection = mock_connection_repo.get_singleton.return_value
+        connection.refresh_token_enc = None
 
-        result = await sync_service._handle_token_refresh(user_id)
+        result = await sync_service._handle_connection_token_refresh(
+            connection, mock_connection_repo
+        )
 
         assert result is None
 

@@ -29,6 +29,13 @@ from src.modules.employee.domain.entities import (  # noqa: E402, F401
     EmployeeDocument,
     Position,
 )
+from src.modules.gmail.domain.entities import (  # noqa: E402, F401
+    EmailAttachment,
+    EmailMessage,
+    GmailAuditLog,
+    OutboundEmail,
+    SyncCursor,
+)
 from src.modules.identity.domain.entities import (  # noqa: E402, F401
     OAuthGrant,
     RefreshToken,
@@ -41,14 +48,6 @@ from src.modules.onboarding.domain.entities import (  # noqa: E402, F401
 )
 from src.modules.payslip.domain.entities import (  # noqa: E402, F401
     Payslip,
-)
-from src.modules.gmail.domain.entities import (  # noqa: E402, F401
-    EmailMessage,
-    SyncCursor,
-    GmailLabelMapping,
-    EmailAttachment,
-    GmailAuditLog,
-    OutboundEmail,
 )
 from src.modules.recruitment.domain.entities import (  # noqa: E402, F401
     Candidate,

@@ -92,6 +92,12 @@ disable_error_code = ["unused-ignore"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-markers = [
-    "integration: marks tests that require external services such as Docker (deselect with '-m \"not integration\"')",
-]
+    strict_markers = true
+    markers = [
+        "unit: fast isolated unit or application-service tests",
+        "integration: tests that cross module or external-service boundaries",
+        "e2e: end-to-end workflow tests",
+        "migration: tests that exercise Alembic migrations",
+        "slow: tests with intentional timeouts, retries, or concurrency waits",
+        "property: property-based tests using Hypothesis",
+    ]

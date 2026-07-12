@@ -6,8 +6,7 @@ Tests cover:
 - Field validation (name, email)
 - CV document linking
 - Confidence score storage
-- Parsed CV JSON storage
-- Gmail label application
+    - Parsed CV JSON storage
 
 Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9
 """
@@ -484,85 +483,6 @@ class TestCandidateServiceCreateOrUpdate:
         assert result.name == "John Doe"
         mock_candidate_repo.update.assert_called_once()
         mock_candidate_repo.create.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_gmail_label_applied_on_success(
-        self,
-        mock_candidate_repo: AsyncMock,
-        mock_cv_document_repo: AsyncMock,
-        mock_session: AsyncMock,
-        sample_parsed_cv: ParsedCV,
-    ) -> None:
-        """Gmail label 'VroomHR/processed' is applied after candidate creation."""
-        mock_label_service = AsyncMock()
-        user_id = uuid4()
-        access_token = "test_token"
-
-        service = CandidateService(
-            candidate_repo=mock_candidate_repo,
-            cv_document_repo=mock_cv_document_repo,
-            minio_client=AsyncMock(),
-            session=mock_session,
-            gmail_label_service=mock_label_service,
-            access_token_provider=AsyncMock(return_value=access_token),
-            user_id_provider=AsyncMock(return_value=user_id),
-        )
-
-        source_email_id = uuid4()
-        cv_doc_id = uuid4()
-
-        with patch(
-            "src.modules.recruitment.application.candidate_service.log_audit",
-            new_callable=AsyncMock,
-        ):
-            await service.create_or_update_candidate(
-                parsed_cv=sample_parsed_cv,
-                cv_document_id=cv_doc_id,
-                source_email_id=source_email_id,
-                confidence_score=0.85,
-            )
-
-        mock_label_service.add_label.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_gmail_label_failure_does_not_block(
-        self,
-        mock_candidate_repo: AsyncMock,
-        mock_cv_document_repo: AsyncMock,
-        mock_session: AsyncMock,
-        sample_parsed_cv: ParsedCV,
-    ) -> None:
-        """Gmail label failure does not prevent candidate creation."""
-        mock_label_service = AsyncMock()
-        mock_label_service.add_label = AsyncMock(side_effect=Exception("Gmail error"))
-
-        service = CandidateService(
-            candidate_repo=mock_candidate_repo,
-            cv_document_repo=mock_cv_document_repo,
-            minio_client=AsyncMock(),
-            session=mock_session,
-            gmail_label_service=mock_label_service,
-            access_token_provider=AsyncMock(return_value="token"),
-            user_id_provider=AsyncMock(return_value=uuid4()),
-        )
-
-        cv_doc_id = uuid4()
-        source_email_id = uuid4()
-
-        with patch(
-            "src.modules.recruitment.application.candidate_service.log_audit",
-            new_callable=AsyncMock,
-        ):
-            # Should not raise despite Gmail failure
-            result = await service.create_or_update_candidate(
-                parsed_cv=sample_parsed_cv,
-                cv_document_id=cv_doc_id,
-                source_email_id=source_email_id,
-                confidence_score=0.85,
-            )
-
-        assert result.name == "Nguyen Van A"
-        mock_label_service.add_label.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_handles_missing_optional_fields(

@@ -11,10 +11,8 @@ from src.modules.gmail.domain.exceptions import (
     GmailConnectFailedException,
     GmailError,
     GmailFetchError,
-    GmailLabelRemoveFailedException,
     GmailNotConnectedException,
     GmailSendFailedException,
-    LabelNamespaceViolationException,
     MessageNotFoundException,
     RateLimitedException,
     UnauthorizedException,
@@ -52,14 +50,6 @@ def app_with_routes(app: FastAPI) -> FastAPI:
     @app.get("/test/message-not-found")
     async def raise_message_not_found():
         raise MessageNotFoundException()
-
-    @app.get("/test/label-namespace")
-    async def raise_label_namespace():
-        raise LabelNamespaceViolationException()
-
-    @app.get("/test/label-remove-failed")
-    async def raise_label_remove_failed():
-        raise GmailLabelRemoveFailedException()
 
     @app.get("/test/send-failed")
     async def raise_send_failed():
@@ -156,32 +146,6 @@ class TestMessageNotFoundException:
         response = await client.get("/test/message-not-found")
         data = response.json()
         assert data["error_code"] == "MESSAGE_NOT_FOUND"
-
-
-class TestLabelNamespaceViolationException:
-    @pytest.mark.anyio
-    async def test_returns_400(self, client: AsyncClient):
-        response = await client.get("/test/label-namespace")
-        assert response.status_code == 400
-
-    @pytest.mark.anyio
-    async def test_returns_error_code(self, client: AsyncClient):
-        response = await client.get("/test/label-namespace")
-        data = response.json()
-        assert data["error_code"] == "LABEL_NAMESPACE_VIOLATION"
-
-
-class TestGmailLabelRemoveFailedException:
-    @pytest.mark.anyio
-    async def test_returns_502(self, client: AsyncClient):
-        response = await client.get("/test/label-remove-failed")
-        assert response.status_code == 502
-
-    @pytest.mark.anyio
-    async def test_returns_error_code(self, client: AsyncClient):
-        response = await client.get("/test/label-remove-failed")
-        data = response.json()
-        assert data["error_code"] == "GMAIL_LABEL_REMOVE_FAILED"
 
 
 class TestGmailSendFailedException:

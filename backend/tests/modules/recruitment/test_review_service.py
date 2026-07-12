@@ -452,7 +452,9 @@ class TestRetryParse:
         """Should set status to needs_review when retry times out."""
 
         async def slow_parse(cv_document_id):
-            await asyncio.sleep(120)  # Exceeds 60s timeout
+            # A never-completing await exercises the timeout without making
+            # the test spend the production timeout duration.
+            await asyncio.Future()
             return None
 
         mock_cv_retry_parser.retry_llm_parse.side_effect = slow_parse

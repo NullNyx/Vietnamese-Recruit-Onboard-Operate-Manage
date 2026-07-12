@@ -42,6 +42,7 @@ def mock_session():
     """Create a mock async session."""
     session = AsyncMock()
     session.commit = AsyncMock()
+    session.add = MagicMock()
     # Default to returning a position for create tests
     mock_position = SimpleNamespace(id=uuid4(), name="Senior Developer")
     session.execute = AsyncMock(

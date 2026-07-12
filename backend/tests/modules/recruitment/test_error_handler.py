@@ -573,7 +573,7 @@ class TestPastStartValueErrorMapping:
             live = await harness.candidate_repo.get_by_id(candidate.id)
             assert live is not None
             assert live.status == CandidateStatus.NEW
-            assert live.calendar_event_id is None
+            assert getattr(live, "calendar_event_id", None) is None
 
         asyncio.run(_run())
 

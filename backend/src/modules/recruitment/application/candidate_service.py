@@ -163,25 +163,6 @@ def validate_candidate_fields(parsed_cv: ParsedCV) -> list[dict[str, Any]]:
 # ─── Protocols for cross-module communication ──────────────────────────
 
 
-@runtime_checkable
-class GmailLabelProtocol(Protocol):
-    """Protocol for applying Gmail labels to messages.
-
-    Abstracts the Gmail module's label service to avoid direct imports.
-    """
-
-    async def add_label(
-        self,
-        user_id: UUID,
-        message_id: str,
-        label_name: str,
-        access_token: str,
-    ) -> None:
-        """Add a label to a Gmail message."""
-        ...
-
-
-@runtime_checkable
 class GmailSendProtocol(Protocol):
     """Protocol for sending emails via Gmail.
 
@@ -392,7 +373,6 @@ class CandidateService:
         cv_document_repo: Repository for CV document persistence.
         minio_client: MinIO client for generating presigned URLs.
         session: Async database session.
-        gmail_label_service: Optional protocol-based Gmail label service.
         access_token_provider: Optional callable returning the current OAuth token.
         user_id_provider: Optional callable returning the current user UUID.
         calendar_port: Optional Calendar adapter (protocol) for event operations.
@@ -408,7 +388,6 @@ class CandidateService:
         cv_document_repo: CVDocumentRepository,
         minio_client: RecruitmentMinIOClient,
         session: AsyncSession,
-        gmail_label_service: GmailLabelProtocol | None = None,
         gmail_sender: GmailSendProtocol | None = None,
         gmail_checker: GmailConnectionChecker | None = None,
         event_publisher: DomainEventPublisher | None = None,
@@ -426,7 +405,6 @@ class CandidateService:
         self._cv_document_repo = cv_document_repo
         self._minio_client = minio_client
         self._session = session
-        self._gmail_label_service = gmail_label_service
         self._gmail_sender = gmail_sender
         self._gmail_checker = gmail_checker
         self._event_publisher = event_publisher
@@ -458,8 +436,7 @@ class CandidateService:
         4. If new: creates with status="new"
         5. Links the CV document to the candidate
         6. Stores confidence_score and parsed_cv_json
-        7. Applies "VroomHR/processed" Gmail label
-        8. Logs audit entry
+            7. Logs audit entry
 
         Args:
             parsed_cv: Structured CV data from LLM parsing.
@@ -513,10 +490,8 @@ class CandidateService:
         # Commit all changes
         await self._session.commit()
 
-        # Step 6: Apply Gmail label "VroomHR/processed" (best-effort)
-        await self._apply_processed_label(source_email_id)
+        # Step 6: Log audit entry
 
-        # Step 7: Log audit entry
         await log_audit(
             session=self._session,
             operation_type=operation,
@@ -771,18 +746,6 @@ class CandidateService:
         if cv_doc is not None:
             cv_doc.candidate_id = candidate_id
             await self._cv_document_repo.update(cv_doc)
-
-    async def _apply_processed_label(self, source_email_id: UUID | None) -> None:
-        """Apply "VroomHR/processed" Gmail label to the source email.
-
-        This is a best-effort operation — failures are logged but do not
-        block candidate creation.
-
-        Args:
-            source_email_id: UUID of the source email message, or None.
-        """
-        # Gmail labels creation/modification is bypassed in VroomHR
-        return
 
     # ─── Status transition validation ──────────────────────────────────
 
@@ -1425,10 +1388,12 @@ class CandidateService:
             raise RuntimeError("Acting HR user id is not configured")
         user_id = self._user_id
 
-        # Step 1: load the Candidate and require an existing event (R7.5). When
-        # absent, raise before any Calendar call.
+        # Step 1: load the Candidate and find the scheduled Interview (R7.5).
+        # The Interview holds the calendar event reference — no legacy Candidate
+        # calendar columns (removed in migration 054).
         candidate = await self._get_candidate_or_raise(candidate_id)
-        event_id = candidate.calendar_event_id
+        interview = await self._get_scheduled_interview(candidate.id)
+        event_id = interview.calendar_event_id if interview else None
         if event_id is None:
             raise NoInterviewToRescheduleError()
 
@@ -1463,7 +1428,7 @@ class CandidateService:
         )
 
         # Capture the previous start and remote version before any mutation.
-        previous_start = candidate.interview_start_at
+        previous_start = interview.start_at
         stored_interview = await self._get_interview_by_event_id(candidate.id, event_id)
         stored_etag = stored_interview.calendar_etag if stored_interview else None
 
@@ -1478,51 +1443,44 @@ class CandidateService:
             if_match=stored_etag,
         )
 
-        # Step 6: update only the stored start and timezone, leaving the
+        # Step 6: update the Interview start/end/timezone, leaving the
         # calendar_event_id unchanged, then commit (R7.1, R7.3).
-        candidate.interview_start_at = start_resolved
-        candidate.interview_timezone = timezone
-        candidate = await self._candidate_repo.update(candidate)
+        interview.start_at = start_resolved
+        interview.end_at = start_resolved + timedelta(minutes=duration_minutes)
+        interview.timezone = timezone
+        self._session.add(interview)
+        await self._session.commit()
 
-        # Update corresponding Interview and participants
-        if hasattr(self._session, "add"):
-            interview = await self._get_interview_by_event_id(candidate.id, event_id)
-            if interview:
-                interview.start_at = start_resolved
-                interview.end_at = start_resolved + timedelta(minutes=duration_minutes)
-                interview.timezone = timezone
-                self._session.add(interview)
+        # Delete old participants except candidate
+        from sqlalchemy import text
 
-                # Delete old participants except candidate
-                from sqlalchemy import text
+        await self._session.execute(
+            text(
+                "DELETE FROM interview_participants "
+                "WHERE interview_id = :interview_id AND type != 'candidate'"
+            ),
+            {"interview_id": interview.id},
+        )
 
-                await self._session.execute(
-                    text(
-                        "DELETE FROM interview_participants "
-                        "WHERE interview_id = :interview_id AND type != 'candidate'"
-                    ),
-                    {"interview_id": interview.id},
+        for emp_id in interviewer_ids:
+            emp_stmt = select(Employee).where(Employee.id == emp_id)
+            emp_res = await self._session.execute(emp_stmt)
+            emp_scalars = emp_res.scalars()
+            emp = None
+            if hasattr(emp_scalars, "first"):
+                try:
+                    emp = emp_scalars.first()
+                except Exception:
+                    pass
+            if emp:
+                emp_part = InterviewParticipant(
+                    interview_id=interview.id,
+                    type="employee",
+                    email=emp.email,
+                    name=emp.full_name,
+                    employee_id=emp_id,
                 )
-
-                for emp_id in interviewer_ids:
-                    emp_stmt = select(Employee).where(Employee.id == emp_id)
-                    emp_res = await self._session.execute(emp_stmt)
-                    emp_scalars = emp_res.scalars()
-                    emp = None
-                    if hasattr(emp_scalars, "first"):
-                        try:
-                            emp = emp_scalars.first()
-                        except Exception:
-                            pass
-                    if emp:
-                        emp_part = InterviewParticipant(
-                            interview_id=interview.id,
-                            type="employee",
-                            email=emp.email,
-                            name=emp.full_name,
-                            employee_id=emp_id,
-                        )
-                        self._session.add(emp_part)
+                self._session.add(emp_part)
 
         await self._session.commit()
 
@@ -1809,7 +1767,8 @@ class CandidateService:
         if self._calendar_port is None or self._user_id is None:
             return
 
-        event_id = candidate.calendar_event_id
+        interview = await self._get_scheduled_interview(candidate.id)
+        event_id = interview.calendar_event_id if interview else None
         if event_id is None:
             # No interview event to cancel (R8.3).
             return
@@ -2083,9 +2042,6 @@ class CandidateService:
                         self._session.add(emp_part)
 
         candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
-        candidate.calendar_event_id = event_id
-        candidate.interview_start_at = start_resolved
-        candidate.interview_timezone = timezone
         candidate = await self._candidate_repo.update(candidate)
         await self._session.commit()
         return candidate
@@ -2150,6 +2106,17 @@ class CandidateService:
                 return scalars.first()
             except Exception:
                 return None
+
+    async def _get_scheduled_interview(self, candidate_id: UUID) -> Interview | None:
+        """Return the first scheduled Interview for a candidate, or None."""
+        stmt = (
+            select(Interview)
+            .where(Interview.candidate_id == candidate_id)
+            .where(Interview.status == "scheduled")
+            .limit(1)
+        )
+        res = await self._session.execute(stmt)
+        return res.scalars().first()
 
     async def _get_interview_or_raise(self, interview_id: UUID) -> Interview:
         """Retrieve an Interview by ID or raise InterviewNotFoundError."""

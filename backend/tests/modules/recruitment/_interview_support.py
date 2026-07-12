@@ -57,9 +57,8 @@ from src.modules.recruitment.application.candidate_service import (
     CalendarPort,
     CandidateService,
 )
-from src.modules.recruitment.domain.entities import Candidate
+from src.modules.recruitment.domain.entities import Candidate, Interview
 from src.modules.recruitment.domain.enums import CandidateStatus
-from src.modules.recruitment.domain.value_objects import CalendarEvent, CalendarEventSpec
 from src.modules.recruitment.domain.value_objects import (
     CalendarEvent,
     CalendarEventSpec,
@@ -228,7 +227,10 @@ class FakeCalendarPort:
         return self._resolve_event(outcome, call)
 
     async def patch_event(
-        self, access_token: str, event_id: str, spec: CalendarEventSpec,
+        self,
+        access_token: str,
+        event_id: str,
+        spec: CalendarEventSpec,
         if_match: str | None = None,
     ) -> CalendarEvent:
         """Record a patch call and return/raise its scripted outcome."""
@@ -368,8 +370,6 @@ class FakeCalendarPort:
         return outcome(call)
 
 
-
-
 # ─── In-memory candidate repository + session ──────────────────────────
 
 
@@ -441,9 +441,6 @@ class FakeCandidateRepository:
 # Candidate fields the snapshot tracks for commit/rollback fidelity.
 _SNAPSHOT_FIELDS: tuple[str, ...] = (
     "status",
-    "calendar_event_id",
-    "interview_start_at",
-    "interview_timezone",
     "rejection_reason",
     "rejected_at",
     "accepted_at",
@@ -481,14 +478,16 @@ class FakeCalendarSession:
             employees: Employees available to the interviewer lookup.
         """
         self.employees: dict[UUID, Employee] = {e.id: e for e in (employees or [])}
+        self.interviews: dict[UUID, Interview] = {}
         self.commit_count = 0
         self.rollback_count = 0
         self._candidate_repo: FakeCandidateRepository | None = None
         self._staged_candidate_ids: set[UUID] = set()
 
     def add(self, instance: object) -> None:
-        """No-op add for compatibility with service methods that persist."""
-        pass
+        """Store Interview entities for query; ignore other types."""
+        if isinstance(instance, Interview):
+            self.interviews[instance.id] = instance
 
     def bind_candidate_repo(self, repo: FakeCandidateRepository) -> None:
         """Associate the candidate repository for commit/rollback coordination."""
@@ -512,11 +511,13 @@ class FakeCalendarSession:
             self._candidate_repo._rollback_staged(self._staged_candidate_ids)
         self._staged_candidate_ids.clear()
 
-    async def execute(self, statement: Any) -> _FakeEmployeeResult:
-        """Execute an interviewer ``select(Employee)`` against seeded employees.
+    async def execute(self, statement: Any) -> _FakeEmployeeResult | _FakeInterviewResult:
+        """Execute an interviewer ``select(Employee)`` or ``select(Interview)`` against seeded data.
 
-        Extracts the requested interviewer ids from the statement's ``IN``
-        clause bind parameters and returns the matching seeded Employees.
+        When the statement targets ``Employee``, extracts the requested ids from the
+        statement's ``IN`` clause and returns the matching seeded Employees.
+        When the statement targets ``Interview``, returns a result matching on
+        ``candidate_id`` or ``calendar_event_id``.
 
         Args:
             statement: The SQLAlchemy/SQLModel select statement.
@@ -524,12 +525,43 @@ class FakeCalendarSession:
         Returns:
             A result object exposing ``.scalars().all()`` and ``.all()``.
         """
+        # Detect if this is an Interview query by checking the compiled columns.
+        try:
+            compiled = statement.compile()
+            raw_sql = str(compiled).lower()
+        except Exception:
+            raw_sql = ""
+
+        if "from interviews" in raw_sql or "from interview" in raw_sql:
+            return self._execute_interview_query(compiled, statement)
+
+        # Default: Employee query
         requested_ids = _extract_in_clause_uuids(statement)
         if requested_ids is None:
             matched = list(self.employees.values())
         else:
             matched = [self.employees[id_] for id_ in requested_ids if id_ in self.employees]
         return _FakeEmployeeResult(matched)
+
+    def _execute_interview_query(self, compiled: Any, statement: Any) -> _FakeInterviewResult:
+        """Execute an Interview query against seeded interviews."""
+        # Extract bind parameters
+        params = {}
+        try:
+            params = compiled.params
+        except Exception:
+            pass
+
+        matched = list(self.interviews.values())
+        # Filter by candidate_id if present
+        candidate_id = params.get("candidate_id_1") or params.get("candidate_id")
+        if candidate_id is not None and isinstance(candidate_id, UUID):
+            matched = [i for i in matched if i.candidate_id == candidate_id]
+        # Filter by calendar_event_id if present
+        event_id = params.get("calendar_event_id_1") or params.get("calendar_event_id")
+        if event_id is not None:
+            matched = [i for i in matched if i.calendar_event_id == event_id]
+        return _FakeInterviewResult(matched)
 
 
 class _FakeEmployeeResult:
@@ -545,6 +577,17 @@ class _FakeEmployeeResult:
     def all(self) -> list[tuple[Any, ...]]:
         """Return ``(id,)`` rows (legacy ``_validate_interviewer_ids`` path)."""
         return [(e.id,) for e in self._employees]
+
+
+class _FakeInterviewResult:
+    """Result stand-in for ``select(Interview)`` queries."""
+
+    def __init__(self, interviews: list[Interview]) -> None:
+        self._interviews = interviews
+
+    def scalars(self) -> _FakeScalars:
+        """Return a scalars accessor wrapping Interview entities."""
+        return _FakeScalars(self._interviews)
 
 
 class _FakeScalars:
@@ -807,19 +850,17 @@ def make_candidate(
     *,
     status: str = CandidateStatus.NEW,
     email: str = "candidate@example.com",
-    calendar_event_id: str | None = None,
-    interview_start_at: datetime | None = None,
-    interview_timezone: str | None = None,
     candidate_id: UUID | None = None,
 ) -> Candidate:
     """Build a Candidate for interview-scheduling tests.
 
+    Calendar event fields live on the ``Interview`` entity (not on ``Candidate``).
+    Tests that need a scheduled interview should create an ``Interview`` via
+    the fake session instead.
+
     Args:
         status: Lifecycle status (defaults to ``new``).
         email: Candidate email address (used as the first attendee).
-        calendar_event_id: Pre-existing event id (for reschedule/cancel tests).
-        interview_start_at: Pre-existing scheduled start.
-        interview_timezone: Pre-existing applied timezone.
         candidate_id: Explicit id (defaults to a fresh UUID).
 
     Returns:
@@ -836,9 +877,6 @@ def make_candidate(
         summary="Test candidate",
         status=status,
         confidence_score=0.9,
-        calendar_event_id=calendar_event_id,
-        interview_start_at=interview_start_at,
-        interview_timezone=interview_timezone,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
     )
@@ -897,6 +935,52 @@ def make_oauth_grant(
         scopes=list(scopes),
         token_expires_at=datetime.now(UTC) + timedelta(hours=1),
         is_valid=True,
+    )
+
+
+def make_interview(
+    *,
+    candidate_id: UUID,
+    status: str = "scheduled",
+    round_name: str = "Technical",
+    start_at: datetime | None = None,
+    end_at: datetime | None = None,
+    timezone: str = "Asia/Ho_Chi_Minh",
+    calendar_event_id: str = "evt-default",
+    calendar_etag: str | None = '"etag-v1"',
+    meeting_mode: str = "google_meet",
+    interview_id: UUID | None = None,
+) -> Interview:
+    """Build an Interview for calendar-related tests.
+
+    Args:
+        candidate_id: The owning Candidate id.
+        status: Interview status (scheduled, completed, cancelled).
+        round_name: Interview round name.
+        start_at: Interview start (defaults to a future UTC datetime).
+        end_at: Interview end (defaults to 1 hour after start).
+        timezone: IANA timezone.
+        calendar_event_id: The Google Calendar event id.
+        calendar_etag: The etag for conditional writes.
+        meeting_mode: Meeting mode (google_meet, in_person, custom_link).
+        interview_id: Explicit id (defaults to a fresh UUID).
+
+    Returns:
+        A populated :class:`Interview` entity (not persisted).
+    """
+    start = start_at or datetime(2090, 6, 1, 9, 0, 0, tzinfo=UTC)
+    end = end_at or start + timedelta(hours=1)
+    return Interview(
+        id=interview_id or uuid4(),
+        candidate_id=candidate_id,
+        status=status,
+        round_name=round_name,
+        start_at=start,
+        end_at=end,
+        timezone=timezone,
+        calendar_event_id=calendar_event_id,
+        calendar_etag=calendar_etag,
+        meeting_mode=meeting_mode,
     )
 
 

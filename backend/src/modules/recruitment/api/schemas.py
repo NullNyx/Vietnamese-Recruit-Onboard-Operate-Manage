@@ -374,17 +374,13 @@ class CandidateResponse(BaseModel):
         phone: Candidate phone number.
         skills: List of skills.
         status: Current lifecycle status.
-        confidence_score: Confidence score (0.0–1.0).
+        confidence_score: Confidence score (0.0-1.0).
         rejection_reason: Rejection reason if rejected.
         rejected_at: Rejection timestamp.
         accepted_at: Acceptance timestamp.
         archived_at: Archive timestamp.
         created_at: Creation timestamp.
         updated_at: Last update timestamp.
-        interview_start_at: Scheduled interview start datetime, if scheduled.
-        interview_timezone: IANA timezone applied to the interview, if scheduled.
-        calendar_event_id: Google Calendar event identifier, if scheduled.
-        meet_link: Google Meet link for the interview, if available.
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -403,10 +399,6 @@ class CandidateResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     job_opening_id: UUID | None = None
-    interview_start_at: datetime | None = None
-    interview_timezone: str | None = None
-    calendar_event_id: str | None = None
-    meet_link: str | None = None
 
 
 class CVPresignedUrlResponse(BaseModel):
