@@ -46,7 +46,10 @@ class TestProcessCandidateAccepted:
     async def test_rejects_malformed_event(self) -> None:
         """A payload missing 'email' is rejected without calling the service."""
         session_maker = MagicMock()
-        session_maker.return_value.__aenter__ = AsyncMock(return_value=AsyncMock())
+        session = MagicMock()
+        session.flush = AsyncMock()
+        session.commit = AsyncMock()
+        session_maker.return_value.__aenter__ = AsyncMock(return_value=session)
         session_maker.return_value.__aexit__ = AsyncMock(return_value=False)
 
         ctx = {

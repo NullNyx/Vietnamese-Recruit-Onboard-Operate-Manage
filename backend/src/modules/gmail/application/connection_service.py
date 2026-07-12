@@ -27,7 +27,7 @@ if TYPE_CHECKING:
         OAuthGrantRepository,
     )
 
-    logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # Google OAuth2 authorization endpoint.
 _GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"

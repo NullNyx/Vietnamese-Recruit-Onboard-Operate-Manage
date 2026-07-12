@@ -89,9 +89,10 @@ class TestClassifyEndpointTimeout:
             classification_confidence_threshold=0.75,
         )
 
-        # Mock ClassificationService.classify_batch to sleep beyond the timeout
+        # Mock ClassificationService.classify_batch to never complete.
         async def slow_classify_batch(*args, **kwargs):
-            await asyncio.sleep(3)  # 3s > 1s timeout
+            # Avoid waiting three real seconds for the endpoint timeout.
+            await asyncio.Future()
             return 3
 
         app = _create_test_app()
@@ -163,7 +164,7 @@ class TestClassifyEndpointTimeout:
         )
 
         async def slow_classify_batch(*args, **kwargs):
-            await asyncio.sleep(3)
+            await asyncio.Future()
             return 2
 
         app = _create_test_app()

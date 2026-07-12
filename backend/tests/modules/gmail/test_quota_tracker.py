@@ -1,6 +1,6 @@
 """Unit tests for Redis-based sliding window quota tracker."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
 
 import pytest
@@ -66,10 +66,10 @@ class TestCanConsume:
         self, quota_tracker: QuotaTracker, mock_redis: AsyncMock, user_id: UUID
     ) -> None:
         """Should allow consumption when no prior usage exists."""
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(return_value=[0, []])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zrangebyscore = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zrangebyscore = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         result = await quota_tracker.can_consume(user_id, 10)
@@ -80,11 +80,11 @@ class TestCanConsume:
         self, quota_tracker: QuotaTracker, mock_redis: AsyncMock, user_id: UUID
     ) -> None:
         """Should allow when current usage + requested units <= 250."""
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         # Existing entries totaling 200 units
         pipeline_mock.execute = AsyncMock(return_value=[0, ["1000.0:100", "1000.1:100"]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zrangebyscore = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zrangebyscore = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         result = await quota_tracker.can_consume(user_id, 50)
@@ -95,10 +95,10 @@ class TestCanConsume:
         self, quota_tracker: QuotaTracker, mock_redis: AsyncMock, user_id: UUID
     ) -> None:
         """Should allow when current usage + requested units == 250."""
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(return_value=[0, ["1000.0:200"]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zrangebyscore = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zrangebyscore = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         result = await quota_tracker.can_consume(user_id, 50)
@@ -109,10 +109,10 @@ class TestCanConsume:
         self, quota_tracker: QuotaTracker, mock_redis: AsyncMock, user_id: UUID
     ) -> None:
         """Should block when current usage + requested units > 250."""
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(return_value=[0, ["1000.0:250"]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zrangebyscore = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zrangebyscore = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         result = await quota_tracker.can_consume(user_id, 1)
@@ -123,10 +123,10 @@ class TestCanConsume:
         self, quota_tracker: QuotaTracker, mock_redis: AsyncMock, user_id: UUID
     ) -> None:
         """Should block when requesting more than remaining capacity."""
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(return_value=[0, ["1000.0:240"]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zrangebyscore = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zrangebyscore = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         result = await quota_tracker.can_consume(user_id, 11)
@@ -147,10 +147,10 @@ class TestConsume:
     ) -> None:
         """Should add a member with timestamp:units format."""
         mock_time.return_value = 1000.5
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(return_value=[True, True])
-        pipeline_mock.zadd = AsyncMock()
-        pipeline_mock.expire = AsyncMock()
+        pipeline_mock.zadd = MagicMock()
+        pipeline_mock.expire = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         await quota_tracker.consume(user_id, 5)
@@ -167,10 +167,10 @@ class TestConsume:
     ) -> None:
         """Should set TTL of 2 seconds on the key."""
         mock_time.return_value = 1000.0
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(return_value=[True, True])
-        pipeline_mock.zadd = AsyncMock()
-        pipeline_mock.expire = AsyncMock()
+        pipeline_mock.zadd = MagicMock()
+        pipeline_mock.expire = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         await quota_tracker.consume(user_id, 10)
@@ -185,10 +185,10 @@ class TestWaitIfNeeded:
         self, quota_tracker: QuotaTracker, mock_redis: AsyncMock, user_id: UUID
     ) -> None:
         """Should not sleep when quota is available."""
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(return_value=[0, []])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zrangebyscore = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zrangebyscore = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         # Should return without sleeping
@@ -203,11 +203,11 @@ class TestWaitIfNeeded:
         user_id: UUID,
     ) -> None:
         """Should sleep and retry when quota is exhausted."""
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         # First call: at limit (250 used), second call: under limit (0 used)
         pipeline_mock.execute = AsyncMock(side_effect=[[0, ["1000.0:250"]], [0, []]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zrangebyscore = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zrangebyscore = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         await quota_tracker.wait_if_needed(user_id, 5)
@@ -223,7 +223,7 @@ class TestWaitIfNeeded:
         user_id: UUID,
     ) -> None:
         """Should keep sleeping until quota frees up."""
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         # Three calls: first two at limit, third under limit
         pipeline_mock.execute = AsyncMock(
             side_effect=[
@@ -232,8 +232,8 @@ class TestWaitIfNeeded:
                 [0, ["1000.0:100"]],
             ]
         )
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zrangebyscore = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zrangebyscore = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         await quota_tracker.wait_if_needed(user_id, 5)
@@ -249,11 +249,11 @@ class TestQuotaTrackerWithCustomSettings:
         settings = GmailSettings(quota_units_per_second=100)
         tracker = QuotaTracker(mock_redis, settings)
 
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         # 90 units used, requesting 11 more → exceeds 100 limit
         pipeline_mock.execute = AsyncMock(return_value=[0, ["1000.0:90"]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zrangebyscore = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zrangebyscore = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         user_id = UUID("12345678-1234-1234-1234-123456789abc")
@@ -266,11 +266,11 @@ class TestQuotaTrackerWithCustomSettings:
         settings = GmailSettings(quota_units_per_second=100)
         tracker = QuotaTracker(mock_redis, settings)
 
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         # 90 units used, requesting 10 more → exactly at 100 limit
         pipeline_mock.execute = AsyncMock(return_value=[0, ["1000.0:90"]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zrangebyscore = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zrangebyscore = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         user_id = UUID("12345678-1234-1234-1234-123456789abc")

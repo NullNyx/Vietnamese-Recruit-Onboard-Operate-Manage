@@ -63,9 +63,11 @@ class TestDetermineGrantStatus:
         result = oauth_service.determine_grant_status(scopes)
         assert result == GrantStatus(gmail_grant_valid=False, calendar_grant_valid=True)
 
-    def test_partial_gmail_scopes_missing_modify(self, oauth_service: OAuthService) -> None:
-        """Missing Gmail scope still means gmail_grant_valid is False."""
-        scopes = [GMAIL_READONLY, GMAIL_SEND, CALENDAR_EVENTS]
+    def test_unrelated_gmail_scope_does_not_replace_required_scope(
+        self, oauth_service: OAuthService
+    ) -> None:
+        """gmail.modify does not replace the required gmail.send scope."""
+        scopes = [GMAIL_READONLY, "https://www.googleapis.com/auth/gmail.modify", CALENDAR_EVENTS]
         result = oauth_service.determine_grant_status(scopes)
         assert result == GrantStatus(gmail_grant_valid=False, calendar_grant_valid=True)
 

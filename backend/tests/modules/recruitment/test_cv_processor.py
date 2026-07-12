@@ -502,9 +502,10 @@ class TestProcessCvFromEmail:
             data=b"slow",
         )
 
-        # Make OCR take a long time
+        # Make OCR never complete; the pipeline timeout should cancel it.
         async def slow_ocr(*args, **kwargs):
-            await asyncio.sleep(10)
+            # Do not spend ten real seconds simulating a timeout.
+            await asyncio.Future()
             return "text"
 
         service._ocr_adapter.extract_text = AsyncMock(side_effect=slow_ocr)

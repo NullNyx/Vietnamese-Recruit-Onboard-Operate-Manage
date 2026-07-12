@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -59,6 +59,7 @@ def mock_session():
     """Create a mock async session."""
     session = AsyncMock()
     session.commit = AsyncMock()
+    session.add = MagicMock()
     session.execute = AsyncMock()
     return session
 

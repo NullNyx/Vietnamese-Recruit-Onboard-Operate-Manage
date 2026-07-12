@@ -1,6 +1,6 @@
 """Unit tests for Redis-based sliding window rate limiter."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -60,12 +60,12 @@ class TestCheckRateLimit:
     ) -> None:
         """First request from an IP should be allowed."""
         # Mock pipeline: zremrangebyscore returns 0 removed, zcard returns 0
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(side_effect=[[0, 0], [True, True]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zcard = AsyncMock()
-        pipeline_mock.zadd = AsyncMock()
-        pipeline_mock.expire = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zcard = MagicMock()
+        pipeline_mock.zadd = MagicMock()
+        pipeline_mock.expire = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         result = await rate_limiter.check_rate_limit("192.168.1.1")
@@ -76,11 +76,11 @@ class TestCheckRateLimit:
         self, rate_limiter: RateLimiter, mock_redis: AsyncMock
     ) -> None:
         """Request should be blocked when count equals max_requests."""
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         # zremrangebyscore removes expired, zcard returns 5 (at limit)
         pipeline_mock.execute = AsyncMock(return_value=[0, 5])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zcard = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zcard = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         result = await rate_limiter.check_rate_limit("192.168.1.1")
@@ -91,10 +91,10 @@ class TestCheckRateLimit:
         self, rate_limiter: RateLimiter, mock_redis: AsyncMock
     ) -> None:
         """Request should be blocked when count exceeds max_requests."""
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(return_value=[0, 10])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zcard = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zcard = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         result = await rate_limiter.check_rate_limit("192.168.1.1")
@@ -105,12 +105,12 @@ class TestCheckRateLimit:
         self, rate_limiter: RateLimiter, mock_redis: AsyncMock
     ) -> None:
         """Request should be allowed when count is one below max."""
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(side_effect=[[0, 4], [True, True]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zcard = AsyncMock()
-        pipeline_mock.zadd = AsyncMock()
-        pipeline_mock.expire = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zcard = MagicMock()
+        pipeline_mock.zadd = MagicMock()
+        pipeline_mock.expire = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         result = await rate_limiter.check_rate_limit("192.168.1.1")
@@ -121,12 +121,12 @@ class TestCheckRateLimit:
         self, rate_limiter: RateLimiter, mock_redis: AsyncMock
     ) -> None:
         """Rate limiter should use 'rate_limit:login:{ip}' key format."""
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(side_effect=[[0, 0], [True, True]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zcard = AsyncMock()
-        pipeline_mock.zadd = AsyncMock()
-        pipeline_mock.expire = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zcard = MagicMock()
+        pipeline_mock.zadd = MagicMock()
+        pipeline_mock.expire = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         await rate_limiter.check_rate_limit("10.0.0.1")
@@ -142,12 +142,12 @@ class TestCheckRateLimit:
     ) -> None:
         """Should remove entries older than the sliding window."""
         mock_time.return_value = 1000.0
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(side_effect=[[0, 0], [True, True]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zcard = AsyncMock()
-        pipeline_mock.zadd = AsyncMock()
-        pipeline_mock.expire = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zcard = MagicMock()
+        pipeline_mock.zadd = MagicMock()
+        pipeline_mock.expire = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         await rate_limiter.check_rate_limit("192.168.1.1")
@@ -163,12 +163,12 @@ class TestCheckRateLimit:
     ) -> None:
         """Should add current timestamp to sorted set when request is allowed."""
         mock_time.return_value = 1000.0
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(side_effect=[[0, 0], [True, True]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zcard = AsyncMock()
-        pipeline_mock.zadd = AsyncMock()
-        pipeline_mock.expire = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zcard = MagicMock()
+        pipeline_mock.zadd = MagicMock()
+        pipeline_mock.expire = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         await rate_limiter.check_rate_limit("192.168.1.1")
@@ -183,12 +183,12 @@ class TestCheckRateLimit:
     ) -> None:
         """Should set key TTL to window_seconds for automatic cleanup."""
         mock_time.return_value = 1000.0
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(side_effect=[[0, 0], [True, True]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zcard = AsyncMock()
-        pipeline_mock.zadd = AsyncMock()
-        pipeline_mock.expire = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zcard = MagicMock()
+        pipeline_mock.zadd = MagicMock()
+        pipeline_mock.expire = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         await rate_limiter.check_rate_limit("192.168.1.1")
@@ -199,13 +199,13 @@ class TestCheckRateLimit:
         self, rate_limiter: RateLimiter, mock_redis: AsyncMock
     ) -> None:
         """Should not add a new entry when the request is rate-limited."""
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         # Only one execute call expected (the check pipeline)
         pipeline_mock.execute = AsyncMock(return_value=[0, 5])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zcard = AsyncMock()
-        pipeline_mock.zadd = AsyncMock()
-        pipeline_mock.expire = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zcard = MagicMock()
+        pipeline_mock.zadd = MagicMock()
+        pipeline_mock.expire = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         await rate_limiter.check_rate_limit("192.168.1.1")
@@ -229,13 +229,13 @@ class TestRateLimiterWithCustomSettings:
         )
         limiter = RateLimiter(mock_redis, settings)
 
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         # 9 requests — still under limit of 10
         pipeline_mock.execute = AsyncMock(side_effect=[[0, 9], [True, True]])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zcard = AsyncMock()
-        pipeline_mock.zadd = AsyncMock()
-        pipeline_mock.expire = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zcard = MagicMock()
+        pipeline_mock.zadd = MagicMock()
+        pipeline_mock.expire = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         result = await limiter.check_rate_limit("10.0.0.1")
@@ -254,10 +254,10 @@ class TestRateLimiterWithCustomSettings:
         )
         limiter = RateLimiter(mock_redis, settings)
 
-        pipeline_mock = AsyncMock()
+        pipeline_mock = MagicMock()
         pipeline_mock.execute = AsyncMock(return_value=[0, 10])
-        pipeline_mock.zremrangebyscore = AsyncMock()
-        pipeline_mock.zcard = AsyncMock()
+        pipeline_mock.zremrangebyscore = MagicMock()
+        pipeline_mock.zcard = MagicMock()
         mock_redis.pipeline = lambda: pipeline_mock
 
         result = await limiter.check_rate_limit("10.0.0.1")
