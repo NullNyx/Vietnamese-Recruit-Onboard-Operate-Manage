@@ -64,6 +64,7 @@ class OrganizationAIConfigService:
         if self._settings is not None:
             return self._settings
         from src.modules.identity.container import get_settings
+
         return get_settings()
 
     def _get_deployment_key(self) -> str | None:
@@ -94,7 +95,12 @@ class OrganizationAIConfigService:
         deployment_key = self._get_deployment_key()
         if config is None:
             return AIConfigurationView(
-                None, None, None, None, False, None,
+                None,
+                None,
+                None,
+                None,
+                False,
+                None,
                 deployment_key_available=deployment_key is not None,
             )
         params: dict[str, object] = dict(
@@ -123,9 +129,7 @@ class OrganizationAIConfigService:
         url = base_url.rstrip("/") + "/models"
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(
-                    url, headers={"Authorization": f"Bearer {api_key}"}
-                )
+                response = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
         except httpx.HTTPError as exc:
             raise OrganizationAIConfigTestError(f"Unable to connect to provider: {exc}") from exc
         if response.status_code < 200 or response.status_code >= 300:
@@ -158,9 +162,7 @@ class OrganizationAIConfigService:
         if config.credential_source == CredentialSource.DEPLOYMENT_KEY.value:
             key = self._get_deployment_key()
             if not key:
-                raise OrganizationAIConfigValidationError(
-                    "Deployment key is not available"
-                )
+                raise OrganizationAIConfigValidationError("Deployment key is not available")
             return key
         if not config.api_key_enc:
             raise OrganizationAIConfigValidationError(
@@ -198,9 +200,7 @@ class OrganizationAIConfigService:
             },
         )
 
-    async def activate_org_api_key(
-        self, api_key: str, admin: User
-    ) -> AIConfigurationUpdateResult:
+    async def activate_org_api_key(self, api_key: str, admin: User) -> AIConfigurationUpdateResult:
         """Activate a new Organization API key (saves encrypted key). No test performed."""
         config = await self.repository.get()
         if config is None:
@@ -227,19 +227,13 @@ class OrganizationAIConfigService:
             },
         )
 
-    async def set_credential_source(
-        self, source: str, admin: User
-    ) -> AIConfigurationUpdateResult:
+    async def set_credential_source(self, source: str, admin: User) -> AIConfigurationUpdateResult:
         """Change the credential source (org_api_key or deployment_key)."""
         if source not in {s.value for s in CredentialSource}:
-            raise OrganizationAIConfigValidationError(
-                f"Invalid credential source: {source}"
-            )
+            raise OrganizationAIConfigValidationError(f"Invalid credential source: {source}")
         config = await self.repository.get()
         if config is None:
-            raise OrganizationAIConfigValidationError(
-                "No provider configuration exists."
-            )
+            raise OrganizationAIConfigValidationError("No provider configuration exists.")
         if source == CredentialSource.DEPLOYMENT_KEY.value:
             deployment_key = self._get_deployment_key()
             if not deployment_key:
@@ -270,9 +264,7 @@ class OrganizationAIConfigService:
         """Revoke the Organization API key, preserving provider/model configuration."""
         config = await self.repository.get()
         if config is None:
-            raise OrganizationAIConfigValidationError(
-                "No provider configuration exists."
-            )
+            raise OrganizationAIConfigValidationError("No provider configuration exists.")
         now = datetime.now(UTC)
         config.api_key_enc = ""
         config.credential_source = CredentialSource.ORG_API_KEY.value

@@ -240,9 +240,7 @@ class OrganizationAIConfiguration(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    updated_by_user_id: UUID | None = Field(
-        foreign_key="users.id", nullable=True
-    )
+    updated_by_user_id: UUID | None = Field(foreign_key="users.id", nullable=True)
 
 
 class AuditActionType(str, Enum):

@@ -168,7 +168,6 @@ def _ai_view_response(view: object) -> OrganizationAIConfigurationResponse:
     )
 
 
-
 @admin_router.get("/organization/ai-config", response_model=OrganizationAIConfigurationResponse)
 @admin_router.get(
     "/organization/ai-configuration",
@@ -200,7 +199,6 @@ async def test_organization_ai_config(
     except OrganizationAIConfigTestError as exc:
         return AIConnectionTestResponse(success=False, message=str(exc))
     return AIConnectionTestResponse(success=True, message="Connection test succeeded")
-
 
     @admin_router.put("/organization/ai-config", response_model=OrganizationAIConfigurationResponse)
     async def update_organization_ai_config(

@@ -175,7 +175,6 @@ export function OrganizationAIConfigForm({
 
   const isOrgKeySource = credentialSource === "org_api_key";
   const isDeploymentKeySource = credentialSource === "deployment_key";
-  const hasConfigured = config.configured;
   const hasOrgApiKey = config.configured && isOrgKeySource && config.api_key_masked != null;
   const hasDeploymentKey = config.deployment_key_available;
 
