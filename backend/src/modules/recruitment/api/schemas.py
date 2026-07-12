@@ -364,9 +364,6 @@ class PaginatedResponse(BaseModel):
     page_size: int
 
 
-
-
-
 class CandidateResponse(BaseModel):
     """Response schema for a single candidate (used by action endpoints).
 
@@ -402,6 +399,7 @@ class CandidateResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     job_opening_id: UUID | None = None
+
 
 class CVPresignedUrlResponse(BaseModel):
     """Response schema for a CV presigned URL request.

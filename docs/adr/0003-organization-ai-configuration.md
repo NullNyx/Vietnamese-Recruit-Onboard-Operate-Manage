@@ -1,0 +1,3 @@
+# Organization AI configuration and provider boundary
+
+AI được cấu hình ở cấp Organization bởi HR, với AI Automation và AI Assistant có công tắc độc lập nhưng dùng provider/model mặc định chung. Hệ thống hỗ trợ credential do deployment operator cung cấp hoặc API key riêng của Organization, OpenAI-compatible endpoint và custom model; secret phải được bảo vệ, test trước khi kích hoạt, còn dữ liệu AI phải có xác nhận policy trước lần bật đầu tiên. AI Automation không làm mất event/CV khi provider lỗi mà lưu trạng thái chờ để retry hoặc xử lý thủ công, vì đây là ranh giới an toàn và vận hành quan trọng trong deployment self-hosted một Organization.

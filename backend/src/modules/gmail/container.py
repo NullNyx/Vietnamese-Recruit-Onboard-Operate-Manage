@@ -203,7 +203,6 @@ async def get_gmail_adapter() -> GmailAdapter:
     )
 
 
-
 async def get_connection_service(
     oauth_grant_repo: OAuthGrantRepository = Depends(get_oauth_grant_repository),
 ) -> ConnectionService:

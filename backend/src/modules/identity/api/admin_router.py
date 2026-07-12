@@ -25,6 +25,7 @@ from src.modules.assistant.infrastructure.tool_config_repository import (
 )
 from src.modules.identity.api.admin_schemas import (
     AdminUserResponse,
+    AIConnectionTestResponse,
     AssistantToolConfigListResponse,
     AssistantToolConfigResponse,
     AssistantToolConfigUpdateRequest,
@@ -33,6 +34,8 @@ from src.modules.identity.api.admin_schemas import (
     DomainListResponse,
     DomainRemoveResponse,
     DomainReplaceRequest,
+    OrganizationAIConfigurationRequest,
+    OrganizationAIConfigurationResponse,
     PaginatedAuditLogsResponse,
     RoleUpdateRequest,
 )
@@ -49,6 +52,12 @@ from src.modules.identity.application.oauth_config_manager import (
     OAuthConfigManager,
     OAuthConfigValidationError,
 )
+from src.modules.identity.application.organization_ai_config_service import (
+    AIConfigurationCandidate,
+    OrganizationAIConfigService,
+    OrganizationAIConfigTestError,
+    OrganizationAIConfigValidationError,
+)
 from src.modules.identity.application.role_service import (
     LastAdminError,
     RoleService,
@@ -57,6 +66,7 @@ from src.modules.identity.application.role_service import (
 )
 from src.modules.identity.application.whitelist_manager import WhitelistManager
 from src.modules.identity.container import (
+    get_crypto_utils,
     get_current_user,
     get_db_session,
     get_oauth_config_manager,
@@ -130,6 +140,90 @@ async def get_audit_service(
     """
     repository = AuditLogRepository(session)
     return AuditService(repository=repository)
+
+
+async def get_organization_ai_config_service(
+    session: AsyncSession = Depends(get_db_session),
+) -> OrganizationAIConfigService:
+    from src.modules.identity.infrastructure.organization_ai_config_repository import (
+        OrganizationAIConfigRepository,
+    )
+
+    return OrganizationAIConfigService(OrganizationAIConfigRepository(session), get_crypto_utils())
+
+
+def _ai_view_response(view: object) -> OrganizationAIConfigurationResponse:
+    return OrganizationAIConfigurationResponse(
+        provider=view.provider,  # type: ignore[attr-defined]
+        base_url=view.base_url,  # type: ignore[attr-defined]
+        model=view.model,  # type: ignore[attr-defined]
+        api_key_masked=view.api_key_masked,  # type: ignore[attr-defined]
+        configured=view.configured,  # type: ignore[attr-defined]
+        updated_at=view.updated_at,  # type: ignore[attr-defined]
+    )
+
+
+@admin_router.get("/organization/ai-config", response_model=OrganizationAIConfigurationResponse)
+@admin_router.get(
+    "/organization/ai-configuration",
+    response_model=OrganizationAIConfigurationResponse,
+    include_in_schema=False,
+)
+async def get_organization_ai_config(
+    admin_user: AdminUserDep,
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+) -> OrganizationAIConfigurationResponse:
+    return _ai_view_response(await service.get_view())
+
+
+@admin_router.post("/organization/ai-config/test", response_model=AIConnectionTestResponse)
+async def test_organization_ai_config(
+    body: OrganizationAIConfigurationRequest,
+    admin_user: AdminUserDep,
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+) -> AIConnectionTestResponse:
+    try:
+        await service.test_connection(
+            AIConfigurationCandidate(body.provider, body.base_url, body.model, body.api_key)
+        )
+    except OrganizationAIConfigValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "AI_CONFIG_INVALID", "message": str(exc)},
+        ) from exc
+    except OrganizationAIConfigTestError as exc:
+        return AIConnectionTestResponse(success=False, message=str(exc))
+    return AIConnectionTestResponse(success=True, message="Connection test succeeded")
+
+
+@admin_router.put("/organization/ai-config", response_model=OrganizationAIConfigurationResponse)
+async def update_organization_ai_config(
+    body: OrganizationAIConfigurationRequest,
+    admin_user: AdminUserDep,
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> OrganizationAIConfigurationResponse:
+    try:
+        view = await service.update(
+            AIConfigurationCandidate(body.provider, body.base_url, body.model, body.api_key),
+            admin_user,
+        )
+    except OrganizationAIConfigValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "AI_CONFIG_INVALID", "message": str(exc)},
+        ) from exc
+    except OrganizationAIConfigTestError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "AI_CONNECTION_FAILED", "message": str(exc)},
+        ) from exc
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_AI_CONFIG_UPDATE,
+        details={"provider": body.provider, "base_url": body.base_url, "model": body.model},
+    )
+    return _ai_view_response(view)
 
 
 # --- Whitelist Endpoints ---
