@@ -22,6 +22,13 @@ class OrganizationAIConfigurationResponse(BaseModel):
     updated_at: datetime | None
     credential_source: str | None = None
     deployment_key_available: bool = False
+    data_policy_accepted: bool = False
+    data_policy_accepted_at: datetime | None = None
+    data_policy_version: str | None = None
+    automation_enabled: bool = False
+    automation_state: str = "not_configured"
+    assistant_enabled: bool = False
+    assistant_state: str = "not_configured"
 
 
 class OrganizationAIConfigurationRequest(BaseModel):
@@ -56,11 +63,18 @@ class AIConnectionTestResponse(BaseModel):
     message: str
 
 
+class DataPolicyResponse(BaseModel):
+    """Response schema for the AI data policy."""
+
+    version: str
+    items: list[dict[str, str]]
+
+
 class RoleUpdateRequest(BaseModel):
     """Request schema for PATCH /api/admin/users/{id}/role.
 
     Attributes:
-        role: The new role to assign to the user. Must be \'admin\' or \'user\'.
+        role: The new role to assign to the user. Must be 'admin' or 'user'.
     """
 
     role: UserRole
@@ -70,11 +84,11 @@ class AdminUserResponse(BaseModel):
     """Response schema for user entries in the admin user list.
 
     Attributes:
-        id: The user\'s unique identifier.
-        email: The user\'s email address.
-        name: The user\'s display name.
-        avatar_url: URL to the user\'s avatar image, if available.
-        role: The user\'s current role.
+        id: The user's unique identifier.
+        email: The user's email address.
+        name: The user's display name.
+        avatar_url: URL to the user's avatar image, if available.
+        role: The user's current role.
         is_active: Whether the user account is active.
         created_at: When the user account was created.
         last_login: When the user last authenticated.
@@ -96,7 +110,7 @@ class AuditLogResponse(BaseModel):
     """Response schema for individual audit log entries.
 
     Attributes:
-        id: The audit log entry\'s unique identifier.
+        id: The audit log entry's unique identifier.
         admin_email: Email of the admin who performed the action.
         action_type: The type of admin action recorded.
         details: Action-specific details (sensitive values masked).

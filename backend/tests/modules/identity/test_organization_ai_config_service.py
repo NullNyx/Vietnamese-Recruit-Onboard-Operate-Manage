@@ -316,3 +316,316 @@ async def test_update_provider_config_preserves_key(service: OrganizationAIConfi
     assert result.view.model == "claude-3.5"
     assert service.repository.config.api_key_enc == old_enc
     assert result.audit_details["action"] == "update_provider"
+
+
+# ---------------------------------------------------------------------------
+# Data policy consent tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_data_policy_returns_static_policy(service: OrganizationAIConfigService) -> None:
+    policy = service.get_data_policy()
+    assert policy["version"] == "1.0"
+    assert isinstance(policy["items"], list)
+    assert len(policy["items"]) == 3
+    assert policy["items"][0]["category"] == "email_intent_classification"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_accept_data_policy_records_consent(service: OrganizationAIConfigService) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    respx.get("https://api.example.test/v1/models").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+    await service.update(
+        AIConfigurationCandidate("openai", "https://api.example.test/v1", "gpt-4o", "sk-key"),
+        user,
+    )
+
+    result = await service.accept_data_policy(user)
+
+    assert result.view.data_policy_accepted is True
+    assert result.view.data_policy_version == "1.0"
+    assert result.audit_details["action"] == "data_policy_accept"
+    assert result.audit_details["policy_version"] == "1.0"
+    assert "provider" in result.audit_details
+    assert "model" in result.audit_details
+    assert service.repository.config.data_policy_accepted is True
+    assert service.repository.config.data_policy_version == "1.0"
+    assert service.repository.config.data_policy_accepted_by_user_id == user.id
+
+
+@pytest.mark.asyncio
+async def test_accept_data_policy_without_config_fails(service: OrganizationAIConfigService) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    with pytest.raises(OrganizationAIConfigValidationError, match="No provider configuration"):
+        await service.accept_data_policy(user)
+
+
+# ---------------------------------------------------------------------------
+# Capability state tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_capability_state_not_configured_when_no_config(service: OrganizationAIConfigService) -> None:
+    view = await service.get_view()
+    assert view.automation_state == "not_configured"
+    assert view.assistant_state == "not_configured"
+    assert view.automation_enabled is False
+    assert view.assistant_enabled is False
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_capability_state_disabled_when_configured_but_not_enabled(
+    service: OrganizationAIConfigService,
+) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    respx.get("https://api.example.test/v1/models").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+    await service.update(
+        AIConfigurationCandidate("openai", "https://api.example.test/v1", "gpt-4o", "sk-key"),
+        user,
+    )
+
+    view = await service.get_view()
+    assert view.automation_state == "disabled"
+    assert view.assistant_state == "disabled"
+    assert view.automation_enabled is False
+    assert view.assistant_enabled is False
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_capability_state_ready_when_enabled_and_has_credential(
+    service: OrganizationAIConfigService,
+) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    respx.get("https://api.example.test/v1/models").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+    await service.update(
+        AIConfigurationCandidate("openai", "https://api.example.test/v1", "gpt-4o", "sk-key"),
+        user,
+    )
+    await service.accept_data_policy(user)
+
+    result = await service.enable_automation(user)
+    assert result.view.automation_enabled is True
+    assert result.view.automation_state == "ready"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_capability_state_unavailable_when_credential_revoked(
+    service: OrganizationAIConfigService,
+) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    respx.get("https://api.example.test/v1/models").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+    await service.update(
+        AIConfigurationCandidate("openai", "https://api.example.test/v1", "gpt-4o", "sk-key"),
+        user,
+    )
+    await service.accept_data_policy(user)
+    # Enable automation
+    await service.enable_automation(user)
+
+    # Revoke the key
+    await service.revoke_org_api_key(user)
+
+    view = await service.get_view()
+    assert view.automation_enabled is True  # toggle stays on
+    assert view.automation_state == "unavailable"  # but no credential
+
+
+# ---------------------------------------------------------------------------
+# Enable rejection tests (safe enable)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_enable_rejected_when_no_config(service: OrganizationAIConfigService) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    with pytest.raises(OrganizationAIConfigValidationError, match="no provider configuration"):
+        await service.enable_automation(user)
+    with pytest.raises(OrganizationAIConfigValidationError, match="no provider configuration"):
+        await service.enable_assistant(user)
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_enable_rejected_when_no_consent(service: OrganizationAIConfigService) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    respx.get("https://api.example.test/v1/models").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+    await service.update(
+        AIConfigurationCandidate("openai", "https://api.example.test/v1", "gpt-4o", "sk-key"),
+        user,
+    )
+
+    with pytest.raises(OrganizationAIConfigValidationError, match="data policy has not been accepted"):
+        await service.enable_automation(user)
+    with pytest.raises(OrganizationAIConfigValidationError, match="data policy has not been accepted"):
+        await service.enable_assistant(user)
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_enable_rejected_when_health_check_fails(service: OrganizationAIConfigService) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    respx.get("https://api.example.test/v1/models").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+    await service.update(
+        AIConfigurationCandidate("openai", "https://api.example.test/v1", "gpt-4o", "sk-key"),
+        user,
+    )
+    await service.accept_data_policy(user)
+
+    # Now make health check fail
+    respx.get("https://api.example.test/v1/models").mock(
+        return_value=httpx.Response(500, json={"error": "down"})
+    )
+
+    with pytest.raises(OrganizationAIConfigTestError, match="health check failed"):
+        await service.enable_automation(user)
+
+
+# ---------------------------------------------------------------------------
+# Independent toggle tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_can_enable_automation_independently(service: OrganizationAIConfigService) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    respx.get("https://api.example.test/v1/models").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+    await service.update(
+        AIConfigurationCandidate("openai", "https://api.example.test/v1", "gpt-4o", "sk-key"),
+        user,
+    )
+    await service.accept_data_policy(user)
+
+    result = await service.enable_automation(user)
+    assert result.view.automation_enabled is True
+    assert result.view.assistant_enabled is False
+    assert result.audit_details["capability"] == "automation"
+    assert result.audit_details["action"] == "enable"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_can_enable_assistant_independently(service: OrganizationAIConfigService) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    respx.get("https://api.example.test/v1/models").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+    await service.update(
+        AIConfigurationCandidate("openai", "https://api.example.test/v1", "gpt-4o", "sk-key"),
+        user,
+    )
+    await service.accept_data_policy(user)
+
+    result = await service.enable_assistant(user)
+    assert result.view.assistant_enabled is True
+    assert result.view.automation_enabled is False
+    assert result.audit_details["capability"] == "assistant"
+    assert result.audit_details["action"] == "enable"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_can_enable_both_independently(service: OrganizationAIConfigService) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    respx.get("https://api.example.test/v1/models").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+    await service.update(
+        AIConfigurationCandidate("openai", "https://api.example.test/v1", "gpt-4o", "sk-key"),
+        user,
+    )
+    await service.accept_data_policy(user)
+
+    await service.enable_automation(user)
+    result = await service.enable_assistant(user)
+
+    assert result.view.automation_enabled is True
+    assert result.view.assistant_enabled is True
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_disable_does_not_require_consent_or_health(service: OrganizationAIConfigService) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    respx.get("https://api.example.test/v1/models").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+    await service.update(
+        AIConfigurationCandidate("openai", "https://api.example.test/v1", "gpt-4o", "sk-key"),
+        user,
+    )
+    # Enable without consent (simulate pre-existing state)
+    service.repository.config.ai_automation_enabled = True
+    service.repository.config.ai_assistant_enabled = True
+
+    result = await service.disable_automation(user)
+    assert result.view.automation_enabled is False
+    assert result.audit_details["action"] == "disable"
+    assert result.audit_details["capability"] == "automation"
+
+    result = await service.disable_assistant(user)
+    assert result.view.assistant_enabled is False
+    assert result.audit_details["action"] == "disable"
+    assert result.audit_details["capability"] == "assistant"
+
+
+# ---------------------------------------------------------------------------
+# Audit safety tests: no secrets in audit details
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_consent_audit_has_no_secret(service: OrganizationAIConfigService) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    respx.get("https://api.example.test/v1/models").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+    await service.update(
+        AIConfigurationCandidate("openai", "https://api.example.test/v1", "gpt-4o", "sk-secret-key"),
+        user,
+    )
+
+    result = await service.accept_data_policy(user)
+    assert "sk-secret-key" not in str(result.audit_details)
+    assert "api_key" not in result.audit_details
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_toggle_audit_has_no_secret(service: OrganizationAIConfigService) -> None:
+    user = User(id=uuid4(), email="hr@example.com", name="HR")
+    respx.get("https://api.example.test/v1/models").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+    await service.update(
+        AIConfigurationCandidate("openai", "https://api.example.test/v1", "gpt-4o", "sk-toggle-secret"),
+        user,
+    )
+    await service.accept_data_policy(user)
+
+    result = await service.enable_automation(user)
+    assert "sk-toggle-secret" not in str(result.audit_details)
+    assert "provider" in result.audit_details
+    assert "model" in result.audit_details
+    assert "capability" in result.audit_details

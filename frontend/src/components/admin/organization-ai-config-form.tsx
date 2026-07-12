@@ -8,12 +8,40 @@ import {
   activateOrgApiKey,
   revokeOrgApiKey,
   testDeploymentKey,
-  updateProviderConfig,
-  type OrganizationAIConfiguration,
+      updateProviderConfig,
+      getDataPolicy,
+      acceptDataPolicy,
+      enableAutomation,
+      disableAutomation,
+      enableAssistant,
+      disableAssistant,
+      type OrganizationAIConfiguration,
+      type DataPolicyResponse,
 } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+function StateBadge({ state }: { state: string }) {
+  const colorMap: Record<string, string> = {
+    not_configured: "bg-gray-100 text-gray-700",
+    disabled: "bg-yellow-100 text-yellow-700",
+    ready: "bg-green-100 text-green-700",
+    unavailable: "bg-red-100 text-red-700",
+  };
+  const labelMap: Record<string, string> = {
+    not_configured: "Chưa cấu hình",
+    disabled: "Đã tắt",
+    ready: "Sẵn sàng",
+    unavailable: "Không khả dụng",
+  };
+  return (
+    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${colorMap[state] || "bg-gray-100 text-gray-700"}`}>
+      {labelMap[state] || state}
+    </span>
+  );
+}
+
 
 export function OrganizationAIConfigForm({
   config,
@@ -34,6 +62,8 @@ export function OrganizationAIConfigForm({
     config.credential_source ?? "org_api_key"
   );
   const [revokeConfirm, setRevokeConfirm] = useState(false);
+  const [policyExpanded, setPolicyExpanded] = useState(false);
+  const [policy, setPolicy] = useState<DataPolicyResponse | null>(null);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -168,6 +198,68 @@ export function OrganizationAIConfigForm({
       setSuccess(true);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Không thể lưu cấu hình provider");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleLoadPolicy() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const data = await getDataPolicy();
+      setPolicy(data);
+      setPolicyExpanded(true);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Không thể tải data policy");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleAcceptPolicy() {
+    setBusy(true);
+    setMessage(null);
+    setSuccess(false);
+    try {
+      const updated = await acceptDataPolicy();
+      onUpdated(updated);
+      setMessage("Đã chấp nhận data policy.");
+      setSuccess(true);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Không thể chấp nhận data policy");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleToggleAutomation(enable: boolean) {
+    setBusy(true);
+    setMessage(null);
+    setSuccess(false);
+    try {
+      const updated = enable ? await enableAutomation() : await disableAutomation();
+      onUpdated(updated);
+      setMessage(enable ? "AI Automation đã được bật." : "AI Automation đã được tắt.");
+      setSuccess(true);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Không thể thay đổi AI Automation");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleToggleAssistant(enable: boolean) {
+    setBusy(true);
+    setMessage(null);
+    setSuccess(false);
+    try {
+      const updated = enable ? await enableAssistant() : await disableAssistant();
+      onUpdated(updated);
+      setMessage(enable ? "AI Assistant đã được bật." : "AI Assistant đã được tắt.");
+      setSuccess(true);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Không thể thay đổi AI Assistant");
     } finally {
       setBusy(false);
     }
@@ -353,6 +445,108 @@ export function OrganizationAIConfigForm({
           )}
         </section>
       )}
+
+
+          {/* Data Policy & Consent */}
+          {config.configured && (
+            <section className="rounded-lg border bg-card p-6 space-y-4">
+              <h2 className="font-heading text-lg font-semibold">Data Policy & Consent</h2>
+              <p className="text-sm text-muted-foreground">
+                Trước khi bật AI, bạn cần xem và chấp nhận data policy mô tả loại dữ liệu
+                được gửi tới provider.
+              </p>
+
+              {!policy && !policyExpanded && (
+                <Button type="button" variant="outline" onClick={handleLoadPolicy} disabled={busy}>
+                  {busy ? "Đang tải..." : "Xem Data Policy"}
+                </Button>
+              )}
+
+              {policyExpanded && policy && (
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Phiên bản: {policy.version}
+                  </p>
+                  {policy.items.map((item, idx) => (
+                    <div key={idx} className="rounded border p-3 text-sm">
+                      <p className="font-medium">{item.category}</p>
+                      <p className="text-muted-foreground">Dữ liệu: {item.data_types}</p>
+                      <p className="text-muted-foreground">Mục đích: {item.purpose}</p>
+                      <p className="text-muted-foreground">Lưu trữ: {item.retention}</p>
+                    </div>
+                  ))}
+
+                  {!config.data_policy_accepted && (
+                    <Button type="button" variant="default" onClick={handleAcceptPolicy} disabled={busy}>
+                      {busy ? "Đang xử lý..." : "Tôi đồng ý và chấp nhận Data Policy"}
+                    </Button>
+                  )}
+
+                  {config.data_policy_accepted && (
+                    <p className="text-sm text-green-600">
+                      ✓ Data policy đã được chấp nhận
+                      {config.data_policy_accepted_at && ` (${new Date(config.data_policy_accepted_at).toLocaleString()})`}
+                      {config.data_policy_version && ` — phiên bản ${config.data_policy_version}`}
+                    </p>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Capability Toggles */}
+          {config.configured && (
+            <section className="rounded-lg border bg-card p-6 space-y-4">
+              <h2 className="font-heading text-lg font-semibold">AI Capabilities</h2>
+              <p className="text-sm text-muted-foreground">
+                Bật/tắt độc lập AI Automation và AI Assistant. Cả hai dùng chung provider/model.
+              </p>
+
+              {/* AI Automation toggle */}
+              <div className="flex items-center justify-between rounded border p-4">
+                <div>
+                  <p className="font-medium">AI Automation</p>
+                  <p className="text-xs text-muted-foreground">
+                    Phân loại email và parse CV tự động
+                  </p>
+                  <StateBadge state={config.automation_state} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={config.automation_enabled ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleToggleAutomation(!config.automation_enabled)}
+                    disabled={busy || (!config.automation_enabled && !config.data_policy_accepted)}
+                  >
+                    {config.automation_enabled ? "Đang bật" : "Đang tắt"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* AI Assistant toggle */}
+              <div className="flex items-center justify-between rounded border p-4">
+                <div>
+                  <p className="font-medium">AI Assistant</p>
+                  <p className="text-xs text-muted-foreground">
+                    Trợ lý hội thoại cho HR
+                  </p>
+                  <StateBadge state={config.assistant_state} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={config.assistant_enabled ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleToggleAssistant(!config.assistant_enabled)}
+                    disabled={busy || (!config.assistant_enabled && !config.data_policy_accepted)}
+                  >
+                    {config.assistant_enabled ? "Đang bật" : "Đang tắt"}
+                  </Button>
+                </div>
+              </div>
+            </section>
+          )}
 
       {/* Global message */}
       {message && (
