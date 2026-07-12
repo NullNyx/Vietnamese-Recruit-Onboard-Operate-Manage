@@ -108,7 +108,12 @@ class OrganizationSettingsRepository:
         self._validate_timezone(timezone)
         settings_row = await self._get_row()
         if settings_row is None:
-            settings_row = OrganizationSettings(timezone=timezone)
+            settings_row = OrganizationSettings(
+                timezone=timezone,
+                allowed_domains=self._normalize_and_validate_domains(
+                    list(self._settings.default_allowed_domains)
+                ),
+            )
         else:
             settings_row.timezone = timezone
         self.session.add(settings_row)
@@ -136,7 +141,13 @@ class OrganizationSettingsRepository:
         """
         timezone = self.default_timezone
         self._validate_timezone(timezone)
-        settings_row = OrganizationSettings(timezone=timezone)
+        allowed_domains = self._normalize_and_validate_domains(
+            list(self._settings.default_allowed_domains)
+        )
+        settings_row = OrganizationSettings(
+            timezone=timezone,
+            allowed_domains=allowed_domains,
+        )
         self.session.add(settings_row)
         await self.session.flush()
         return settings_row

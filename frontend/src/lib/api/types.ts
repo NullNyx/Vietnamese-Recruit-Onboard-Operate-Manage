@@ -88,6 +88,30 @@ export interface PositionCreateData {
 }
 
 // ---------------------------------------------------------------------------
+// Organization Google Connection Types (identity router)
+// ---------------------------------------------------------------------------
+
+export interface OrganizationGoogleConnectionResponse {
+  status: ConnectionStatus;
+  email: string | null;
+  has_secret: boolean;
+  redirect_url?: string | null;
+}
+
+export type CapabilityHealthState =
+  | "healthy"
+  | "unhealthy"
+  | "unknown"
+  | "unavailable";
+
+export interface CapabilityHealth {
+  capability: string;
+  health: CapabilityHealthState;
+  label: string;
+  description?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Gmail Integration Types
 // ---------------------------------------------------------------------------
 

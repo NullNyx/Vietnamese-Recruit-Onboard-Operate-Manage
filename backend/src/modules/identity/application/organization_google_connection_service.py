@@ -9,6 +9,7 @@ from uuid import uuid4
 import httpx
 
 from src.modules.identity.application.audit_service import AuditService
+from src.modules.identity.application.oauth_config_manager import OAuthConfigManager
 from src.modules.identity.domain.entities import AuditActionType, OrganizationGoogleConnection, User
 from src.modules.identity.domain.exceptions import (
     DomainAccessDeniedError,
@@ -20,7 +21,6 @@ from src.modules.identity.infrastructure.connection_state_repository import (
 )
 from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
 from src.modules.identity.infrastructure.jwt_utils import JWTUtils
-from src.modules.identity.infrastructure.oauth_config_repository import OAuthConfigRepository
 from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
 from src.modules.recruitment.infrastructure.org_settings_repository import (
     OrganizationSettingsRepository,
@@ -53,7 +53,7 @@ class OrganizationGoogleConnectionService:
         self,
         *,
         connection_repo: OrganizationGoogleConnectionRepository,
-        oauth_config_repo: OAuthConfigRepository,
+        oauth_config_manager: OAuthConfigManager,
         oauth_grant_repo: OAuthGrantRepository,
         audit_service: AuditService,
         crypto: CryptoUtils,
@@ -62,7 +62,7 @@ class OrganizationGoogleConnectionService:
         http_client: httpx.AsyncClient,
     ) -> None:
         self._connection_repo = connection_repo
-        self._oauth_config_repo = oauth_config_repo
+        self._oauth_config_manager = oauth_config_manager
         self._oauth_grant_repo = oauth_grant_repo
         self._audit_service = audit_service
         self._crypto = crypto
@@ -84,9 +84,10 @@ class OrganizationGoogleConnectionService:
         )
 
     async def initiate(self, hr: User) -> OrganizationGoogleConnectionResponse:
-        config = await self._oauth_config_repo.get_active()
-        if config is None:
+        config = await self._oauth_config_manager.get_effective_credentials()
+        if not config.client_id or not config.client_secret or not config.redirect_uri:
             raise GoogleAuthError("Google OAuth config missing")
+
         state_nonce = str(uuid4())
         session_id = str(getattr(hr, "session_id", hr.id))
         state = self._state_jwt.create_state_token(
@@ -161,16 +162,15 @@ class OrganizationGoogleConnectionService:
                 connected_by_user_id=current.connected_by_user_id,
             )
         )
-        config = await self._oauth_config_repo.get_active()
-        if config is None:
+        config = await self._oauth_config_manager.get_effective_credentials()
+        if not config.client_id or not config.client_secret or not config.redirect_uri:
             raise GoogleAuthError("Google OAuth config missing")
-        client_secret = self._crypto.decrypt(config.client_secret_enc)
         token = await self._http_client.post(
             GOOGLE_TOKEN_URL,
             data={
                 "code": code,
                 "client_id": config.client_id,
-                "client_secret": client_secret,
+                "client_secret": config.client_secret,
                 "redirect_uri": config.redirect_uri,
                 "grant_type": "authorization_code",
             },
@@ -179,6 +179,10 @@ class OrganizationGoogleConnectionService:
             raise GoogleAuthError("OAuth token exchange failed")
         data = token.json()
         granted = set(str(data.get("scope", "")).split())
+        # Google canonicalizes the OIDC `email` scope to the equivalent
+        # userinfo.email URI in token responses.
+        if "https://www.googleapis.com/auth/userinfo.email" in granted:
+            granted.add("email")
         if not set(REQUIRED_SCOPES).issubset(granted):
             raise GoogleAuthError("Missing required Google scopes")
         userinfo = await self._http_client.get(
@@ -190,11 +194,12 @@ class OrganizationGoogleConnectionService:
         profile = userinfo.json()
         email = profile.get("email")
         hd = profile.get("hd")
-        if not email or not hd:
+        if not email:
             raise DomainAccessDeniedError()
         domains = await self._org_settings_repo.get_allowed_domains()
-        if not domains or hd.lower() not in {d.lower() for d in domains}:
+        if domains and (not hd or hd.lower() not in {d.lower() for d in domains}):
             raise DomainAccessDeniedError()
+        email_domain = hd or email.rsplit("@", 1)[-1].lower()
         refresh_token = data.get("refresh_token")
         if current and current.refresh_token_enc and refresh_token is None:
             refresh_token = self._crypto.decrypt(current.refresh_token_enc)
@@ -202,7 +207,7 @@ class OrganizationGoogleConnectionService:
             status="connected",
             email=email,
             google_sub=profile.get("sub"),
-            email_domain=hd,
+            email_domain=email_domain,
             selected_calendar_id=current.selected_calendar_id if current else None,
             credential_format_version=1,
             credential_key_version=1,
@@ -214,7 +219,7 @@ class OrganizationGoogleConnectionService:
                 if current
                 else None
             ),
-            client_secret_enc=config.client_secret_enc,
+            client_secret_enc=self._crypto.encrypt(config.client_secret),
             token_expires_at=(
                 datetime.now(UTC) + timedelta(seconds=int(data.get("expires_in", 3600)))
             ),

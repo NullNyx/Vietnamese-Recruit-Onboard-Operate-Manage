@@ -3,7 +3,7 @@
 import * as React from "react";
 import { PenSquare, RotateCw, Sparkles } from "lucide-react";
 
-import type { ConnectionStatus, EmailMessage } from "@/lib/api/types";
+import type { ConnectionStatus, EmailMessage, CapabilityHealth } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/types";
 import * as gmailApi from "@/lib/api/gmail";
 
@@ -36,6 +36,9 @@ function GmailPageContent() {
   const [connectLoading, setConnectLoading] = React.useState(false);
   const [disconnectLoading, setDisconnectLoading] = React.useState(false);
   const [disconnectDialogOpen, setDisconnectDialogOpen] = React.useState(false);
+
+  // --- Capability health state ---
+  const [capabilities, setCapabilities] = React.useState<CapabilityHealth[]>([]);
 
   // --- Email list state ---
   const [emails, setEmails] = React.useState<EmailMessage[]>([]);
@@ -115,12 +118,12 @@ function GmailPageContent() {
     }
   }, [handleApiError]);
 
-  // --- Fetch connection status ---
+  // --- Fetch connection status from identity router ---
   const fetchStatus = React.useCallback(async () => {
     setStatusLoading(true);
     setStatusError(null);
     try {
-      const res = await gmailApi.getStatus();
+      const res = await gmailApi.getConnectionStatus();
       setConnectionStatus(res.status);
       setConnectedEmail(res.email);
     } catch (err) {
@@ -135,6 +138,11 @@ function GmailPageContent() {
       setStatusLoading(false);
     }
   }, []);
+
+  // --- Update capability health when connection status changes ---
+  React.useEffect(() => {
+    setCapabilities(gmailApi.getCapabilityHealth(connectionStatus === "connected"));
+  }, [connectionStatus]);
 
   // --- Fetch emails from backend ---
   const fetchEmails = React.useCallback(async () => {
@@ -182,15 +190,32 @@ function GmailPageContent() {
     }
   }, [connectionStatus, fetchEmails, fetchReviewEmails]);
 
-  // --- Connect handler ---
+  // --- Connect handler: get authorize URL from identity router ---
   const handleConnect = React.useCallback(async () => {
     setConnectLoading(true);
     try {
-      const res = await gmailApi.connect();
+      const res = await gmailApi.getAuthorizeUrl();
       if (res.redirect_url) {
         window.location.href = res.redirect_url;
       } else {
         // Already connected
+        await fetchStatus();
+      }
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setConnectLoading(false);
+    }
+  }, [fetchStatus, handleApiError]);
+
+  // --- Reconnect handler: for reauthorization_required case ---
+  const handleReconnect = React.useCallback(async () => {
+    setConnectLoading(true);
+    try {
+      const res = await gmailApi.reconnectConnection();
+      if (res.redirect_url) {
+        window.location.href = res.redirect_url;
+      } else {
         await fetchStatus();
       }
     } catch (err) {
@@ -209,7 +234,7 @@ function GmailPageContent() {
     setDisconnectDialogOpen(false);
     setDisconnectLoading(true);
     try {
-      const res = await gmailApi.disconnect();
+      const res = await gmailApi.disconnectConnection();
       setConnectionStatus(res.status);
       setConnectedEmail(res.email);
       addToast("Đã ngắt kết nối Gmail thành công.", "success");
@@ -359,6 +384,14 @@ function GmailPageContent() {
   // --- Determine if connected ---
   const isConnected = connectionStatus === "connected";
 
+  // --- Handle connect or reconnect based on status ---
+  const handleConnectOrReconnect = React.useCallback(() => {
+    if (connectionStatus === "reauthorization_required") {
+      return handleReconnect();
+    }
+    return handleConnect();
+  }, [connectionStatus, handleConnect, handleReconnect]);
+
   return (
     <div className="gmail-fullbleed flex flex-col h-full overflow-hidden">
       {/* Header */}
@@ -427,11 +460,12 @@ function GmailPageContent() {
             email={connectedEmail}
             loading={statusLoading}
             error={statusError}
-            onConnect={handleConnect}
+            onConnect={handleConnectOrReconnect}
             onDisconnect={handleDisconnectClick}
             onRetry={fetchStatus}
             connectLoading={connectLoading}
             disconnectLoading={disconnectLoading}
+            capabilities={capabilities}
           />
         </div>
       )}
@@ -477,19 +511,44 @@ function GmailPageContent() {
                 selectedEmailId ? "hidden lg:flex" : "flex"
               } w-full lg:w-[380px] lg:shrink-0 h-full`}
             >
-              {/* Connection status bar (compact) */}
-              <div className="border-b border-border px-3 py-2">
+              {/* Connection status bar (compact) with capability health */}
+              <div className="border-b border-border px-3 py-2 space-y-2">
                 <ConnectionPanel
                   status={connectionStatus}
                   email={connectedEmail}
                   loading={statusLoading}
                   error={statusError}
-                  onConnect={handleConnect}
+                  onConnect={handleConnectOrReconnect}
                   onDisconnect={handleDisconnectClick}
                   onRetry={fetchStatus}
                   connectLoading={connectLoading}
                   disconnectLoading={disconnectLoading}
+                  compact
                 />
+                {/* Capability health cards shown separately from connection status */}
+                {connectionStatus === "connected" && capabilities.length > 0 && (
+                  <div className="pt-1">
+                    {/* Using CapabilityHealthCards inline */}
+                    {capabilities.map((cap) => (
+                      <div
+                        key={cap.capability}
+                        className="flex items-center gap-1.5 py-0.5"
+                      >
+                        <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-400" />
+                        <span className="text-[10px] text-muted-foreground">
+                          {cap.label}:{" "}
+                          {cap.health === "unknown"
+                            ? "Chưa xác thực"
+                            : cap.health === "unavailable"
+                              ? "Không khả dụng"
+                              : cap.health === "healthy"
+                                ? "Hoạt động"
+                                : "Lỗi"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Email list or empty state */}

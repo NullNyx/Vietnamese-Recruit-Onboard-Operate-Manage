@@ -125,16 +125,16 @@ class DurableConnectionRepo:
 
 
 @pytest.fixture
-def oauth_config_repo(crypto: CryptoUtils) -> AsyncMock:
-    repo = AsyncMock()
-    repo.get_active = AsyncMock(
+def oauth_config_manager() -> AsyncMock:
+    manager = AsyncMock()
+    manager.get_effective_credentials = AsyncMock(
         return_value=SimpleNamespace(
             client_id="cid",
-            client_secret_enc=crypto.encrypt("secret"),
+            client_secret="secret",
             redirect_uri="http://test/callback",
         )
     )
-    return repo
+    return manager
 
 
 @pytest.fixture
@@ -178,7 +178,7 @@ def connection_repo() -> DurableConnectionRepo:
 @pytest.fixture
 def service(
     connection_repo,
-    oauth_config_repo,
+    oauth_config_manager,
     audit_service,
     crypto,
     state_jwt,
@@ -187,7 +187,7 @@ def service(
 ) -> OrganizationGoogleConnectionService:
     return OrganizationGoogleConnectionService(
         connection_repo=connection_repo,
-        oauth_config_repo=oauth_config_repo,
+        oauth_config_manager=oauth_config_manager,
         oauth_grant_repo=AsyncMock(),
         audit_service=audit_service,
         crypto=crypto,
@@ -254,6 +254,26 @@ async def test_callback_persists_grant_and_reuses_refresh_token(
 
 
 @pytest.mark.asyncio
+async def test_callback_accepts_google_canonical_email_scope(
+    service: OrganizationGoogleConnectionService,
+    hr_user: User,
+    http_client: FakeHttpClient,
+) -> None:
+    assert isinstance(http_client.token, FakeResponse)
+    http_client.token._payload["scope"] = " ".join(
+        scope
+        for scope in REQUIRED_SCOPES
+        if scope != "email"
+    ) + " https://www.googleapis.com/auth/userinfo.email"
+    init = await service.initiate(hr_user)
+    state = parse_qs(urlparse(init.redirect_url or "").query)["state"][0]
+
+    result = await service.callback(hr=hr_user, state=state, code="code")
+
+    assert result.status == "connected"
+
+
+@pytest.mark.asyncio
 async def test_callback_rejects_replay_state(
     service: OrganizationGoogleConnectionService, hr_user: User
 ) -> None:
@@ -315,13 +335,19 @@ async def test_callback_logs_switch_account_when_email_changes(
 
 
 @pytest.mark.asyncio
-async def test_callback_fails_closed_when_allowed_domains_empty(
+async def test_callback_allows_any_verified_email_when_allowed_domains_empty(
     service: OrganizationGoogleConnectionService,
     hr_user: User,
     org_settings_repo: AsyncMock,
+    http_client: FakeHttpClient,
 ) -> None:
     org_settings_repo.get_allowed_domains = AsyncMock(return_value=[])
+    http_client.userinfo = FakeResponse(
+        200, {"email": "personal@gmail.com", "sub": "gmail-sub"}
+    )
     init = await service.initiate(hr_user)
     state = parse_qs(urlparse(init.redirect_url or "").query)["state"][0]
-    with pytest.raises(DomainAccessDeniedError):
-        await service.callback(hr=hr_user, state=state, code="code")
+
+    result = await service.callback(hr=hr_user, state=state, code="code")
+
+    assert result.status == "connected"

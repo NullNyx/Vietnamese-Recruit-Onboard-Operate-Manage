@@ -105,6 +105,7 @@ export interface CandidateDetail {
   interview_timezone?: string | null; // IANA timezone (e.g. "Asia/Ho_Chi_Minh")
   calendar_event_id?: string | null;
   meet_link?: string | null;
+      interviews?: InterviewResponse[];
 }
 
 // ---------------------------------------------------------------------------
@@ -177,12 +178,67 @@ export interface CandidateListParams {
   skills?: string; // comma-separated
 }
 
-export interface ScheduleInterviewRequest {
-  /** ISO 8601 datetime for the interview start (ADR-0008 contract). */
+
+  // ---------------------------------------------------------------------------
+// Interview Types (GH #148 / #154 / #155)
+// ---------------------------------------------------------------------------
+
+export interface InterviewParticipant {
+  id: string;
+  interview_id: string;
+  type: "candidate" | "employee" | "external";
+  email: string;
+  name: string | null;
+  employee_id: string | null;
+}
+
+export interface InterviewResponse {
+  id: string;
+  candidate_id: string;
+  status: string;
+  round_name: string;
+  start_at: string;
+  end_at: string;
+  timezone: string;
+  calendar_event_id: string | null;
+  needs_relink: boolean;
+  participants: InterviewParticipant[];
+}
+
+export interface CreateInterviewRequest {
+  round_name: string;
   start: string;
-  duration_minutes: number;
+  end: string;
+  timezone: string;
+  mode: "google_meet" | "in_person" | "custom_link";
+  meeting_link?: string | null;
   interviewer_ids: string[];
-  notes?: string;
+  external_participant_emails?: string[];
+  notes?: string | null;
+}
+
+export interface CalendarConflict {
+  id: string;
+  interview_id: string;
+  candidate_id: string;
+  calendar_event_id: string;
+  local_snapshot: Record<string, unknown>;
+  remote_snapshot: Record<string, unknown>;
+  conflict_details: Record<string, unknown>;
+  status: string;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CalendarConflictListResponse {
+  conflicts: CalendarConflict[];
+  total_count: number;
+}
+
+export interface ResolveConflictRequest {
+  choice: "keep_google" | "overwrite_vroom";
 }
 
 export interface SendEmailRequest {
@@ -306,43 +362,6 @@ export async function getCVPresignedUrl(
     `${BASE}/candidates/${candidateId}/cv/${documentId}`,
   );
   return handleResponse<CVPresignedUrlResponse>(res);
-}
-
-/**
- * Schedule an interview for a candidate.
- */
-export async function scheduleInterview(
-  id: string,
-  data: ScheduleInterviewRequest,
-): Promise<void> {
-  const res = await fetchWithTimeout(
-    `${BASE}/candidates/${id}/schedule-interview`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    },
-  );
-  await handleResponse<unknown>(res);
-}
-
-/**
- * Reschedule an existing interview for a candidate. Patches the existing
- * Google Calendar event (preserving the Meet link) per ADR-0008.
- */
-export async function rescheduleInterview(
-  id: string,
-  data: ScheduleInterviewRequest,
-): Promise<void> {
-  const res = await fetchWithTimeout(
-    `${BASE}/candidates/${id}/reschedule-interview`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    },
-  );
-  await handleResponse<unknown>(res);
 }
 
 /**
@@ -709,4 +728,132 @@ export async function retryOutboundEmail(
     { method: "POST" },
   );
   return handleResponse<OutboundEmailRetryResponse>(res);
+}
+
+// ---------------------------------------------------------------------------
+// Interview API Functions (GH #148 / #154 / #155)
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a new interview for a candidate with calendar event.
+ * POST /api/recruitment/candidates/{candidateId}/create-interview
+ */
+export async function createInterview(
+  candidateId: string,
+  data: CreateInterviewRequest,
+): Promise<InterviewResponse> {
+  const res = await fetchWithTimeout(
+    `${BASE}/candidates/${candidateId}/create-interview`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    },
+  );
+  return handleResponse<InterviewResponse>(res);
+}
+
+/**
+ * Complete an interview.
+ * POST /api/recruitment/candidates/{candidateId}/interviews/{interviewId}/complete
+ */
+export async function completeInterview(
+  candidateId: string,
+  interviewId: string,
+): Promise<InterviewResponse> {
+  const res = await fetchWithTimeout(
+    `${BASE}/candidates/${candidateId}/interviews/${interviewId}/complete`,
+    { method: "POST" },
+  );
+  return handleResponse<InterviewResponse>(res);
+}
+
+/**
+ * Cancel an interview.
+ * POST /api/recruitment/candidates/{candidateId}/interviews/{interviewId}/cancel
+ */
+export async function cancelInterview(
+  candidateId: string,
+  interviewId: string,
+): Promise<InterviewResponse> {
+  const res = await fetchWithTimeout(
+    `${BASE}/candidates/${candidateId}/interviews/${interviewId}/cancel`,
+    { method: "POST" },
+  );
+  return handleResponse<InterviewResponse>(res);
+}
+
+/**
+ * Create a replacement interview (after cancellation).
+ * POST /api/recruitment/candidates/{candidateId}/interviews/{interviewId}/replacement
+ */
+export async function createReplacementInterview(
+  candidateId: string,
+  interviewId: string,
+  data: CreateInterviewRequest,
+): Promise<InterviewResponse> {
+  const res = await fetchWithTimeout(
+    `${BASE}/candidates/${candidateId}/interviews/${interviewId}/replacement`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    },
+  );
+  return handleResponse<InterviewResponse>(res);
+}
+
+// ---------------------------------------------------------------------------
+// Calendar Conflict API Functions
+// ---------------------------------------------------------------------------
+
+/**
+ * List calendar conflicts, optionally filtered.
+ * GET /api/recruitment/calendar-conflicts
+ */
+export async function listCalendarConflicts(
+  params: {
+    status?: string;
+    candidate_id?: string;
+  } = {},
+): Promise<CalendarConflictListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params.status) searchParams.set("status", params.status);
+  if (params.candidate_id) searchParams.set("candidate_id", params.candidate_id);
+  const query = searchParams.toString();
+  const url = `/api/recruitment/calendar-conflicts${query ? `?${query}` : ""}`;
+  const res = await fetchWithTimeout(url);
+  return handleResponse<CalendarConflictListResponse>(res);
+}
+
+/**
+ * Get a single calendar conflict by ID.
+ * GET /api/recruitment/calendar-conflicts/{conflictId}
+ */
+export async function getCalendarConflict(
+  conflictId: string,
+): Promise<CalendarConflict> {
+  const res = await fetchWithTimeout(
+    `/api/recruitment/calendar-conflicts/${conflictId}`,
+  );
+  return handleResponse<CalendarConflict>(res);
+}
+
+/**
+ * Resolve a calendar conflict.
+ * POST /api/recruitment/calendar-conflicts/{conflictId}/resolve
+ */
+export async function resolveCalendarConflict(
+  conflictId: string,
+  data: ResolveConflictRequest,
+): Promise<CalendarConflict> {
+  const res = await fetchWithTimeout(
+    `/api/recruitment/calendar-conflicts/${conflictId}/resolve`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    },
+  );
+  return handleResponse<CalendarConflict>(res);
 }

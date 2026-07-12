@@ -15,6 +15,8 @@ services:
       - ./backend/config:/app/backend/config
     environment:
       AUTH_AUTO_SEED_SAMPLE_DATA: "true"
+      # Local-only OAuth test allowance; production compose has no such default.
+      RECRUITMENT_DEFAULT_ALLOWED_DOMAINS: '["gmail.com"]'
     command: >
       sh -c "uv run alembic upgrade head &&
              uv run uvicorn src.main:app --host 0.0.0.0 --port 8000"

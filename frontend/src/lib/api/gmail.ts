@@ -1,6 +1,7 @@
 import type {
-  ConnectionStatusResponse,
-  ConnectResponse,
+  CapabilityHealth,
+  CapabilityHealthState,
+  OrganizationGoogleConnectionResponse,
   SyncResponse,
   MessageBodyResponse,
   SendEmailRequest,
@@ -11,6 +12,7 @@ import type {
 import { ApiError } from "./types";
 
 const BASE = "/api/gmail";
+const AUTH_BASE = "/api/auth";
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -25,24 +27,108 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json();
 }
 
-export async function getStatus(): Promise<ConnectionStatusResponse> {
-  const res = await fetch(`${BASE}/status`);
-  return handleResponse<ConnectionStatusResponse>(res);
+// ---------------------------------------------------------------------------
+// Organization Google Connection (identity router)
+// ---------------------------------------------------------------------------
+
+/**
+ * Get the current Google Workspace connection status for the organization.
+ *
+ * Calls GET /api/auth/organization-google-connection and returns the
+ * connection state, email, and whether OAuth secrets are configured.
+ */
+export async function getConnectionStatus(): Promise<OrganizationGoogleConnectionResponse> {
+  const res = await fetch(`${AUTH_BASE}/organization-google-connection`);
+  return handleResponse<OrganizationGoogleConnectionResponse>(res);
 }
 
-export async function connect(): Promise<ConnectResponse> {
-  const res = await fetch(`${BASE}/connect`, {
-    method: "POST",
-  });
-  return handleResponse<ConnectResponse>(res);
+/**
+ * Get the Google OAuth authorize URL to start the connection flow.
+ *
+ * Calls GET /api/auth/organization-google-connection/authorize-url.
+ * Redirect the user to the returned redirect_url.
+ */
+export async function getAuthorizeUrl(): Promise<OrganizationGoogleConnectionResponse> {
+  const res = await fetch(
+    `${AUTH_BASE}/organization-google-connection/authorize-url`,
+  );
+  return handleResponse<OrganizationGoogleConnectionResponse>(res);
 }
 
-export async function disconnect(): Promise<ConnectionStatusResponse> {
-  const res = await fetch(`${BASE}/disconnect`, {
-    method: "POST",
-  });
-  return handleResponse<ConnectionStatusResponse>(res);
+/**
+ * Reconnect (re-authorize) the Google Workspace connection.
+ *
+ * Calls POST /api/auth/organization-google-connection/reconnect.
+ * Redirect the user to the returned redirect_url.
+ */
+export async function reconnectConnection(): Promise<OrganizationGoogleConnectionResponse> {
+  const res = await fetch(
+    `${AUTH_BASE}/organization-google-connection/reconnect`,
+    { method: "POST" },
+  );
+  return handleResponse<OrganizationGoogleConnectionResponse>(res);
 }
+
+/**
+ * Disconnect the organization Google Workspace connection.
+ *
+ * Calls DELETE /api/auth/organization-google-connection and returns the
+ * resulting disconnected status.
+ */
+export async function disconnectConnection(): Promise<OrganizationGoogleConnectionResponse> {
+  const res = await fetch(`${AUTH_BASE}/organization-google-connection`, {
+    method: "DELETE",
+  });
+  return handleResponse<OrganizationGoogleConnectionResponse>(res);
+}
+
+// ---------------------------------------------------------------------------
+// Capability Health
+// ---------------------------------------------------------------------------
+
+/**
+ * Available capabilities that depend on the Google Workspace connection.
+ */
+export const CAPABILITIES = [
+  { capability: "gmail_ingestion", label: "Gmail ingestion" },
+  { capability: "gmail_sending", label: "Gmail sending" },
+  { capability: "calendar_sync", label: "Calendar sync" },
+] as const;
+
+export function getCapabilityLabel(capability: string): string {
+  const entry = CAPABILITIES.find((c) => c.capability === capability);
+  return entry?.label ?? capability;
+}
+
+/**
+ * Get capability health for each Google Workspace feature.
+ *
+ * Since the backend does not expose per-capability health status,
+ * this returns an honest unknown/unavailable state for each capability.
+ *
+ * When connected, capabilities are reported as "unknown" (cannot verify).
+ * When disconnected, they are reported as "unavailable" (no connection).
+ */
+export function getCapabilityHealth(
+  isConnected: boolean,
+): CapabilityHealth[] {
+  const baseHealth: CapabilityHealthState = isConnected
+    ? "unknown"
+    : "unavailable";
+
+  return CAPABILITIES.map((c) => ({
+    capability: c.capability,
+    health: baseHealth,
+    label: c.label,
+    description: isConnected
+      ? "Không thể xác thực trạng thái dịch vụ"
+      : "Chưa kết nối Gmail",
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Gmail operations (unchanged)
+// ---------------------------------------------------------------------------
 
 export async function syncEmails(): Promise<SyncResponse> {
   const res = await fetch(`${BASE}/sync`, {

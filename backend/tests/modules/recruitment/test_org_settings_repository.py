@@ -162,12 +162,16 @@ class TestGetTimezoneSeeding:
         self, session: AsyncSession
     ) -> None:
         """A custom configured default timezone is seeded and returned."""
-        settings = RecruitmentSettings(default_organization_timezone="Europe/Paris")
+        settings = RecruitmentSettings(
+            default_organization_timezone="Europe/Paris",
+            default_allowed_domains=["Gmail.com"],
+        )
         repo = OrganizationSettingsRepository(session, settings=settings)
 
         timezone = await repo.get_timezone()
 
         assert timezone == "Europe/Paris"
+        assert await repo.get_allowed_domains() == ["gmail.com"]
         assert await _count_rows(session) == 1
 
 

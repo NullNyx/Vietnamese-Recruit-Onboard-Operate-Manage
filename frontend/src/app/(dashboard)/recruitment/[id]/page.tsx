@@ -18,13 +18,18 @@ import { UnassignDialog } from "@/components/recruitment/unassign-dialog";
 import { RejectDialog } from "@/components/recruitment/reject-dialog";
 import { AcceptDialog } from "@/components/recruitment/accept-dialog";
 import { ArchiveDialog } from "@/components/recruitment/archive-dialog";
-import { ScheduleInterviewDialog } from "@/components/recruitment/schedule-interview-dialog";
-import type { ScheduleInterviewFormData } from "@/components/recruitment/schedule-interview-dialog";
+import { InterviewFormDialog } from "@/components/recruitment/interview-form-dialog";
+import type { InterviewFormData, Interviewer } from "@/components/recruitment/interview-form-dialog";
+import { InterviewList } from "@/components/recruitment/interview-list";
+import { ConflictManager } from "@/components/recruitment/conflict-manager";
 import { SendEmailDialog } from "@/components/recruitment/send-email-dialog";
 import {
   getCandidate,
-  scheduleInterview,
-  rescheduleInterview,
+  createInterview,
+  completeInterview,
+  cancelInterview,
+  createReplacementInterview,
+  listCalendarConflicts,
   sendEmail,
   rejectCandidate,
   acceptCandidate,
@@ -32,12 +37,13 @@ import {
   assignCandidate,
   reassignCandidate,
   unassignCandidate,
-  type CandidateDetail,
-  type ScheduleInterviewRequest,
+    type CandidateDetail,
+    type CalendarConflict,
   type SendEmailRequest,
   type RejectRequest,
 } from "@/lib/api/recruitment";
 import { ApiError } from "@/lib/api/types";
+import { listEmployees } from "@/lib/api/employees";
 import { formatDate, type CandidateStatus } from "@/lib/recruitment-utils";
 
 // ---------------------------------------------------------------------------
@@ -49,7 +55,7 @@ type DialogType =
   | "accept"
   | "archive"
   | "schedule"
-  | "reschedule"
+  | "replacement"
   | "email"
   | "assign"
   | "unassign"
@@ -80,6 +86,9 @@ export default function CandidateDetailPage() {
   const [errorAnnouncement, setErrorAnnouncement] = useState("");
   const [currentJobOpeningId, setCurrentJobOpeningId] = useState<string | null>(null);
   const [currentJobOpeningTitle, setCurrentJobOpeningTitle] = useState("");
+  const [replacementSourceId, setReplacementSourceId] = useState<string | null>(null);
+  const [conflicts, setConflicts] = useState<CalendarConflict[]>([]);
+    const [interviewers, setInterviewers] = useState<Interviewer[]>([]);
 
   // -------------------------------------------------------------------------
   // Data Fetching
@@ -112,9 +121,43 @@ export default function CandidateDetailPage() {
     }
   }, [id]);
 
+  const fetchConflicts = useCallback(async () => {
+    try {
+      const result = await listCalendarConflicts({ candidate_id: id });
+      setConflicts(result.conflicts);
+    } catch {
+      // Conflicts are non-critical; silently ignore errors
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchCandidate();
   }, [fetchCandidate]);
+
+  useEffect(() => {
+    if (pageState.kind === "loaded") {
+      fetchConflicts();
+    }
+  }, [pageState.kind, fetchConflicts]);
+
+  useEffect(() => {
+    void listEmployees({ page: 1, page_size: 100, is_active: true })
+      .then((result) => {
+        setInterviewers(
+          result.items
+            .filter((employee) => Boolean(employee.email))
+            .map((employee) => ({
+              id: employee.id,
+              name: employee.full_name,
+              email: employee.email,
+            })),
+        );
+      })
+      .catch(() => {
+        // External interviewers remain available if Employee loading fails.
+        setInterviewers([]);
+      });
+  }, []);
 
   // -------------------------------------------------------------------------
   // Action Handlers
@@ -126,6 +169,7 @@ export default function CandidateDetailPage() {
     toast.success(successMessage);
     setActionAnnouncement(successMessage);
     await fetchCandidate();
+    await fetchConflicts();
   }
 
   function handleActionError(err: unknown) {
@@ -203,33 +247,44 @@ export default function CandidateDetailPage() {
     }
   }
 
-  async function handleScheduleInterview(data: ScheduleInterviewFormData) {
+  async function handleCreateInterview(data: InterviewFormData) {
     setActionLoading(true);
     try {
-      const request: ScheduleInterviewRequest = {
-        start: data.start,
-        duration_minutes: data.durationMinutes,
-        interviewer_ids: data.interviewerIds,
-        notes: data.notes,
-      };
-      await scheduleInterview(id, request);
+      await createInterview(id, data);
       await handleActionSuccess("Đã lên lịch phỏng vấn thành công");
     } catch (err) {
       handleActionError(err);
     }
   }
 
-  async function handleRescheduleInterview(data: ScheduleInterviewFormData) {
+  async function handleReplacementInterview(
+    cancelledInterviewId: string,
+    data: InterviewFormData,
+  ) {
     setActionLoading(true);
     try {
-      const request: ScheduleInterviewRequest = {
-        start: data.start,
-        duration_minutes: data.durationMinutes,
-        interviewer_ids: data.interviewerIds,
-        notes: data.notes,
-      };
-      await rescheduleInterview(id, request);
-      await handleActionSuccess("Đã đổi lịch phỏng vấn thành công");
+      await createReplacementInterview(id, cancelledInterviewId, data);
+      await handleActionSuccess("Đã tạo lịch phỏng vấn thay thế thành công");
+    } catch (err) {
+      handleActionError(err);
+    }
+  }
+
+  async function handleCompleteInterview(interviewId: string) {
+    setActionLoading(true);
+    try {
+      await completeInterview(id, interviewId);
+      await handleActionSuccess("Đã hoàn thành buổi phỏng vấn");
+    } catch (err) {
+      handleActionError(err);
+    }
+  }
+
+  async function handleCancelInterview(interviewId: string) {
+    setActionLoading(true);
+    try {
+      await cancelInterview(id, interviewId);
+      await handleActionSuccess("Đã hủy buổi phỏng vấn");
     } catch (err) {
       handleActionError(err);
     }
@@ -391,7 +446,6 @@ export default function CandidateDetailPage() {
         <CandidateActions
           status={candidate.status as CandidateStatus}
           onScheduleInterview={() => setActiveDialog("schedule")}
-          onReschedule={() => setActiveDialog("reschedule")}
           onSendEmail={() => setActiveDialog("email")}
           onReject={() => setActiveDialog("reject")}
           onAccept={() => setActiveDialog("accept")}
@@ -435,6 +489,31 @@ export default function CandidateDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Calendar Conflicts */}
+      <ConflictManager
+        conflicts={conflicts}
+        onConflictResolved={() => {
+          void fetchConflicts();
+        }}
+      />
+
+      {/* Interview List (new Interview API) */}
+      <InterviewList
+        interviews={candidate.interviews ?? []}
+        candidateId={id}
+        onReplacement={(interview) => {
+          setReplacementSourceId(interview.id);
+          setActiveDialog("replacement");
+        }}
+        onComplete={(interview) => {
+          void handleCompleteInterview(interview.id);
+        }}
+        onCancel={(interview) => {
+          void handleCancelInterview(interview.id);
+        }}
+        actionLoading={actionLoading}
+      />
 
       {/* CV Sections + Documents */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -487,23 +566,37 @@ export default function CandidateDetailPage() {
         loading={actionLoading}
       />
 
-      <ScheduleInterviewDialog
+      <InterviewFormDialog
         open={activeDialog === "schedule"}
         onOpenChange={(open) => {
-          if (!open) setActiveDialog(null);
+          if (!open) {
+            setActiveDialog(null);
+          }
         }}
-        onConfirm={handleScheduleInterview}
+        onConfirm={(data) => {
+          void handleCreateInterview(data);
+        }}
         loading={actionLoading}
+        interviewers={interviewers}
+        mode="create"
       />
 
-      <ScheduleInterviewDialog
-        mode="reschedule"
-        open={activeDialog === "reschedule"}
+      <InterviewFormDialog
+        open={activeDialog === "replacement"}
         onOpenChange={(open) => {
-          if (!open) setActiveDialog(null);
+          if (!open) {
+            setReplacementSourceId(null);
+            setActiveDialog(null);
+          }
         }}
-        onConfirm={handleRescheduleInterview}
+        onConfirm={(data) => {
+          if (replacementSourceId) {
+            void handleReplacementInterview(replacementSourceId, data);
+          }
+        }}
         loading={actionLoading}
+        interviewers={interviewers}
+        mode="replacement"
       />
 
       <SendEmailDialog

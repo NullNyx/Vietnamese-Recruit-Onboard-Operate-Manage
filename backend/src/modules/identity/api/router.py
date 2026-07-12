@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -44,6 +44,7 @@ from src.modules.identity.container import (
     get_oauth_config_manager,
     get_oauth_service,
     get_rate_limiter,
+    get_settings,
     get_token_service,
 )
 from src.modules.identity.domain.entities import User
@@ -82,6 +83,7 @@ get_session = get_db_session
 
 async def _get_connection_service(
     session: AsyncSession = Depends(get_db_session),
+    oauth_config_manager: OAuthConfigManager = Depends(get_oauth_config_manager),
 ) -> OrganizationGoogleConnectionService:
     from httpx import AsyncClient
 
@@ -90,7 +92,6 @@ async def _get_connection_service(
     from src.modules.identity.infrastructure.connection_state_repository import (
         OrganizationGoogleConnectionRepository,
     )
-    from src.modules.identity.infrastructure.oauth_config_repository import OAuthConfigRepository
     from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
     from src.modules.recruitment.infrastructure.org_settings_repository import (
         OrganizationSettingsRepository,
@@ -100,7 +101,7 @@ async def _get_connection_service(
 
     return OrganizationGoogleConnectionService(
         connection_repo=OrganizationGoogleConnectionRepository(session),
-        oauth_config_repo=OAuthConfigRepository(session),
+        oauth_config_manager=oauth_config_manager,
         oauth_grant_repo=OAuthGrantRepository(session),
         audit_service=AuditService(repository=audit_log_repo),
         crypto=get_crypto_utils(),
@@ -244,6 +245,19 @@ async def reconnect_google_connection(
 ) -> GoogleWorkspaceConnectionResponse:
     res = await connection_service.initiate(current_user)
     return GoogleWorkspaceConnectionResponse(**res.__dict__)
+
+
+@router.get("/callback")
+async def callback_google_connection_redirect(
+    code: str,
+    state: str,
+    current_user: AdminOnlyDep,
+    connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
+) -> RedirectResponse:
+    """Complete Organization Google consent using the env-configured redirect URI."""
+    await connection_service.callback(hr=current_user, state=state, code=code)
+    frontend_url = get_settings().frontend_url.rstrip("/")
+    return RedirectResponse(f"{frontend_url}/gmail?google_connection=connected", status_code=303)
 
 
 @router.post("/organization-google-connection/callback")

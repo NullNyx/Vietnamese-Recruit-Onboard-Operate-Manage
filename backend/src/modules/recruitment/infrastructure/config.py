@@ -35,6 +35,7 @@ class RecruitmentSettings(BaseSettings):
         calendar_api_timeout_seconds: Timeout per Google Calendar API request.
         calendar_max_retries: Maximum retry attempts for failed Calendar API calls.
         default_organization_timezone: Fallback IANA timezone for interview scheduling.
+        default_allowed_domains: Domains seeded for a new Organization.
     """
 
     model_config = SettingsConfigDict(env_prefix="RECRUITMENT_")
@@ -70,6 +71,9 @@ class RecruitmentSettings(BaseSettings):
 
     # Confidence threshold
     auto_accept_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+
+    # Organization defaults
+    default_allowed_domains: list[str] = Field(default_factory=list)
 
     # Google Calendar
     calendar_api_base_url: str = "https://www.googleapis.com/calendar/v3"
