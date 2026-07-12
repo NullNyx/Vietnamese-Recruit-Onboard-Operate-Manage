@@ -208,34 +208,35 @@ async def test_organization_ai_config(
         return AIConnectionTestResponse(success=False, message=str(exc))
     return AIConnectionTestResponse(success=True, message="Connection test succeeded")
 
-    @admin_router.put("/organization/ai-config", response_model=OrganizationAIConfigurationResponse)
-    async def update_organization_ai_config(
-        body: OrganizationAIConfigurationRequest,
-        admin_user: AdminUserDep,
-        service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
-        audit_service: AuditService = Depends(get_audit_service),
-    ) -> OrganizationAIConfigurationResponse:
-        try:
-            result = await service.update(
-                AIConfigurationCandidate(body.provider, body.base_url, body.model, body.api_key),
-                admin_user,
-            )
-        except OrganizationAIConfigValidationError as exc:
-            raise HTTPException(
-                status_code=422,
-                detail={"code": "AI_CONFIG_INVALID", "message": str(exc)},
-            ) from exc
-        except OrganizationAIConfigTestError as exc:
-            raise HTTPException(
-                status_code=400,
-                detail={"code": "AI_CONNECTION_FAILED", "message": str(exc)},
-            ) from exc
-        await audit_service.log_action(
-            admin=admin_user,
-            action_type=AuditActionType.ORG_AI_CONFIG_UPDATE,
-            details=result.audit_details,
+
+@admin_router.put("/organization/ai-config", response_model=OrganizationAIConfigurationResponse)
+async def update_organization_ai_config(
+    body: OrganizationAIConfigurationRequest,
+    admin_user: AdminUserDep,
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> OrganizationAIConfigurationResponse:
+    try:
+        result = await service.update(
+            AIConfigurationCandidate(body.provider, body.base_url, body.model, body.api_key),
+            admin_user,
         )
-        return _ai_view_response(result.view)
+    except OrganizationAIConfigValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "AI_CONFIG_INVALID", "message": str(exc)},
+        ) from exc
+    except OrganizationAIConfigTestError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "AI_CONNECTION_FAILED", "message": str(exc)},
+        ) from exc
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_AI_CONFIG_UPDATE,
+        details=result.audit_details,
+    )
+    return _ai_view_response(result.view)
 
 
 # --- Credential source management ---

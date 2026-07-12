@@ -1,3 +1,4 @@
+import json
 from uuid import uuid4
 
 import httpx
@@ -6,7 +7,6 @@ import respx
 
 from src.modules.identity.application.organization_ai_config_service import (
     AIConfigurationCandidate,
-    AIConfigurationView,
     OrganizationAIConfigService,
     OrganizationAIConfigTestError,
     OrganizationAIConfigValidationError,
@@ -65,8 +65,35 @@ def service_with_deployment_key(crypto: CryptoUtils) -> OrganizationAIConfigServ
 
 @pytest.mark.asyncio
 @respx.mock
+async def test_connection_supports_completion_only_provider(
+    service: OrganizationAIConfigService,
+) -> None:
+    route = respx.post("https://api.example.test/v1/chat/completions").mock(
+        return_value=httpx.Response(
+            200,
+            json={"choices": [{"message": {"role": "assistant", "content": "OK"}}]},
+        )
+    )
+
+    await service.test_connection(
+        AIConfigurationCandidate(
+            "openai-completions",
+            "https://api.example.test/v1",
+            "custom-model",
+            "secret-key",
+        )
+    )
+
+    assert route.called
+    request = route.calls[0].request
+    assert request.url.path == "/v1/chat/completions"
+    assert json.loads(request.content)["model"] == "custom-model"
+
+
+@pytest.mark.asyncio
+@respx.mock
 async def test_update_tests_before_encrypting_and_never_returns_plaintext(service: OrganizationAIConfigService) -> None:
-    route = respx.get("https://api.example.test/v1/models").mock(
+    route = respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     user = User(id=uuid4(), email="hr@example.com", name="HR")
@@ -88,7 +115,7 @@ async def test_update_tests_before_encrypting_and_never_returns_plaintext(servic
 @pytest.mark.asyncio
 @respx.mock
 async def test_failed_connection_does_not_replace_existing(service: OrganizationAIConfigService) -> None:
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(500, json={"error": "no"})
     )
     user = User(id=uuid4(), email="hr@example.com", name="HR")
@@ -124,7 +151,7 @@ async def test_get_view_shows_deployment_key_available(service_with_deployment_k
 async def test_set_credential_source_to_deployment_key(service_with_deployment_key: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
     # First create a config
-    route = respx.get("https://api.example.test/v1/models").mock(
+    route = respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service_with_deployment_key.update(
@@ -134,7 +161,7 @@ async def test_set_credential_source_to_deployment_key(service_with_deployment_k
     route.reset()
 
     # Now switch to deployment key (mocking the deployment key test)
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     result = await service_with_deployment_key.set_credential_source(
@@ -150,7 +177,7 @@ async def test_set_credential_source_to_deployment_key_fails_when_not_available(
     service: OrganizationAIConfigService,
 ) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -171,7 +198,7 @@ async def test_set_credential_source_to_deployment_key_fails_when_not_available(
 @respx.mock
 async def test_activate_org_api_key(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -205,7 +232,7 @@ async def test_activate_without_config_fails(service: OrganizationAIConfigServic
 @respx.mock
 async def test_revoke_org_api_key_clears_key_preserves_config(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -240,7 +267,7 @@ async def test_revoke_without_config_fails(service: OrganizationAIConfigService)
 @pytest.mark.asyncio
 @respx.mock
 async def test_update_audit_has_no_secret(service: OrganizationAIConfigService) -> None:
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     user = User(id=uuid4(), email="hr@example.com", name="HR")
@@ -263,7 +290,7 @@ async def test_update_audit_has_no_secret(service: OrganizationAIConfigService) 
 @respx.mock
 async def test_rotate_audit_has_no_secret(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -279,7 +306,7 @@ async def test_rotate_audit_has_no_secret(service: OrganizationAIConfigService) 
 @respx.mock
 async def test_revoke_audit_has_no_secret(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -300,7 +327,7 @@ async def test_revoke_audit_has_no_secret(service: OrganizationAIConfigService) 
 @respx.mock
 async def test_update_provider_config_preserves_key(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -336,7 +363,7 @@ async def test_get_data_policy_returns_static_policy(service: OrganizationAIConf
 @respx.mock
 async def test_accept_data_policy_records_consent(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -384,7 +411,7 @@ async def test_capability_state_disabled_when_configured_but_not_enabled(
     service: OrganizationAIConfigService,
 ) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -405,7 +432,7 @@ async def test_capability_state_ready_when_enabled_and_has_credential(
     service: OrganizationAIConfigService,
 ) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -425,7 +452,7 @@ async def test_capability_state_unavailable_when_credential_revoked(
     service: OrganizationAIConfigService,
 ) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -462,7 +489,7 @@ async def test_enable_rejected_when_no_config(service: OrganizationAIConfigServi
 @respx.mock
 async def test_enable_rejected_when_no_consent(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -480,7 +507,7 @@ async def test_enable_rejected_when_no_consent(service: OrganizationAIConfigServ
 @respx.mock
 async def test_enable_rejected_when_health_check_fails(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -490,7 +517,7 @@ async def test_enable_rejected_when_health_check_fails(service: OrganizationAICo
     await service.accept_data_policy(user)
 
     # Now make health check fail
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(500, json={"error": "down"})
     )
 
@@ -507,7 +534,7 @@ async def test_enable_rejected_when_health_check_fails(service: OrganizationAICo
 @respx.mock
 async def test_can_enable_automation_independently(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -527,7 +554,7 @@ async def test_can_enable_automation_independently(service: OrganizationAIConfig
 @respx.mock
 async def test_can_enable_assistant_independently(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -547,7 +574,7 @@ async def test_can_enable_assistant_independently(service: OrganizationAIConfigS
 @respx.mock
 async def test_can_enable_both_independently(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -567,7 +594,7 @@ async def test_can_enable_both_independently(service: OrganizationAIConfigServic
 @respx.mock
 async def test_disable_does_not_require_consent_or_health(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -598,7 +625,7 @@ async def test_disable_does_not_require_consent_or_health(service: OrganizationA
 @respx.mock
 async def test_consent_audit_has_no_secret(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
@@ -615,7 +642,7 @@ async def test_consent_audit_has_no_secret(service: OrganizationAIConfigService)
 @respx.mock
 async def test_toggle_audit_has_no_secret(service: OrganizationAIConfigService) -> None:
     user = User(id=uuid4(), email="hr@example.com", name="HR")
-    respx.get("https://api.example.test/v1/models").mock(
+    respx.post("https://api.example.test/v1/chat/completions").mock(
         return_value=httpx.Response(200, json={"data": []})
     )
     await service.update(
