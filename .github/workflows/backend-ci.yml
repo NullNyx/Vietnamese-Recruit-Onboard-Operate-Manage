@@ -70,10 +70,10 @@ jobs:
         working-directory: backend
         run: uv sync --all-extras
 
-          - name: Run fast pytest tier
-            working-directory: backend
-            run: uv run pytest tests/ -v -m "not integration and not e2e and not migration and not slow and not property"
+      - name: Run fast pytest tier
+        working-directory: backend
+        run: uv run pytest tests/ -v -m "not integration and not e2e and not migration and not slow and not property"
 
-          # The full suite is intentionally kept separate from the PR gate. Run it
-          # locally with `uv run pytest tests/ -v` and promote it to a scheduled
-          # or post-merge job once the currently failing integration tests are fixed.
+      # The full suite is intentionally kept separate from the PR gate. Run it
+      # locally with `uv run pytest tests/ -v` and promote it to a scheduled
+      # or post-merge job once the currently failing integration tests are fixed.
