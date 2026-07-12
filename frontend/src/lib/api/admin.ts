@@ -33,7 +33,22 @@ export interface WhitelistEntryCreated {
   created_at: string;
 }
 
-export interface OAuthConfig {
+  export interface OrganizationAIConfiguration {
+    provider: string | null;
+    base_url: string | null;
+    model: string | null;
+    api_key_masked: string | null;
+    configured: boolean;
+    updated_at: string | null;
+  }
+
+  export interface AIConnectionTestResponse {
+    success: boolean;
+    message: string;
+  }
+
+  export interface OAuthConfig {
+
   client_id: string;
   client_secret_masked: string;
   redirect_uri: string;
@@ -126,8 +141,46 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json();
 }
 
-// ---------------------------------------------------------------------------
-// Whitelist Endpoints
+  // ---------------------------------------------------------------------------
+  // Organization AI Configuration Endpoints
+  // ---------------------------------------------------------------------------
+
+  export async function getOrganizationAIConfiguration(): Promise<OrganizationAIConfiguration> {
+    const res = await fetch(`${BASE}/organization/ai-config`);
+    return handleResponse<OrganizationAIConfiguration>(res);
+  }
+
+  export async function testOrganizationAIConfiguration(data: {
+    provider: string;
+    base_url: string;
+    model: string;
+    api_key: string;
+  }): Promise<AIConnectionTestResponse> {
+    const res = await fetch(`${BASE}/organization/ai-config/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<AIConnectionTestResponse>(res);
+  }
+
+  export async function updateOrganizationAIConfiguration(data: {
+    provider: string;
+    base_url: string;
+    model: string;
+    api_key: string;
+  }): Promise<OrganizationAIConfiguration> {
+    const res = await fetch(`${BASE}/organization/ai-config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<OrganizationAIConfiguration>(res);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Whitelist Endpoints
+
 // ---------------------------------------------------------------------------
 
 export async function listWhitelist(): Promise<WhitelistListResponse> {

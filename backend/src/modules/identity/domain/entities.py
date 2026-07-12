@@ -207,7 +207,32 @@ class OrganizationGoogleConnection(SQLModel, table=True):
     )
 
 
+class OrganizationAIConfiguration(SQLModel, table=True):
+    """Stores the singleton Organization AI provider configuration."""
+
+    __tablename__ = "organization_ai_configurations"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    organization_singleton_key: str = Field(
+        default="default", max_length=32, nullable=False, unique=True
+    )
+    provider: str = Field(max_length=100, nullable=False)
+    base_url: str = Field(max_length=500, nullable=False)
+    model: str = Field(max_length=255, nullable=False)
+    api_key_enc: str = Field(nullable=False)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_by_user_id: UUID = Field(foreign_key="users.id", nullable=False)
+
+
 class AuditActionType(str, Enum):
+
     """Enumeration of admin audit action types."""
 
     WHITELIST_ADD = "whitelist_add"
@@ -231,6 +256,8 @@ class AuditActionType(str, Enum):
     ORG_GOOGLE_RECONNECT = "org_google_reconnect"
     ORG_GOOGLE_SWITCH_ACCOUNT = "org_google_switch_account"
     ORG_GOOGLE_DISCONNECT = "org_google_disconnect"
+    ORG_AI_CONFIG_UPDATE = "org_ai_config_update"
+
     OUTBOUND_EMAIL_CREATED = "outbound_email_created"
     OUTBOUND_EMAIL_SENT = "outbound_email_sent"
     OUTBOUND_EMAIL_FAILED = "outbound_email_failed"

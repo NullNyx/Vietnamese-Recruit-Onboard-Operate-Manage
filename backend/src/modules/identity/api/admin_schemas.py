@@ -13,7 +13,29 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.modules.identity.domain.entities import AuditActionType, UserRole
 
 
+class OrganizationAIConfigurationResponse(BaseModel):
+    provider: str | None
+    base_url: str | None
+    model: str | None
+    api_key_masked: str | None
+    configured: bool
+    updated_at: datetime | None
+
+
+class OrganizationAIConfigurationRequest(BaseModel):
+    provider: str = Field(..., min_length=1, max_length=100)
+    base_url: str = Field(..., min_length=1, max_length=500)
+    model: str = Field(..., min_length=1, max_length=255)
+    api_key: str = Field(..., min_length=1, max_length=4096)
+
+
+class AIConnectionTestResponse(BaseModel):
+    success: bool
+    message: str
+
+
 class RoleUpdateRequest(BaseModel):
+
     """Request schema for PATCH /api/admin/users/{id}/role.
 
     Attributes:
