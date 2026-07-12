@@ -33,14 +33,16 @@ export interface WhitelistEntryCreated {
   created_at: string;
 }
 
-  export interface OrganizationAIConfiguration {
-    provider: string | null;
-    base_url: string | null;
-    model: string | null;
-    api_key_masked: string | null;
-    configured: boolean;
-    updated_at: string | null;
-  }
+      export interface OrganizationAIConfiguration {
+        provider: string | null;
+        base_url: string | null;
+        model: string | null;
+        api_key_masked: string | null;
+        configured: boolean;
+        updated_at: string | null;
+        credential_source: string | null;
+        deployment_key_available: boolean;
+      }
 
   export interface AIConnectionTestResponse {
     success: boolean;
@@ -76,17 +78,21 @@ export interface AdminUser {
   last_login: string;
 }
 
-export type AuditActionType =
-  | 'whitelist_add'
-  | 'whitelist_remove'
-  | 'oauth_update'
-  | 'role_change'
-  | 'org_domain_update'
-  | 'assistant_tool_config'
-  | 'org_google_connect'
-  | 'org_google_reconnect'
-  | 'org_google_switch_account'
-  | 'org_google_disconnect';
+    export type AuditActionType =
+      | 'whitelist_add'
+      | 'whitelist_remove'
+      | 'oauth_update'
+      | 'role_change'
+      | 'org_domain_update'
+      | 'assistant_tool_config'
+      | 'org_google_connect'
+      | 'org_google_reconnect'
+      | 'org_google_switch_account'
+      | 'org_google_disconnect'
+      | 'org_ai_config_update'
+      | 'org_ai_config_rotate'
+      | 'org_ai_config_revoke'
+      | 'org_ai_config_source';
 
 export interface DomainListResponse {
   allowed_domains: string[];
@@ -175,8 +181,54 @@ async function handleResponse<T>(res: Response): Promise<T> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    return handleResponse<OrganizationAIConfiguration>(res);
-  }
+      return handleResponse<OrganizationAIConfiguration>(res);
+    }
+
+      export async function setCredentialSource(credentialSource: string): Promise<OrganizationAIConfiguration> {
+        const res = await fetch(`${BASE}/organization/ai-config/source`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ credential_source: credentialSource }),
+        });
+        return handleResponse<OrganizationAIConfiguration>(res);
+      }
+
+      export async function activateOrgApiKey(apiKey: string): Promise<OrganizationAIConfiguration> {
+        const res = await fetch(`${BASE}/organization/ai-config/activate-key`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: apiKey }),
+        });
+        return handleResponse<OrganizationAIConfiguration>(res);
+      }
+
+      export async function revokeOrgApiKey(): Promise<OrganizationAIConfiguration> {
+        const res = await fetch(`${BASE}/organization/ai-config/revoke-key`, {
+          method: 'POST',
+        });
+        return handleResponse<OrganizationAIConfiguration>(res);
+      }
+
+      export async function testDeploymentKey(): Promise<AIConnectionTestResponse> {
+        const res = await fetch(`${BASE}/organization/ai-config/test-deployment-key`, {
+          method: 'POST',
+        });
+        return handleResponse<AIConnectionTestResponse>(res);
+      }
+
+      export async function updateProviderConfig(data: {
+        provider: string;
+        base_url: string;
+        model: string;
+      }): Promise<OrganizationAIConfiguration> {
+        const res = await fetch(`${BASE}/organization/ai-config/provider`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        return handleResponse<OrganizationAIConfiguration>(res);
+      }
+
 
   // ---------------------------------------------------------------------------
   // Whitelist Endpoints

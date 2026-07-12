@@ -24,6 +24,7 @@ from src.modules.assistant.infrastructure.tool_config_repository import (
     ToolConfigRepository,
 )
 from src.modules.identity.api.admin_schemas import (
+    ActivateOrgApiKeyRequest,
     AdminUserResponse,
     AIConnectionTestResponse,
     AssistantToolConfigListResponse,
@@ -38,6 +39,8 @@ from src.modules.identity.api.admin_schemas import (
     OrganizationAIConfigurationResponse,
     PaginatedAuditLogsResponse,
     RoleUpdateRequest,
+    SetCredentialSourceRequest,
+    UpdateProviderConfigRequest,
 )
 from src.modules.identity.api.schemas import (
     OAuthConfigResponse,
@@ -160,7 +163,10 @@ def _ai_view_response(view: object) -> OrganizationAIConfigurationResponse:
         api_key_masked=view.api_key_masked,  # type: ignore[attr-defined]
         configured=view.configured,  # type: ignore[attr-defined]
         updated_at=view.updated_at,  # type: ignore[attr-defined]
+        credential_source=view.credential_source,  # type: ignore[attr-defined]
+        deployment_key_available=view.deployment_key_available,  # type: ignore[attr-defined]
     )
+
 
 
 @admin_router.get("/organization/ai-config", response_model=OrganizationAIConfigurationResponse)
@@ -196,18 +202,52 @@ async def test_organization_ai_config(
     return AIConnectionTestResponse(success=True, message="Connection test succeeded")
 
 
-@admin_router.put("/organization/ai-config", response_model=OrganizationAIConfigurationResponse)
-async def update_organization_ai_config(
-    body: OrganizationAIConfigurationRequest,
+    @admin_router.put("/organization/ai-config", response_model=OrganizationAIConfigurationResponse)
+    async def update_organization_ai_config(
+        body: OrganizationAIConfigurationRequest,
+        admin_user: AdminUserDep,
+        service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+        audit_service: AuditService = Depends(get_audit_service),
+    ) -> OrganizationAIConfigurationResponse:
+        try:
+            result = await service.update(
+                AIConfigurationCandidate(body.provider, body.base_url, body.model, body.api_key),
+                admin_user,
+            )
+        except OrganizationAIConfigValidationError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "AI_CONFIG_INVALID", "message": str(exc)},
+            ) from exc
+        except OrganizationAIConfigTestError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail={"code": "AI_CONNECTION_FAILED", "message": str(exc)},
+            ) from exc
+        await audit_service.log_action(
+            admin=admin_user,
+            action_type=AuditActionType.ORG_AI_CONFIG_UPDATE,
+            details=result.audit_details,
+        )
+        return _ai_view_response(result.view)
+
+
+# --- Credential source management ---
+
+
+@admin_router.put(
+    "/organization/ai-config/source",
+    response_model=OrganizationAIConfigurationResponse,
+)
+async def set_credential_source(
+    body: SetCredentialSourceRequest,
     admin_user: AdminUserDep,
     service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
     audit_service: AuditService = Depends(get_audit_service),
 ) -> OrganizationAIConfigurationResponse:
+    """Change the AI credential source (org_api_key or deployment_key)."""
     try:
-        view = await service.update(
-            AIConfigurationCandidate(body.provider, body.base_url, body.model, body.api_key),
-            admin_user,
-        )
+        result = await service.set_credential_source(body.credential_source, admin_user)
     except OrganizationAIConfigValidationError as exc:
         raise HTTPException(
             status_code=422,
@@ -220,10 +260,123 @@ async def update_organization_ai_config(
         ) from exc
     await audit_service.log_action(
         admin=admin_user,
-        action_type=AuditActionType.ORG_AI_CONFIG_UPDATE,
-        details={"provider": body.provider, "base_url": body.base_url, "model": body.model},
+        action_type=AuditActionType.ORG_AI_CONFIG_SOURCE,
+        details=result.audit_details,
     )
-    return _ai_view_response(view)
+    return _ai_view_response(result.view)
+
+
+# --- Organization API key rotation ---
+
+
+@admin_router.post(
+    "/organization/ai-config/activate-key",
+    response_model=OrganizationAIConfigurationResponse,
+)
+async def activate_org_api_key(
+    body: ActivateOrgApiKeyRequest,
+    admin_user: AdminUserDep,
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> OrganizationAIConfigurationResponse:
+    """Activate a new Organization API key (assumes test already passed)."""
+    try:
+        result = await service.activate_org_api_key(body.api_key, admin_user)
+    except OrganizationAIConfigValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "AI_CONFIG_INVALID", "message": str(exc)},
+        ) from exc
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_AI_CONFIG_ROTATE,
+        details=result.audit_details,
+    )
+    return _ai_view_response(result.view)
+
+
+@admin_router.post("/organization/ai-config/revoke-key", status_code=200)
+async def revoke_org_api_key(
+    admin_user: AdminUserDep,
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> OrganizationAIConfigurationResponse:
+    """Revoke the Organization API key, preserving provider/model configuration."""
+    try:
+        result = await service.revoke_org_api_key(admin_user)
+    except OrganizationAIConfigValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "AI_CONFIG_INVALID", "message": str(exc)},
+        ) from exc
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_AI_CONFIG_REVOKE,
+        details=result.audit_details,
+    )
+    return _ai_view_response(result.view)
+
+
+# --- Deployment key health check ---
+
+
+@admin_router.post(
+    "/organization/ai-config/test-deployment-key",
+    response_model=AIConnectionTestResponse,
+)
+async def test_deployment_key_connection(
+    admin_user: AdminUserDep,
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+) -> AIConnectionTestResponse:
+    """Test connectivity using the deployment-wide AI key (if configured)."""
+    view = await service.get_view()
+    if not view.configured:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "AI_CONFIG_INVALID", "message": "No provider configuration exists"},
+        )
+    try:
+        await service.test_deployment_key_connection(
+            provider=view.provider or "",
+            base_url=view.base_url or "",
+            model=view.model or "",
+        )
+    except OrganizationAIConfigTestError as exc:
+        return AIConnectionTestResponse(success=False, message=str(exc))
+    return AIConnectionTestResponse(
+        success=True, message="Deployment key connection test succeeded"
+    )
+
+
+# --- Provider config update without key change ---
+
+
+@admin_router.put(
+    "/organization/ai-config/provider",
+    response_model=OrganizationAIConfigurationResponse,
+)
+async def update_provider_config(
+    body: UpdateProviderConfigRequest,
+    admin_user: AdminUserDep,
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> OrganizationAIConfigurationResponse:
+    """Update provider/model/base_url without changing the API key."""
+    try:
+        result = await service.update_provider_config(
+            body.provider, body.base_url, body.model, admin_user
+        )
+    except OrganizationAIConfigValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "AI_CONFIG_INVALID", "message": str(exc)},
+        ) from exc
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_AI_CONFIG_UPDATE,
+        details=result.audit_details,
+    )
+    return _ai_view_response(result.view)
 
 
 # --- Whitelist Endpoints ---

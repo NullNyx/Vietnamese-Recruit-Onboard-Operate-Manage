@@ -207,6 +207,13 @@ class OrganizationGoogleConnection(SQLModel, table=True):
     )
 
 
+class CredentialSource(str, Enum):
+    """Source of the AI provider credential."""
+
+    ORG_API_KEY = "org_api_key"
+    DEPLOYMENT_KEY = "deployment_key"
+
+
 class OrganizationAIConfiguration(SQLModel, table=True):
     """Stores the singleton Organization AI provider configuration."""
 
@@ -219,7 +226,12 @@ class OrganizationAIConfiguration(SQLModel, table=True):
     provider: str = Field(max_length=100, nullable=False)
     base_url: str = Field(max_length=500, nullable=False)
     model: str = Field(max_length=255, nullable=False)
-    api_key_enc: str = Field(nullable=False)
+    api_key_enc: str = Field(nullable=False, default="")
+    credential_source: str = Field(
+        default=CredentialSource.ORG_API_KEY.value,
+        max_length=32,
+        nullable=False,
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -228,7 +240,9 @@ class OrganizationAIConfiguration(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    updated_by_user_id: UUID = Field(foreign_key="users.id", nullable=False)
+    updated_by_user_id: UUID | None = Field(
+        foreign_key="users.id", nullable=True
+    )
 
 
 class AuditActionType(str, Enum):
@@ -256,6 +270,9 @@ class AuditActionType(str, Enum):
     ORG_GOOGLE_SWITCH_ACCOUNT = "org_google_switch_account"
     ORG_GOOGLE_DISCONNECT = "org_google_disconnect"
     ORG_AI_CONFIG_UPDATE = "org_ai_config_update"
+    ORG_AI_CONFIG_ROTATE = "org_ai_config_rotate"
+    ORG_AI_CONFIG_REVOKE = "org_ai_config_revoke"
+    ORG_AI_CONFIG_SOURCE = "org_ai_config_source"
 
     OUTBOUND_EMAIL_CREATED = "outbound_email_created"
     OUTBOUND_EMAIL_SENT = "outbound_email_sent"

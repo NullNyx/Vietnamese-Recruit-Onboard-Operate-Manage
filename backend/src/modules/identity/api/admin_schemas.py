@@ -20,6 +20,8 @@ class OrganizationAIConfigurationResponse(BaseModel):
     api_key_masked: str | None
     configured: bool
     updated_at: datetime | None
+    credential_source: str | None = None
+    deployment_key_available: bool = False
 
 
 class OrganizationAIConfigurationRequest(BaseModel):
@@ -27,6 +29,26 @@ class OrganizationAIConfigurationRequest(BaseModel):
     base_url: str = Field(..., min_length=1, max_length=500)
     model: str = Field(..., min_length=1, max_length=255)
     api_key: str = Field(..., min_length=1, max_length=4096)
+
+
+class ActivateOrgApiKeyRequest(BaseModel):
+    """Request to activate an Organization API key."""
+
+    api_key: str = Field(..., min_length=1, max_length=4096)
+
+
+class SetCredentialSourceRequest(BaseModel):
+    """Request to change the credential source."""
+
+    credential_source: str = Field(..., min_length=1, max_length=32)
+
+
+class UpdateProviderConfigRequest(BaseModel):
+    """Request to update provider/model without changing API key."""
+
+    provider: str = Field(..., min_length=1, max_length=100)
+    base_url: str = Field(..., min_length=1, max_length=500)
+    model: str = Field(..., min_length=1, max_length=255)
 
 
 class AIConnectionTestResponse(BaseModel):

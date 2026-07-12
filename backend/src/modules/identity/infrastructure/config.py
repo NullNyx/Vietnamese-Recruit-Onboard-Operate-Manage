@@ -68,6 +68,9 @@ class AuthSettings(BaseSettings):
     # Dev bootstrap
     auto_seed_sample_data: bool = Field(default=False)
 
+    # AI Deployment
+    ai_deployment_key: str | None = None  # Optional deployment-wide API key for AI provider
+
     # Frontend
     frontend_url: str = "http://localhost:3000"
 
