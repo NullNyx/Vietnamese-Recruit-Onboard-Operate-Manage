@@ -232,7 +232,6 @@ class OrganizationAIConfiguration(SQLModel, table=True):
 
 
 class AuditActionType(str, Enum):
-
     """Enumeration of admin audit action types."""
 
     WHITELIST_ADD = "whitelist_add"

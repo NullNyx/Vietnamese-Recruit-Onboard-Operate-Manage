@@ -35,7 +35,6 @@ class AIConnectionTestResponse(BaseModel):
 
 
 class RoleUpdateRequest(BaseModel):
-
     """Request schema for PATCH /api/admin/users/{id}/role.
 
     Attributes:

@@ -187,7 +187,7 @@ async def test_organization_ai_config(
             AIConfigurationCandidate(body.provider, body.base_url, body.model, body.api_key)
         )
     except OrganizationAIConfigValidationError as exc:
-                raise HTTPException(
+        raise HTTPException(
             status_code=422,
             detail={"code": "AI_CONFIG_INVALID", "message": str(exc)},
         ) from exc
@@ -227,7 +227,6 @@ async def update_organization_ai_config(
 
 
 # --- Whitelist Endpoints ---
-
 
 
 @admin_router.get("/whitelist", response_model=WhitelistListResponse)

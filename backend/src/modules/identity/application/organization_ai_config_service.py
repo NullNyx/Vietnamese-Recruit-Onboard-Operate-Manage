@@ -90,9 +90,7 @@ class OrganizationAIConfigService:
                 f"Provider connection test failed with status {response.status_code}"
             )
 
-    async def update(
-        self, candidate: AIConfigurationCandidate, admin: User
-    ) -> AIConfigurationView:
+    async def update(self, candidate: AIConfigurationCandidate, admin: User) -> AIConfigurationView:
         await self.test_connection(candidate)
         encrypted = self.crypto.encrypt(candidate.api_key)
         now = datetime.now(UTC)
