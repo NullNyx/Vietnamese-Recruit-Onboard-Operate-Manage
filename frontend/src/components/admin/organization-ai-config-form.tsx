@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import {
-  getOrganizationAIConfiguration,
   testOrganizationAIConfiguration,
   updateOrganizationAIConfiguration,
   type OrganizationAIConfiguration,

@@ -1292,7 +1292,7 @@ class CandidateService:
         # commit (R2.3, R4.1-R4.3). Attendee/Meet sub-failures are non-fatal: the
         # event exists, so the schedule succeeds even without a Meet link (R5.3,
         # R6.2, R6.3).
-        candidate = await self._persist_interview_schedule(
+        persisted_candidate = await self._persist_interview_schedule(
             candidate,
             event.event_id,
             start_resolved,
@@ -1301,6 +1301,10 @@ class CandidateService:
             interviewer_ids,
             notes,
         )
+        # Some lightweight repository doubles do not return the updated entity.
+        # Keep the loaded candidate for auditing and the response in that case.
+        if persisted_candidate is not None:
+            candidate = persisted_candidate
 
         # Step 9: success audit (R12.1). Audit failure never rolls back (R12.5):
         # ``log_audit`` swallows its own failures.
