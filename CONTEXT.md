@@ -68,6 +68,10 @@ _Avoid_: Chatbot (quá chung), Agent (hàm ý tự động ghi dữ liệu)
 Khả năng tương lai giả định, trong đó AI tự quyết định và tự thực thi write action. Rõ ràng nằm ngoài scope hiện tại — chỉ được ghi nhận như một định hướng tương lai.
 _Avoid_: dùng “Agent” để gọi Assistant hiện tại vì Assistant không autonomous
 
+**Organization AI Configuration**:
+Cấu hình AI cấp Organization do HR quản lý, xác định provider/model mặc định, nguồn credential và trạng thái bật/tắt độc lập của AI Automation và AI Assistant. Cấu hình này không thuộc Employee hoặc Employee Account.
+_Avoid_: User AI Settings, Employee AI Configuration, AI Agent Configuration
+
 ## Recruitment & Onboarding
 
 **Candidate**:
