@@ -42,7 +42,20 @@ export interface WhitelistEntryCreated {
         updated_at: string | null;
         credential_source: string | null;
         deployment_key_available: boolean;
+        data_policy_accepted: boolean;
+        data_policy_accepted_at: string | null;
+        data_policy_version: string | null;
+        automation_enabled: boolean;
+        automation_state: string;
+        assistant_enabled: boolean;
+        assistant_state: string;
       }
+
+
+  export interface DataPolicyResponse {
+    version: string;
+    items: Array<{ category: string; data_types: string; purpose: string; retention: string }>;
+  }
 
   export interface AIConnectionTestResponse {
     success: boolean;
@@ -231,6 +244,58 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 
   // ---------------------------------------------------------------------------
+
+      // --- Data Policy & Consent ---
+
+
+      export async function getDataPolicy(): Promise<DataPolicyResponse> {
+        const res = await fetch(`${BASE}/organization/ai-config/data-policy`);
+        return handleResponse<DataPolicyResponse>(res);
+      }
+
+      export async function acceptDataPolicy(): Promise<OrganizationAIConfiguration> {
+        const res = await fetch(`${BASE}/organization/ai-config/accept-data-policy`, {
+          method: 'POST',
+        });
+        return handleResponse<OrganizationAIConfiguration>(res);
+      }
+
+
+      // --- Capability toggles: AI Automation ---
+
+
+      export async function enableAutomation(): Promise<OrganizationAIConfiguration> {
+        const res = await fetch(`${BASE}/organization/ai-config/automation/enable`, {
+          method: 'POST',
+        });
+        return handleResponse<OrganizationAIConfiguration>(res);
+      }
+
+      export async function disableAutomation(): Promise<OrganizationAIConfiguration> {
+        const res = await fetch(`${BASE}/organization/ai-config/automation/disable`, {
+          method: 'POST',
+        });
+        return handleResponse<OrganizationAIConfiguration>(res);
+      }
+
+
+      // --- Capability toggles: AI Assistant ---
+
+
+      export async function enableAssistant(): Promise<OrganizationAIConfiguration> {
+        const res = await fetch(`${BASE}/organization/ai-config/assistant/enable`, {
+          method: 'POST',
+        });
+        return handleResponse<OrganizationAIConfiguration>(res);
+      }
+
+      export async function disableAssistant(): Promise<OrganizationAIConfiguration> {
+        const res = await fetch(`${BASE}/organization/ai-config/assistant/disable`, {
+          method: 'POST',
+        });
+        return handleResponse<OrganizationAIConfiguration>(res);
+      }
+
   // Whitelist Endpoints
 
 // ---------------------------------------------------------------------------

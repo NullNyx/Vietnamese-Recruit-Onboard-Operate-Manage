@@ -242,6 +242,18 @@ class OrganizationAIConfiguration(SQLModel, table=True):
     )
     updated_by_user_id: UUID | None = Field(foreign_key="users.id", nullable=True)
 
+    # Data policy consent
+    data_policy_accepted: bool = Field(default=False, nullable=False)
+    data_policy_accepted_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    data_policy_accepted_by_user_id: UUID | None = Field(foreign_key="users.id", nullable=True)
+    data_policy_version: str | None = Field(default=None, nullable=True)
+
+    # Independent capability toggles
+    ai_automation_enabled: bool = Field(default=False, nullable=False)
+    ai_assistant_enabled: bool = Field(default=False, nullable=False)
+
 
 class AuditActionType(str, Enum):
     """Enumeration of admin audit action types."""
@@ -271,6 +283,9 @@ class AuditActionType(str, Enum):
     ORG_AI_CONFIG_ROTATE = "org_ai_config_rotate"
     ORG_AI_CONFIG_REVOKE = "org_ai_config_revoke"
     ORG_AI_CONFIG_SOURCE = "org_ai_config_source"
+    ORG_AI_CONSENT = "org_ai_consent"
+    ORG_AI_TOGGLE_AUTOMATION = "org_ai_toggle_automation"
+    ORG_AI_TOGGLE_ASSISTANT = "org_ai_toggle_assistant"
 
     OUTBOUND_EMAIL_CREATED = "outbound_email_created"
     OUTBOUND_EMAIL_SENT = "outbound_email_sent"
