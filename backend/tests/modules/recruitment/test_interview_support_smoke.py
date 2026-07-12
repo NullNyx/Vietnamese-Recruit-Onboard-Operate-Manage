@@ -137,7 +137,6 @@ class TestCandidateRepoAndSession:
 
         # Mutate + stage + commit -> committed snapshot advances.
         candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
-        candidate.calendar_event_id = "evt-1"
         await repo.update(candidate)
         await session.commit()
         assert repo.committed_snapshot(candidate.id)["status"] == (
@@ -146,14 +145,12 @@ class TestCandidateRepoAndSession:
 
         # Mutate again then rollback -> live object reverts to committed state.
         candidate.status = CandidateStatus.REJECTED
-        candidate.calendar_event_id = "evt-2"
         await repo.update(candidate)
         await session.rollback()
 
         live = await repo.get_by_id(candidate.id)
         assert live is not None
         assert live.status == CandidateStatus.INTERVIEW_SCHEDULED
-        assert live.calendar_event_id == "evt-1"
 
     async def test_session_resolves_interviewers_via_real_query(self) -> None:
         """The session executes the service's real select(Employee) lookup."""

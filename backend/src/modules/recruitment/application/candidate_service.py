@@ -1767,11 +1767,11 @@ class CandidateService:
         if self._calendar_port is None or self._user_id is None:
             return
 
-            interview = await self._get_scheduled_interview(candidate.id)
-            event_id = interview.calendar_event_id if interview else None
-            if event_id is None:
-                # No interview event to cancel (R8.3).
-                return
+        interview = await self._get_scheduled_interview(candidate.id)
+        event_id = interview.calendar_event_id if interview else None
+        if event_id is None:
+            # No interview event to cancel (R8.3).
+            return
 
         calendar_port = self._calendar_port
         user_id = self._user_id
@@ -2044,6 +2044,7 @@ class CandidateService:
         candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
         candidate = await self._candidate_repo.update(candidate)
         await self._session.commit()
+        return candidate
 
     async def _send_interview_email_notification(
         self,
@@ -2092,41 +2093,41 @@ class CandidateService:
         )
         await self._session.commit()
 
-        async def _get_interview_by_event_id(
-            self, candidate_id: UUID, event_id: str
-        ) -> Interview | None:
-            stmt = select(Interview).where(
-                Interview.candidate_id == candidate_id, Interview.calendar_event_id == event_id
-            )
-            res = await self._session.execute(stmt)
-            scalars = res.scalars()
-            if hasattr(scalars, "first"):
-                try:
-                    return scalars.first()
-                except Exception:
-                    return None
+    async def _get_interview_by_event_id(
+        self, candidate_id: UUID, event_id: str
+    ) -> Interview | None:
+        stmt = select(Interview).where(
+            Interview.candidate_id == candidate_id, Interview.calendar_event_id == event_id
+        )
+        res = await self._session.execute(stmt)
+        scalars = res.scalars()
+        if hasattr(scalars, "first"):
+            try:
+                return scalars.first()
+            except Exception:
+                return None
 
-        async def _get_scheduled_interview(self, candidate_id: UUID) -> Interview | None:
-            """Return the first scheduled Interview for a candidate, or None."""
-            stmt = (
-                select(Interview)
-                .where(Interview.candidate_id == candidate_id)
-                .where(Interview.status == "scheduled")
-                .limit(1)
-            )
-            res = await self._session.execute(stmt)
-            return res.scalars().first()
+    async def _get_scheduled_interview(self, candidate_id: UUID) -> Interview | None:
+        """Return the first scheduled Interview for a candidate, or None."""
+        stmt = (
+            select(Interview)
+            .where(Interview.candidate_id == candidate_id)
+            .where(Interview.status == "scheduled")
+            .limit(1)
+        )
+        res = await self._session.execute(stmt)
+        return res.scalars().first()
 
-        async def _get_interview_or_raise(self, interview_id: UUID) -> Interview:
-            """Retrieve an Interview by ID or raise InterviewNotFoundError."""
-            stmt = select(Interview).where(Interview.id == interview_id)
-            res = await self._session.execute(stmt)
-            interview = res.scalars().first()
-            if interview is None:
-                from src.modules.recruitment.domain.exceptions import InterviewNotFoundError
+    async def _get_interview_or_raise(self, interview_id: UUID) -> Interview:
+        """Retrieve an Interview by ID or raise InterviewNotFoundError."""
+        stmt = select(Interview).where(Interview.id == interview_id)
+        res = await self._session.execute(stmt)
+        interview = res.scalars().first()
+        if interview is None:
+            from src.modules.recruitment.domain.exceptions import InterviewNotFoundError
 
-                raise InterviewNotFoundError(f"Interview not found: {interview_id}")
-            return interview
+            raise InterviewNotFoundError(f"Interview not found: {interview_id}")
+        return interview
 
     @staticmethod
     def _assert_interview_is_scheduled(interview: Interview, action: str) -> None:

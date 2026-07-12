@@ -42,9 +42,18 @@ def email_repo() -> AsyncMock:
 
 
 @pytest.fixture
-def oauth_grant_repo() -> AsyncMock:
-    """Create a mocked OAuthGrantRepository."""
-    return AsyncMock()
+def connection_repo() -> AsyncMock:
+    """Create a mocked OrganizationGoogleConnectionRepository."""
+    repo = AsyncMock()
+    connection = MagicMock()
+    connection.status = "connected"
+    connection.access_token_enc = "encrypted_test_access_token"
+    connection.refresh_token_enc = "encrypted_test_refresh_token"
+    connection.client_secret_enc = None
+    connection.token_expires_at = datetime.now(UTC) + timedelta(hours=1)
+    repo.get_singleton = AsyncMock(return_value=connection)
+    repo.upsert_singleton = AsyncMock()
+    return repo
 
 
 @pytest.fixture
@@ -67,7 +76,7 @@ def send_service(
     settings: GmailSettings,
     gmail_adapter: AsyncMock,
     email_repo: AsyncMock,
-    oauth_grant_repo: AsyncMock,
+    connection_repo: AsyncMock,
     crypto: MagicMock,
     audit_logger: AsyncMock,
 ) -> SendService:
@@ -75,7 +84,7 @@ def send_service(
     return SendService(
         gmail_adapter=gmail_adapter,
         email_repo=email_repo,
-        oauth_grant_repo=oauth_grant_repo,
+        connection_repo=connection_repo,
         crypto=crypto,
         audit_logger=audit_logger,
         settings=settings,
@@ -84,25 +93,21 @@ def send_service(
     )
 
 
-def _make_grant(
+def _make_connection(
     *,
-    is_valid: bool = True,
+    status: str = "connected",
     token_expires_at: datetime | None = None,
     access_token_enc: str = "encrypted_test_access_token",
     refresh_token_enc: str = "encrypted_test_refresh_token",
-    scopes: list[str] | None = None,
 ) -> MagicMock:
-    """Create a mock OAuth grant with configurable fields."""
-    grant = MagicMock()
-    grant.is_valid = is_valid
-    grant.token_expires_at = token_expires_at or (datetime.now(UTC) + timedelta(hours=1))
-    grant.access_token_enc = access_token_enc
-    grant.refresh_token_enc = refresh_token_enc
-    grant.scopes = scopes or [
-        "https://www.googleapis.com/auth/gmail.readonly",
-        "https://www.googleapis.com/auth/gmail.send",
-    ]
-    return grant
+    """Create a mock Organization Google Connection with configurable fields."""
+    conn = MagicMock()
+    conn.status = status
+    conn.token_expires_at = token_expires_at or (datetime.now(UTC) + timedelta(hours=1))
+    conn.access_token_enc = access_token_enc
+    conn.refresh_token_enc = refresh_token_enc
+    conn.client_secret_enc = None
+    return conn
 
 
 def _make_send_params(
@@ -338,15 +343,14 @@ class TestSendEmail:
     async def test_successful_send(
         self,
         send_service: SendService,
-        oauth_grant_repo: AsyncMock,
+        connection_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         email_repo: AsyncMock,
         audit_logger: AsyncMock,
     ) -> None:
         """Successfully sends email and returns response."""
         user_id = uuid4()
-        grant = _make_grant()
-        oauth_grant_repo.get_by_user_id.return_value = grant
+        # Connection is already set up via connection_repo fixture
         gmail_adapter.send_message.return_value = SentMessageInfo(
             message_id="sent_msg_123", thread_id="thread_456"
         )
@@ -362,14 +366,13 @@ class TestSendEmail:
     async def test_stores_sent_metadata(
         self,
         send_service: SendService,
-        oauth_grant_repo: AsyncMock,
+        connection_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         email_repo: AsyncMock,
     ) -> None:
         """Stores sent message metadata in EmailRepository."""
         user_id = uuid4()
-        grant = _make_grant()
-        oauth_grant_repo.get_by_user_id.return_value = grant
+        # Connection is already set up via connection_repo fixture
         gmail_adapter.send_message.return_value = SentMessageInfo(
             message_id="sent_msg_123", thread_id="thread_456"
         )
@@ -387,14 +390,13 @@ class TestSendEmail:
     async def test_logs_audit_on_send(
         self,
         send_service: SendService,
-        oauth_grant_repo: AsyncMock,
+        connection_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         audit_logger: AsyncMock,
     ) -> None:
         """Logs send operation to audit logger."""
         user_id = uuid4()
-        grant = _make_grant()
-        oauth_grant_repo.get_by_user_id.return_value = grant
+        # Connection is already set up via connection_repo fixture
         gmail_adapter.send_message.return_value = SentMessageInfo(
             message_id="msg_1", thread_id="thread_1"
         )
@@ -415,11 +417,11 @@ class TestSendEmail:
     async def test_raises_not_connected_when_no_grant(
         self,
         send_service: SendService,
-        oauth_grant_repo: AsyncMock,
+        connection_repo: AsyncMock,
     ) -> None:
-        """Raises GmailNotConnectedException when no OAuth grant exists."""
+        """Raises GmailNotConnectedException when no connection exists."""
         user_id = uuid4()
-        oauth_grant_repo.get_by_user_id.return_value = None
+        connection_repo.get_singleton.return_value = None
 
         params = _make_send_params()
         with pytest.raises(GmailNotConnectedException):
@@ -428,12 +430,11 @@ class TestSendEmail:
     async def test_raises_not_connected_when_grant_invalid(
         self,
         send_service: SendService,
-        oauth_grant_repo: AsyncMock,
+        connection_repo: AsyncMock,
     ) -> None:
-        """Raises GmailNotConnectedException when grant is invalid."""
+        """Raises GmailNotConnectedException when connection is disconnected."""
         user_id = uuid4()
-        grant = _make_grant(is_valid=False)
-        oauth_grant_repo.get_by_user_id.return_value = grant
+        connection_repo.get_singleton.return_value.status = "disconnected"
 
         params = _make_send_params()
         with pytest.raises(GmailNotConnectedException):
@@ -442,14 +443,13 @@ class TestSendEmail:
     async def test_refreshes_token_on_401(
         self,
         send_service: SendService,
-        oauth_grant_repo: AsyncMock,
+        connection_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         crypto: MagicMock,
     ) -> None:
         """Refreshes token and retries on 401 from send_message."""
         user_id = uuid4()
-        grant = _make_grant()
-        oauth_grant_repo.get_by_user_id.return_value = grant
+        # Connection is already set up via connection_repo fixture
 
         # First call raises 401, second succeeds
         mock_response = MagicMock()
@@ -475,13 +475,12 @@ class TestSendEmail:
     async def test_raises_send_failed_when_refresh_fails(
         self,
         send_service: SendService,
-        oauth_grant_repo: AsyncMock,
+        connection_repo: AsyncMock,
         gmail_adapter: AsyncMock,
     ) -> None:
         """Raises GmailSendFailedException when token refresh fails on 401."""
         user_id = uuid4()
-        grant = _make_grant()
-        oauth_grant_repo.get_by_user_id.return_value = grant
+        # Connection is already set up via connection_repo fixture
 
         mock_response = MagicMock()
         mock_response.status_code = 401
@@ -497,12 +496,11 @@ class TestSendEmail:
     async def test_raises_validation_error_for_invalid_params(
         self,
         send_service: SendService,
-        oauth_grant_repo: AsyncMock,
+        connection_repo: AsyncMock,
     ) -> None:
         """Raises ValueError for invalid parameters before calling adapter."""
         user_id = uuid4()
-        grant = _make_grant()
-        oauth_grant_repo.get_by_user_id.return_value = grant
+        # Connection is already set up via connection_repo fixture
 
         params = _make_send_params(to=[])
         with pytest.raises(ValueError):
@@ -511,14 +509,13 @@ class TestSendEmail:
     async def test_send_succeeds_even_if_metadata_storage_fails(
         self,
         send_service: SendService,
-        oauth_grant_repo: AsyncMock,
+        connection_repo: AsyncMock,
         gmail_adapter: AsyncMock,
         email_repo: AsyncMock,
     ) -> None:
         """Send succeeds even if storing metadata fails."""
         user_id = uuid4()
-        grant = _make_grant()
-        oauth_grant_repo.get_by_user_id.return_value = grant
+        # Connection is already set up via connection_repo fixture
         gmail_adapter.send_message.return_value = SentMessageInfo(
             message_id="msg_1", thread_id="thread_1"
         )
@@ -533,13 +530,15 @@ class TestSendEmail:
     async def test_refreshes_token_when_expired(
         self,
         send_service: SendService,
-        oauth_grant_repo: AsyncMock,
+        connection_repo: AsyncMock,
         gmail_adapter: AsyncMock,
     ) -> None:
         """Refreshes token when token_expires_at is in the past."""
         user_id = uuid4()
-        grant = _make_grant(token_expires_at=datetime.now(UTC) - timedelta(minutes=5))
-        oauth_grant_repo.get_by_user_id.return_value = grant
+        # Connection fixture already provides a valid connection; set token expired
+        connection_repo.get_singleton.return_value.token_expires_at = datetime.now(UTC) - timedelta(
+            minutes=5
+        )
         gmail_adapter.refresh_access_token.return_value = (
             "refreshed_token",
             datetime.now(UTC) + timedelta(hours=1),
