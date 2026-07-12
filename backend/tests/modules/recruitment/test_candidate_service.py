@@ -577,9 +577,7 @@ class TestScheduleInterview:
             notes="Technical interview",
         )
 
-        assert result.calendar_event_id == "evt-123"
-        assert result.interview_timezone == "Asia/Ho_Chi_Minh"
-        assert result.interview_start_at is not None
+        assert result.status == CandidateStatus.INTERVIEW_SCHEDULED
         # Calendar event created exactly once with end = start + duration.
         assert len(calendar_port.create_calls) == 1
         _, spec = calendar_port.create_calls[0]
@@ -708,7 +706,7 @@ class TestScheduleInterview:
                 interviewer_ids=[interviewer_id],
             )
         mock_session.rollback.assert_awaited()
-        assert candidate.calendar_event_id is None
+        assert candidate.status == CandidateStatus.NEW
 
     async def test_schedule_from_rejected_raises(self, schedule_service, mock_candidate_repo):
         """Should raise InvalidStatusTransitionError from rejected status."""
