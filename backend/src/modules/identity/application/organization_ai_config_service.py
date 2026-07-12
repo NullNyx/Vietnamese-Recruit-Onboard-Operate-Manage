@@ -25,8 +25,7 @@ DATA_POLICY_ITEMS: list[dict[str, str]] = [
     {
         "category": "email_intent_classification",
         "data_types": (
-            "Email subject, sender address, and body text "
-            "(for inbound recruitment emails)"
+            "Email subject, sender address, and body text (for inbound recruitment emails)"
         ),
         "purpose": "Classify email intent (cv/partner/event/internal/other) for automated routing",
         "retention": "Provider processes data transiently; no training or storage by provider",

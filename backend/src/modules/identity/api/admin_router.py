@@ -208,6 +208,7 @@ async def test_organization_ai_config(
         return AIConnectionTestResponse(success=False, message=str(exc))
     return AIConnectionTestResponse(success=True, message="Connection test succeeded")
 
+
 @admin_router.put("/organization/ai-config", response_model=OrganizationAIConfigurationResponse)
 async def update_organization_ai_config(
     body: OrganizationAIConfigurationRequest,
