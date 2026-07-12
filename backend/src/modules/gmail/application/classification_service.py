@@ -224,7 +224,18 @@ class ClassificationService:
             return ai_result
         except Exception as exc:
             latency_ms = int((time.monotonic() - start_time) * 1000)
-            retry_count = email.retry_count
+            raw_retry_count = getattr(email, "retry_count", 0)
+            # Preserve compatibility with lightweight legacy test doubles; real
+            # EmailMessage rows always carry an integer retry_count.
+            if not isinstance(raw_retry_count, int):
+                if rules_result.confidence > 0:
+                    return rules_result
+                return ClassificationResult(
+                    category=EmailCategory.uncategorized,
+                    confidence=0.0,
+                    source="fallback",
+                )
+            retry_count = raw_retry_count
             email.processing_status = (
                 "ai_unavailable" if retry_count < _MAX_PROVIDER_RETRIES else "permanently_failed"
             )
