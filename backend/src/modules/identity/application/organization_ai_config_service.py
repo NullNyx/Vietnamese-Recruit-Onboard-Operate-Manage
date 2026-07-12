@@ -24,7 +24,10 @@ DATA_POLICY_VERSION = "1.0"
 DATA_POLICY_ITEMS: list[dict[str, str]] = [
     {
         "category": "email_intent_classification",
-        "data_types": "Email subject, sender address, and body text (for inbound recruitment emails)",
+        "data_types": (
+                "Email subject, sender address, and body text "
+                "(for inbound recruitment emails)"
+            ),
         "purpose": "Classify email intent (cv/partner/event/internal/other) for automated routing",
         "retention": "Provider processes data transiently; no training or storage by provider",
     },
@@ -191,7 +194,10 @@ class OrganizationAIConfigService:
             return False
         return True
     def _compute_state(
-        self, config: OrganizationAIConfiguration | None, enabled: bool, credential_usable: bool | None
+        self,
+        config: OrganizationAIConfiguration | None,
+        enabled: bool,
+        credential_usable: bool | None,
     ) -> str:
         """Compute the capability state.
 
@@ -242,9 +248,13 @@ class OrganizationAIConfigService:
             data_policy_accepted_at=config.data_policy_accepted_at,
             data_policy_version=config.data_policy_version,
             automation_enabled=config.ai_automation_enabled,
-            automation_state=self._compute_state(config, config.ai_automation_enabled, credential_usable),
+            automation_state=self._compute_state(
+                config, config.ai_automation_enabled, credential_usable
+            ),
             assistant_enabled=config.ai_assistant_enabled,
-            assistant_state=self._compute_state(config, config.ai_assistant_enabled, credential_usable),
+            assistant_state=self._compute_state(
+                config, config.ai_assistant_enabled, credential_usable
+            ),
         )
         if config.credential_source == CredentialSource.DEPLOYMENT_KEY.value:
             params["api_key_masked"] = "****" if deployment_key else None
