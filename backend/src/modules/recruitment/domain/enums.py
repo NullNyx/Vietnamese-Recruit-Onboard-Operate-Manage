@@ -45,6 +45,7 @@ class ProcessingStatus(StrEnum):
     DISMISSED = "dismissed"
     UPLOAD_FAILED = "upload_failed"
     PERMANENTLY_FAILED = "permanently_failed"
+    AI_UNAVAILABLE = "ai_unavailable"
 
 
 class EmailIntent(StrEnum):

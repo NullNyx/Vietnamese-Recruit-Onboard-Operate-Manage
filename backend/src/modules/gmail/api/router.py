@@ -933,27 +933,32 @@ async def _get_unclassified_emails_and_count(
     current_user: User, email_repo: EmailRepository, limit: int
 ) -> tuple[list[EmailMessageEntity], int]:
     """Fetch unclassified emails and the total remaining count."""
-    from sqlalchemy import func
+    from datetime import UTC, datetime
+
+    from sqlalchemy import func, or_
     from sqlmodel import select
 
     from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
 
-    # Only select emails that haven't been classified yet.
+    pending_filter = or_(
+        EmailMessageEntity.processing_status == "unprocessed",
+        (EmailMessageEntity.processing_status == "ai_unavailable")
+        & (EmailMessageEntity.next_retry_at <= datetime.now(UTC)),
+    )
     statement = (
         select(EmailMessageEntity)
         .where(EmailMessageEntity.user_id == current_user.id)
-        .where(EmailMessageEntity.processing_status == "unprocessed")
+        .where(pending_filter)
         .limit(limit)
     )
     result = await email_repo.session.execute(statement)
     unclassified_emails = list(result.scalars().all())
 
-    # Count total remaining for progress
     count_stmt = (
         select(func.count())
         .select_from(EmailMessageEntity)
         .where(EmailMessageEntity.user_id == current_user.id)
-        .where(EmailMessageEntity.processing_status == "unprocessed")
+        .where(pending_filter)
     )
     total_remaining_result = await email_repo.session.execute(count_stmt)
     total_remaining = total_remaining_result.scalar() or 0
@@ -1326,7 +1331,10 @@ async def reclassify_email(
     )
 
     # Fetch the email
-    statement = select(EmailMessageEntity).where(EmailMessageEntity.id == message_id)  # type: ignore[arg-type]
+    statement = select(EmailMessageEntity).where(  # type: ignore[arg-type]
+        EmailMessageEntity.id == message_id
+    )
+    # type: ignore[arg-type]
     result = await email_repo.session.execute(statement)
     email = result.scalar_one_or_none()
 
@@ -1336,11 +1344,11 @@ async def reclassify_email(
     if email.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # Guard: only needs_review emails can be reclassified
-    if email.processing_status != "needs_review":
+    # HR may retry both low-confidence and provider-unavailable work items.
+    if email.processing_status not in {"needs_review", "ai_unavailable", "permanently_failed"}:
         raise HTTPException(
             status_code=400,
-            detail=f"Email status is '{email.processing_status}', expected 'needs_review'",
+            detail=(f"Email status is '{email.processing_status}', expected a reviewable item"),
         )
 
     from src.modules.gmail.container import get_classification_service
@@ -1379,6 +1387,47 @@ async def reclassify_email(
 
 
 # ---------------------------------------------------------------------------
+@router.post("/review/emails/{message_id}/classify-manually")
+async def classify_email_manually(
+    message_id: UUID,
+    category: str,
+    current_user: CurrentUserDep,
+    email_repo: EmailRepositoryDep,
+) -> dict[str, str]:
+    """Let HR classify a provider-pending email without AI."""
+    from fastapi import HTTPException
+    from sqlalchemy import select
+
+    from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
+    from src.modules.gmail.domain.enums import EmailCategory
+
+    try:
+        EmailCategory(category)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid email category") from exc
+    result = await email_repo.session.execute(
+        select(EmailMessageEntity).where(  # type: ignore[arg-type]
+            EmailMessageEntity.id == message_id
+        )
+    )
+    email = result.scalar_one_or_none()
+    if email is None:
+        raise HTTPException(status_code=404, detail="Email not found")
+    if email.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if email.processing_status not in {"ai_unavailable", "permanently_failed", "needs_review"}:
+        raise HTTPException(status_code=400, detail="Email is not awaiting manual recovery")
+    email.category = category
+    email.processing_status = "classified"
+    email.processing_error = None
+    email.next_retry_at = None
+    email.retry_count = 0
+    email.is_permanently_failed = False
+    email_repo.session.add(email)
+    await email_repo.session.commit()
+    return {"id": str(email.id), "category": category, "processing_status": email.processing_status}
+
+
 # Outbound Email endpoints
 # ---------------------------------------------------------------------------
 

@@ -289,6 +289,7 @@ class CVDocumentRepository:
         review_statuses = [
             ProcessingStatus.NEEDS_REVIEW,
             ProcessingStatus.FAILED,
+            ProcessingStatus.AI_UNAVAILABLE,
         ]
 
         statement = select(CVDocument).where(
