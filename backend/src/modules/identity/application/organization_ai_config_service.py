@@ -176,7 +176,7 @@ class OrganizationAIConfigService:
         except OrganizationAIConfigValidationError:
             return False
         try:
-            await self._test_url(config.base_url, key)
+            await self._test_completion(config.base_url, key, config.model)
         except OrganizationAIConfigTestError:
             return False
         return True
@@ -273,12 +273,30 @@ class OrganizationAIConfigService:
     # Health / connection
     # ------------------------------------------------------------------
 
-    async def _test_url(self, base_url: str, api_key: str) -> None:
-        """Test connectivity to the provider's /models endpoint."""
-        url = base_url.rstrip("/") + "/models"
+    async def _test_completion(self, base_url: str, api_key: str, model: str) -> None:
+        """Verify an OpenAI-compatible provider through chat completions.
+
+        Completion-only providers are not required to expose the optional
+        ``/models`` discovery endpoint, so health checks exercise the contract
+        the configured model will actually use.
+        """
+        url = base_url.rstrip("/") + "/chat/completions"
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": "Reply with OK."}],
+            "max_tokens": 4,
+            "stream": False,
+        }
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
         except httpx.HTTPError as exc:
             raise OrganizationAIConfigTestError(f"Unable to connect to provider: {exc}") from exc
         if response.status_code < 200 or response.status_code >= 300:
@@ -288,7 +306,7 @@ class OrganizationAIConfigService:
 
     async def test_connection(self, candidate: AIConfigurationCandidate) -> None:
         self.validate(candidate)
-        await self._test_url(candidate.base_url, candidate.api_key)
+        await self._test_completion(candidate.base_url, candidate.api_key, candidate.model)
 
     async def test_deployment_key_connection(
         self, provider: str, base_url: str, model: str
@@ -304,7 +322,7 @@ class OrganizationAIConfigService:
             api_key=deployment_key,
         )
         self.validate(candidate)
-        await self._test_url(base_url, deployment_key)
+        await self._test_completion(base_url, deployment_key, model)
 
     async def _resolve_api_key(self, config: OrganizationAIConfiguration) -> str:
         """Return the actual API key for a config based on its credential source."""
@@ -344,7 +362,7 @@ class OrganizationAIConfigService:
         # Health check must pass
         try:
             key = await self._resolve_api_key(config)
-            await self._test_url(config.base_url, key)
+            await self._test_completion(config.base_url, key, config.model)
         except (OrganizationAIConfigValidationError, OrganizationAIConfigTestError) as exc:
             raise OrganizationAIConfigTestError(
                 f"Cannot enable {capability_name}: provider health check failed — {exc}"
@@ -548,7 +566,7 @@ class OrganizationAIConfigService:
                     "Deployment key is not configured. Set AI_DEPLOYMENT_KEY environment variable."
                 )
             # Test with deployment key
-            await self._test_url(config.base_url, deployment_key)
+            await self._test_completion(config.base_url, deployment_key, config.model)
         elif source == CredentialSource.ORG_API_KEY.value:
             if not config.api_key_enc:
                 raise OrganizationAIConfigValidationError(
