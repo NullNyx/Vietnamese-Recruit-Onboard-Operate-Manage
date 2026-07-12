@@ -157,7 +157,7 @@ async def get_organization_ai_config_service(
 
 
 def _ai_view_response(view: object) -> OrganizationAIConfigurationResponse:
-        return OrganizationAIConfigurationResponse(
+    return OrganizationAIConfigurationResponse(
         provider=view.provider,  # type: ignore[attr-defined]
         base_url=view.base_url,  # type: ignore[attr-defined]
         model=view.model,  # type: ignore[attr-defined]
@@ -173,7 +173,7 @@ def _ai_view_response(view: object) -> OrganizationAIConfigurationResponse:
         automation_state=view.automation_state,  # type: ignore[attr-defined]
         assistant_enabled=view.assistant_enabled,  # type: ignore[attr-defined]
         assistant_state=view.assistant_state,  # type: ignore[attr-defined]
-        )
+    )
 
 
 @admin_router.get("/organization/ai-config", response_model=OrganizationAIConfigurationResponse)
@@ -383,7 +383,6 @@ async def update_provider_config(
         details=result.audit_details,
     )
     return _ai_view_response(result.view)
-
 
 
 # --- Data Policy & Consent ---

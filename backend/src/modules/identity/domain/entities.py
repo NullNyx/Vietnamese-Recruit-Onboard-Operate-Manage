@@ -247,9 +247,7 @@ class OrganizationAIConfiguration(SQLModel, table=True):
     data_policy_accepted_at: datetime | None = Field(
         default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
     )
-    data_policy_accepted_by_user_id: UUID | None = Field(
-        foreign_key="users.id", nullable=True
-    )
+    data_policy_accepted_by_user_id: UUID | None = Field(foreign_key="users.id", nullable=True)
     data_policy_version: str | None = Field(default=None, nullable=True)
 
     # Independent capability toggles
