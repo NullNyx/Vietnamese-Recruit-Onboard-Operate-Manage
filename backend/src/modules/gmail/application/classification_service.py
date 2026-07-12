@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -36,6 +37,13 @@ if TYPE_CHECKING:
     from src.modules.gmail.infrastructure.email_repository import EmailRepository
 
 logger = logging.getLogger(__name__)
+
+_MAX_PROVIDER_RETRIES = 3
+_RETRY_BACKOFF_SECONDS = (60, 300, 900)
+
+
+class AIUnavailableError(RuntimeError):
+    """Raised when AI Automation cannot reach its provider."""
 
 
 class ClassificationService:
@@ -100,7 +108,7 @@ class ClassificationService:
                 try:
                     result = await self._classify_single(email)
                     await self._apply_classification(email, result)
-                    return 1
+                    return 0 if result.source == "ai_unavailable" else 1
                 except Exception as exc:
                     logger.error(
                         "Classification failed for email %s: %s",
@@ -215,21 +223,31 @@ class ClassificationService:
             )
             return ai_result
         except Exception as exc:
-            # AI failed — fall back to rules result even if low confidence
             latency_ms = int((time.monotonic() - start_time) * 1000)
+            retry_count = email.retry_count
+            email.processing_status = (
+                "ai_unavailable" if retry_count < _MAX_PROVIDER_RETRIES else "permanently_failed"
+            )
+            email.processing_error = "AI provider unavailable; HR can retry or classify manually"
+            email.last_retry_at = datetime.now(UTC)
+            if retry_count < _MAX_PROVIDER_RETRIES:
+                delay = _RETRY_BACKOFF_SECONDS[retry_count]
+                email.next_retry_at = datetime.now(UTC) + timedelta(seconds=delay)
+            else:
+                email.next_retry_at = None
+                email.is_permanently_failed = True
+            email.retry_count += 1
+            self._session.add(email)
             logger.warning(
-                "AI classification failed for email %s (%dms), falling back to rules result: %s",
+                "AI classification unavailable for email %s (%dms): %s",
                 email.gmail_message_id,
                 latency_ms,
                 exc,
             )
-            # If rules had some result, use it; otherwise uncategorized
-            if rules_result.confidence > 0:
-                return rules_result
             return ClassificationResult(
                 category=EmailCategory.uncategorized,
                 confidence=0.0,
-                source="fallback",
+                source="ai_unavailable",
             )
 
     async def _apply_classification(
@@ -247,7 +265,15 @@ class ClassificationService:
             email: The EmailMessage entity to update.
             result: The classification result to apply.
         """
+        if result.source == "ai_unavailable":
+            return
+
         email.category = result.category.value
+        email.processing_error = None
+        email.next_retry_at = None
+        email.last_retry_at = None
+        email.retry_count = 0
+        email.is_permanently_failed = False
 
         # Dead-letter queue: if confidence below threshold, mark for human review
         if result.confidence < self._settings.classification_needs_review_threshold:

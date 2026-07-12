@@ -84,6 +84,12 @@ class CVDocument(SQLModel, table=True):
     processing_error: str | None = Field(default=None, max_length=500)
     validation_errors: list[dict[str, Any]] | None = Field(default=None, sa_column=Column(JSONB))
     retry_count: int = Field(default=0, nullable=False)
+    next_retry_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    last_retry_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
     uploaded_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

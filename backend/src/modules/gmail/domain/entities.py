@@ -41,9 +41,16 @@ class EmailMessage(SQLModel, table=True):
     label_ids: list[str] = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
     has_attachments: bool = Field(default=False, nullable=False)
     raw_payload_enc: str | None = Field(default=None)
-    processing_status: str = Field(default="unprocessed", max_length=20, nullable=False)
+    processing_status: str = Field(default="unprocessed", max_length=30, nullable=False)
     category: str | None = Field(default=None, max_length=20)
     retry_count: int = Field(default=0, nullable=False)
+    processing_error: str | None = Field(default=None, max_length=500)
+    next_retry_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    last_retry_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
     is_permanently_failed: bool = Field(default=False, nullable=False)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

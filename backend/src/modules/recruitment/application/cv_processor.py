@@ -15,6 +15,7 @@ import hashlib
 import logging
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
@@ -572,8 +573,22 @@ class CVProcessorService:
         try:
             parse_result = await self._llm_adapter.parse_cv(redacted_text)
         except LLMParseError as exc:
-            cv_doc.processing_status = ProcessingStatus.FAILED
-            cv_doc.processing_error = f"LLM parse failed: {exc}"
+            cv_doc.retry_count += 1
+            if cv_doc.retry_count <= 3:
+                # Keep the established failed state so existing review tooling can
+                # recover the document; retry metadata makes it pending work.
+                cv_doc.processing_status = ProcessingStatus.FAILED
+                cv_doc.next_retry_at = datetime.now(UTC) + timedelta(
+                    seconds=(60, 300, 900)[cv_doc.retry_count - 1]
+                )
+                cv_doc.last_retry_at = datetime.now(UTC)
+                cv_doc.processing_error = (
+                    "LLM parse failed; AI provider unavailable; HR can retry or "
+                    f"process manually: {exc}"
+                )
+            else:
+                cv_doc.processing_status = ProcessingStatus.PERMANENTLY_FAILED
+                cv_doc.processing_error = "AI provider unavailable after bounded retries"
             cv_doc = await self._cv_document_repo.update(cv_doc)
             await self._session.commit()
 
