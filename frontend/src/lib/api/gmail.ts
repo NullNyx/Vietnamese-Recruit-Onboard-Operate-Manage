@@ -284,7 +284,7 @@ export interface ProcessAttachmentsResponse {
       days: number | null;
       total_count: number;
       processed_count: number;
-      cv_count: number;
+      job_application_count: number;
       errors: number;
       started_at: string | null;
       completed_at: string | null;

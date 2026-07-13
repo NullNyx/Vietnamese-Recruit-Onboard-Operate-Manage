@@ -265,7 +265,7 @@ async def get_import_status(
         days=result.days,
         total_count=result.total_count,
         processed_count=result.processed_count,
-        cv_count=result.cv_count,
+        job_application_count=result.job_application_count,
         errors=result.errors,
         started_at=result.started_at,
         completed_at=result.completed_at,

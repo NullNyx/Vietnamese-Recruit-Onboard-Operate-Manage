@@ -80,7 +80,7 @@ export function HistoricalImportPanel() {
         days: result.days,
         total_count: 0,
         processed_count: 0,
-        cv_count: 0,
+        job_application_count: 0,
         errors: 0,
         started_at: new Date().toISOString(),
         completed_at: null,
@@ -297,9 +297,9 @@ export function HistoricalImportPanel() {
                 </div>
                 <div className="rounded-md bg-muted px-2 py-1">
                   <div className="text-xs font-semibold text-foreground">
-                    {importStatus.cv_count}
+                    {importStatus.job_application_count}
                   </div>
-                  <div className="text-[10px] text-muted-foreground">CV</div>
+                  <div className="text-[10px] text-muted-foreground">Job Applications</div>
                 </div>
                 <div className="rounded-md bg-muted px-2 py-1">
                   <div className="text-xs font-semibold text-foreground">

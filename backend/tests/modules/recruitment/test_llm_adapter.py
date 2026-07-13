@@ -67,7 +67,7 @@ class TestClassifyIntent:
     @pytest.mark.asyncio
     async def test_classifies_cv_intent_legacy(self, adapter: LLMAdapter):
         """Should correctly classify a CV email (legacy intent)."""
-        mock_response = _make_completion_response(_make_classification_json("cv"))
+        mock_response = _make_completion_response(_make_classification_json("job_application"))
 
         with patch.object(
             adapter._client.chat.completions, "create", new_callable=AsyncMock
@@ -82,7 +82,7 @@ class TestClassifyIntent:
             )
 
         assert isinstance(result, IntentResult)
-        assert result.intent == EmailIntent.CV
+        assert result.intent == EmailIntent.JOB_APPLICATION
         assert result.classification is not None
         assert result.classification.version == "1.0"
         assert result.classification.confidence == 0.95
@@ -177,7 +177,7 @@ class TestClassifyIntent:
         incomplete_json = json.dumps(
             {
                 "version": "1.0",
-                "intent": "cv",
+                "intent": "job_application",
                 "evidence": ["matched_cv_pattern"],
             }
         )
@@ -248,7 +248,7 @@ class TestClassifyIntent:
         """Should retry on API errors and succeed if a retry works."""
         from openai import APIConnectionError
 
-        mock_response = _make_completion_response(_make_classification_json("cv"))
+        mock_response = _make_completion_response(_make_classification_json("job_application"))
 
         with patch.object(
             adapter._client.chat.completions, "create", new_callable=AsyncMock
@@ -266,13 +266,13 @@ class TestClassifyIntent:
                     attachment_filenames=["cv.pdf"],
                 )
 
-        assert result.intent == EmailIntent.CV
+        assert result.intent == EmailIntent.JOB_APPLICATION
         assert mock_create.call_count == 2
 
     @pytest.mark.asyncio
     async def test_prompt_includes_all_metadata(self, adapter: LLMAdapter):
         """Should include subject, sender, snippet, and attachments in prompt."""
-        mock_response = _make_completion_response(_make_classification_json("cv"))
+        mock_response = _make_completion_response(_make_classification_json("job_application"))
 
         with patch.object(
             adapter._client.chat.completions, "create", new_callable=AsyncMock
@@ -372,7 +372,7 @@ class TestClassifyIntent:
         cv_json = json.dumps(
             {
                 "version": "1.0",
-                "intent": "cv",
+                "intent": "job_application",
                 "confidence": 0.9,
                 "evidence": ["matched_cv_pattern"],
                 "source_hints": {"has_cv_attachment": "true"},
@@ -393,7 +393,7 @@ class TestClassifyIntent:
                 attachment_filenames=[],
             )
 
-        assert result.intent == EmailIntent.CV
+        assert result.intent == EmailIntent.JOB_APPLICATION
 
 
 class TestParseCV:
@@ -622,8 +622,8 @@ class TestParseClassificationJson:
         assert len(result.evidence) == 2
         assert ("sender_role", "candidate") in result.source_hints
 
-    def test_parses_cv_legacy(self, adapter: LLMAdapter):
-        """Should parse legacy cv intent."""
+    def test_rejects_legacy_cv_intent(self, adapter: LLMAdapter):
+        """Legacy ``cv`` is audit data, not an active routing intent."""
         content = json.dumps(
             {
                 "version": "1.0",
@@ -633,10 +633,8 @@ class TestParseClassificationJson:
                 "source_hints": {"has_cv_attachment": "true"},
             }
         )
-        result = adapter._parse_classification_json(content)
-        assert result.intent == EmailIntent.CV
-        assert result.confidence == 0.95
-        assert ("has_cv_attachment", "true") in result.source_hints
+        with pytest.raises(LLMParseError, match="unsupported intent"):
+            adapter._parse_classification_json(content)
 
     @pytest.mark.parametrize("confidence", [1.5, -0.5, True])
     def test_rejects_invalid_confidence(self, adapter: LLMAdapter, confidence: float | bool):
@@ -644,7 +642,7 @@ class TestParseClassificationJson:
         content = json.dumps(
             {
                 "version": "1.0",
-                "intent": "cv",
+                "intent": "job_application",
                 "confidence": confidence,
                 "evidence": ["attachment:cv.pdf"],
                 "source_hints": {},
@@ -658,7 +656,7 @@ class TestParseClassificationJson:
         inner = json.dumps(
             {
                 "version": "1.0",
-                "intent": "cv",
+                "intent": "job_application",
                 "confidence": 0.9,
                 "evidence": ["test"],
                 "source_hints": {},
@@ -666,7 +664,7 @@ class TestParseClassificationJson:
         )
         content = f"```json\n{inner}\n```"
         result = adapter._parse_classification_json(content)
-        assert result.intent == EmailIntent.CV
+        assert result.intent == EmailIntent.JOB_APPLICATION
 
     def test_handles_plain_code_blocks(self, adapter: LLMAdapter):
         """Should strip plain code block wrappers (no language tag)."""
@@ -705,7 +703,7 @@ class TestParseClassificationJson:
         """Should raise LLMParseError when version field is missing."""
         content = json.dumps(
             {
-                "intent": "cv",
+                "intent": "job_application",
                 "confidence": 0.9,
                 "evidence": [],
             }
@@ -730,7 +728,7 @@ class TestParseClassificationJson:
         content = json.dumps(
             {
                 "version": "1.0",
-                "intent": "cv",
+                "intent": "job_application",
                 "evidence": [],
             }
         )
@@ -742,7 +740,7 @@ class TestParseClassificationJson:
         content = json.dumps(
             {
                 "version": "1.0",
-                "intent": "cv",
+                "intent": "job_application",
                 "confidence": 0.9,
             }
         )

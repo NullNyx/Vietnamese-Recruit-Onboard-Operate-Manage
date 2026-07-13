@@ -11,8 +11,9 @@ Revises: 063
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
+
+from alembic import op
 
 revision: str = "064"
 down_revision: str | None = "063"
@@ -26,7 +27,7 @@ def upgrade() -> None:
         "correction_records",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("source_type", sa.String(20), nullable=False),
-        sa.Column("source_id", sa.Uuid(), nullable=False, index=True),
+        sa.Column("source_id", sa.Uuid(), nullable=False),
         # Prediction
         sa.Column("prediction_intent", sa.String(50), nullable=True),
         sa.Column("confidence_raw", sa.Float(), nullable=True),
@@ -47,7 +48,12 @@ def upgrade() -> None:
         # Evaluation opt-in
         sa.Column("evaluation_status", sa.String(20), nullable=False, server_default="none"),
         # Guard
-        sa.Column("triggers_online_learning", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column(
+            "triggers_online_learning",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text("false"),
+        ),
         # Redacted fields
         sa.Column("redacted_subject", sa.String(500), nullable=True),
         sa.Column("redacted_snippet", sa.String(2000), nullable=True),
@@ -82,14 +88,12 @@ def upgrade() -> None:
             sa.Uuid(),
             sa.ForeignKey("correction_records.id"),
             nullable=False,
-            index=True,
         ),
         sa.Column(
             "evaluation_set_id",
             sa.Uuid(),
             sa.ForeignKey("evaluation_sets.id"),
             nullable=False,
-            index=True,
         ),
         # Redacted content
         sa.Column("redacted_subject", sa.String(500), nullable=False, server_default=""),

@@ -3,7 +3,7 @@
 Orchestrates the preview, execution, progress tracking, and cancellation of
 historical email import from the Organization Shared Google Account. The import
 operates on a bounded time window (7 or 30 days), reads only INBOX messages,
-uses the same AI Automation pipeline as live sync (only intent ``cv`` continues
+uses the same AI Automation pipeline as live sync (only ``job_application`` continues
 to Backbone Flow), and never modifies the live Gmail history cursor.
 
 Import state is stored in Redis so the ARQ worker and API endpoints can
@@ -87,7 +87,7 @@ class ImportStatus:
         days: The time window of the job, if any.
         total_count: Total messages found for the window.
         processed_count: Messages processed so far / final.
-        cv_count: Messages classified as cv that entered Backbone Flow.
+        job_application_count: Messages classified as Job Applications that entered Backbone Flow.
         errors: Count of errors encountered.
         started_at: ISO timestamp when the job started.
         completed_at: ISO timestamp when the job finished or None.
@@ -99,7 +99,7 @@ class ImportStatus:
     days: int | None = None
     total_count: int = 0
     processed_count: int = 0
-    cv_count: int = 0
+    job_application_count: int = 0
     errors: int = 0
     started_at: str | None = None
     completed_at: str | None = None
@@ -286,7 +286,7 @@ class HistoricalImportService:
             "started_at": now_ts,
             "total_count": "0",
             "processed_count": "0",
-            "cv_count": "0",
+            "job_application_count": "0",
             "errors": "0",
         }
 
@@ -330,7 +330,9 @@ class HistoricalImportService:
         progress = await self._hgetall_str(_REDIS_PROGRESS_KEY)
         total_count = int(progress.get("total_count", job.get("total_count", "0")))
         processed_count = int(progress.get("processed_count", job.get("processed_count", "0")))
-        cv_count = int(progress.get("cv_count", job.get("cv_count", "0")))
+        job_application_count = int(
+            progress.get("job_application_count", job.get("job_application_count", "0"))
+        )
         errors = int(progress.get("errors", job.get("errors", "0")))
         error_message = progress.get("error_message", "") or None
 
@@ -340,7 +342,7 @@ class HistoricalImportService:
             days=int(days_str) if days_str else None,
             total_count=total_count,
             processed_count=processed_count,
-            cv_count=cv_count,
+            job_application_count=job_application_count,
             errors=errors,
             started_at=started_at or None,
             completed_at=completed_at or None,
@@ -399,7 +401,7 @@ class HistoricalImportService:
         progress in Redis.
 
         Returns:
-            A summary dict with total, processed, cv_count, errors.
+            A summary dict with total, processed, job_application_count, errors.
         """
         job = await self._hgetall_str(_REDIS_JOB_KEY)
         if not job:
@@ -439,7 +441,7 @@ class HistoricalImportService:
         query = self._build_query(window_start, window_end)
 
         total_processed = 0
-        total_cv = 0
+        total_job_applications = 0
         total_errors = 0
 
         try:
@@ -459,12 +461,14 @@ class HistoricalImportService:
                     "Historical import job %s: no messages in window",
                     job_id,
                 )
-                await self._mark_final(job_id, "completed", total_processed, total_cv, total_errors)
+                await self._mark_final(
+                    job_id, "completed", total_processed, total_job_applications, total_errors
+                )
                 return {
                     "status": "completed",
                     "total": 0,
                     "processed": 0,
-                    "cv": 0,
+                    "job_applications": 0,
                 }
 
             for i in range(0, total_count, IMPORT_BATCH_SIZE):
@@ -478,14 +482,14 @@ class HistoricalImportService:
                         job_id,
                         "cancelled",
                         total_processed,
-                        total_cv,
+                        total_job_applications,
                         total_errors,
                     )
                     return {
                         "status": "cancelled",
                         "total": total_count,
                         "processed": total_processed,
-                        "cv": total_cv,
+                        "job_applications": total_job_applications,
                     }
 
                 # Verify connection identity hasn't changed (disconnect, reconnect).
@@ -551,22 +555,28 @@ class HistoricalImportService:
             # Classify newly imported emails.
             if total_processed > 0 and self._settings.classification_enabled:
                 try:
-                    total_cv = await self._classify_recent_emails(user_id, total_processed)
+                    total_job_applications = await self._classify_recent_emails(
+                        user_id, total_processed
+                    )
                 except Exception as exc:
                     logger.error(
                         "Classification after historical import failed: %s",
                         exc,
                     )
 
-            await self._hset_field_str(_REDIS_PROGRESS_KEY, "cv_count", str(total_cv))
+            await self._hset_field_str(
+                _REDIS_PROGRESS_KEY, "job_application_count", str(total_job_applications)
+            )
 
-            await self._mark_final(job_id, "completed", total_processed, total_cv, total_errors)
+            await self._mark_final(
+                job_id, "completed", total_processed, total_job_applications, total_errors
+            )
 
             logger.info(
-                "Historical import job %s completed: %d processed, %d cv, %d errors",
+                "Historical import job %s completed: %d processed, %d Job Applications, %d errors",
                 job_id,
                 total_processed,
-                total_cv,
+                total_job_applications,
                 total_errors,
             )
 
@@ -574,7 +584,7 @@ class HistoricalImportService:
                 "status": "completed",
                 "total": total_count,
                 "processed": total_processed,
-                "cv": total_cv,
+                "job_applications": total_job_applications,
                 "errors": total_errors,
             }
 
@@ -765,7 +775,7 @@ class HistoricalImportService:
         job_id: str,
         status: str,
         processed: int,
-        cv: int,
+        job_applications: int,
         errors: int,
     ) -> None:
         """Mark the job as completed/cancelled in Redis.
@@ -774,7 +784,7 @@ class HistoricalImportService:
             job_id: The job UUID.
             status: 'completed' or 'cancelled'.
             processed: Total messages processed.
-            cv: Messages classified as cv.
+            job_applications: Messages classified as Job Applications.
             errors: Error count.
         """
         now_ts = str(time.time())
@@ -789,7 +799,7 @@ class HistoricalImportService:
             _REDIS_PROGRESS_KEY,
             {
                 "processed_count": str(processed),
-                "cv_count": str(cv),
+                "job_application_count": str(job_applications),
                 "errors": str(errors),
             },
         )
@@ -799,7 +809,7 @@ class HistoricalImportService:
                 "job_id": job_id,
                 "status": status,
                 "processed_count": str(processed),
-                "cv_count": str(cv),
+                "job_application_count": str(job_applications),
                 "errors": str(errors),
                 "completed_at": now_ts,
             },
@@ -833,14 +843,14 @@ class HistoricalImportService:
         """Run classification on the most recently imported emails.
 
         Uses the same ClassificationService as the live sync pipeline.
-        Only emails classified as 'recruitment' (cv intent) are counted.
+        Only emails classified as Job Applications are counted.
 
         Args:
             user_id: The user ID for ownership.
             limit: Max number of recent emails to classify.
 
         Returns:
-            Count of emails classified as 'recruitment'/cv.
+            Count of emails classified as Job Applications.
         """
         from sqlmodel import desc, select
 
@@ -889,15 +899,17 @@ class HistoricalImportService:
 
         await classification_service.classify_batch(user_id=user_id, emails=imported_emails)
 
-        cv_count = sum(1 for e in imported_emails if getattr(e, "category", None) == "recruitment")
-
-        logger.info(
-            "Classified %d imported emails (%d as cv/recruitment)",
-            len(imported_emails),
-            cv_count,
+        job_application_count = sum(
+            1 for e in imported_emails if getattr(e, "category", None) == "recruitment"
         )
 
-        return cv_count
+        logger.info(
+            "Classified %d imported emails (%d as Job Applications)",
+            len(imported_emails),
+            job_application_count,
+        )
+
+        return job_application_count
 
     def _metadata_to_entity(self, user_id: UUID, metadata: GmailMessageMetadata) -> Any:
         """Convert GmailMessageMetadata to an EmailMessage domain entity.

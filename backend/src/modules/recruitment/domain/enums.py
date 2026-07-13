@@ -55,7 +55,6 @@ class EmailIntent(StrEnum):
     of email subject, sender, snippet, and attachment metadata.
     """
 
-    CV = "cv"
     JOB_APPLICATION = "job_application"
     PARTNER = "partner"
     EVENT = "event"
