@@ -68,20 +68,15 @@ def _load_frozen_predictions(path: str | Path) -> dict[str, dict[str, Any]]:
     """
     p = Path(path)
     if not p.exists():
-        raise EvaluationContractError(
-            f"Frozen predictions file not found: {p}"
-        )
+        raise EvaluationContractError(f"Frozen predictions file not found: {p}")
     try:
         with open(p, encoding="utf-8") as f:
             raw = json.load(f)
     except json.JSONDecodeError as exc:
-        raise EvaluationContractError(
-            f"Failed to parse frozen predictions file {p}: {exc}"
-        )
+        raise EvaluationContractError(f"Failed to parse frozen predictions file {p}: {exc}")
     if not isinstance(raw, dict):
         raise EvaluationContractError(
-            f"Frozen predictions file must contain a JSON object (dict), "
-            f"got {type(raw).__name__}"
+            f"Frozen predictions file must contain a JSON object (dict), got {type(raw).__name__}"
         )
     return raw
 
@@ -119,8 +114,7 @@ def _convert_frozen(
         confidence = float(pred_data.get("confidence", 0.0))
         if not (0.0 <= confidence <= 1.0):
             raise EvaluationContractError(
-                f"Frozen prediction for {item_id!r}: confidence {confidence} "
-                f"is outside [0.0, 1.0]"
+                f"Frozen prediction for {item_id!r}: confidence {confidence} is outside [0.0, 1.0]"
             )
         frozen[item_id] = Prediction(
             item_id=item_id,
@@ -191,9 +185,7 @@ def main() -> None:
             frozen_predictions = _convert_frozen(fp_raw, item_ids)
             # Extract predictor version metadata from frozen file
             fp_meta = fp_raw.get("_metadata", {})
-            predictor_meta = (
-                fp_meta.get("predictor", {}) if isinstance(fp_meta, dict) else {}
-            )
+            predictor_meta = fp_meta.get("predictor", {}) if isinstance(fp_meta, dict) else {}
             if predictor_meta:
                 source_versions = VersionInfo(
                     model=str(predictor_meta.get("model", "")),

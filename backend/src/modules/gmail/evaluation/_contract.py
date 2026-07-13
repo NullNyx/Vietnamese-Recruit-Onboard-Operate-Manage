@@ -325,9 +325,7 @@ class EvaluationContract:
         try:
             raw = json.loads(p.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
-            raise EvaluationContractError(
-                f"Failed to parse evaluation dataset {p}: {exc}"
-            )
+            raise EvaluationContractError(f"Failed to parse evaluation dataset {p}: {exc}")
         return cls(raw)
 
     # ── validation ───────────────────────────────────────────────
@@ -339,25 +337,15 @@ class EvaluationContract:
     ) -> None:
         """Validate the raw dataset dict against the contract schema."""
         if not isinstance(raw, dict):
-            raise EvaluationContractError(
-                "Top-level dataset must be a JSON object"
-            )
+            raise EvaluationContractError("Top-level dataset must be a JSON object")
         if "version" not in raw:
-            raise EvaluationContractError(
-                "Dataset must include a 'version' field (semver)"
-            )
+            raise EvaluationContractError("Dataset must include a 'version' field (semver)")
         if "items" not in raw:
-            raise EvaluationContractError(
-                "Dataset must include an 'items' array"
-            )
+            raise EvaluationContractError("Dataset must include an 'items' array")
         if not isinstance(raw["items"], list):
-            raise EvaluationContractError(
-                "Dataset 'items' field must be a JSON array"
-            )
+            raise EvaluationContractError("Dataset 'items' field must be a JSON array")
         if not raw["items"]:
-            raise EvaluationContractError(
-                "Dataset 'items' array must not be empty"
-            )
+            raise EvaluationContractError("Dataset 'items' array must not be empty")
 
         # Validate cohorts header
         defined_cohorts: set[str] = set(raw.get("cohorts", {}).keys())
@@ -365,18 +353,14 @@ class EvaluationContract:
         # Validate shape: each item must be a plain dict
         for item in raw["items"]:
             if not isinstance(item, dict):
-                raise EvaluationContractError(
-                    "Each 'items' entry must be a JSON object (dict)"
-                )
+                raise EvaluationContractError("Each 'items' entry must be a JSON object (dict)")
 
         # Check for duplicate ids
         seen_ids: set[str] = set()
         for item in raw["items"]:
             item_id = item.get("id", "")
             if item_id in seen_ids:
-                raise EvaluationContractError(
-                    f"Duplicate item id: {item_id!r}"
-                )
+                raise EvaluationContractError(f"Duplicate item id: {item_id!r}")
             if item_id:
                 seen_ids.add(item_id)
 
@@ -423,13 +407,9 @@ class EvaluationContract:
                 for c in item.get("cohorts", []):
                     if c in cohort_item_counts:
                         cohort_item_counts[c] += 1
-            empty_cohorts = [
-                c for c, count in cohort_item_counts.items() if count == 0
-            ]
+            empty_cohorts = [c for c, count in cohort_item_counts.items() if count == 0]
             if empty_cohorts:
-                raise EvaluationContractError(
-                    f"Required cohorts have zero items: {empty_cohorts}"
-                )
+                raise EvaluationContractError(f"Required cohorts have zero items: {empty_cohorts}")
 
     @staticmethod
     def _build_dataset(raw: dict[str, Any]) -> EvaluationDataset:
@@ -476,11 +456,7 @@ class EvaluationContract:
         Returns:
             An ``EvaluationReport`` with metrics.
         """
-        fp = (
-            frozen_predictions
-            if frozen_predictions is not None
-            else self.frozen_predictions
-        )
+        fp = frozen_predictions if frozen_predictions is not None else self.frozen_predictions
         effective_versions = self.versions
         if source_versions is not None:
             effective_versions = VersionInfo(
@@ -527,8 +503,7 @@ class EvaluationContract:
                 pred = predictor(item)
                 if not isinstance(pred, Prediction):
                     raise EvaluationContractError(
-                        f"Predictor returned non-Prediction for {item.id}: "
-                        f"{type(pred).__name__}"
+                        f"Predictor returned non-Prediction for {item.id}: {type(pred).__name__}"
                     )
                 if pred.item_id != item.id:
                     raise EvaluationContractError(
@@ -660,9 +635,7 @@ def _compute_metrics(
     per_cohort: dict[str, MetricRow] = {}
     for cohort in sorted(all_cohort_names):
         s = cohort_stats[cohort]
-        tp, fp, fn, review, support = (
-            s["tp"], s["fp"], s["fn"], s["review"], s["support"]
-        )
+        tp, fp, fn, review, support = (s["tp"], s["fp"], s["fn"], s["review"], s["support"])
         recall = tp / support if support > 0 else 0.0
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         review_rate = review / support if support > 0 else 0.0

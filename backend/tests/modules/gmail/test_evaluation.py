@@ -186,11 +186,7 @@ class TestEvaluationContractValidation:
 
     def test_item_missing_ground_truth(self) -> None:
         """An item without ground_truth is rejected."""
-        item = {
-            k: v
-            for k, v in _VALID_SAMPLE_DATASET["items"][0].items()
-            if k != "ground_truth"
-        }
+        item = {k: v for k, v in _VALID_SAMPLE_DATASET["items"][0].items() if k != "ground_truth"}
         data = dict(_VALID_SAMPLE_DATASET, items=[item])
         with pytest.raises(EvaluationContractError, match="ground_truth"):
             EvaluationContract(data)
@@ -204,9 +200,7 @@ class TestEvaluationContractValidation:
 
     def test_item_references_unknown_cohort(self) -> None:
         """An item referencing a cohort not defined in the header is rejected."""
-        item = dict(
-            _VALID_SAMPLE_DATASET["items"][0], cohorts=["unknown-cohort"]
-        )
+        item = dict(_VALID_SAMPLE_DATASET["items"][0], cohorts=["unknown-cohort"])
         data = dict(_VALID_SAMPLE_DATASET, items=[item])
         with pytest.raises(EvaluationContractError, match="unknown-cohort"):
             EvaluationContract(data)
@@ -269,9 +263,7 @@ class TestEvaluationContractValidation:
             cohorts=all_cohorts,
             items=items,
         )
-        with pytest.raises(
-            EvaluationContractError, match="zero items"
-        ):
+        with pytest.raises(EvaluationContractError, match="zero items"):
             EvaluationContract(data)
 
     def test_required_cohort_missing_from_header(self) -> None:
@@ -458,13 +450,29 @@ _MINIMAL_COHORT_SET: dict[str, Any] = {
 }
 
 _MINIMAL_ITEMS: list[dict[str, Any]] = [
-    {"id": f"eval-{i:03d}", "subject": str(i), "sender_email": f"a{i}@mau.mau",
-     "sender_name": f"A{i}", "snippet": str(i), "has_attachments": False,
-        "ground_truth": "recruitment", "cohorts": [c]}
-        for i, c in enumerate([
-        "no-cv", "referral", "agency", "multi-applicant",
-        "mixed-purpose", "follow-up", "misleading-attachment", "mixed-language",
-    ], start=1)
+    {
+        "id": f"eval-{i:03d}",
+        "subject": str(i),
+        "sender_email": f"a{i}@mau.mau",
+        "sender_name": f"A{i}",
+        "snippet": str(i),
+        "has_attachments": False,
+        "ground_truth": "recruitment",
+        "cohorts": [c],
+    }
+    for i, c in enumerate(
+        [
+            "no-cv",
+            "referral",
+            "agency",
+            "multi-applicant",
+            "mixed-purpose",
+            "follow-up",
+            "misleading-attachment",
+            "mixed-language",
+        ],
+        start=1,
+    )
 ]
 
 
@@ -717,9 +725,7 @@ def test_review_rate_with_low_confidence(
 
     class _LowConfPredictor:
         def __call__(self, item: EvaluationItem) -> Prediction:
-            return _single_item_prediction(
-                item, confidence=0.3, source="rules"
-            )
+            return _single_item_prediction(item, confidence=0.3, source="rules")
 
     report = EvaluationContract._run(
         dataset=mixed_dataset,
@@ -965,9 +971,7 @@ def test_frozen_predictions_mixed_with_predictor(
 
     class _LeavePredictor:
         def __call__(self, item: EvaluationItem) -> Prediction:
-            return _single_item_prediction(
-                item, category=EmailCategory.leave_request
-            )
+            return _single_item_prediction(item, category=EmailCategory.leave_request)
 
     report = EvaluationContract._run(
         dataset=mixed_dataset,
@@ -1020,9 +1024,7 @@ def test_predictor_wrong_item_id_fails(
                 source="test",
             )
 
-    with pytest.raises(
-        EvaluationContractError, match="wrong item"
-    ):
+    with pytest.raises(EvaluationContractError, match="wrong item"):
         EvaluationContract._run(
             dataset=mixed_dataset,
             predictor=_WrongIdPredictor(),
@@ -1044,9 +1046,7 @@ def test_predictor_confidence_out_of_range_fails(
                 source="test",
             )
 
-    with pytest.raises(
-        EvaluationContractError, match="outside"
-    ):
+    with pytest.raises(EvaluationContractError, match="outside"):
         EvaluationContract._run(
             dataset=mixed_dataset,
             predictor=_BadConfidencePredictor(),
@@ -1066,9 +1066,7 @@ def test_frozen_prediction_item_id_mismatch_fails(
             source="frozen",
         ),
     }
-    with pytest.raises(
-        EvaluationContractError, match="item_id mismatch"
-    ):
+    with pytest.raises(EvaluationContractError, match="item_id mismatch"):
         EvaluationContract._run(
             dataset=mixed_dataset,
             frozen_predictions=fp,
@@ -1091,6 +1089,7 @@ def test_contract_run_accepts_frozen_predictions_override() -> None:
             source="override",
         ),
     }
+
     # The rest of items need a predictor
     class _DummyPredictor:
         def __call__(self, item: EvaluationItem) -> Prediction:
@@ -1107,7 +1106,6 @@ def test_contract_run_accepts_frozen_predictions_override() -> None:
     )
     assert report.overall.support == 8
 
-
     def test_predictor_returns_non_prediction_fails(
         mixed_dataset: EvaluationDataset,
     ) -> None:
@@ -1117,13 +1115,12 @@ def test_contract_run_accepts_frozen_predictions_override() -> None:
             def __call__(self, item: EvaluationItem) -> str:
                 return "not a prediction"
 
-        with pytest.raises(
-            EvaluationContractError, match="non-Prediction"
-        ):
+        with pytest.raises(EvaluationContractError, match="non-Prediction"):
             EvaluationContract._run(
                 dataset=mixed_dataset,
                 predictor=_BadPredictor(),  # type: ignore[arg-type]
             )
+
 
 # ──────────────────────────────────────────────────────────────────
 # 6.  Review rate semantics
@@ -1138,8 +1135,10 @@ def test_review_rate_attributed_to_ground_truth_category(
     Items where confidence < threshold increment the review counter of their
     *ground-truth* category, not the predicted category.
     """
+
     class _LowConfRecruitmentPredictor:
         """Always predicts recruitment with low confidence."""
+
         def __call__(self, item: EvaluationItem) -> Prediction:
             return Prediction(
                 item_id=item.id,
@@ -1185,6 +1184,7 @@ def test_review_rate_high_confidence_no_review(
 
     Verifies both GT-based attribution and threshold behaviour.
     """
+
     class _HighConfPredictor:
         def __call__(self, item: EvaluationItem) -> Prediction:
             return Prediction(
@@ -1292,6 +1292,7 @@ def test_frozen_run_accepts_source_versions(
             source="frozen",
         ),
     }
+
     class _DummyPredictor:
         def __call__(self, item: EvaluationItem) -> Prediction:
             return Prediction(
@@ -1326,6 +1327,7 @@ def test_source_versions_empty_in_versions_unchanged(
         policy_version="original-policy",
     )
     contract = EvaluationContract(data)
+
     class _PerfectPredictor:
         def __call__(self, item: EvaluationItem) -> Prediction:
             return Prediction(
