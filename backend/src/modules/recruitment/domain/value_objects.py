@@ -14,6 +14,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from src.modules.recruitment.domain.enums import EmailIntent
+
 
 class MeetingMode(StrEnum):
     """Mode for an interview meeting."""
@@ -158,3 +160,31 @@ class SyncEventChanges:
     events: tuple[CalendarEvent, ...] = ()
     next_sync_token: str | None = None
     next_page_token: str | None = None
+
+
+@dataclass(frozen=True)
+class ClassificationResult:
+    """Structured classification contract from LLM.
+
+    Versioned contract containing the validated routing intent, confidence,
+    inspectable evidence, and source hints. The LLM is prompted to return
+    this structure as strict JSON without chain-of-thought.
+
+    Email and attachment content are treated as untrusted data — the LLM
+    has no tools and no write capability.
+
+    Attributes:
+        version: Contract version string (e.g. "1.0").
+        intent: The validated routing intent.
+        confidence: Confidence score between 0.0 and 1.0.
+        evidence: Human-readable strings explaining what triggered the
+            classification (e.g. "subject:contains_cv", "attachment:pdf").
+        source_hints: Required metadata map about the email source
+            (e.g. {"sender_role": "agency", "contains_referral": "true"}).
+    """
+
+    version: str
+    intent: EmailIntent
+    confidence: float
+    evidence: tuple[str, ...]
+    source_hints: tuple[tuple[str, str], ...] = ()

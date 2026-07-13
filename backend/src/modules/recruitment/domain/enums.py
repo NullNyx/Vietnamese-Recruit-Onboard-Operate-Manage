@@ -56,6 +56,7 @@ class EmailIntent(StrEnum):
     """
 
     CV = "cv"
+    JOB_APPLICATION = "job_application"
     PARTNER = "partner"
     EVENT = "event"
     INTERNAL = "internal"
