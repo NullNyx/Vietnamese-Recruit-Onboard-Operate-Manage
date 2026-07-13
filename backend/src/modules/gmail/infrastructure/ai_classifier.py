@@ -62,6 +62,10 @@ class ClassificationResult:
         source: Classification source ("rules" or "ai").
         matched_signals: Signals that contributed to classification.
         token_usage: Token usage from LLM call.
+        source_hints: Structured metadata about the email source
+            (e.g. (("sender_role", "candidate"), ("has_cv_attachment", "true"))).
+            Populated by the provider classifier; empty for rule-only results.
+            Backwards-compatible default is empty tuple.
     """
 
     category: EmailCategory
@@ -69,6 +73,7 @@ class ClassificationResult:
     source: str = "ai"
     matched_signals: list[str] = field(default_factory=list)
     token_usage: dict[str, int] = field(default_factory=dict)
+    source_hints: tuple[tuple[str, str], ...] = field(default_factory=tuple)
 
 
 class AIClassifier:

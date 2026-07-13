@@ -1069,6 +1069,9 @@ async def _evaluate_rules(
     from src.modules.gmail.application.rules_classifier import RulesClassifier
     from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
     from src.modules.gmail.infrastructure.audit_logger import AuditLogger
+    from src.modules.recruitment.application.job_application_service import (
+        build_job_application_ingestion,
+    )
 
     rules_classifier = RulesClassifier()
     ai_classifier = AIClassifier(settings)
@@ -1081,6 +1084,9 @@ async def _evaluate_rules(
         audit_logger=audit_logger,
         settings=settings,
         session=email_repo.session,
+        on_application_created=build_job_application_ingestion(
+            email_repo.session
+        ).create_from_classification,
     )
 
     return await classification_service.classify_batch(

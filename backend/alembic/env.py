@@ -54,6 +54,7 @@ from src.modules.recruitment.domain.entities import (  # noqa: E402, F401
     CVDocument,
     Interview,
     InterviewParticipant,
+    JobApplication,
     OrganizationSettings,
     RecruitmentAuditLog,
 )

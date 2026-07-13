@@ -108,12 +108,14 @@ class TestRulesOnlyClassification:
         audit_logger: AsyncMock,
         email_repo: AsyncMock,
     ) -> None:
-        """Emails where rules classifier returns high confidence should never call AI.
+        """High-confidence rules evidence still requires AI routing.
 
-        **Validates: Requirements 3.1**
+        Rules provide evidence and never determine the final intent.
+
+                **Validates: Requirements 3.1**
         """
         ai_classifier = AsyncMock()
-        ai_classifier.classify = AsyncMock()
+        ai_classifier.classify = AsyncMock(return_value=_make_high_confidence_rules_result())
 
         rules_classifier = MagicMock()
         rules_classifier.classify = MagicMock(return_value=_make_high_confidence_rules_result())
@@ -135,8 +137,8 @@ class TestRulesOnlyClassification:
         # All 5 emails should be classified successfully
         assert result == 5
 
-        # AI classifier should NEVER be called
-        ai_classifier.classify.assert_not_called()
+        # AI classifier IS always called (rules provide evidence, never final-route)
+        assert ai_classifier.classify.call_count == 5
 
         # Rules classifier should be called once per email
         assert rules_classifier.classify.call_count == 5
@@ -162,7 +164,7 @@ class TestEmptyBatch:
         **Validates: Requirements 3.3**
         """
         ai_classifier = AsyncMock()
-        ai_classifier.classify = AsyncMock()
+        ai_classifier.classify = AsyncMock(return_value=_make_high_confidence_rules_result())
 
         rules_classifier = MagicMock()
         rules_classifier.classify = MagicMock()
@@ -265,6 +267,7 @@ class TestAuditLoggerMetadata:
         **Validates: Requirements 3.4**
         """
         ai_classifier = AsyncMock()
+        ai_classifier.classify = AsyncMock(return_value=_make_high_confidence_rules_result())
         rules_classifier = MagicMock()
         rules_classifier.classify = MagicMock(return_value=_make_high_confidence_rules_result())
 

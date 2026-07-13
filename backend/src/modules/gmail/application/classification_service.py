@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -35,6 +36,7 @@ if TYPE_CHECKING:
     )
     from src.modules.gmail.infrastructure.audit_logger import AuditLogger
     from src.modules.gmail.infrastructure.email_repository import EmailRepository
+    from src.modules.recruitment.domain.entities import JobApplication
 
 logger = logging.getLogger(__name__)
 
@@ -72,10 +74,15 @@ class ClassificationService:
         audit_logger: AuditLogger,
         settings: GmailSettings,
         session: AsyncSession,
+        on_application_created: Callable[
+            [EmailMessage, ClassificationResult], Awaitable[JobApplication]
+        ]
+        | None = None,  # noqa: E501
     ) -> None:
         self._rules = rules_classifier
         self._ai = ai_classifier
         self._email_repo = email_repo
+        self._on_application_created = on_application_created
         self._audit_logger = audit_logger
         self._settings = settings
         self._session = session
@@ -107,8 +114,9 @@ class ClassificationService:
             async with sem:
                 try:
                     result = await self._classify_single(email)
-                    await self._apply_classification(email, result)
-                    return 0 if result.source == "ai_unavailable" else 1
+                    callback_ok = await self._apply_classification(email, result)
+                    # Count as classified only if the result is valid AND callback succeeded
+                    return 1 if (result.source != "ai_unavailable" and callback_ok) else 0
                 except Exception as exc:
                     logger.error(
                         "Classification failed for email %s: %s",
@@ -165,20 +173,23 @@ class ClassificationService:
     async def _classify_single(self, email: EmailMessage) -> ClassificationResult:
         """Run the two-tier classification on a single email.
 
-        Tier 1: Rule-based classifier (keywords, sender domain, attachments).
-        Tier 2: AI classifier (LLM) if rules confidence < threshold.
+        Tier 1: Rule-based classifier (keywords, sender domain, attachments) -
+        provides evidence only, never final-routes.
+        Tier 2: AI classifier (LLM) - always invoked.
+        Rule matched_signals are merged as evidence into the AI result.
 
         Args:
             email: The EmailMessage entity to classify.
 
         Returns:
-            ClassificationResult with category and confidence.
+            ClassificationResult with category and confidence. Source is
+            always "ai" (or "ai_unavailable"/"fallback" on AI failure).
         """
         from src.modules.gmail.infrastructure.ai_classifier import ClassificationResult
 
         start_time = time.monotonic()
 
-        # Tier 1: Rule-based classification
+        # Tier 1: Rule-based classification (evidence only, never final-routes)
         rules_result = self._rules.classify(
             subject=email.subject,
             sender_email=email.sender_email,
@@ -186,25 +197,7 @@ class ClassificationService:
             has_attachments=email.has_attachments,
         )
 
-        if rules_result.confidence >= self._settings.classification_confidence_threshold:
-            latency_ms = int((time.monotonic() - start_time) * 1000)
-            logger.info(
-                "Email %s classified by RULES as %s (confidence=%.2f, %dms) signals=%s",
-                email.gmail_message_id[:10],
-                rules_result.category.value,
-                rules_result.confidence,
-                latency_ms,
-                rules_result.matched_signals[:3],
-            )
-            return rules_result
-
-        # Tier 2: AI classification (LLM fallback)
-        logger.info(
-            "Email %s rules confidence too low (%.2f < %.2f), calling AI...",
-            email.gmail_message_id[:10],
-            rules_result.confidence,
-            self._settings.classification_confidence_threshold,
-        )
+        # Always invoke AI classifier (rules never determine final routing)
         try:
             ai_result = await self._ai.classify(
                 subject=email.subject,
@@ -213,23 +206,10 @@ class ClassificationService:
                 snippet=email.snippet,
                 has_attachments=email.has_attachments,
             )
-            latency_ms = int((time.monotonic() - start_time) * 1000)
-            logger.debug(
-                "Email %s classified by AI as %s (confidence=%.2f, %dms)",
-                email.gmail_message_id,
-                ai_result.category.value,
-                ai_result.confidence,
-                latency_ms,
-            )
-            return ai_result
         except Exception as exc:
             latency_ms = int((time.monotonic() - start_time) * 1000)
             raw_retry_count = getattr(email, "retry_count", 0)
-            # Preserve compatibility with lightweight legacy test doubles; real
-            # EmailMessage rows always carry an integer retry_count.
             if not isinstance(raw_retry_count, int):
-                if rules_result.confidence > 0:
-                    return rules_result
                 return ClassificationResult(
                     category=EmailCategory.uncategorized,
                     confidence=0.0,
@@ -261,26 +241,61 @@ class ClassificationService:
                 source="ai_unavailable",
             )
 
+        # Merge rule matched_signals as evidence into AI result
+        merged_signals = list(rules_result.matched_signals) + list(ai_result.matched_signals)
+        latency_ms = int((time.monotonic() - start_time) * 1000)
+
+        if rules_result.matched_signals:
+            logger.info(
+                "Email %s classified by AI as %s (confidence=%.2f, %dms) rules_signals=%s",
+                email.gmail_message_id[:10],
+                ai_result.category.value,
+                ai_result.confidence,
+                latency_ms,
+                rules_result.matched_signals[:3],
+            )
+        else:
+            logger.debug(
+                "Email %s classified by AI as %s (confidence=%.2f, %dms)",
+                email.gmail_message_id[:10],
+                ai_result.category.value,
+                ai_result.confidence,
+                latency_ms,
+            )
+
+        return ClassificationResult(
+            category=ai_result.category,
+            confidence=ai_result.confidence,
+            source="ai",
+            matched_signals=merged_signals,
+            token_usage=ai_result.token_usage,
+            source_hints=ai_result.source_hints,
+        )
+
     async def _apply_classification(
         self,
         email: EmailMessage,
         result: ClassificationResult,
-    ) -> None:
+    ) -> bool:
         """Persist classification result to the email record.
 
         Updates the email's category and processing_status fields.
         If confidence is below needs_review_threshold, marks as needs_review
-        instead of classified.
+        instead of classified. If the JobApplication callback fails, marks
+        as needs_review with processing_error so the outcome is reviewable.
 
         Args:
             email: The EmailMessage entity to update.
             result: The classification result to apply.
+
+        Returns:
+            True if the email should count as classified, False if
+            classification should not be counted (callback failure).
         """
         if result.source == "ai_unavailable":
-            return
+            return False
 
         email.category = result.category.value
-        email.processing_error = None
         email.next_retry_at = None
         email.last_retry_at = None
         email.retry_count = 0
@@ -289,13 +304,36 @@ class ClassificationService:
         # Dead-letter queue: if confidence below threshold, mark for human review
         if result.confidence < self._settings.classification_needs_review_threshold:
             email.processing_status = "needs_review"
+            email.processing_error = None
             logger.info(
                 "Email %s marked needs_review (confidence=%.2f < threshold=%.2f)",
                 email.gmail_message_id[:10],
                 result.confidence,
                 self._settings.classification_needs_review_threshold,
             )
-        else:
-            email.processing_status = "classified"
+            self._session.add(email)
+            return True
 
+        # Invoke callback BEFORE setting classified status.
+        # If callback fails, the email is marked needs_review so the
+        # outcome is retryable/reviewable, not silently swallowed.
+        if (
+            result.category == EmailCategory.recruitment
+            and self._on_application_created is not None
+        ):
+            try:
+                await self._on_application_created(email, result)
+            except Exception:
+                logger.exception(
+                    "JobApplication callback failed for email %s, marking needs_review",
+                    email.gmail_message_id[:10],
+                )
+                email.processing_status = "needs_review"
+                email.processing_error = "JobApplication creation failed"
+                self._session.add(email)
+                return False
+
+        email.processing_status = "classified"
+        email.processing_error = None
         self._session.add(email)
+        return True

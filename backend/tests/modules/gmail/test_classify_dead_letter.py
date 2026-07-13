@@ -178,6 +178,14 @@ class TestDeadLetterQueue:
         )
 
         ai_classifier = AsyncMock()
+        ai_classifier.classify = AsyncMock(
+            return_value=ClassificationResult(
+                category=EmailCategory.recruitment,
+                confidence=0.90,
+                source="ai",
+                matched_signals=["subject:ứng tuyển", "sender_domain:vietnamworks.com"],
+            )
+        )
 
         service = ClassificationService(
             rules_classifier=rules_classifier,

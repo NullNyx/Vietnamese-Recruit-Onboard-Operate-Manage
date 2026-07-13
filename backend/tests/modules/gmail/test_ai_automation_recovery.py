@@ -77,18 +77,24 @@ async def test_provider_recovery_classifies_without_retry_metadata() -> None:
 
 
 @pytest.mark.asyncio
-async def test_rules_path_works_when_automation_provider_is_down() -> None:
+async def test_ai_down_classifies_as_ai_unavailable_even_with_high_confidence_rules() -> None:
+    """Rules never final-route. When AI is down, email goes to ai_unavailable."""
     rules = MagicMock()
     rules.classify.return_value = ClassificationResult(
         category=EmailCategory.recruitment, confidence=0.9, source="rules"
     )
     ai = AsyncMock()
+    ai.classify.side_effect = Exception("AI provider down")
     session = AsyncMock()
     session.add = MagicMock()
     audit = AsyncMock()
-    service = ClassificationService(rules, ai, AsyncMock(), audit, GmailSettings(), session)
+    settings = GmailSettings(classification_batch_concurrency=1)
+    service = ClassificationService(rules, ai, AsyncMock(), audit, settings, session)
     email = make_email()
+    email.retry_count = 0
 
-    assert await service.classify_batch(uuid4(), [email]) == 1
-    ai.classify.assert_not_called()
-    assert email.processing_status == "classified"
+    result = await service.classify_batch(uuid4(), [email])
+    assert result == 0
+    assert email.processing_status == "ai_unavailable"
+    ai.classify.assert_awaited_once()
+    assert email.category is None
