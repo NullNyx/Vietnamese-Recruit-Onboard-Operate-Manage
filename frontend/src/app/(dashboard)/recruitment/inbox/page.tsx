@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { JobApplicationActions } from "@/components/recruitment/job-application-actions";
 
 import {
   listInbox,
@@ -56,6 +57,7 @@ import type {
   ApplicationSource,
   InboxItem,
   InboxStatus,
+  JobApplicationInboxResult,
   JobApplicationLinkProposal,
   SplitApplicantInput,
 } from "@/lib/api/recruitment";
@@ -226,6 +228,9 @@ function InboxItemDetailDialog({
   const [targetApplicationId, setTargetApplicationId] = React.useState("");
   const [linkProposal, setLinkProposal] =
     React.useState<JobApplicationLinkProposal | null>(null);
+  const [createdApplications, setCreatedApplications] = React.useState<
+    JobApplicationInboxResult[]
+  >([]);
 
   const handleCorrect = async () => {
     if (!correctedIntent.trim()) return;
@@ -268,10 +273,10 @@ function InboxItemDetailDialog({
     if (applicants.length === 0) return;
     setLoading(true);
     try {
-      await splitInboxItem(item.id, { source: splitSource, applicants });
+      const result = await splitInboxItem(item.id, { source: splitSource, applicants });
+      setCreatedApplications(result.applications);
       toast.success(`Đã tạo ${applicants.length} Job Application`);
       setSplitOpen(false);
-      onCorrected();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Lỗi khi tách ứng viên");
     } finally {
@@ -467,6 +472,10 @@ function InboxItemDetailDialog({
                 </p>
               )}
             </div>
+          )}
+
+          {createdApplications.length > 0 && (
+            <JobApplicationActions applications={createdApplications} />
           )}
 
           {/* Processing Error */}

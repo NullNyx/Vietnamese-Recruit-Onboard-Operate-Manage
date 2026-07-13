@@ -29,9 +29,7 @@ from src.modules.gmail.domain.entities import EmailMessage
 from src.modules.gmail.infrastructure.ai_classifier import ClassificationResult
 from src.modules.recruitment.domain.entities import JobApplication
 from src.modules.recruitment.domain.enums import ApplicationSource, JobApplicationStatus
-from src.modules.recruitment.infrastructure.repositories import (
-    JobApplicationRepository,
-)
+from src.modules.recruitment.infrastructure.repositories import JobApplicationRepository
 
 logger = logging.getLogger(__name__)
 
