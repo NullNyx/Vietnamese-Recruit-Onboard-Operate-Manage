@@ -11,7 +11,8 @@ from __future__ import annotations
 import hashlib
 import time
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from enum import Enum
 
 from src.modules.gmail.infrastructure.ai_classifier import ClassificationResult
@@ -47,6 +48,7 @@ class RolloutConfig:
     stable_classifier_version: str
     candidate_classifier_version: str | None = None
     canary_percentage: int = 0
+    prompt_version: str = "unknown"
 
 
 @dataclass(frozen=True)
@@ -98,14 +100,30 @@ class RolloutTelemetryEvent:
     stable_intent: str
     candidate_intent: str | None
     policy_version: str
+
     has_cv: bool
     stable_latency_ms: int
     candidate_latency_ms: int | None
     candidate_provider_error: bool = False
+    prompt_version: str = "unknown"
+    retry_count: int = 0
+    retry_failure: bool = False
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    estimated_cost_usd: float = 0.0
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 ClassifierCall = Callable[[], Awaitable[ClassificationResult]]
 TelemetryRecorder = Callable[[RolloutTelemetryEvent], Awaitable[None]]
+
+
+def _token_count(result: ClassificationResult | None, name: str) -> int:
+    """Read provider usage without persisting provider response content."""
+    if result is None:
+        return 0
+    value = result.token_usage.get(name, 0)
+    return value if isinstance(value, int) and value >= 0 else 0
 
 
 class ClassificationRollout:
@@ -175,8 +193,10 @@ class ClassificationRollout:
                             stable_intent="",
                             candidate_intent=None,
                             policy_version=self.config.policy_version,
+                            prompt_version=self.config.prompt_version,
                             has_cv=has_cv,
                             stable_latency_ms=0,
+                            retry_failure=True,
                             candidate_latency_ms=candidate_latency_ms,
                             candidate_provider_error=True,
                         )
@@ -206,8 +226,13 @@ class ClassificationRollout:
                         candidate_result.category.value if candidate_result else None
                     ),
                     policy_version=self.config.policy_version,
+                    prompt_version=self.config.prompt_version,
                     has_cv=has_cv,
                     stable_latency_ms=stable_latency_ms,
+                    prompt_tokens=_token_count(candidate_result or stable_result, "prompt_tokens"),
+                    completion_tokens=_token_count(
+                        candidate_result or stable_result, "completion_tokens"
+                    ),
                     candidate_latency_ms=candidate_latency_ms,
                     candidate_provider_error=candidate_provider_error,
                 )
