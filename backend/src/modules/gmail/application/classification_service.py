@@ -325,6 +325,30 @@ class ClassificationService:
         email.retry_count = 0
         email.is_permanently_failed = False
 
+        # Cardinality ambiguity always belongs in the HR work surface, even
+        # when routing intent confidence is high. Creating one application here
+        # would lose the remaining applicants from the source message.
+        if (
+            result.category == EmailCategory.recruitment
+            and result.requires_hr_split
+            and self._on_uncertain_classification is not None
+        ):
+            try:
+                await self._on_uncertain_classification(email, result)
+            except Exception:
+                logger.exception(
+                    "RecruitmentInboxItem split callback failed for email %s",
+                    email.gmail_message_id[:10],
+                )
+                email.processing_status = "needs_review"
+                email.processing_error = "RecruitmentInboxItem creation failed"
+                self._session.add(email)
+                return False
+            email.processing_status = "classified"
+            email.processing_error = None
+            self._session.add(email)
+            return True
+
         # If confidence below threshold, route to Recruitment Inbox or needs_review
         if result.confidence < self._settings.classification_needs_review_threshold:
             # Recruitment emails below threshold → needs_classification + inbox item

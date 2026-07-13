@@ -21,6 +21,7 @@ Key design decisions:
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -97,17 +98,49 @@ class JobApplicationService:
             )
             return existing
 
-        # Derive source from classification hints
-        source = self._derive_source(classification_result)
+        # Gmail thread is the default linking boundary. A split source may
+        # already have several applications, so the supplemental message is
+        # linked to every application in that thread without creating another.
+        same_thread = await self._repo.list_by_gmail_thread_id(email.gmail_thread_id)
+        if same_thread:
+            reference = {
+                "email_message_id": str(email.id),
+                "gmail_message_id": email.gmail_message_id,
+                "gmail_thread_id": email.gmail_thread_id,
+                "link_type": "same_thread",
+            }
+            for application in same_thread:
+                references = list(application.message_references or [])
+                if not any(
+                    item.get("gmail_message_id") == email.gmail_message_id for item in references
+                ):
+                    references.append(reference)
+                    application.message_references = references
+                    history = list(application.audit_history or [])
+                    history.append(
+                        {
+                            "action": "same_thread_link",
+                            "gmail_message_id": email.gmail_message_id,
+                            "occurred_at": datetime.now(UTC).isoformat(),
+                        }
+                    )
+                    application.audit_history = history
+                    await self._repo.update(application)
+            return same_thread[0]
 
-        # Derive applicant identity conservatively.
-        # For direct applications, sender = applicant.
-        # For referral/agency, applicant fields remain nullable.
-        applicant_name: str | None = None
-        applicant_email: str | None = None
+        source = self._derive_source(classification_result)
+        source_hints = self._source_hints(classification_result)
+        hint_values = {hint["key"].lower(): hint["value"] for hint in source_hints}
+
+        # Structured applicant identity wins over sender identity. Referrals and
+        # agencies therefore never turn the forwarding sender into the applicant.
+        applicant_name = hint_values.get("applicant_name")
+        applicant_email = hint_values.get("applicant_email")
         if source == ApplicationSource.DIRECT:
-            applicant_name = email.sender_name or None
-            applicant_email = email.sender_email or None
+            applicant_name = applicant_name or email.sender_name or None
+            applicant_email = applicant_email or email.sender_email or None
+
+        evidence = [{"signal": signal} for signal in (classification_result.matched_signals or [])]
 
         job_application = JobApplication(
             source_email_message_id=email.id,
@@ -118,6 +151,16 @@ class JobApplicationService:
             applicant_email=applicant_email,
             sender_name=email.sender_name or "",
             sender_email=email.sender_email or "",
+            evidence=evidence,
+            source_hints=source_hints,
+            message_references=[
+                {
+                    "email_message_id": str(email.id),
+                    "gmail_message_id": email.gmail_message_id,
+                    "gmail_thread_id": email.gmail_thread_id,
+                    "link_type": "source",
+                }
+            ],
             status=JobApplicationStatus.NEW,
         )
 
@@ -154,6 +197,16 @@ class JobApplicationService:
             raise JobApplicationCreationError(f"Could not create Job Application: {exc}") from exc
 
     @staticmethod
+    def _source_hints(
+        classification_result: ClassificationResult,
+    ) -> list[dict[str, str]]:
+        """Normalize structured source hints for persistence and lookup."""
+        return [
+            {"key": str(key), "value": str(value)}
+            for key, value in (classification_result.source_hints or ())
+        ]
+
+    @staticmethod
     def _derive_source(classification_result: ClassificationResult) -> str:
         """Derive the application source from classification result.
 
@@ -175,7 +228,7 @@ class JobApplicationService:
             if "sender_role" in key_lower:
                 if value_lower in ("agency", "headhunter"):
                     return ApplicationSource.AGENCY
-                if value_lower == "referral":
+                if value_lower in ("referral", "employee_referral"):
                     return ApplicationSource.EMPLOYEE_REFERRAL
             if "contains_referral" in key_lower and value_lower == "true":
                 return ApplicationSource.EMPLOYEE_REFERRAL

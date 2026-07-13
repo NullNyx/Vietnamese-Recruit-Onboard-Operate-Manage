@@ -17,6 +17,7 @@ from src.modules.recruitment.domain.enums import (
     ApplicationSource,
     InboxStatus,
     JobApplicationStatus,
+    LinkProposalStatus,
 )
 
 
@@ -422,17 +423,57 @@ class JobApplication(SQLModel, table=True):
     source_email_message_id: UUID = Field(
         foreign_key="email_messages.id", nullable=False, index=True
     )
-    gmail_message_id: str = Field(max_length=255, nullable=False, unique=True, index=True)
+    gmail_message_id: str = Field(max_length=255, nullable=False, index=True)
     gmail_thread_id: str = Field(max_length=255, nullable=False)
     source: str = Field(default=ApplicationSource.DIRECT, max_length=30, nullable=False)
     applicant_name: str | None = Field(default=None, max_length=255)
     applicant_email: str | None = Field(default=None, max_length=255)
     sender_name: str = Field(default="", max_length=255, nullable=False)
     sender_email: str = Field(default="", max_length=255, nullable=False)
+    evidence: list[dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column(JSONB, nullable=False)
+    )
+    source_hints: list[dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column(JSONB, nullable=False)
+    )
+    message_references: list[dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column(JSONB, nullable=False)
+    )
+    audit_history: list[dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column(JSONB, nullable=False)
+    )
     job_opening_id: UUID | None = Field(
         default=None, foreign_key="job_openings.id", nullable=True, index=True
     )
     status: str = Field(default=JobApplicationStatus.NEW, max_length=20, nullable=False, index=True)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+
+class JobApplicationLinkProposal(SQLModel, table=True):
+    """A cross-thread link that has no effect until HR resolves it."""
+
+    __tablename__ = "job_application_link_proposals"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    recruitment_inbox_item_id: UUID = Field(
+        foreign_key="recruitment_inbox_items.id", nullable=False, index=True
+    )
+    target_job_application_id: UUID = Field(
+        foreign_key="job_applications.id", nullable=False, index=True
+    )
+    status: str = Field(
+        default=LinkProposalStatus.PENDING, max_length=20, nullable=False, index=True
+    )
+    proposed_by_user_id: UUID = Field(foreign_key="users.id", nullable=False)
+    resolved_by_user_id: UUID | None = Field(default=None, foreign_key="users.id")
+    resolved_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

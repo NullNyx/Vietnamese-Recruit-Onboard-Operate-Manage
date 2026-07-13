@@ -135,6 +135,7 @@ class TestJobApplicationIngestion:
         """
         job_app_repo = MagicMock(spec=JobApplicationRepository)
         job_app_repo.get_by_gmail_message_id = AsyncMock(return_value=None)
+        job_app_repo.list_by_gmail_thread_id = AsyncMock(return_value=[])
         job_app_repo.create = AsyncMock()
 
         job_app_service = JobApplicationService(
@@ -402,6 +403,7 @@ class TestJobApplicationIngestion:
         """
         job_app_repo = MagicMock(spec=JobApplicationRepository)
         job_app_repo.get_by_gmail_message_id = AsyncMock(return_value=None)
+        job_app_repo.list_by_gmail_thread_id = AsyncMock(return_value=[])
         job_app_repo.create = AsyncMock()
 
         job_app_service = JobApplicationService(
@@ -464,6 +466,7 @@ class TestJobApplicationIngestion:
         """
         job_app_repo = MagicMock(spec=JobApplicationRepository)
         job_app_repo.get_by_gmail_message_id = AsyncMock(return_value=None)
+        job_app_repo.list_by_gmail_thread_id = AsyncMock(return_value=[])
         job_app_repo.create = AsyncMock()
 
         job_app_service = JobApplicationService(
@@ -505,3 +508,117 @@ class TestJobApplicationIngestion:
         assert created.source == ApplicationSource.AGENCY
         assert created.applicant_name is None
         assert created.applicant_email is None
+
+
+class TestIssue185ApplicantIdentity:
+    """Applicant identity remains distinct from referral or agency senders."""
+
+    @pytest.mark.parametrize(
+        ("sender_role", "expected_source"),
+        [
+            ("referral", ApplicationSource.EMPLOYEE_REFERRAL),
+            ("agency", ApplicationSource.AGENCY),
+        ],
+    )
+    async def test_structured_applicant_identity_is_not_replaced_by_sender(
+        self,
+        sender_role: str,
+        expected_source: ApplicationSource,
+        session: AsyncMock,
+    ) -> None:
+        repo = MagicMock(spec=JobApplicationRepository)
+        repo.get_by_gmail_message_id = AsyncMock(return_value=None)
+        repo.list_by_gmail_thread_id = AsyncMock(return_value=[])
+        repo.create = AsyncMock(side_effect=lambda application: application)
+
+        service = JobApplicationService(session=session, job_application_repo=repo)
+        email = _make_mock_email(
+            sender_name="Nguoi gioi thieu",
+            sender_email="sender@agency.example",
+        )
+        result = ClassificationResult(
+            category=EmailCategory.recruitment,
+            confidence=0.95,
+            source="ai",
+            matched_signals=["application_language", "partner_relationship"],
+            source_hints=(
+                ("sender_role", sender_role),
+                ("applicant_name", "Nguyen Thi Ung Vien"),
+                ("applicant_email", "candidate@example.com"),
+            ),
+        )
+
+        created = await service.create_from_classification(email, result)
+
+        assert created.source == expected_source
+        assert created.applicant_name == "Nguyen Thi Ung Vien"
+        assert created.applicant_email == "candidate@example.com"
+        assert created.sender_name == "Nguoi gioi thieu"
+        assert created.sender_email == "sender@agency.example"
+        assert created.evidence == [
+            {"signal": "application_language"},
+            {"signal": "partner_relationship"},
+        ]
+        assert created.source_hints == [
+            {"key": "sender_role", "value": sender_role},
+            {"key": "applicant_name", "value": "Nguyen Thi Ung Vien"},
+            {"key": "applicant_email", "value": "candidate@example.com"},
+        ]
+
+    async def test_same_thread_supplement_links_without_creating_duplicate(
+        self,
+        session: AsyncMock,
+    ) -> None:
+        existing = JobApplication(
+            source_email_message_id=uuid4(),
+            gmail_message_id="msg_original",
+            gmail_thread_id="thread_shared",
+            applicant_name="Nguyen Thi Ung Vien",
+            applicant_email="candidate@example.com",
+            message_references=[
+                {
+                    "email_message_id": str(uuid4()),
+                    "gmail_message_id": "msg_original",
+                    "gmail_thread_id": "thread_shared",
+                    "link_type": "source",
+                }
+            ],
+        )
+        second_split_application = JobApplication(
+            source_email_message_id=existing.source_email_message_id,
+            gmail_message_id="msg_original",
+            gmail_thread_id="thread_shared",
+            applicant_name="Tran Thi Ung Vien",
+            applicant_email="second@example.com",
+            message_references=list(existing.message_references),
+        )
+        repo = MagicMock(spec=JobApplicationRepository)
+        repo.get_by_gmail_message_id = AsyncMock(return_value=None)
+        repo.list_by_gmail_thread_id = AsyncMock(
+            return_value=[existing, second_split_application]
+        )
+        repo.update = AsyncMock(side_effect=lambda application: application)
+        repo.create = AsyncMock()
+        service = JobApplicationService(session=session, job_application_repo=repo)
+        supplement = _make_mock_email(
+            email_id="msg_supplement",
+            thread_id="thread_shared",
+        )
+
+        linked = await service.create_from_classification(
+            supplement, _make_high_confidence_recruitment_result()
+        )
+
+        assert linked.id == existing.id
+        assert [ref["gmail_message_id"] for ref in linked.message_references] == [
+            "msg_original",
+            "msg_supplement",
+        ]
+        assert linked.message_references[-1]["link_type"] == "same_thread"
+        assert second_split_application.message_references[-1]["gmail_message_id"] == (
+            "msg_supplement"
+        )
+        assert repo.update.await_count == 2
+        repo.update.assert_any_await(existing)
+        repo.update.assert_any_await(second_split_application)
+        repo.create.assert_not_awaited()

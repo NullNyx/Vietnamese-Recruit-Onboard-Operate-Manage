@@ -9,15 +9,27 @@ Gmail ClassificationService for uncertain recruitment emails.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.recruitment.domain.entities import RecruitmentInboxItem
-from src.modules.recruitment.domain.enums import InboxStatus
+from src.modules.recruitment.domain.entities import (
+    JobApplication,
+    JobApplicationLinkProposal,
+    RecruitmentInboxItem,
+)
+from src.modules.recruitment.domain.enums import (
+    ApplicationSource,
+    InboxStatus,
+    JobApplicationStatus,
+    LinkProposalStatus,
+)
 from src.modules.recruitment.infrastructure.repositories import (
+    JobApplicationLinkProposalRepository,
+    JobApplicationRepository,
     RecruitmentInboxItemRepository,
 )
 
@@ -30,6 +42,27 @@ class RecruitmentInboxItemNotFoundError(Exception):
 
 class InboxItemDismissedError(Exception):
     """Raised when attempting to modify a dismissed inbox item."""
+
+
+class JobApplicationNotFoundError(Exception):
+    """Raised when a target Job Application is not found."""
+
+
+class LinkProposalNotFoundError(Exception):
+    """Raised when a cross-thread link proposal is not found."""
+
+
+class InvalidLinkProposalError(Exception):
+    """Raised when a link proposal violates thread or lifecycle rules."""
+
+
+@dataclass(frozen=True)
+class SplitApplicant:
+    """Applicant identity supplied by HR when splitting a source message."""
+
+    name: str
+    email: str | None = None
+    job_opening_id: UUID | None = None
 
 
 class InboxService:
@@ -48,9 +81,13 @@ class InboxService:
         self,
         session: AsyncSession,
         inbox_repo: RecruitmentInboxItemRepository,
+        job_application_repo: JobApplicationRepository | None = None,
+        link_proposal_repo: JobApplicationLinkProposalRepository | None = None,
     ) -> None:
         self._session = session
         self._repo = inbox_repo
+        self._job_applications = job_application_repo
+        self._link_proposals = link_proposal_repo
 
     async def list_inbox(
         self,
@@ -154,7 +191,11 @@ class InboxService:
             snippet=getattr(email, "snippet", "") or "",
             has_attachments=getattr(email, "has_attachments", False),
             attachments_metadata=attachments_meta if attachments_meta else None,
-            inbox_status=InboxStatus.NEEDS_CLASSIFICATION,
+            inbox_status=(
+                InboxStatus.READY_FOR_REVIEW
+                if classification_result.requires_hr_split
+                else InboxStatus.NEEDS_CLASSIFICATION
+            ),
             prediction_intent=classification_result.category.value
             if hasattr(classification_result.category, "value")
             else str(classification_result.category),
@@ -191,6 +232,168 @@ class InboxService:
         if item is None:
             raise RecruitmentInboxItemNotFoundError(f"Recruitment Inbox item {item_id} not found")
         return item
+
+    async def split_item(
+        self,
+        item_id: UUID,
+        applicants: list[SplitApplicant],
+        source: ApplicationSource,
+        user_id: UUID,
+    ) -> list[JobApplication]:
+        """Split one source message into independently reviewable applications."""
+        application_repo = self._job_applications
+        if application_repo is None:
+            raise RuntimeError("Job Application repository is required for split")
+        if not applicants:
+            raise ValueError("At least one applicant is required")
+
+        item = await self.get_item(item_id)
+        if item.dismissed:
+            raise InboxItemDismissedError(f"Cannot split dismissed inbox item {item_id}")
+
+        occurred_at = datetime.now(UTC).isoformat()
+        applications: list[JobApplication] = []
+        for applicant in applicants:
+            application = JobApplication(
+                source_email_message_id=item.source_email_message_id,
+                gmail_message_id=item.gmail_message_id,
+                gmail_thread_id=item.gmail_thread_id,
+                source=source,
+                applicant_name=applicant.name,
+                applicant_email=applicant.email,
+                sender_name=item.sender_name,
+                sender_email=item.sender_email,
+                evidence=list(item.evidence or []),
+                source_hints=list(item.source_hints or []),
+                message_references=[
+                    {
+                        "email_message_id": str(item.source_email_message_id),
+                        "gmail_message_id": item.gmail_message_id,
+                        "gmail_thread_id": item.gmail_thread_id,
+                        "link_type": "split_source",
+                    }
+                ],
+                audit_history=[
+                    {
+                        "action": "split",
+                        "performed_by_user_id": str(user_id),
+                        "occurred_at": occurred_at,
+                    }
+                ],
+                job_opening_id=applicant.job_opening_id,
+                status=JobApplicationStatus.NEW,
+            )
+            applications.append(await application_repo.create(application))
+
+        history = list(item.correction_history or [])
+        history.append(
+            {
+                "action": "split",
+                "job_application_ids": [str(application.id) for application in applications],
+                "performed_by_user_id": str(user_id),
+                "occurred_at": occurred_at,
+            }
+        )
+        item.correction_history = history
+        item.inbox_status = InboxStatus.RESOLVED
+        await self._repo.update(item)
+        return applications
+
+    async def propose_cross_thread_link(
+        self,
+        item_id: UUID,
+        target_job_application_id: UUID,
+        user_id: UUID,
+    ) -> JobApplicationLinkProposal:
+        """Create an inert proposal; cross-thread messages are never linked here."""
+        application_repo = self._job_applications
+        proposal_repo = self._link_proposals
+        if application_repo is None or proposal_repo is None:
+            raise RuntimeError("Job Application and proposal repositories are required")
+
+        item = await self.get_item(item_id)
+        if item.dismissed:
+            raise InboxItemDismissedError(f"Cannot link dismissed inbox item {item_id}")
+        target = await application_repo.get_by_id(target_job_application_id)
+        if target is None:
+            raise JobApplicationNotFoundError(
+                f"Job Application {target_job_application_id} not found"
+            )
+        if target.gmail_thread_id == item.gmail_thread_id:
+            raise InvalidLinkProposalError(
+                "Messages in the same Gmail thread are linked automatically"
+            )
+
+        proposal = JobApplicationLinkProposal(
+            recruitment_inbox_item_id=item.id,
+            target_job_application_id=target.id,
+            status=LinkProposalStatus.PENDING,
+            proposed_by_user_id=user_id,
+        )
+        return await proposal_repo.create(proposal)
+
+    async def resolve_link_proposal(
+        self,
+        proposal_id: UUID,
+        decision: LinkProposalStatus,
+        user_id: UUID,
+    ) -> JobApplicationLinkProposal:
+        """Apply or reject a pending cross-thread proposal after HR review."""
+        application_repo = self._job_applications
+        proposal_repo = self._link_proposals
+        if application_repo is None or proposal_repo is None:
+            raise RuntimeError("Job Application and proposal repositories are required")
+        if decision not in (LinkProposalStatus.CONFIRMED, LinkProposalStatus.REJECTED):
+            raise InvalidLinkProposalError("Decision must be confirmed or rejected")
+
+        proposal = await proposal_repo.get_by_id(proposal_id)
+        if proposal is None:
+            raise LinkProposalNotFoundError(f"Link proposal {proposal_id} not found")
+        if proposal.status != LinkProposalStatus.PENDING:
+            raise InvalidLinkProposalError("Link proposal has already been resolved")
+
+        item = await self.get_item(proposal.recruitment_inbox_item_id)
+        target = await application_repo.get_by_id(proposal.target_job_application_id)
+        if target is None:
+            raise JobApplicationNotFoundError(
+                f"Job Application {proposal.target_job_application_id} not found"
+            )
+
+        now = datetime.now(UTC)
+        if decision == LinkProposalStatus.CONFIRMED:
+            references = list(target.message_references or [])
+            if not any(
+                reference.get("gmail_message_id") == item.gmail_message_id
+                for reference in references
+            ):
+                references.append(
+                    {
+                        "email_message_id": str(item.source_email_message_id),
+                        "gmail_message_id": item.gmail_message_id,
+                        "gmail_thread_id": item.gmail_thread_id,
+                        "link_type": "hr_confirmed_cross_thread",
+                    }
+                )
+                target.message_references = references
+                history = list(target.audit_history or [])
+                history.append(
+                    {
+                        "action": "cross_thread_link_confirmed",
+                        "performed_by_user_id": str(user_id),
+                        "occurred_at": now.isoformat(),
+                    }
+                )
+                target.audit_history = history
+                await application_repo.update(target)
+            item.inbox_status = InboxStatus.RESOLVED
+        else:
+            item.inbox_status = InboxStatus.READY_FOR_REVIEW
+
+        proposal.status = decision
+        proposal.resolved_by_user_id = user_id
+        proposal.resolved_at = now
+        await self._repo.update(item)
+        return await proposal_repo.update(proposal)
 
     async def correct_intent(
         self,
