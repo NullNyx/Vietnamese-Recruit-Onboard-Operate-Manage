@@ -275,7 +275,7 @@ class IntentClassifierService:
         """
         intent = intent_result.intent
 
-        if intent == EmailIntent.CV:
+        if intent == EmailIntent.CV or intent == EmailIntent.JOB_APPLICATION:
             pass
 
             # Enqueue CV processing via ARQ

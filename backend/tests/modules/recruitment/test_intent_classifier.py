@@ -247,6 +247,23 @@ class TestClassifyEmail:
             # Enqueue should NOT be called for non-CV intents
             mock_enqueue_func.assert_not_called()
 
+        async def test_job_application_enqueues_processing(self, service, mock_enqueue_func):
+            """job_application intent triggers CV processing enqueue (like legacy cv)."""
+            email_message_id = uuid4()
+            job_intent = IntentResult(
+                intent=EmailIntent.JOB_APPLICATION,
+                token_usage={"prompt_tokens": 50, "completion_tokens": 1, "total_tokens": 51},
+            )
+            await service.process_classification_result(
+                intent_result=job_intent,
+                gmail_message_id="msg_job",
+                email_message_id=email_message_id,
+                user_id=uuid4(),
+                access_token="test_token",
+            )
+            # CV processing should still be enqueued (like cv)
+            mock_enqueue_func.assert_called_once_with("process_cv_from_email", email_message_id)
+
         async def test_cv_intent_enqueues_processing_without_token(
             self, service, mock_enqueue_func
         ):

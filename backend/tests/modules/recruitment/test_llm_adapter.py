@@ -17,6 +17,31 @@ from src.modules.recruitment.infrastructure.llm_adapter import (
 )
 
 
+def _make_classification_json(intent: str, confidence: float = 0.95) -> str:
+    """Create a valid classification JSON response string."""
+    return json.dumps(
+        {
+            "version": "1.0",
+            "intent": intent,
+            "confidence": confidence,
+            "evidence": [f"matched_{intent}_pattern"],
+            "source_hints": {"sender_role": "candidate", "has_cv_attachment": "false"},
+        }
+    )
+
+
+def _make_completion_response(content: str, prompt_tokens: int = 50, completion_tokens: int = 10):
+    """Create a mock chat completion response."""
+    response = MagicMock()
+    response.choices = [MagicMock()]
+    response.choices[0].message.content = content
+    response.usage = MagicMock()
+    response.usage.prompt_tokens = prompt_tokens
+    response.usage.completion_tokens = completion_tokens
+    response.usage.total_tokens = prompt_tokens + completion_tokens
+    return response
+
+
 @pytest.fixture
 def settings() -> RecruitmentSettings:
     """Create test settings."""
@@ -36,25 +61,13 @@ def adapter(settings: RecruitmentSettings) -> LLMAdapter:
     return LLMAdapter(settings)
 
 
-def _make_completion_response(content: str, prompt_tokens: int = 50, completion_tokens: int = 10):
-    """Create a mock chat completion response."""
-    response = MagicMock()
-    response.choices = [MagicMock()]
-    response.choices[0].message.content = content
-    response.usage = MagicMock()
-    response.usage.prompt_tokens = prompt_tokens
-    response.usage.completion_tokens = completion_tokens
-    response.usage.total_tokens = prompt_tokens + completion_tokens
-    return response
-
-
 class TestClassifyIntent:
     """Tests for the classify_intent method."""
 
     @pytest.mark.asyncio
-    async def test_classifies_cv_intent(self, adapter: LLMAdapter):
-        """Should correctly classify a CV email."""
-        mock_response = _make_completion_response("cv")
+    async def test_classifies_cv_intent_legacy(self, adapter: LLMAdapter):
+        """Should correctly classify a CV email (legacy intent)."""
+        mock_response = _make_completion_response(_make_classification_json("cv"))
 
         with patch.object(
             adapter._client.chat.completions, "create", new_callable=AsyncMock
@@ -70,14 +83,37 @@ class TestClassifyIntent:
 
         assert isinstance(result, IntentResult)
         assert result.intent == EmailIntent.CV
+        assert result.classification is not None
+        assert result.classification.version == "1.0"
+        assert result.classification.confidence == 0.95
         assert result.token_usage["prompt_tokens"] == 50
         assert result.token_usage["completion_tokens"] == 10
         assert result.token_usage["total_tokens"] == 60
 
     @pytest.mark.asyncio
+    async def test_classifies_job_application_intent(self, adapter: LLMAdapter):
+        """Should correctly classify a job_application email."""
+        mock_response = _make_completion_response(_make_classification_json("job_application"))
+
+        with patch.object(
+            adapter._client.chat.completions, "create", new_callable=AsyncMock
+        ) as mock_create:
+            mock_create.return_value = mock_response
+
+            result = await adapter.classify_intent(
+                subject="Application for Senior Developer",
+                sender="applicant@gmail.com",
+                snippet="I would like to apply for the position...",
+                attachment_filenames=[],
+            )
+
+        assert result.intent == EmailIntent.JOB_APPLICATION
+        assert result.classification is not None
+
+    @pytest.mark.asyncio
     async def test_classifies_partner_intent(self, adapter: LLMAdapter):
         """Should correctly classify a partner email."""
-        mock_response = _make_completion_response("partner")
+        mock_response = _make_completion_response(_make_classification_json("partner"))
 
         with patch.object(
             adapter._client.chat.completions, "create", new_callable=AsyncMock
@@ -96,7 +132,7 @@ class TestClassifyIntent:
     @pytest.mark.asyncio
     async def test_classifies_event_intent(self, adapter: LLMAdapter):
         """Should correctly classify an event email."""
-        mock_response = _make_completion_response("event")
+        mock_response = _make_completion_response(_make_classification_json("event"))
 
         with patch.object(
             adapter._client.chat.completions, "create", new_callable=AsyncMock
@@ -113,8 +149,8 @@ class TestClassifyIntent:
         assert result.intent == EmailIntent.EVENT
 
     @pytest.mark.asyncio
-    async def test_defaults_to_other_on_invalid_response(self, adapter: LLMAdapter):
-        """Should default to OTHER when LLM returns unparseable response."""
+    async def test_malformed_response_raises_after_retries(self, adapter: LLMAdapter):
+        """Malformed response should raise LLMParseError after retries, not default to OTHER."""
         mock_response = _make_completion_response("I think this is a job application")
 
         with patch.object(
@@ -122,52 +158,71 @@ class TestClassifyIntent:
         ) as mock_create:
             mock_create.return_value = mock_response
 
-            result = await adapter.classify_intent(
-                subject="Test",
-                sender="test@test.com",
-                snippet="Test snippet",
-                attachment_filenames=[],
-            )
+            with patch("asyncio.sleep", new_callable=AsyncMock):
+                with pytest.raises(LLMParseError):
+                    await adapter.classify_intent(
+                        subject="Test",
+                        sender="test@test.com",
+                        snippet="Test snippet",
+                        attachment_filenames=[],
+                    )
 
-        assert result.intent == EmailIntent.OTHER
+        # Verify all retries were exhausted
+        assert mock_create.call_count == 3
 
     @pytest.mark.asyncio
-    async def test_handles_response_with_quotes(self, adapter: LLMAdapter):
-        """Should handle LLM response wrapped in quotes."""
-        mock_response = _make_completion_response('"cv"')
+    async def test_missing_required_field_raises_after_retries(self, adapter: LLMAdapter):
+        """Missing required fields in JSON should raise LLMParseError after retries."""
+        # Missing 'confidence' field
+        incomplete_json = json.dumps(
+            {
+                "version": "1.0",
+                "intent": "cv",
+                "evidence": ["matched_cv_pattern"],
+            }
+        )
+        mock_response = _make_completion_response(incomplete_json)
 
         with patch.object(
             adapter._client.chat.completions, "create", new_callable=AsyncMock
         ) as mock_create:
             mock_create.return_value = mock_response
 
-            result = await adapter.classify_intent(
-                subject="Apply for position",
-                sender="candidate@email.com",
-                snippet="Please find my CV attached",
-                attachment_filenames=["resume.pdf"],
-            )
-
-        assert result.intent == EmailIntent.CV
+            with patch("asyncio.sleep", new_callable=AsyncMock):
+                with pytest.raises(LLMParseError):
+                    await adapter.classify_intent(
+                        subject="Test",
+                        sender="test@test.com",
+                        snippet="Test snippet",
+                        attachment_filenames=[],
+                    )
 
     @pytest.mark.asyncio
-    async def test_handles_response_with_period(self, adapter: LLMAdapter):
-        """Should handle LLM response with trailing period."""
-        mock_response = _make_completion_response("internal.")
+    async def test_unsupported_intent_raises_after_retries(self, adapter: LLMAdapter):
+        """Unsupported intent in JSON should raise LLMParseError after retries."""
+        bad_intent = json.dumps(
+            {
+                "version": "1.0",
+                "intent": "spam",
+                "confidence": 0.9,
+                "evidence": ["matched_spam_pattern"],
+            }
+        )
+        mock_response = _make_completion_response(bad_intent)
 
         with patch.object(
             adapter._client.chat.completions, "create", new_callable=AsyncMock
         ) as mock_create:
             mock_create.return_value = mock_response
 
-            result = await adapter.classify_intent(
-                subject="Internal memo",
-                sender="hr@company.com",
-                snippet="Team meeting tomorrow",
-                attachment_filenames=[],
-            )
-
-        assert result.intent == EmailIntent.INTERNAL
+            with patch("asyncio.sleep", new_callable=AsyncMock):
+                with pytest.raises(LLMParseError):
+                    await adapter.classify_intent(
+                        subject="Test",
+                        sender="test@test.com",
+                        snippet="Test snippet",
+                        attachment_filenames=[],
+                    )
 
     @pytest.mark.asyncio
     async def test_raises_after_max_retries_on_timeout(self, adapter: LLMAdapter):
@@ -193,7 +248,7 @@ class TestClassifyIntent:
         """Should retry on API errors and succeed if a retry works."""
         from openai import APIConnectionError
 
-        mock_response = _make_completion_response("cv")
+        mock_response = _make_completion_response(_make_classification_json("cv"))
 
         with patch.object(
             adapter._client.chat.completions, "create", new_callable=AsyncMock
@@ -217,7 +272,7 @@ class TestClassifyIntent:
     @pytest.mark.asyncio
     async def test_prompt_includes_all_metadata(self, adapter: LLMAdapter):
         """Should include subject, sender, snippet, and attachments in prompt."""
-        mock_response = _make_completion_response("cv")
+        mock_response = _make_completion_response(_make_classification_json("cv"))
 
         with patch.object(
             adapter._client.chat.completions, "create", new_callable=AsyncMock
@@ -246,7 +301,7 @@ class TestClassifyIntent:
     @pytest.mark.asyncio
     async def test_prompt_shows_no_attachments(self, adapter: LLMAdapter):
         """Should indicate no attachments when list is empty."""
-        mock_response = _make_completion_response("other")
+        mock_response = _make_completion_response(_make_classification_json("other"))
 
         with patch.object(
             adapter._client.chat.completions, "create", new_callable=AsyncMock
@@ -264,6 +319,81 @@ class TestClassifyIntent:
         messages = call_kwargs["messages"]
         user_message = messages[1]["content"]
         assert "none" in user_message.lower()
+
+    @pytest.mark.asyncio
+    async def test_prompt_says_untrusted_data(self, adapter: LLMAdapter):
+        """Prompt should label email as untrusted data."""
+        mock_response = _make_completion_response(_make_classification_json("other"))
+
+        with patch.object(
+            adapter._client.chat.completions, "create", new_callable=AsyncMock
+        ) as mock_create:
+            mock_create.return_value = mock_response
+
+            await adapter.classify_intent(
+                subject="Test",
+                sender="test@test.com",
+                snippet="Test",
+                attachment_filenames=[],
+            )
+
+        call_kwargs = mock_create.call_args[1]
+        messages = call_kwargs["messages"]
+        system_message = messages[0]["content"]
+        assert "untrusted" in system_message.lower()
+        assert "no tools" in system_message.lower()
+        assert "no write" in system_message.lower()
+
+    @pytest.mark.asyncio
+    async def test_prompt_requests_json(self, adapter: LLMAdapter):
+        """Prompt should request JSON output, not single word."""
+        mock_response = _make_completion_response(_make_classification_json("other"))
+
+        with patch.object(
+            adapter._client.chat.completions, "create", new_callable=AsyncMock
+        ) as mock_create:
+            mock_create.return_value = mock_response
+
+            await adapter.classify_intent(
+                subject="Test",
+                sender="test@test.com",
+                snippet="Test",
+                attachment_filenames=[],
+            )
+
+        call_kwargs = mock_create.call_args[1]
+        messages = call_kwargs["messages"]
+        user_message = messages[1]["content"]
+        assert "JSON" in user_message
+
+    @pytest.mark.asyncio
+    async def test_handles_markdown_code_block(self, adapter: LLMAdapter):
+        """Should handle JSON wrapped in markdown code blocks."""
+        cv_json = json.dumps(
+            {
+                "version": "1.0",
+                "intent": "cv",
+                "confidence": 0.9,
+                "evidence": ["matched_cv_pattern"],
+                "source_hints": {"has_cv_attachment": "true"},
+            }
+        )
+        wrapped = f"```json\n{cv_json}\n```"
+        mock_response = _make_completion_response(wrapped)
+
+        with patch.object(
+            adapter._client.chat.completions, "create", new_callable=AsyncMock
+        ) as mock_create:
+            mock_create.return_value = mock_response
+
+            result = await adapter.classify_intent(
+                subject="Test",
+                sender="test@test.com",
+                snippet="Test",
+                attachment_filenames=[],
+            )
+
+        assert result.intent == EmailIntent.CV
 
 
 class TestParseCV:
@@ -454,38 +584,196 @@ class TestParseCV:
                 assert kwargs["timeout"] == 30
 
 
-class TestParseIntentResponse:
-    """Tests for the _parse_intent_response helper."""
+class TestParseClassificationJson:
+    """Tests for the _parse_classification_json helper."""
 
-    def test_parses_exact_intent_values(self, adapter: LLMAdapter):
-        """Should parse exact intent enum values."""
-        assert adapter._parse_intent_response("cv") == EmailIntent.CV
-        assert adapter._parse_intent_response("partner") == EmailIntent.PARTNER
-        assert adapter._parse_intent_response("event") == EmailIntent.EVENT
-        assert adapter._parse_intent_response("internal") == EmailIntent.INTERNAL
-        assert adapter._parse_intent_response("other") == EmailIntent.OTHER
+    def test_parses_all_valid_intents(self, adapter: LLMAdapter):
+        """Should parse all valid EmailIntent values from classification JSON."""
+        for intent in EmailIntent:
+            content = json.dumps(
+                {
+                    "version": "1.0",
+                    "intent": intent.value,
+                    "confidence": 0.9,
+                    "evidence": [f"matched_{intent.value}_pattern"],
+                    "source_hints": {},
+                }
+            )
+            result = adapter._parse_classification_json(content)
+            assert result.intent == intent
+            assert result.version == "1.0"
+            assert 0.0 <= result.confidence <= 1.0
 
-    def test_handles_uppercase(self, adapter: LLMAdapter):
-        """Should handle uppercase responses (already lowered before calling)."""
-        assert adapter._parse_intent_response("cv") == EmailIntent.CV
+    def test_parses_job_application(self, adapter: LLMAdapter):
+        """Should parse job_application intent."""
+        content = json.dumps(
+            {
+                "version": "1.0",
+                "intent": "job_application",
+                "confidence": 0.85,
+                "evidence": ["subject:application", "body:apply_for_position"],
+                "source_hints": {"sender_role": "candidate", "has_cv_attachment": "false"},
+            }
+        )
+        result = adapter._parse_classification_json(content)
+        assert result.intent == EmailIntent.JOB_APPLICATION
+        assert result.version == "1.0"
+        assert result.confidence == 0.85
+        assert len(result.evidence) == 2
+        assert ("sender_role", "candidate") in result.source_hints
 
-    def test_handles_quoted_response(self, adapter: LLMAdapter):
-        """Should strip quotes from response."""
-        assert adapter._parse_intent_response('"cv"') == EmailIntent.CV
-        assert adapter._parse_intent_response("'partner'") == EmailIntent.PARTNER
+    def test_parses_cv_legacy(self, adapter: LLMAdapter):
+        """Should parse legacy cv intent."""
+        content = json.dumps(
+            {
+                "version": "1.0",
+                "intent": "cv",
+                "confidence": 0.95,
+                "evidence": ["attachment:cv.pdf"],
+                "source_hints": {"has_cv_attachment": "true"},
+            }
+        )
+        result = adapter._parse_classification_json(content)
+        assert result.intent == EmailIntent.CV
+        assert result.confidence == 0.95
+        assert ("has_cv_attachment", "true") in result.source_hints
 
-    def test_handles_response_with_period(self, adapter: LLMAdapter):
-        """Should strip trailing period."""
-        assert adapter._parse_intent_response("event.") == EmailIntent.EVENT
+    @pytest.mark.parametrize("confidence", [1.5, -0.5, True])
+    def test_rejects_invalid_confidence(self, adapter: LLMAdapter, confidence: float | bool):
+        """Confidence outside the contract range should fail validation."""
+        content = json.dumps(
+            {
+                "version": "1.0",
+                "intent": "cv",
+                "confidence": confidence,
+                "evidence": ["attachment:cv.pdf"],
+                "source_hints": {},
+            }
+        )
+        with pytest.raises(LLMParseError, match="confidence"):
+            adapter._parse_classification_json(content)
 
-    def test_handles_substring_match(self, adapter: LLMAdapter):
-        """Should find intent as substring in longer response."""
-        assert adapter._parse_intent_response("the intent is cv") == EmailIntent.CV
+    def test_handles_markdown_code_blocks(self, adapter: LLMAdapter):
+        """Should strip markdown code block wrappers."""
+        inner = json.dumps(
+            {
+                "version": "1.0",
+                "intent": "cv",
+                "confidence": 0.9,
+                "evidence": ["test"],
+                "source_hints": {},
+            }
+        )
+        content = f"```json\n{inner}\n```"
+        result = adapter._parse_classification_json(content)
+        assert result.intent == EmailIntent.CV
 
-    def test_defaults_to_other_for_garbage(self, adapter: LLMAdapter):
-        """Should default to OTHER for completely unrecognizable response."""
-        assert adapter._parse_intent_response("xyz123") == EmailIntent.OTHER
-        assert adapter._parse_intent_response("") == EmailIntent.OTHER
+    def test_handles_plain_code_blocks(self, adapter: LLMAdapter):
+        """Should strip plain code block wrappers (no language tag)."""
+        inner = json.dumps(
+            {
+                "version": "1.0",
+                "intent": "event",
+                "confidence": 0.8,
+                "evidence": ["test"],
+                "source_hints": {},
+            }
+        )
+        content = f"```\n{inner}\n```"
+        result = adapter._parse_classification_json(content)
+        assert result.intent == EmailIntent.EVENT
+
+    def test_raises_on_malformed_json(self, adapter: LLMAdapter):
+        """Should raise LLMParseError for malformed JSON."""
+        with pytest.raises(LLMParseError, match="not valid JSON"):
+            adapter._parse_classification_json("not json at all")
+
+    def test_raises_on_empty_string(self, adapter: LLMAdapter):
+        """Should raise LLMParseError for empty string."""
+        with pytest.raises(LLMParseError, match="not valid JSON"):
+            adapter._parse_classification_json("")
+
+    def test_raises_on_non_dict_json(self, adapter: LLMAdapter):
+        """Should raise LLMParseError for JSON that is not a dict."""
+        with pytest.raises(LLMParseError, match="not a JSON object"):
+            adapter._parse_classification_json('"just a string"')
+
+        with pytest.raises(LLMParseError, match="not a JSON object"):
+            adapter._parse_classification_json("[1, 2, 3]")
+
+    def test_raises_on_missing_version(self, adapter: LLMAdapter):
+        """Should raise LLMParseError when version field is missing."""
+        content = json.dumps(
+            {
+                "intent": "cv",
+                "confidence": 0.9,
+                "evidence": [],
+            }
+        )
+        with pytest.raises(LLMParseError, match="version"):
+            adapter._parse_classification_json(content)
+
+    def test_raises_on_missing_intent(self, adapter: LLMAdapter):
+        """Should raise LLMParseError when intent field is missing."""
+        content = json.dumps(
+            {
+                "version": "1.0",
+                "confidence": 0.9,
+                "evidence": [],
+            }
+        )
+        with pytest.raises(LLMParseError, match="intent"):
+            adapter._parse_classification_json(content)
+
+    def test_raises_on_missing_confidence(self, adapter: LLMAdapter):
+        """Should raise LLMParseError when confidence field is missing."""
+        content = json.dumps(
+            {
+                "version": "1.0",
+                "intent": "cv",
+                "evidence": [],
+            }
+        )
+        with pytest.raises(LLMParseError, match="confidence"):
+            adapter._parse_classification_json(content)
+
+    def test_raises_on_missing_evidence(self, adapter: LLMAdapter):
+        """Should raise LLMParseError when evidence field is missing."""
+        content = json.dumps(
+            {
+                "version": "1.0",
+                "intent": "cv",
+                "confidence": 0.9,
+            }
+        )
+        with pytest.raises(LLMParseError, match="evidence"):
+            adapter._parse_classification_json(content)
+
+    def test_raises_on_unsupported_intent(self, adapter: LLMAdapter):
+        """Should raise LLMParseError for unsupported intent value."""
+        content = json.dumps(
+            {
+                "version": "1.0",
+                "intent": "spam",
+                "confidence": 0.9,
+                "evidence": [],
+            }
+        )
+        with pytest.raises(LLMParseError, match="unsupported intent"):
+            adapter._parse_classification_json(content)
+
+    def test_raises_on_missing_source_hints(self, adapter: LLMAdapter):
+        """Source hints are a required part of the versioned contract."""
+        content = json.dumps(
+            {
+                "version": "1.0",
+                "intent": "other",
+                "confidence": 0.5,
+                "evidence": ["no_recruitment_signal"],
+            }
+        )
+        with pytest.raises(LLMParseError, match="source_hints"):
+            adapter._parse_classification_json(content)
 
 
 class TestParseCVJson:
