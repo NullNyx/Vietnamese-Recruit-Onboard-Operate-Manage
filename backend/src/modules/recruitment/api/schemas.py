@@ -770,6 +770,8 @@ class JobApplicationResponse(BaseModel):
     source_email_message_id: UUID
     gmail_message_id: str
     gmail_thread_id: str
+    intent: str
+    has_cv: bool
     source: str
     applicant_name: str | None = None
     applicant_email: str | None = None
