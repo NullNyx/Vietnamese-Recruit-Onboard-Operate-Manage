@@ -15,6 +15,7 @@ from sqlmodel import Field, SQLModel
 
 from src.modules.recruitment.domain.enums import (
     ApplicationSource,
+    CorrectionEvaluationStatus,
     InboxStatus,
     JobApplicationStatus,
     LinkProposalStatus,
@@ -70,7 +71,7 @@ class RecruitmentInboxItem(SQLModel, table=True):
 
     Created when an email is classified as recruitment but confidence
     is below the policy threshold (needs_classification), or when
-    provider retries are exhausted (permanently_failed \u2192 manual_review).
+    provider retries are exhausted (permanently_failed → manual_review).
 
     This entity does NOT duplicate the JobApplication; it represents
     inbox-specific state for emails that did NOT reach the threshold
@@ -482,6 +483,130 @@ class JobApplicationLinkProposal(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
     updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+
+class CorrectionRecord(SQLModel, table=True):
+    """Records an HR correction for safe evaluation feedback.
+
+    Stores the prediction, HR decision, model/prompt/policy versions,
+    and minimal metadata. Raw body, thread content, attachment content,
+    and chain-of-thought are NEVER stored here.
+
+    This record serves as the basis for opt-in evaluation samples.
+    Corrections never trigger online learning or automatic prompt/model changes.
+    """
+
+    __tablename__ = "correction_records"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    source_type: str = Field(max_length=20, nullable=False)  # "inbox_item" or "job_application"
+    source_id: UUID = Field(nullable=False, index=True)
+
+    # Prediction (what the system said)
+    prediction_intent: str | None = Field(default=None, max_length=50)
+    confidence_raw: float | None = Field(default=None)
+    confidence_calibrated: float | None = Field(default=None)
+
+    # HR correction (what HR decided)
+    corrected_intent: str = Field(max_length=50, nullable=False)
+    previous_inbox_status: str | None = Field(default=None, max_length=30)
+
+    # Who and when
+    corrected_by_user_id: UUID = Field(foreign_key="users.id", nullable=False)
+    corrected_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+    # Versions — essential for reproducibility
+    model_version: str | None = Field(default=None, max_length=100)
+    prompt_version: str | None = Field(default=None, max_length=100)
+    policy_version: str | None = Field(default=None, max_length=100)
+
+    # Safe evidence metadata (never raw content)
+    evidence: list[dict[str, Any]] | None = Field(default=None, sa_column=Column(JSONB))
+    source_hints: list[dict[str, Any]] | None = Field(default=None, sa_column=Column(JSONB))
+
+    # Evaluation opt-in status
+    evaluation_status: str = Field(
+        default=CorrectionEvaluationStatus.NONE, max_length=20, nullable=False
+    )
+
+    # Guard: correction never changes model behaviour
+    triggers_online_learning: bool = Field(default=False, nullable=False)
+
+    # Message reference for redaction (never stored raw)
+    redacted_subject: str | None = Field(default=None, max_length=500)
+    redacted_snippet: str | None = Field(default=None, max_length=2000)
+
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+
+class EvaluationSet(SQLModel, table=True):
+    """A versioned evaluation set containing redacted samples.
+
+    Only redacted data is written here. Each set has a semantic version
+    and can be used to compare classifier versions reproducibly.
+    """
+
+    __tablename__ = "evaluation_sets"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    version: str = Field(max_length=30, nullable=False, unique=True, index=True)
+    description: str = Field(default="", max_length=500)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+
+class EvaluationSample(SQLModel, table=True):
+    """A redacted evaluation sample committed to a versioned set.
+
+    Contains only redacted data safe for durable storage.
+    Links back to the source CorrectionRecord for audit.
+    """
+
+    __tablename__ = "evaluation_samples"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    correction_record_id: UUID = Field(
+        foreign_key="correction_records.id", nullable=False, index=True
+    )
+    evaluation_set_id: UUID = Field(foreign_key="evaluation_sets.id", nullable=False, index=True)
+
+    # Redacted fields — no PII, no raw content
+    redacted_subject: str = Field(default="", max_length=500)
+    redacted_snippet: str = Field(default="", max_length=2000)
+    redacted_sender_name: str = Field(default="", max_length=255)
+    redacted_sender_email: str = Field(default="", max_length=255)
+
+    # Ground truth from HR correction
+    ground_truth_intent: str = Field(max_length=50, nullable=False)
+
+    # Versions for reproducibility
+    model_version: str | None = Field(default=None, max_length=100)
+    prompt_version: str | None = Field(default=None, max_length=100)
+    policy_version: str | None = Field(default=None, max_length=100)
+
+    # Cohort labels for granular evaluation
+    cohorts: list[str] = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
+
+    redacted_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )

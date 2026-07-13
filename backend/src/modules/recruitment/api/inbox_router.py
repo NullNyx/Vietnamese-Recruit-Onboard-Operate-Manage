@@ -11,6 +11,7 @@ work; it is not a Gmail inbox or an AI error queue.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Annotated
 from uuid import UUID
 
@@ -30,6 +31,10 @@ from src.modules.recruitment.api.schemas import (
     SplitInboxItemRequest,
     SplitInboxItemResponse,
 )
+from src.modules.recruitment.application.evaluation_service import (
+    CorrectionEvaluationService,
+    CorrectionRecordNotFoundError,
+)
 from src.modules.recruitment.application.inbox_service import (
     InboxItemDismissedError,
     InboxService,
@@ -41,6 +46,9 @@ from src.modules.recruitment.application.inbox_service import (
 )
 from src.modules.recruitment.domain.enums import InboxStatus
 from src.modules.recruitment.infrastructure.repositories import (
+    CorrectionRecordRepository,
+    EvaluationSampleRepository,
+    EvaluationSetRepository,
     JobApplicationLinkProposalRepository,
     JobApplicationRepository,
     RecruitmentInboxItemRepository,
@@ -78,6 +86,19 @@ def _build_inbox_service(
         inbox_repo=inbox_repo,
         job_application_repo=JobApplicationRepository(session),
         link_proposal_repo=JobApplicationLinkProposalRepository(session),
+    )
+
+
+def _build_evaluation_service(
+    session: AsyncSession,
+) -> CorrectionEvaluationService:
+    """Build a CorrectionEvaluationService for a database session."""
+    return CorrectionEvaluationService(
+        session=session,
+        correction_repo=CorrectionRecordRepository(session),
+        evaluation_set_repo=EvaluationSetRepository(session),
+        evaluation_sample_repo=EvaluationSampleRepository(session),
+        inbox_repo=RecruitmentInboxItemRepository(session),
     )
 
 
@@ -201,17 +222,36 @@ async def correct_inbox_intent(
     """Correct the routing intent of an inbox item.
 
     Records the correction in audit history and resolves the item.
+    Also creates a CorrectionRecord for safe evaluation feedback.
     Dismissed items cannot be corrected.
     """
     _require_hr(current_user)
 
     service = _build_inbox_service(session, inbox_repo)
+    eval_service = _build_evaluation_service(session)
+
     try:
         item = await service.correct_intent(
             item_id=item_id,
             corrected_intent=body.corrected_intent,
             user_id=current_user.id,
         )
+
+        # Record a CorrectionRecord for safe evaluation feedback
+        # using only safe metadata — no raw email body, thread, or attachments
+        await eval_service.record_correction(
+            source_type="inbox_item",
+            source_id=item_id,
+            prediction_intent=item.prediction_intent,
+            corrected_intent=body.corrected_intent,
+            corrected_by_user_id=current_user.id,
+            confidence_raw=item.confidence_raw,
+            confidence_calibrated=item.confidence_calibrated,
+            previous_inbox_status=item.inbox_status,
+            evidence=item.evidence,
+            source_hints=item.source_hints,
+        )
+
     except RecruitmentInboxItemNotFoundError:
         raise HTTPException(
             status_code=404,
@@ -351,3 +391,88 @@ async def resolve_cross_thread_link(
         raise HTTPException(status_code=409, detail=str(exc))
 
     return LinkProposalResponse.model_validate(proposal)
+
+
+# ---------------------------------------------------------------------------
+# Evaluation endpoints (GH #187)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{item_id}/corrections", response_model=list[dict[str, object]])
+async def list_item_corrections(
+    item_id: UUID,
+    current_user: CurrentUserDep,
+    session: DbSessionDep,
+) -> list[dict[str, object]]:
+    """List all correction records for an inbox item."""
+    _require_hr(current_user)
+    eval_service = _build_evaluation_service(session)
+    records = await eval_service.list_corrections_for_source(item_id)
+    return [
+        {
+            "id": str(r.id),
+            "prediction_intent": r.prediction_intent,
+            "corrected_intent": r.corrected_intent,
+            "confidence_raw": r.confidence_raw,
+            "confidence_calibrated": r.confidence_calibrated,
+            "corrected_by_user_id": str(r.corrected_by_user_id),
+            "corrected_at": r.corrected_at.isoformat() if r.corrected_at else None,
+            "model_version": r.model_version,
+            "prompt_version": r.prompt_version,
+            "policy_version": r.policy_version,
+            "evaluation_status": r.evaluation_status,
+            "triggers_online_learning": r.triggers_online_learning,
+        }
+        for r in records
+    ]
+
+
+@router.post(
+    "/{item_id}/corrections/{correction_id}/select-for-evaluation",
+    response_model=dict[str, object],
+)
+async def select_correction_for_evaluation(
+    item_id: UUID,
+    correction_id: UUID,
+    current_user: CurrentUserDep,
+    session: DbSessionDep,
+) -> dict[str, object]:
+    """Opt a correction record into evaluation for this inbox item."""
+    _require_hr(current_user)
+    eval_service = _build_evaluation_service(session)
+
+    # Build redacted subject/snippet from the inbox item
+    inbox_repo = RecruitmentInboxItemRepository(session)
+    inbox_item = await inbox_repo.get_by_id(item_id)
+    redacted_subject = _redact_email_field(inbox_item.subject if inbox_item else "")
+    redacted_snippet = _redact_email_field(inbox_item.snippet if inbox_item else "")
+
+    try:
+        record = await eval_service.select_for_evaluation(
+            correction_record_id=correction_id,
+            redacted_subject=redacted_subject,
+            redacted_snippet=redacted_snippet,
+        )
+    except CorrectionRecordNotFoundError:
+        raise HTTPException(status_code=404, detail="Correction record not found")
+
+    return {
+        "id": str(record.id),
+        "evaluation_status": record.evaluation_status,
+        "redacted_subject": record.redacted_subject,
+        "redacted_snippet": record.redacted_snippet,
+    }
+
+
+def _redact_email_field(text: str) -> str:
+    """Simple redaction: replace email addresses and phone numbers.
+
+    This is a lightweight redaction pass applied to subject/snippet when
+    opting into evaluation. Full PII redaction uses PIIRedactor for
+    evaluation set samples.
+    """
+    # Redact email addresses
+    text = re.sub(r"[\w.+-]+@[\w-]+\.[\w.]+", "[EMAIL]", text)
+    # Redact phone numbers (Vietnamese: 10-11 digits, optional +84 prefix)
+    text = re.sub(r"(\+84|0)\d{9,10}", "[PHONE]", text)
+    return text
