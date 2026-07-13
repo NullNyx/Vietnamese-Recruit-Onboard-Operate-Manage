@@ -74,6 +74,23 @@ class ClassificationResult:
     matched_signals: list[str] = field(default_factory=list)
     token_usage: dict[str, int] = field(default_factory=dict)
     source_hints: tuple[tuple[str, str], ...] = field(default_factory=tuple)
+    # Stable Job Application contract. ``category`` remains the legacy Gmail
+    # routing value during expand/compatibility; these fields are independent.
+    intent: str | None = None
+    application_source: str | None = None
+    has_cv: bool | None = None
+
+    def __post_init__(self) -> None:
+        if self.category == EmailCategory.recruitment:
+            self.intent = self.intent or "job_application"
+
+    @property
+    def is_job_application(self) -> bool:
+        """Return the stable intent without requiring callers to know legacy categories."""
+        return self.intent == "job_application" or self.category.value in {
+            "recruitment",
+            "job_application",
+        }
 
     @property
     def requires_hr_split(self) -> bool:
@@ -204,6 +221,7 @@ class AIClassifier:
                     source="ai",
                     matched_signals=[f"llm_response:{raw_content}"],
                     token_usage=token_usage,
+                    has_cv=has_attachments,
                 )
 
             except TimeoutError as exc:

@@ -995,8 +995,10 @@ export interface JobApplicationInboxResult {
   id: string;
   source_email_message_id: string;
   gmail_message_id: string;
-  gmail_thread_id: string;
-  source: ApplicationSource;
+    gmail_thread_id: string;
+    intent: "job_application";
+    has_cv: boolean;
+    source: ApplicationSource;
   applicant_name: string | null;
   applicant_email: string | null;
   sender_name: string;

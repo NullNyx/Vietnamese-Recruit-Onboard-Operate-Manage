@@ -126,7 +126,9 @@ class JobApplicationService:
                     await self._repo.update(application)
             return same_thread[0]
 
-        source = self._derive_source(classification_result)
+        source = classification_result.application_source or self._derive_source(
+            classification_result
+        )
         source_hints = self._source_hints(classification_result)
         hint_values = {hint["key"].lower(): hint["value"] for hint in source_hints}
 
@@ -144,6 +146,12 @@ class JobApplicationService:
             source_email_message_id=email.id,
             gmail_message_id=email.gmail_message_id,
             gmail_thread_id=email.gmail_thread_id,
+            intent=classification_result.intent or "job_application",
+            has_cv=(
+                classification_result.has_cv
+                if classification_result.has_cv is not None
+                else email.has_attachments
+            ),
             source=source,
             applicant_name=applicant_name,
             applicant_email=applicant_email,

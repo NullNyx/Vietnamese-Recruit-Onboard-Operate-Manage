@@ -311,6 +311,9 @@ class ClassificationService:
             matched_signals=merged_signals,
             token_usage=ai_result.token_usage,
             source_hints=ai_result.source_hints,
+            intent=ai_result.intent,
+            application_source=ai_result.application_source,
+            has_cv=ai_result.has_cv if ai_result.has_cv is not None else email.has_attachments,
         )
 
     async def _apply_classification(
@@ -347,7 +350,7 @@ class ClassificationService:
         # when routing intent confidence is high. Creating one application here
         # would lose the remaining applicants from the source message.
         if (
-            result.category == EmailCategory.recruitment
+            result.is_job_application
             and result.requires_hr_split
             and self._on_uncertain_classification is not None
         ):
@@ -375,7 +378,7 @@ class ClassificationService:
         # If confidence below threshold, route to Recruitment Inbox or needs_review
         if result.confidence < review_threshold:
             # Recruitment emails below threshold → needs_classification + inbox item
-            if result.category == EmailCategory.recruitment:
+            if result.is_job_application:
                 callback_ok = True
                 if self._on_uncertain_classification is not None:
                     try:
@@ -416,10 +419,7 @@ class ClassificationService:
         # Invoke callback BEFORE setting classified status.
         # If callback fails, the email is marked needs_review so the
         # outcome is retryable/reviewable, not silently swallowed.
-        if (
-            result.category == EmailCategory.recruitment
-            and self._on_application_created is not None
-        ):
+        if result.is_job_application and self._on_application_created is not None:
             try:
                 await self._on_application_created(email, result)
             except Exception:

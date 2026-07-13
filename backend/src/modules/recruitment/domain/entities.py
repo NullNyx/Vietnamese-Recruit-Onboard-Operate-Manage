@@ -426,6 +426,9 @@ class JobApplication(SQLModel, table=True):
     )
     gmail_message_id: str = Field(max_length=255, nullable=False, index=True)
     gmail_thread_id: str = Field(max_length=255, nullable=False)
+    # Stable contract fields remain independent of the legacy Gmail category.
+    intent: str = Field(default="job_application", max_length=50, nullable=False)
+    has_cv: bool = Field(default=False, nullable=False)
     source: str = Field(default=ApplicationSource.DIRECT, max_length=30, nullable=False)
     applicant_name: str | None = Field(default=None, max_length=255)
     applicant_email: str | None = Field(default=None, max_length=255)
