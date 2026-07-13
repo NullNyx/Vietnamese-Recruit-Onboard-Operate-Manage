@@ -143,3 +143,18 @@ class InboxStatus(StrEnum):
     NEEDS_INFORMATION = "needs_information"
     READY_FOR_REVIEW = "ready_for_review"
     RESOLVED = "resolved"
+
+
+class CorrectionEvaluationStatus(StrEnum):
+    """Status of a correction record in the evaluation flow.
+
+    - none: Default — not selected for evaluation.
+    - selected: HR opted this sample in for evaluation; pending redaction.
+    - redacted: PII has been removed; sample ready for evaluation set commit.
+    - committed: Sample has been written to a versioned evaluation set.
+    """
+
+    NONE = "none"
+    SELECTED = "selected"
+    REDACTED = "redacted"
+    COMMITTED = "committed"

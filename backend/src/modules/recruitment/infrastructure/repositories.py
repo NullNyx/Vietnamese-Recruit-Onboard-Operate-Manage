@@ -14,7 +14,10 @@ from sqlmodel import select
 
 from src.modules.recruitment.domain.entities import (
     Candidate,
+    CorrectionRecord,
     CVDocument,
+    EvaluationSample,
+    EvaluationSet,
     JobApplication,
     JobApplicationLinkProposal,
     JobOpening,
@@ -698,6 +701,139 @@ class JobApplicationLinkProposalRepository:
         self.session.add(proposal)
         await self.session.flush()
         return proposal
+
+
+class CorrectionRecordRepository:
+    """Handles CorrectionRecord entity persistence.
+
+    Attributes:
+        session: The async database session for executing queries.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def create(self, record: CorrectionRecord) -> CorrectionRecord:
+        self.session.add(record)
+        await self.session.flush()
+        return record
+
+    async def get_by_id(self, id: UUID) -> CorrectionRecord | None:
+        statement = select(CorrectionRecord).where(CorrectionRecord.id == id)
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
+    async def get_by_source_id(self, source_id: UUID) -> list[CorrectionRecord]:
+        """Return all correction records for a given source.
+
+        Args:
+            source_id: UUID of the inbox item or job application.
+
+        Returns:
+            List of CorrectionRecord entities, newest first.
+        """
+        statement = (
+            select(CorrectionRecord)
+            .where(CorrectionRecord.source_id == source_id)
+            .order_by(desc(CorrectionRecord.created_at))
+        )
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
+    async def get_by_evaluation_status(self, status: str) -> list[CorrectionRecord]:
+        """Return correction records with a specific evaluation status.
+
+        Args:
+            status: The evaluation status to filter by.
+
+        Returns:
+            List of CorrectionRecord entities.
+        """
+        statement = (
+            select(CorrectionRecord)
+            .where(CorrectionRecord.evaluation_status == status)
+            .order_by(desc(CorrectionRecord.created_at))
+        )
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
+    async def update(self, record: CorrectionRecord) -> CorrectionRecord:
+        record.updated_at = datetime.now(UTC)
+        self.session.add(record)
+        await self.session.flush()
+        return record
+
+
+class EvaluationSetRepository:
+    """Handles EvaluationSet entity persistence.
+
+    Attributes:
+        session: The async database session for executing queries.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def create(self, evaluation_set: EvaluationSet) -> EvaluationSet:
+        self.session.add(evaluation_set)
+        await self.session.flush()
+        return evaluation_set
+
+    async def get_by_id(self, id: UUID) -> EvaluationSet | None:
+        statement = select(EvaluationSet).where(EvaluationSet.id == id)
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
+    async def get_by_version(self, version: str) -> EvaluationSet | None:
+        statement = select(EvaluationSet).where(EvaluationSet.version == version)
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
+    async def list_all(self) -> list[EvaluationSet]:
+        statement = select(EvaluationSet).order_by(desc(EvaluationSet.created_at))
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
+
+class EvaluationSampleRepository:
+    """Handles EvaluationSample entity persistence.
+
+    Attributes:
+        session: The async database session for executing queries.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def create(self, sample: EvaluationSample) -> EvaluationSample:
+        self.session.add(sample)
+        await self.session.flush()
+        return sample
+
+    async def get_by_id(self, id: UUID) -> EvaluationSample | None:
+        statement = select(EvaluationSample).where(EvaluationSample.id == id)
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
+    async def list_by_evaluation_set_id(self, evaluation_set_id: UUID) -> list[EvaluationSample]:
+        statement = (
+            select(EvaluationSample)
+            .where(EvaluationSample.evaluation_set_id == evaluation_set_id)
+            .order_by(EvaluationSample.created_at)
+        )
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
+    async def list_by_correction_record_id(
+        self, correction_record_id: UUID
+    ) -> list[EvaluationSample]:
+        statement = (
+            select(EvaluationSample)
+            .where(EvaluationSample.correction_record_id == correction_record_id)
+            .order_by(EvaluationSample.created_at)
+        )
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
 
 
 class RecruitmentInboxItemRepository:
