@@ -80,8 +80,8 @@ class LLMAdapter:
         """Classify email intent using LLM.
 
         Constructs a prompt with email metadata and asks the LLM to classify
-        the email into one of the valid intents: job_application, cv, partner,
-        event, internal, other.
+        the email into one of the valid intents: job_application, partner, event,
+        internal, other.
 
         Args:
             subject: Email subject line.
@@ -113,7 +113,7 @@ class LLMAdapter:
                     "Schema:\n"
                     "{\n"
                     '  "version": "1.0",\n'
-                    '  "intent": "one of: job_application, cv, partner, event, internal, other",\n'
+                    '  "intent": "one of: job_application, partner, event, internal, other",\n'
                     '  "confidence": 0.0-1.0,\n'
                     '  "evidence": ["string reasons for this classification"],\n'
                     '  "source_hints": {\n'
@@ -126,9 +126,8 @@ class LLMAdapter:
                     "Rules:\n"
                     "- `job_application` means the email expresses intent to apply "
                     "for a job at the organization, whether or not a CV is attached.\n"
-                    "- `cv` means a CV/resume file is attached to the email.\n"
-                    "- When an email is clearly both a job application and has a CV "
-                    "attached, use `job_application`.\n"
+                    "- A CV/resume attachment is evidence for `job_application`, not a "
+                    "separate routing intent.\n"
                     "- If unsure, prefer lower confidence rather than a wrong intent.\n"
                     "- Return ONLY the JSON object, no extra text."
                 ),

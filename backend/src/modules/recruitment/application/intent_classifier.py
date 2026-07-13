@@ -258,10 +258,10 @@ class IntentClassifierService:
         user_id: UUID | None = None,
         access_token: str | None = None,
     ) -> None:
-        """Process the classification result and enqueue if CV.
+        """Process the classification result and enqueue Job Application attachments.
 
-        For CV intent:
-        - Enqueue CV processing via ARQ
+        For ``job_application`` intent:
+        - Enqueue CV attachment processing via ARQ
 
         For other intents:
         - Store the classified intent on the email record (via category update)
@@ -275,10 +275,8 @@ class IntentClassifierService:
         """
         intent = intent_result.intent
 
-        if intent == EmailIntent.CV or intent == EmailIntent.JOB_APPLICATION:
-            pass
-
-            # Enqueue CV processing via ARQ
+        if intent == EmailIntent.JOB_APPLICATION:
+            # Enqueue CV attachment processing via ARQ
             if self._enqueue_func and email_message_id:
                 try:
                     await self._enqueue_func("process_cv_from_email", email_message_id)
@@ -297,7 +295,7 @@ class IntentClassifierService:
         else:
             # Requirement 1.5: Store classified intent without triggering CV pipeline
             logger.info(
-                "Email %s classified as %s, no CV processing needed",
+                "Email %s classified as %s, no attachment processing needed",
                 gmail_message_id,
                 intent.value,
                 extra={

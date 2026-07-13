@@ -263,7 +263,7 @@ class ImportStatusResponse(BaseModel):
         days: The time window of the job.
         total_count: Total messages found for the window.
         processed_count: Messages processed so far / final.
-        cv_count: Messages classified as cv that entered Backbone Flow.
+        job_application_count: Messages classified as Job Applications that entered Backbone Flow.
         errors: Count of errors encountered.
         started_at: ISO timestamp when the job started.
         completed_at: ISO timestamp when the job finished or None.
@@ -275,7 +275,7 @@ class ImportStatusResponse(BaseModel):
     days: int | None = None
     total_count: int = 0
     processed_count: int = 0
-    cv_count: int = 0
+    job_application_count: int = 0
     errors: int = 0
     started_at: str | None = None
     completed_at: str | None = None

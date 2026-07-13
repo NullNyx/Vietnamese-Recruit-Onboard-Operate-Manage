@@ -65,10 +65,10 @@ def service(
 class TestClassifyEmail:
     """Tests for the classify_email method."""
 
-    async def test_successful_cv_classification(self, service, mock_llm_adapter):
-        """Successfully classifies an email as CV intent."""
+    async def test_successful_job_application_classification(self, service, mock_llm_adapter):
+        """Successfully classifies an email as Job Application intent."""
         expected_result = IntentResult(
-            intent=EmailIntent.CV,
+            intent=EmailIntent.JOB_APPLICATION,
             token_usage={"prompt_tokens": 50, "completion_tokens": 1, "total_tokens": 51},
         )
         mock_llm_adapter.classify_intent = AsyncMock(return_value=expected_result)
@@ -83,7 +83,7 @@ class TestClassifyEmail:
             user_id=uuid4(),
         )
 
-        assert result.intent == EmailIntent.CV
+        assert result.intent == EmailIntent.JOB_APPLICATION
         assert result.token_usage["total_tokens"] == 51
 
     async def test_successful_other_classification(self, service, mock_llm_adapter):
@@ -109,7 +109,7 @@ class TestClassifyEmail:
     ):
         """PII in snippet is redacted before being sent to LLM."""
         expected_result = IntentResult(
-            intent=EmailIntent.CV,
+            intent=EmailIntent.JOB_APPLICATION,
             token_usage={"prompt_tokens": 50, "completion_tokens": 1, "total_tokens": 51},
         )
         mock_llm_adapter.classify_intent = AsyncMock(return_value=expected_result)
@@ -189,7 +189,7 @@ class TestClassifyEmail:
     async def test_classify_email_with_attachments(self, service, mock_llm_adapter):
         """Attachment filenames are passed to the LLM adapter."""
         expected_result = IntentResult(
-            intent=EmailIntent.CV,
+            intent=EmailIntent.JOB_APPLICATION,
             token_usage={"prompt_tokens": 60, "completion_tokens": 1, "total_tokens": 61},
         )
         mock_llm_adapter.classify_intent = AsyncMock(return_value=expected_result)
@@ -209,10 +209,10 @@ class TestClassifyEmail:
     class TestProcessClassificationResult:
         """Tests for the process_classification_result method."""
 
-        async def test_cv_intent_enqueues_processing(self, service, mock_enqueue_func):
-            """CV intent triggers CV processing enqueue."""
+        async def test_job_application_intent_enqueues_processing(self, service, mock_enqueue_func):
+            """Job Application intent triggers CV attachment processing."""
             intent_result = IntentResult(
-                intent=EmailIntent.CV,
+                intent=EmailIntent.JOB_APPLICATION,
                 token_usage={"prompt_tokens": 50, "completion_tokens": 1, "total_tokens": 51},
             )
             email_message_id = uuid4()
@@ -220,7 +220,7 @@ class TestClassifyEmail:
 
             await service.process_classification_result(
                 intent_result=intent_result,
-                gmail_message_id="msg_cv",
+                gmail_message_id="msg_job_application",
                 email_message_id=email_message_id,
                 user_id=user_id,
                 access_token="test_token",
@@ -230,7 +230,7 @@ class TestClassifyEmail:
             mock_enqueue_func.assert_called_once_with("process_cv_from_email", email_message_id)
 
         async def test_other_intent_does_not_enqueue(self, service, mock_enqueue_func):
-            """Non-CV intents do not trigger enqueue."""
+            """Non-Job Application intents do not trigger attachment processing."""
             intent_result = IntentResult(
                 intent=EmailIntent.PARTNER,
                 token_usage={"prompt_tokens": 40, "completion_tokens": 1, "total_tokens": 41},
@@ -244,32 +244,14 @@ class TestClassifyEmail:
                 access_token="test_token",
             )
 
-            # Enqueue should NOT be called for non-CV intents
             mock_enqueue_func.assert_not_called()
 
-        async def test_job_application_enqueues_processing(self, service, mock_enqueue_func):
-            """job_application intent triggers CV processing enqueue (like legacy cv)."""
-            email_message_id = uuid4()
-            job_intent = IntentResult(
-                intent=EmailIntent.JOB_APPLICATION,
-                token_usage={"prompt_tokens": 50, "completion_tokens": 1, "total_tokens": 51},
-            )
-            await service.process_classification_result(
-                intent_result=job_intent,
-                gmail_message_id="msg_job",
-                email_message_id=email_message_id,
-                user_id=uuid4(),
-                access_token="test_token",
-            )
-            # CV processing should still be enqueued (like cv)
-            mock_enqueue_func.assert_called_once_with("process_cv_from_email", email_message_id)
-
-        async def test_cv_intent_enqueues_processing_without_token(
+        async def test_job_application_enqueues_processing_without_token(
             self, service, mock_enqueue_func
         ):
-            """CV intent still enqueues even without access token."""
+            """Job Application attachment processing does not require an access token."""
             intent_result = IntentResult(
-                intent=EmailIntent.CV,
+                intent=EmailIntent.JOB_APPLICATION,
                 token_usage={"prompt_tokens": 50, "completion_tokens": 1, "total_tokens": 51},
             )
             email_message_id = uuid4()
@@ -285,16 +267,16 @@ class TestClassifyEmail:
             # Enqueue should still be called
             mock_enqueue_func.assert_called_once_with("process_cv_from_email", email_message_id)
 
-        async def test_all_non_cv_intents_skip_enqueue(self, service, mock_enqueue_func):
-            """All non-CV intents (partner, event, internal, other) skip enqueue."""
-            non_cv_intents = [
+        async def test_all_non_application_intents_skip_enqueue(self, service, mock_enqueue_func):
+            """Partner, event, internal, and other skip attachment processing."""
+            non_application_intents = [
                 EmailIntent.PARTNER,
                 EmailIntent.EVENT,
                 EmailIntent.INTERNAL,
                 EmailIntent.OTHER,
             ]
 
-            for intent in non_cv_intents:
+            for intent in non_application_intents:
                 mock_enqueue_func.reset_mock()
 
                 intent_result = IntentResult(

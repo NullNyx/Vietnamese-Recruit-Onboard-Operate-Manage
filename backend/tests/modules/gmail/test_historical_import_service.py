@@ -1,4 +1,5 @@
 from unittest.mock import ANY
+
 """Unit tests for HistoricalImportService.
 
 Tests cover the public API surface of the historical email import service:
@@ -7,7 +8,7 @@ All infrastructure dependencies are mocked; no real Gmail or Redis calls.
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import ANY, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import httpx
@@ -15,9 +16,7 @@ import pytest
 
 from src.modules.gmail.application.import_service import (
     HistoricalImportService,
-    IMPORT_ALLOWED_DAYS,
     ImportPreview,
-    ImportStatus,
 )
 from src.modules.gmail.infrastructure.config import GmailSettings
 from src.modules.identity.domain.entities import OrganizationGoogleConnection
@@ -197,9 +196,7 @@ class TestPreviewImport:
             None,
         )
         # Simulate one already-imported message.
-        email_repo.get_by_gmail_ids.return_value = [
-            _make_email_entity(user_id, "msg_001")
-        ]
+        email_repo.get_by_gmail_ids.return_value = [_make_email_entity(user_id, "msg_001")]
 
         result = await import_service.preview_import(7, user_id)
 
@@ -295,9 +292,7 @@ class TestStartImport:
 
         from src.modules.gmail.domain.exceptions import GmailImportException
 
-        with pytest.raises(
-            GmailImportException, match="already running"
-        ):
+        with pytest.raises(GmailImportException, match="already running"):
             await import_service.start_import(7, user_id)
 
     async def test_start_import_completed_ok(
@@ -341,9 +336,7 @@ class TestStartImport:
 
         from src.modules.gmail.domain.exceptions import GmailImportException
 
-        with pytest.raises(
-            GmailImportException, match="No valid Google connection"
-        ):
+        with pytest.raises(GmailImportException, match="No valid Google connection"):
             await import_service.start_import(7, user_id)
 
 
@@ -379,14 +372,14 @@ class TestGetImportStatus:
                 "started_at": "1234567890.0",
                 "total_count": "100",
                 "processed_count": "25",
-                "cv_count": "3",
+                "job_application_count": "3",
                 "errors": "1",
             },
             # Second call for progress
             {
                 "total_count": "100",
                 "processed_count": "25",
-                "cv_count": "3",
+                "job_application_count": "3",
                 "errors": "1",
             },
         ]
@@ -398,7 +391,7 @@ class TestGetImportStatus:
         assert status.days == 7
         assert status.total_count == 100
         assert status.processed_count == 25
-        assert status.cv_count == 3
+        assert status.job_application_count == 3
         assert status.errors == 1
         assert status.started_at == "1234567890.0"
         assert status.completed_at is None
@@ -664,13 +657,11 @@ class TestProcessImportJob:
         )
 
         # msg_001 already imported
-        email_repo.get_by_gmail_ids.return_value = [
-            _make_email_entity(user_id, "msg_001")
-        ]
+        email_repo.get_by_gmail_ids.return_value = [_make_email_entity(user_id, "msg_001")]
 
         # Only msg_002 should be fetched
-        gmail_adapter.get_single_message_metadata.return_value = (
-            _make_message_metadata(msg_id="msg_002")
+        gmail_adapter.get_single_message_metadata.return_value = _make_message_metadata(
+            msg_id="msg_002"
         )
 
         import_service._settings.classification_enabled = False
@@ -678,9 +669,7 @@ class TestProcessImportJob:
         result = await import_service.process_import_job()
 
         assert result["processed"] == 1
-        gmail_adapter.get_single_message_metadata.assert_called_once_with(
-                ANY, "msg_002"
-        )
+        gmail_adapter.get_single_message_metadata.assert_called_once_with(ANY, "msg_002")
 
 
 # ---------------------------------------------------------------------------
@@ -720,7 +709,7 @@ class TestBuildQuery:
 
 
 # ---------------------------------------------------------------------------
-    # Tests: connection integrity verification
+# Tests: connection integrity verification
 # ---------------------------------------------------------------------------
 
 
