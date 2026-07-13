@@ -8,6 +8,12 @@ from uuid import uuid4
 
 import httpx
 
+from src.modules.gmail.application.classification_rollout import (
+    BusinessPolicy,
+    ReleaseMetrics,
+    RolloutMode,
+    evaluate_release_gates,
+)
 from src.modules.identity.domain.entities import CredentialSource, OrganizationAIConfiguration, User
 from src.modules.identity.infrastructure.config import AuthSettings
 from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
@@ -86,6 +92,14 @@ class AIConfigurationView:
     automation_state: str = AICapabilityState.NOT_CONFIGURED.value
     assistant_enabled: bool = False
     assistant_state: str = AICapabilityState.NOT_CONFIGURED.value
+    classification_policy: str = BusinessPolicy.RECALL_FIRST.value
+    classification_policy_version: str = "recall-first-v1"
+    stable_classifier_version: str = "classifier-v1"
+    candidate_classifier_version: str | None = None
+    candidate_classification_policy: str | None = None
+    candidate_classification_policy_version: str | None = None
+    rollout_mode: str = RolloutMode.STABLE.value
+    canary_percentage: int = 0
 
 
 @dataclass(frozen=True)
@@ -94,6 +108,18 @@ class AIConfigurationCandidate:
     base_url: str
     model: str
     api_key: str
+
+
+@dataclass(frozen=True)
+class ClassificationRolloutCandidate:
+    """Audited Organization selection for a candidate rollout."""
+
+    mode: RolloutMode
+    business_policy: BusinessPolicy
+    policy_version: str
+    classifier_version: str
+    canary_percentage: int = 0
+    release_metrics: ReleaseMetrics | None = None
 
 
 @dataclass
@@ -258,6 +284,16 @@ class OrganizationAIConfigService:
             assistant_state=self._compute_state(
                 config, config.ai_assistant_enabled, credential_usable
             ),
+            classification_policy=config.classification_policy,
+            classification_policy_version=config.classification_policy_version,
+            stable_classifier_version=config.stable_classifier_version,
+            candidate_classifier_version=config.candidate_classifier_version,
+            candidate_classification_policy=config.candidate_classification_policy,
+            candidate_classification_policy_version=(
+                config.candidate_classification_policy_version
+            ),
+            rollout_mode=config.rollout_mode,
+            canary_percentage=config.canary_percentage,
         )
         if config.credential_source == CredentialSource.DEPLOYMENT_KEY.value:
             params["api_key_masked"] = "****" if deployment_key else None
@@ -641,5 +677,82 @@ class OrganizationAIConfigService:
                 "base_url": base_url.rstrip("/"),
                 "model": model.strip(),
                 "action": "update_provider",
+            },
+        )
+
+    async def configure_classification_rollout(
+        self, candidate: ClassificationRolloutCandidate, admin: User
+    ) -> AIConfigurationUpdateResult:
+        """Select a business policy and safely stage a classifier version."""
+        config = await self.repository.get()
+        if config is None:
+            raise OrganizationAIConfigValidationError("No provider configuration exists.")
+        if not candidate.classifier_version.strip() or not candidate.policy_version.strip():
+            raise OrganizationAIConfigValidationError(
+                "classifier_version and policy_version must not be empty"
+            )
+        if not 0 <= candidate.canary_percentage <= 100:
+            raise OrganizationAIConfigValidationError("canary_percentage must be between 0 and 100")
+        if candidate.mode == RolloutMode.CANARY and candidate.canary_percentage == 0:
+            raise OrganizationAIConfigValidationError(
+                "canary rollout requires canary_percentage greater than zero"
+            )
+        if candidate.mode == RolloutMode.FULL:
+            if candidate.release_metrics is None:
+                raise OrganizationAIConfigValidationError(
+                    "full rollout requires a release metrics report"
+                )
+            decision = evaluate_release_gates(candidate.release_metrics)
+            if not decision.allowed:
+                raise OrganizationAIConfigValidationError(
+                    "full rollout blocked by release gates: " + ", ".join(decision.failures)
+                )
+
+        config.candidate_classifier_version = candidate.classifier_version.strip()
+        config.candidate_classification_policy = candidate.business_policy.value
+        config.candidate_classification_policy_version = candidate.policy_version.strip()
+        config.rollout_mode = candidate.mode.value
+        config.canary_percentage = (
+            100 if candidate.mode == RolloutMode.FULL else candidate.canary_percentage
+        )
+        config.updated_at = datetime.now(UTC)
+        config.updated_by_user_id = admin.id
+        await self.repository.save(config)
+        return AIConfigurationUpdateResult(
+            view=await self.get_view(),
+            audit_details={
+                "action": "classification_rollout_configure",
+                "rollout_mode": candidate.mode.value,
+                "business_policy": candidate.business_policy.value,
+                "policy_version": candidate.policy_version,
+                "stable_classifier_version": config.stable_classifier_version,
+                "candidate_classifier_version": candidate.classifier_version,
+                "canary_percentage": config.canary_percentage,
+            },
+        )
+
+    async def rollback_classification_rollout(self, admin: User) -> AIConfigurationUpdateResult:
+        """Restore retained stable versions without touching workflow records."""
+        config = await self.repository.get()
+        if config is None:
+            raise OrganizationAIConfigValidationError("No provider configuration exists.")
+        rolled_back_classifier = config.candidate_classifier_version
+        rolled_back_policy = config.candidate_classification_policy_version
+        config.candidate_classifier_version = None
+        config.candidate_classification_policy = None
+        config.candidate_classification_policy_version = None
+        config.rollout_mode = RolloutMode.STABLE.value
+        config.canary_percentage = 0
+        config.updated_at = datetime.now(UTC)
+        config.updated_by_user_id = admin.id
+        await self.repository.save(config)
+        return AIConfigurationUpdateResult(
+            view=await self.get_view(),
+            audit_details={
+                "action": "classification_rollout_rollback",
+                "restored_classifier_version": config.stable_classifier_version,
+                "restored_policy_version": config.classification_policy_version,
+                "rolled_back_classifier_version": rolled_back_classifier,
+                "rolled_back_policy_version": rolled_back_policy,
             },
         )

@@ -328,8 +328,20 @@ async def get_classification_service(
     session: AsyncSession = Depends(get_db_session),
 ) -> ClassificationService:
     """Provide classification with idempotent Job Application ingestion and Recruitment Inbox."""
+    from src.modules.gmail.application.classification_rollout import (
+        BusinessPolicy,
+        ClassificationRollout,
+        RolloutConfig,
+        RolloutMode,
+    )
     from src.modules.gmail.application.rules_classifier import RulesClassifier
     from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
+    from src.modules.gmail.infrastructure.classification_rollout_repository import (
+        ClassificationRolloutRepository,
+    )
+    from src.modules.identity.infrastructure.organization_ai_config_repository import (
+        OrganizationAIConfigRepository,
+    )
     from src.modules.recruitment.application.inbox_service import InboxService
     from src.modules.recruitment.application.job_application_service import (
         build_job_application_ingestion,
@@ -339,6 +351,35 @@ async def get_classification_service(
     job_app_service = build_job_application_ingestion(session)
     inbox_repo = RecruitmentInboxItemRepository(session)
     inbox_service = InboxService(session=session, inbox_repo=inbox_repo)
+    rollout = None
+    candidate_classifier = None
+    organization_ai_config = await OrganizationAIConfigRepository(session).get()
+    if (
+        organization_ai_config is not None
+        and organization_ai_config.candidate_classifier_version
+        and organization_ai_config.rollout_mode != RolloutMode.STABLE.value
+    ):
+        candidate_policy = (
+            organization_ai_config.candidate_classification_policy
+            or organization_ai_config.classification_policy
+        )
+        policy_version = (
+            organization_ai_config.candidate_classification_policy_version
+            or organization_ai_config.classification_policy_version
+        )
+        telemetry_repo = ClassificationRolloutRepository(session)
+        rollout = ClassificationRollout(
+            RolloutConfig(
+                mode=RolloutMode(organization_ai_config.rollout_mode),
+                business_policy=BusinessPolicy(candidate_policy),
+                policy_version=policy_version,
+                stable_classifier_version=organization_ai_config.stable_classifier_version,
+                candidate_classifier_version=(organization_ai_config.candidate_classifier_version),
+                canary_percentage=organization_ai_config.canary_percentage,
+            ),
+            record=telemetry_repo.record,
+        )
+        candidate_classifier = AIClassifier(settings)
     return ClassificationService(
         rules_classifier=RulesClassifier(),
         ai_classifier=AIClassifier(settings),
@@ -348,6 +389,8 @@ async def get_classification_service(
         session=email_repo.session,
         on_application_created=job_app_service.create_from_classification,
         on_uncertain_classification=inbox_service.create_from_classification,
+        rollout=rollout,
+        candidate_ai_classifier=candidate_classifier,
     )
 
 

@@ -33,23 +33,31 @@ export interface WhitelistEntryCreated {
   created_at: string;
 }
 
-      export interface OrganizationAIConfiguration {
-        provider: string | null;
-        base_url: string | null;
-        model: string | null;
-        api_key_masked: string | null;
-        configured: boolean;
-        updated_at: string | null;
-        credential_source: string | null;
-        deployment_key_available: boolean;
-        data_policy_accepted: boolean;
-        data_policy_accepted_at: string | null;
-        data_policy_version: string | null;
-        automation_enabled: boolean;
-        automation_state: string;
-        assistant_enabled: boolean;
-        assistant_state: string;
-      }
+export interface OrganizationAIConfiguration {
+  provider: string | null;
+  base_url: string | null;
+  model: string | null;
+  api_key_masked: string | null;
+  configured: boolean;
+  updated_at: string | null;
+  credential_source: string | null;
+  deployment_key_available: boolean;
+  data_policy_accepted: boolean;
+  data_policy_accepted_at: string | null;
+  data_policy_version: string | null;
+  automation_enabled: boolean;
+  automation_state: string;
+  assistant_enabled: boolean;
+  assistant_state: string;
+  classification_policy: string;
+  classification_policy_version: string;
+  stable_classifier_version: string;
+  candidate_classifier_version: string | null;
+  candidate_classification_policy: string | null;
+  candidate_classification_policy_version: string | null;
+  rollout_mode: 'stable' | 'shadow' | 'canary' | 'full';
+  canary_percentage: number;
+}
 
 
   export interface DataPolicyResponse {
@@ -91,21 +99,22 @@ export interface AdminUser {
   last_login: string;
 }
 
-    export type AuditActionType =
-      | 'whitelist_add'
-      | 'whitelist_remove'
-      | 'oauth_update'
-      | 'role_change'
-      | 'org_domain_update'
-      | 'assistant_tool_config'
-      | 'org_google_connect'
-      | 'org_google_reconnect'
-      | 'org_google_switch_account'
-      | 'org_google_disconnect'
-      | 'org_ai_config_update'
-      | 'org_ai_config_rotate'
-      | 'org_ai_config_revoke'
-      | 'org_ai_config_source';
+export type AuditActionType =
+  | 'whitelist_add'
+  | 'whitelist_remove'
+  | 'oauth_update'
+  | 'role_change'
+  | 'org_domain_update'
+  | 'assistant_tool_config'
+  | 'org_google_connect'
+  | 'org_google_reconnect'
+  | 'org_google_switch_account'
+  | 'org_google_disconnect'
+  | 'org_ai_config_update'
+  | 'org_ai_config_rotate'
+  | 'org_ai_config_revoke'
+  | 'org_ai_config_source'
+  | 'org_ai_classification_rollout';
 
 export interface DomainListResponse {
   allowed_domains: string[];
@@ -295,6 +304,46 @@ async function handleResponse<T>(res: Response): Promise<T> {
         });
         return handleResponse<OrganizationAIConfiguration>(res);
       }
+
+
+export interface ClassificationReleaseMetrics {
+  job_application_recall: number;
+  baseline_recall: number;
+  needs_classification_rate: number;
+  no_cv_recall: number | null;
+  correction_rate: number;
+  review_rate: number;
+  p95_latency_ms: number;
+  provider_error_rate: number;
+  duplicate_count: number;
+}
+
+export interface ClassificationRolloutInput {
+  mode: 'shadow' | 'canary' | 'full';
+  business_policy: 'recall_first';
+  policy_version: string;
+  classifier_version: string;
+  canary_percentage: number;
+  release_metrics?: ClassificationReleaseMetrics;
+}
+
+export async function configureClassificationRollout(
+  data: ClassificationRolloutInput
+): Promise<OrganizationAIConfiguration> {
+  const res = await fetch(`${BASE}/organization/ai-config/classification-rollout`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<OrganizationAIConfiguration>(res);
+}
+
+export async function rollbackClassificationRollout(): Promise<OrganizationAIConfiguration> {
+  const res = await fetch(`${BASE}/organization/ai-config/classification-rollout/rollback`, {
+    method: 'POST',
+  });
+  return handleResponse<OrganizationAIConfiguration>(res);
+}
 
   // Whitelist Endpoints
 

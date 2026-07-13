@@ -254,6 +254,18 @@ class OrganizationAIConfiguration(SQLModel, table=True):
     ai_automation_enabled: bool = Field(default=False, nullable=False)
     ai_assistant_enabled: bool = Field(default=False, nullable=False)
 
+    # Organization-owned Job Application classification rollout
+    classification_policy: str = Field(default="recall_first", max_length=50, nullable=False)
+    classification_policy_version: str = Field(
+        default="recall-first-v1", max_length=100, nullable=False
+    )
+    stable_classifier_version: str = Field(default="classifier-v1", max_length=100, nullable=False)
+    candidate_classifier_version: str | None = Field(default=None, max_length=100)
+    candidate_classification_policy: str | None = Field(default=None, max_length=50)
+    candidate_classification_policy_version: str | None = Field(default=None, max_length=100)
+    rollout_mode: str = Field(default="stable", max_length=20, nullable=False)
+    canary_percentage: int = Field(default=0, ge=0, le=100, nullable=False)
+
 
 class AuditActionType(str, Enum):
     """Enumeration of admin audit action types."""
@@ -285,6 +297,7 @@ class AuditActionType(str, Enum):
     ORG_AI_CONFIG_SOURCE = "org_ai_config_source"
     ORG_AI_CONSENT = "org_ai_consent"
     ORG_AI_TOGGLE_AUTOMATION = "org_ai_toggle_automation"
+    ORG_AI_CLASSIFICATION_ROLLOUT = "org_ai_classification_rollout"
     ORG_AI_TOGGLE_ASSISTANT = "org_ai_toggle_assistant"
 
     OUTBOUND_EMAIL_CREATED = "outbound_email_created"

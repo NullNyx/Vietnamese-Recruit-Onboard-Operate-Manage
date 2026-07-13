@@ -10,6 +10,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.modules.gmail.application.classification_rollout import BusinessPolicy, RolloutMode
 from src.modules.identity.domain.entities import AuditActionType, UserRole
 
 
@@ -29,6 +30,14 @@ class OrganizationAIConfigurationResponse(BaseModel):
     automation_state: str = "not_configured"
     assistant_enabled: bool = False
     assistant_state: str = "not_configured"
+    classification_policy: str = "recall_first"
+    classification_policy_version: str = "recall-first-v1"
+    stable_classifier_version: str = "classifier-v1"
+    candidate_classifier_version: str | None = None
+    candidate_classification_policy: str | None = None
+    candidate_classification_policy_version: str | None = None
+    rollout_mode: str = "stable"
+    canary_percentage: int = 0
 
 
 class OrganizationAIConfigurationRequest(BaseModel):
@@ -61,6 +70,42 @@ class UpdateProviderConfigRequest(BaseModel):
 class AIConnectionTestResponse(BaseModel):
     success: bool
     message: str
+
+
+class ClassificationReleaseMetricsRequest(BaseModel):
+    job_application_recall: float = Field(..., ge=0, le=1)
+    baseline_recall: float = Field(..., ge=0, le=1)
+    needs_classification_rate: float = Field(..., ge=0, le=1)
+    no_cv_recall: float | None = Field(default=None, ge=0, le=1)
+    correction_rate: float = Field(..., ge=0, le=1)
+    review_rate: float = Field(..., ge=0, le=1)
+    p95_latency_ms: int = Field(..., ge=0)
+    provider_error_rate: float = Field(..., ge=0, le=1)
+    duplicate_count: int = Field(..., ge=0)
+
+
+class ClassificationRolloutRequest(BaseModel):
+    """Organization business policy selection and rollout target."""
+
+    mode: RolloutMode
+    business_policy: BusinessPolicy
+    policy_version: str = Field(..., min_length=1, max_length=100)
+    classifier_version: str = Field(..., min_length=1, max_length=100)
+    canary_percentage: int = Field(default=0, ge=0, le=100)
+    release_metrics: ClassificationReleaseMetricsRequest | None = None
+
+
+class ClassificationRolloutTelemetryResponse(BaseModel):
+    sample_size: int
+    job_application_recall_proxy: float
+    stable_recall_proxy: float
+    no_cv_recall_proxy: float | None
+    correction_rate: float
+    review_rate: float
+    needs_classification_rate: float
+    p95_latency_ms: int
+    provider_error_rate: float
+    duplicate_count: int
 
 
 class DataPolicyResponse(BaseModel):
