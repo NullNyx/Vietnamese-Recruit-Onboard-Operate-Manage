@@ -255,8 +255,7 @@ class CorrectionEvaluationService:
             # Check if there's evidence of no CV
             signals = [ev.get("signal", "").lower() for ev in record.evidence]
             has_no_cv = bool(signals) and all(
-                "cv" not in signal and "attachment" not in signal
-                for signal in signals
+                "cv" not in signal and "attachment" not in signal for signal in signals
             )
             if has_no_cv:
                 cohorts.append("no-cv")

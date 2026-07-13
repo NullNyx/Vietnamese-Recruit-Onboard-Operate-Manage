@@ -583,9 +583,7 @@ class EvaluationSample(SQLModel, table=True):
     correction_record_id: UUID = Field(
         foreign_key="correction_records.id", nullable=False, index=True
     )
-    evaluation_set_id: UUID = Field(
-        foreign_key="evaluation_sets.id", nullable=False, index=True
-    )
+    evaluation_set_id: UUID = Field(foreign_key="evaluation_sets.id", nullable=False, index=True)
 
     # Redacted fields — no PII, no raw content
     redacted_subject: str = Field(default="", max_length=500)
