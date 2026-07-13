@@ -17,6 +17,7 @@ from src.modules.recruitment.domain.entities import (
     CVDocument,
     JobApplication,
     JobOpening,
+    RecruitmentInboxItem,
 )
 from src.modules.recruitment.domain.enums import (
     CandidateStatus,
@@ -661,3 +662,144 @@ class JobApplicationRepository:
         self.session.add(job_application)
         await self.session.flush()
         return job_application
+
+
+class RecruitmentInboxItemRepository:
+    """Handles RecruitmentInboxItem entity persistence.
+
+    Attributes:
+        session: The async database session for executing queries.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        """Initialize the repository with an async database session.
+
+        Args:
+            session: An SQLAlchemy AsyncSession instance for database operations.
+        """
+        self.session = session
+
+    async def create(self, item: RecruitmentInboxItem) -> RecruitmentInboxItem:
+        """Persist a new Recruitment Inbox item.
+
+        Args:
+            item: The RecruitmentInboxItem entity to create.
+
+        Returns:
+            The persisted RecruitmentInboxItem with generated fields populated.
+        """
+        self.session.add(item)
+        await self.session.flush()
+        return item
+
+    async def get_by_id(self, id: UUID) -> RecruitmentInboxItem | None:
+        """Retrieve a Recruitment Inbox item by its unique identifier.
+
+        Args:
+            id: The UUID primary key of the inbox item.
+
+        Returns:
+            The RecruitmentInboxItem entity if found, None otherwise.
+        """
+        statement = select(RecruitmentInboxItem).where(RecruitmentInboxItem.id == id)
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
+    async def get_by_gmail_message_id(self, gmail_message_id: str) -> RecruitmentInboxItem | None:
+        """Retrieve an inbox item by its Gmail message ID.
+
+        Used for idempotent creation.
+
+        Args:
+            gmail_message_id: The Gmail message identifier string.
+
+        Returns:
+            The RecruitmentInboxItem entity if found, None otherwise.
+        """
+        statement = select(RecruitmentInboxItem).where(
+            RecruitmentInboxItem.gmail_message_id == gmail_message_id
+        )
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
+    async def update(self, item: RecruitmentInboxItem) -> RecruitmentInboxItem:
+        """Update an existing Recruitment Inbox item.
+
+        Updates the updated_at timestamp automatically.
+
+        Args:
+            item: The RecruitmentInboxItem entity with updated fields.
+
+        Returns:
+            The updated RecruitmentInboxItem entity.
+        """
+        item.updated_at = datetime.now(UTC)
+        self.session.add(item)
+        await self.session.flush()
+        return item
+
+    async def list_by_status(
+        self,
+        inbox_status: str | None = None,
+        dismissed: bool | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[RecruitmentInboxItem], int]:
+        """Retrieve a paginated list of inbox items with optional filters.
+
+        Args:
+            inbox_status: Filter by inbox status.
+            dismissed: Filter by dismissed state.
+            page: The page number (1-indexed).
+            page_size: Number of items per page.
+
+        Returns:
+            A tuple of (list of entities, total count).
+        """
+        statement = select(RecruitmentInboxItem)
+        count_statement = select(func.count()).select_from(RecruitmentInboxItem)
+
+        if inbox_status is not None:
+            statement = statement.where(RecruitmentInboxItem.inbox_status == inbox_status)
+            count_statement = count_statement.where(
+                RecruitmentInboxItem.inbox_status == inbox_status
+            )
+
+        if dismissed is not None:
+            statement = statement.where(RecruitmentInboxItem.dismissed == dismissed)
+            count_statement = count_statement.where(RecruitmentInboxItem.dismissed == dismissed)
+
+        # Get total count
+        count_result = await self.session.execute(count_statement)
+        total = count_result.scalar() or 0
+
+        # Apply sorting and pagination
+        offset = (page - 1) * page_size
+        statement = statement.order_by(desc(RecruitmentInboxItem.created_at))
+        statement = statement.offset(offset).limit(page_size)
+
+        # Execute query
+        result = await self.session.execute(statement)
+        items = list(result.scalars().all())
+
+        return items, total
+
+    async def find_dismissed_by_gmail_message_id(
+        self, gmail_message_id: str
+    ) -> RecruitmentInboxItem | None:
+        """Check if a dismissed inbox item exists for a Gmail message.
+
+        Used by the classification worker to prevent re-creation of dismissed items.
+
+        Args:
+            gmail_message_id: The Gmail message identifier string.
+
+        Returns:
+            The dismissed RecruitmentInboxItem if found, None otherwise.
+        """
+        statement = select(RecruitmentInboxItem).where(
+            RecruitmentInboxItem.gmail_message_id == gmail_message_id,
+            RecruitmentInboxItem.dismissed,
+        )
+        result = await self.session.execute(statement)
+        return result.scalars().first()

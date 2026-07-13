@@ -15,6 +15,7 @@ from sqlmodel import Field, SQLModel
 
 from src.modules.recruitment.domain.enums import (
     ApplicationSource,
+    InboxStatus,
     JobApplicationStatus,
 )
 
@@ -61,6 +62,81 @@ class Candidate(SQLModel, table=True):
     )
 
     job_opening_id: UUID | None = Field(default=None, foreign_key="job_openings.id", index=True)
+
+
+class RecruitmentInboxItem(SQLModel, table=True):
+    """Recruitment Inbox item for emails requiring HR attention.
+
+    Created when an email is classified as recruitment but confidence
+    is below the policy threshold (needs_classification), or when
+    provider retries are exhausted (permanently_failed \u2192 manual_review).
+
+    This entity does NOT duplicate the JobApplication; it represents
+    inbox-specific state for emails that did NOT reach the threshold
+    for automatic Job Application creation.
+
+    Dismissed items retain their record and are excluded from retry.
+    """
+
+    __tablename__ = "recruitment_inbox_items"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    source_email_message_id: UUID = Field(
+        foreign_key="email_messages.id", nullable=False, index=True
+    )
+    gmail_message_id: str = Field(max_length=255, nullable=False, unique=True, index=True)
+    gmail_thread_id: str = Field(max_length=255, nullable=False)
+    sender_name: str = Field(default="", max_length=255, nullable=False)
+    sender_email: str = Field(default="", max_length=255, nullable=False)
+    subject: str = Field(default="", max_length=500)
+    snippet: str = Field(default="", max_length=2000)
+    has_attachments: bool = Field(default=False)
+
+    # Safe attachment metadata (count, names, types, sizes) - never raw content
+    attachments_metadata: list[dict[str, Any]] | None = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
+
+    # Classification result
+    inbox_status: str = Field(
+        default=InboxStatus.NEEDS_CLASSIFICATION, max_length=30, nullable=False, index=True
+    )
+    prediction_intent: str | None = Field(default=None, max_length=50)
+    confidence_raw: float | None = Field(default=None)
+    confidence_calibrated: float | None = Field(default=None)
+    evidence: list[dict[str, Any]] | None = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
+    source_hints: list[dict[str, Any]] | None = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
+
+    # Correction tracking
+    corrected_intent: str | None = Field(default=None, max_length=50)
+    corrected_by_user_id: UUID | None = Field(default=None, foreign_key="users.id")
+    corrected_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    correction_history: list[dict[str, Any]] | None = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
+
+    # Dismissal
+    dismissed: bool = Field(default=False, nullable=False, index=True)
+    dismissed_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    dismissed_by_user_id: UUID | None = Field(default=None, foreign_key="users.id")
+
+    # Retry tracking
+    retry_count: int = Field(default=0, nullable=False)
+    is_retry_exhausted: bool = Field(default=False, nullable=False)
+    processing_error: str | None = Field(default=None, max_length=500)
+
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
 
 
 class CVDocument(SQLModel, table=True):

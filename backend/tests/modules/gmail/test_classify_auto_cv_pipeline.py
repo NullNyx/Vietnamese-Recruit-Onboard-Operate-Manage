@@ -188,7 +188,7 @@ class TestClassifyAutoCVProcessing:
 
         # Low confidence → needs_review (dead-letter queue)
         assert classified_count == 1
-        assert email.processing_status == "needs_review"
+        assert email.processing_status == "needs_classification"
         assert email.category == "recruitment"
         assert email.has_attachments is True
 
@@ -294,16 +294,19 @@ class TestCVReviewQueueIntegration:
 
         # Verify all marked needs_review
         for email in emails:
-            assert email.processing_status == "needs_review"
+            assert email.processing_status == "needs_classification"
 
         # Simulate review queue query
         # In real code: SELECT * FROM email_messages
         # WHERE user_id = {user_id} AND processing_status = 'needs_review'
-        needs_review_emails = [e for e in emails if e.processing_status == "needs_review"]
 
-        # All 3 emails should be in the review queue
-        assert len(needs_review_emails) == 3
+        needs_classification_emails = [
+            e for e in emails if e.processing_status == "needs_classification"
+        ]
+
+        # All 3 emails should be in the recruitment inbox
+        assert len(needs_classification_emails) == 3
 
         # Each should have attachments (CVs)
-        for email in needs_review_emails:
+        for email in needs_classification_emails:
             assert email.has_attachments is True

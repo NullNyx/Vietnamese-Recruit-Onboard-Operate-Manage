@@ -643,3 +643,98 @@ class ResolveConflictRequest(BaseModel):
     """
 
     choice: str = Field(pattern=r"^(keep_google|overwrite_vroom)$")
+
+
+# ---------------------------------------------------------------------------
+# Recruitment Inbox schemas (GH #184)
+# ---------------------------------------------------------------------------
+
+
+class InboxItemResponse(BaseModel):
+    """Response schema for a single Recruitment Inbox item.
+
+    Attributes:
+        id: UUID of the inbox item.
+        gmail_message_id: Gmail message ID.
+        gmail_thread_id: Gmail thread ID.
+        subject: Email subject line.
+        sender_name: Sender's display name.
+        sender_email: Sender's email address.
+        snippet: Email snippet.
+        has_attachments: Whether the email has attachments.
+        attachments_metadata: Safe attachment metadata (count, names, types, sizes).
+        inbox_status: Current inbox status (needs_classification, etc.).
+        prediction_intent: The AI prediction for routing intent.
+        confidence_raw: Raw confidence score from provider.
+        confidence_calibrated: Calibrated confidence score.
+        evidence: List of evidence items from classification.
+        source_hints: Source hints from classification.
+        corrected_intent: HR-corrected intent, if any.
+        corrected_by_user_id: UUID of the correcting HR user.
+        corrected_at: Timestamp of correction.
+        correction_history: Chronological list of corrections.
+        dismissed: Whether the item is dismissed.
+        dismissed_at: Dismissal timestamp.
+        dismissed_by_user_id: UUID of the dismissing HR user.
+        processing_error: Error description for failed items.
+        retry_count: Number of retry attempts.
+        is_retry_exhausted: Whether retries are exhausted.
+        created_at: Creation timestamp.
+        updated_at: Last update timestamp.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    gmail_message_id: str
+    gmail_thread_id: str
+    sender_name: str = ""
+    sender_email: str = ""
+    subject: str = ""
+    snippet: str = ""
+    has_attachments: bool = False
+    attachments_metadata: list[dict[str, Any]] | None = None
+    inbox_status: str
+    prediction_intent: str | None = None
+    confidence_raw: float | None = None
+    confidence_calibrated: float | None = None
+    evidence: list[dict[str, Any]] | None = None
+    source_hints: list[dict[str, Any]] | None = None
+    corrected_intent: str | None = None
+    corrected_by_user_id: UUID | None = None
+    corrected_at: datetime | None = None
+    correction_history: list[dict[str, Any]] | None = None
+    dismissed: bool = False
+    dismissed_at: datetime | None = None
+    dismissed_by_user_id: UUID | None = None
+    processing_error: str | None = None
+    retry_count: int = 0
+    is_retry_exhausted: bool = False
+    created_at: datetime
+    updated_at: datetime
+
+
+class InboxListResponse(BaseModel):
+    """Paginated response for the Recruitment Inbox list.
+
+    Attributes:
+        items: List of inbox items.
+        total: Total number of matching items.
+        page: Current page number.
+        page_size: Items per page.
+    """
+
+    items: list[InboxItemResponse]
+    total: int
+    page: int
+    page_size: int
+
+
+class CorrectIntentRequest(BaseModel):
+    """Request schema for correcting inbox item routing intent.
+
+    Attributes:
+        corrected_intent: The corrected routing intent value.
+    """
+
+    corrected_intent: str = Field(..., min_length=1, max_length=50)
