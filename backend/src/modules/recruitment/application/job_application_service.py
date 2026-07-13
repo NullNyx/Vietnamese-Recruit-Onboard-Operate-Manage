@@ -194,7 +194,6 @@ class JobApplicationService:
             )
             raise JobApplicationCreationError(f"Could not create Job Application: {exc}") from exc
 
-
     @staticmethod
     def _source_hints(
         classification_result: ClassificationResult,

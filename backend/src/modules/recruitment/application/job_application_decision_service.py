@@ -53,9 +53,7 @@ class JobApplicationDecisionService:
         """Assign an unpromoted application to one open Job Opening, or none."""
         application = await self._applications.get_by_id_for_update(job_application_id)
         if application is None:
-            raise JobApplicationNotFoundError(
-                f"Job Application not found: {job_application_id}"
-            )
+            raise JobApplicationNotFoundError(f"Job Application not found: {job_application_id}")
         if application.status == JobApplicationStatus.DISMISSED:
             raise JobApplicationAssignmentBlockedError("Job Application is dismissed")
         if application.status == JobApplicationStatus.PROMOTED:
@@ -96,9 +94,7 @@ class JobApplicationDecisionService:
         """Promote once, returning the linked Candidate on repeated requests."""
         application = await self._applications.get_by_id_for_update(job_application_id)
         if application is None:
-            raise JobApplicationNotFoundError(
-                f"Job Application not found: {job_application_id}"
-            )
+            raise JobApplicationNotFoundError(f"Job Application not found: {job_application_id}")
         if application.status == JobApplicationStatus.DISMISSED:
             raise JobApplicationPromotionBlockedError("Job Application is dismissed")
 
@@ -112,9 +108,7 @@ class JobApplicationDecisionService:
         if application.candidate_id is not None:
             candidate = await self._candidates.get_by_id(application.candidate_id)
             if candidate is None:
-                raise JobApplicationPromotionBlockedError(
-                    "linked Candidate no longer exists"
-                )
+                raise JobApplicationPromotionBlockedError("linked Candidate no longer exists")
             return application, candidate
 
         effective_opening_id = (
