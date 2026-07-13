@@ -28,6 +28,7 @@ from src.modules.gmail.infrastructure.config import GmailSettings
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from src.modules.gmail.application.classification_rollout import ClassificationRollout
     from src.modules.gmail.application.rules_classifier import RulesClassifier
     from src.modules.gmail.domain.entities import EmailMessage
     from src.modules.gmail.infrastructure.ai_classifier import (
@@ -82,6 +83,8 @@ class ClassificationService:
             [EmailMessage, ClassificationResult], Awaitable[RecruitmentInboxItem]
         ]
         | None = None,
+        rollout: ClassificationRollout | None = None,
+        candidate_ai_classifier: AIClassifier | None = None,
     ) -> None:
         self._rules = rules_classifier
         self._ai = ai_classifier
@@ -91,6 +94,8 @@ class ClassificationService:
         self._audit_logger = audit_logger
         self._settings = settings
         self._session = session
+        self._rollout = rollout
+        self._candidate_ai = candidate_ai_classifier
 
     async def classify_batch(
         self,
@@ -208,13 +213,26 @@ class ClassificationService:
 
         # Always invoke AI classifier (rules never determine final routing)
         try:
-            ai_result = await self._ai.classify(
-                subject=email.subject,
-                sender_email=email.sender_email,
-                sender_name=email.sender_name,
-                snippet=email.snippet,
-                has_attachments=email.has_attachments,
-            )
+
+            async def classify_with(classifier: AIClassifier) -> ClassificationResult:
+                return await classifier.classify(
+                    subject=email.subject,
+                    sender_email=email.sender_email,
+                    sender_name=email.sender_name,
+                    snippet=email.snippet,
+                    has_attachments=email.has_attachments,
+                )
+
+            candidate_ai = self._candidate_ai
+            if self._rollout is not None and candidate_ai is not None:
+                ai_result = await self._rollout.classify(
+                    gmail_message_id=email.gmail_message_id,
+                    stable=lambda: classify_with(self._ai),
+                    candidate=lambda: classify_with(candidate_ai),
+                    has_cv=email.has_attachments,
+                )
+            else:
+                ai_result = await classify_with(self._ai)
         except Exception as exc:
             latency_ms = int((time.monotonic() - start_time) * 1000)
             raw_retry_count = getattr(email, "retry_count", 0)
@@ -349,8 +367,13 @@ class ClassificationService:
             self._session.add(email)
             return True
 
+        review_threshold = (
+            self._rollout.review_threshold
+            if self._rollout is not None
+            else self._settings.classification_needs_review_threshold
+        )
         # If confidence below threshold, route to Recruitment Inbox or needs_review
-        if result.confidence < self._settings.classification_needs_review_threshold:
+        if result.confidence < review_threshold:
             # Recruitment emails below threshold → needs_classification + inbox item
             if result.category == EmailCategory.recruitment:
                 callback_ok = True
@@ -376,7 +399,7 @@ class ClassificationService:
                     "Email %s marked needs_classification (confidence=%.2f < threshold=%.2f)",
                     email.gmail_message_id[:10],
                     result.confidence,
-                    self._settings.classification_needs_review_threshold,
+                    review_threshold,
                 )
             else:
                 email.processing_status = "needs_review"
@@ -385,7 +408,7 @@ class ClassificationService:
                     "Email %s marked needs_review (confidence=%.2f < threshold=%.2f)",
                     email.gmail_message_id[:10],
                     result.confidence,
-                    self._settings.classification_needs_review_threshold,
+                    review_threshold,
                 )
             self._session.add(email)
             return True

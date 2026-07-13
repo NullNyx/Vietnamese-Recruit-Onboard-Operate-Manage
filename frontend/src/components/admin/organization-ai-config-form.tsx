@@ -15,6 +15,8 @@ import {
       disableAutomation,
       enableAssistant,
       disableAssistant,
+      configureClassificationRollout,
+      rollbackClassificationRollout,
       type OrganizationAIConfiguration,
       type DataPolicyResponse,
 } from "@/lib/api/admin";
@@ -64,6 +66,12 @@ export function OrganizationAIConfigForm({
   const [revokeConfirm, setRevokeConfirm] = useState(false);
   const [policyExpanded, setPolicyExpanded] = useState(false);
   const [policy, setPolicy] = useState<DataPolicyResponse | null>(null);
+  const [classifierVersion, setClassifierVersion] = useState(
+    config.candidate_classifier_version ?? config.stable_classifier_version
+  );
+  const [classificationPolicyVersion, setClassificationPolicyVersion] = useState(
+    config.candidate_classification_policy_version ?? config.classification_policy_version
+  );
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -265,6 +273,48 @@ export function OrganizationAIConfigForm({
     }
   }
 
+  async function handleClassificationRollout(mode: "shadow" | "canary") {
+    setBusy(true);
+    setMessage(null);
+    setSuccess(false);
+    try {
+      const updated = await configureClassificationRollout({
+        mode,
+        business_policy: "recall_first",
+        policy_version: classificationPolicyVersion,
+        classifier_version: classifierVersion,
+        canary_percentage: mode === "canary" ? 10 : 0,
+      });
+      onUpdated(updated);
+      setMessage(
+        mode === "shadow"
+          ? "Đã bật shadow; kết quả candidate không thay đổi workflow."
+          : "Đã bật canary ổn định 10% theo email."
+      );
+      setSuccess(true);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Không thể cập nhật rollout");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleClassificationRollback() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const updated = await rollbackClassificationRollout();
+      onUpdated(updated);
+      setMessage("Đã rollback về classifier và policy stable.");
+      setSuccess(true);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Không thể rollback");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+
   const isOrgKeySource = credentialSource === "org_api_key";
   const isDeploymentKeySource = credentialSource === "deployment_key";
   const hasOrgApiKey = config.configured && isOrgKeySource && config.api_key_masked != null;
@@ -445,6 +495,54 @@ export function OrganizationAIConfigForm({
           )}
         </section>
       )}
+
+
+          {/* Job Application classification rollout */}
+          {config.configured && (
+            <section className="rounded-lg border bg-card p-6 space-y-4">
+              <h2 className="font-heading text-lg font-semibold">Job Application classification</h2>
+              <p className="text-sm text-muted-foreground">
+                Organization chọn policy nghiệp vụ; confidence threshold do hệ thống quản lý.
+              </p>
+              <div className="rounded border p-3 text-sm">
+                <p><strong>Policy:</strong> Ưu tiên không bỏ sót</p>
+                <p><strong>Stable:</strong> {config.stable_classifier_version} / {config.classification_policy_version}</p>
+                <p><strong>Rollout:</strong> {config.rollout_mode}{config.rollout_mode === "canary" ? ` (${config.canary_percentage}%)` : ""}</p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="classifier-version">Candidate classifier version</Label>
+                <Input
+                  id="classifier-version"
+                  value={classifierVersion}
+                  onChange={(event) => setClassifierVersion(event.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="classification-policy-version">Policy version</Label>
+                <Input
+                  id="classification-policy-version"
+                  value={classificationPolicyVersion}
+                  onChange={(event) => setClassificationPolicyVersion(event.target.value)}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" disabled={busy} onClick={() => handleClassificationRollout("shadow")}>
+                  Bật shadow
+                </Button>
+                <Button type="button" variant="outline" disabled={busy} onClick={() => handleClassificationRollout("canary")}>
+                  Bật canary 10%
+                </Button>
+                {config.rollout_mode !== "stable" && (
+                  <Button type="button" variant="destructive" disabled={busy} onClick={handleClassificationRollback}>
+                    Rollback stable
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Full rollout chỉ mở qua operational release gate sau khi có báo cáo no-CV riêng.
+              </p>
+            </section>
+          )}
 
 
           {/* Data Policy & Consent */}

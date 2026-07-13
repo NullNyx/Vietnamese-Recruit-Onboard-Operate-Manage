@@ -34,6 +34,16 @@ class OrganizationAIConfigRepository:
             existing.data_policy_version = config.data_policy_version
             existing.ai_automation_enabled = config.ai_automation_enabled
             existing.ai_assistant_enabled = config.ai_assistant_enabled
+            existing.classification_policy = config.classification_policy
+            existing.classification_policy_version = config.classification_policy_version
+            existing.stable_classifier_version = config.stable_classifier_version
+            existing.candidate_classifier_version = config.candidate_classifier_version
+            existing.candidate_classification_policy = config.candidate_classification_policy
+            existing.candidate_classification_policy_version = (
+                config.candidate_classification_policy_version
+            )
+            existing.rollout_mode = config.rollout_mode
+            existing.canary_percentage = config.canary_percentage
             self.session.add(existing)
             await self.session.flush()
             return existing

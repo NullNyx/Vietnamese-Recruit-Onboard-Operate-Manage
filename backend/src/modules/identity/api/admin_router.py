@@ -23,6 +23,7 @@ from sqlmodel import select
 from src.modules.assistant.infrastructure.tool_config_repository import (
     ToolConfigRepository,
 )
+from src.modules.gmail.application.classification_rollout import ReleaseMetrics
 from src.modules.identity.api.admin_schemas import (
     ActivateOrgApiKeyRequest,
     AdminUserResponse,
@@ -31,6 +32,8 @@ from src.modules.identity.api.admin_schemas import (
     AssistantToolConfigResponse,
     AssistantToolConfigUpdateRequest,
     AuditLogResponse,
+    ClassificationRolloutRequest,
+    ClassificationRolloutTelemetryResponse,
     DataPolicyResponse,
     DomainAddRequest,
     DomainListResponse,
@@ -58,6 +61,7 @@ from src.modules.identity.application.oauth_config_manager import (
 )
 from src.modules.identity.application.organization_ai_config_service import (
     AIConfigurationCandidate,
+    ClassificationRolloutCandidate,
     OrganizationAIConfigService,
     OrganizationAIConfigTestError,
     OrganizationAIConfigValidationError,
@@ -173,6 +177,14 @@ def _ai_view_response(view: object) -> OrganizationAIConfigurationResponse:
         automation_state=view.automation_state,  # type: ignore[attr-defined]
         assistant_enabled=view.assistant_enabled,  # type: ignore[attr-defined]
         assistant_state=view.assistant_state,  # type: ignore[attr-defined]
+        classification_policy=view.classification_policy,  # type: ignore[attr-defined]
+        classification_policy_version=view.classification_policy_version,  # type: ignore[attr-defined]
+        stable_classifier_version=view.stable_classifier_version,  # type: ignore[attr-defined]
+        candidate_classifier_version=view.candidate_classifier_version,  # type: ignore[attr-defined]
+        candidate_classification_policy=view.candidate_classification_policy,  # type: ignore[attr-defined]
+        candidate_classification_policy_version=view.candidate_classification_policy_version,  # type: ignore[attr-defined]
+        rollout_mode=view.rollout_mode,  # type: ignore[attr-defined]
+        canary_percentage=view.canary_percentage,  # type: ignore[attr-defined]
     )
 
 
@@ -187,6 +199,90 @@ async def get_organization_ai_config(
     service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
 ) -> OrganizationAIConfigurationResponse:
     return _ai_view_response(await service.get_view())
+
+
+@admin_router.get(
+    "/organization/ai-config/classification-rollout/telemetry",
+    response_model=ClassificationRolloutTelemetryResponse,
+)
+async def get_classification_rollout_telemetry(
+    admin_user: AdminUserDep,
+    session: AsyncSession = Depends(get_db_session),
+    hours: int = Query(default=24, ge=1, le=720),
+) -> ClassificationRolloutTelemetryResponse:
+    """Return measured operational metrics from durable rollout/workflow state."""
+    from src.modules.gmail.infrastructure.classification_rollout_repository import (
+        ClassificationRolloutRepository,
+    )
+
+    telemetry = await ClassificationRolloutRepository(session).summarize(hours=hours)
+    return ClassificationRolloutTelemetryResponse(**telemetry.__dict__)
+
+
+@admin_router.put(
+    "/organization/ai-config/classification-rollout",
+    response_model=OrganizationAIConfigurationResponse,
+)
+async def configure_classification_rollout(
+    body: ClassificationRolloutRequest,
+    admin_user: AdminUserDep,
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> OrganizationAIConfigurationResponse:
+    """Select an audited business policy and rollout stage."""
+    metrics = (
+        ReleaseMetrics(**body.release_metrics.model_dump())
+        if body.release_metrics is not None
+        else None
+    )
+    try:
+        result = await service.configure_classification_rollout(
+            ClassificationRolloutCandidate(
+                mode=body.mode,
+                business_policy=body.business_policy,
+                policy_version=body.policy_version,
+                classifier_version=body.classifier_version,
+                canary_percentage=body.canary_percentage,
+                release_metrics=metrics,
+            ),
+            admin_user,
+        )
+    except OrganizationAIConfigValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "CLASSIFICATION_ROLLOUT_BLOCKED", "message": str(exc)},
+        ) from exc
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_AI_CLASSIFICATION_ROLLOUT,
+        details=result.audit_details,
+    )
+    return _ai_view_response(result.view)
+
+
+@admin_router.post(
+    "/organization/ai-config/classification-rollout/rollback",
+    response_model=OrganizationAIConfigurationResponse,
+)
+async def rollback_classification_rollout(
+    admin_user: AdminUserDep,
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> OrganizationAIConfigurationResponse:
+    """Restore retained stable versions without deleting Recruitment Inbox work."""
+    try:
+        result = await service.rollback_classification_rollout(admin_user)
+    except OrganizationAIConfigValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "CLASSIFICATION_ROLLOUT_INVALID", "message": str(exc)},
+        ) from exc
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_AI_CLASSIFICATION_ROLLOUT,
+        details=result.audit_details,
+    )
+    return _ai_view_response(result.view)
 
 
 @admin_router.post("/organization/ai-config/test", response_model=AIConnectionTestResponse)
