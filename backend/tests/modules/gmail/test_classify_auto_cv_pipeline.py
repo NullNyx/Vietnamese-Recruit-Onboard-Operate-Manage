@@ -118,7 +118,8 @@ class TestClassifyAutoCVProcessing:
             return_value=_make_high_confidence_recruitment_result()
         )
 
-        ai_classifier = AsyncMock()  # Not called due to high confidence
+        ai_classifier = AsyncMock()
+        ai_classifier.classify = AsyncMock(return_value=_make_high_confidence_recruitment_result())
 
         service = ClassificationService(
             rules_classifier=rules_classifier,
@@ -219,7 +220,8 @@ class TestClassifyAutoCVProcessing:
         rules_classifier = MagicMock()
         rules_classifier.classify = MagicMock(return_value=non_recruitment_result)
 
-        ai_classifier = AsyncMock()  # Not called
+        ai_classifier = AsyncMock()
+        ai_classifier.classify = AsyncMock(return_value=non_recruitment_result)
 
         service = ClassificationService(
             rules_classifier=rules_classifier,

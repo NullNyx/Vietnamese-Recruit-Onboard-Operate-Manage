@@ -855,6 +855,9 @@ class HistoricalImportService:
             AIClassifier,
         )
         from src.modules.gmail.infrastructure.audit_logger import AuditLogger
+        from src.modules.recruitment.application.job_application_service import (
+            build_job_application_ingestion,
+        )
 
         stmt = (
             select(EmailMessage)
@@ -879,6 +882,9 @@ class HistoricalImportService:
             audit_logger=audit_logger,
             settings=self._settings,
             session=self._session,
+            on_application_created=build_job_application_ingestion(
+                self._session
+            ).create_from_classification,
         )
 
         await classification_service.classify_batch(user_id=user_id, emails=imported_emails)

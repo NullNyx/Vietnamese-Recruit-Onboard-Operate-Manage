@@ -324,20 +324,17 @@ async def get_attachment_service(
 async def get_classification_service(
     email_repo: EmailRepository = Depends(get_email_repository),
     audit_logger: AuditLogger = Depends(get_audit_logger),
+    session: AsyncSession = Depends(get_db_session),
 ) -> ClassificationService:
-    """Provide a ClassificationService instance.
-
-    Args:
-        email_repo: The email repository from DI.
-        audit_logger: The audit logger from DI.
-
-    Returns:
-        A ClassificationService configured with all dependencies.
-    """
+    """Provide classification with idempotent Job Application ingestion."""
     from src.modules.gmail.application.rules_classifier import RulesClassifier
     from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
+    from src.modules.recruitment.application.job_application_service import (
+        build_job_application_ingestion,
+    )
 
     settings = get_gmail_settings()
+    job_app_service = build_job_application_ingestion(session)
     return ClassificationService(
         rules_classifier=RulesClassifier(),
         ai_classifier=AIClassifier(settings),
@@ -345,6 +342,7 @@ async def get_classification_service(
         audit_logger=audit_logger,
         settings=settings,
         session=email_repo.session,
+        on_application_created=job_app_service.create_from_classification,
     )
 
 

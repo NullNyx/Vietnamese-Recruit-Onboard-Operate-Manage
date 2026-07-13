@@ -77,3 +77,45 @@ class JobOpeningStatus(StrEnum):
     OPEN = "open"
     CLOSED = "closed"
     CANCELLED = "cancelled"
+
+
+class ApplicationSource(StrEnum):
+    """Source channel of a Job Application.
+
+    Identifies how the application was received:
+    - direct: Applicant sent directly to the organization.
+    - employee_referral: Referred by an existing employee.
+    - agency: Submitted through a recruitment agency.
+    """
+
+    DIRECT = "direct"
+    EMPLOYEE_REFERRAL = "employee_referral"
+    AGENCY = "agency"
+
+
+class JobApplicationStatus(StrEnum):
+    """Lifecycle status of a Job Application.
+
+    - new: Freshly ingested, awaiting HR review.
+    - dismissed: Rejected by HR; kept for idempotency.
+    - promoted: Converted to Candidate by HR action.
+    """
+
+    NEW = "new"
+    DISMISSED = "dismissed"
+    PROMOTED = "promoted"
+
+
+class JobApplicationProcessingStatus(StrEnum):
+    """Processing status of a Job Application in the ingestion pipeline.
+
+    - pending: Awaiting processing.
+    - completed: Successfully ingested.
+    - failed: Ingestion failed (provider error).
+    - permanently_failed: All retries exhausted.
+    """
+
+    PENDING = "pending"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    PERMANENTLY_FAILED = "permanently_failed"

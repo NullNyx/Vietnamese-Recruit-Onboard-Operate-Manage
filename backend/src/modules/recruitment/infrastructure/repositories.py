@@ -12,8 +12,17 @@ from sqlalchemy import Text, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from src.modules.recruitment.domain.entities import Candidate, CVDocument, JobOpening
-from src.modules.recruitment.domain.enums import CandidateStatus, JobOpeningStatus, ProcessingStatus
+from src.modules.recruitment.domain.entities import (
+    Candidate,
+    CVDocument,
+    JobApplication,
+    JobOpening,
+)
+from src.modules.recruitment.domain.enums import (
+    CandidateStatus,
+    JobOpeningStatus,
+    ProcessingStatus,
+)
 
 
 class CandidateRepository:
@@ -582,3 +591,73 @@ class JobOpeningRepository:
                 counts[status] = cnt
 
         return counts
+
+
+class JobApplicationRepository:
+    """Handles JobApplication entity persistence using async SQLAlchemy sessions.
+
+    Attributes:
+        session: The async database session for executing queries.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        """Initialize the repository with an async database session.
+
+        Args:
+            session: An SQLAlchemy AsyncSession instance for database operations.
+        """
+        self.session = session
+
+    async def create(self, job_application: JobApplication) -> JobApplication:
+        """Persist a Job Application inside an isolated savepoint."""
+        async with self.session.begin_nested():
+            self.session.add(job_application)
+            await self.session.flush()
+        return job_application
+
+    async def get_by_id(self, id: UUID) -> JobApplication | None:
+        """Retrieve a Job Application by its unique identifier.
+
+        Args:
+            id: The UUID primary key of the Job Application.
+
+        Returns:
+            The JobApplication entity if found, None otherwise.
+        """
+        statement = select(JobApplication).where(JobApplication.id == id)
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
+    async def get_by_gmail_message_id(self, gmail_message_id: str) -> JobApplication | None:
+        """Retrieve a Job Application by its Gmail message ID.
+
+        Used for idempotent ingestion: returns the existing application
+        if one was already created for this message.
+
+        Args:
+            gmail_message_id: The Gmail message identifier string.
+
+        Returns:
+            The JobApplication entity if found, None otherwise.
+        """
+        statement = select(JobApplication).where(
+            JobApplication.gmail_message_id == gmail_message_id
+        )
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
+    async def update(self, job_application: JobApplication) -> JobApplication:
+        """Update an existing Job Application entity.
+
+        Updates the updated_at timestamp automatically.
+
+        Args:
+            job_application: The JobApplication entity with updated fields.
+
+        Returns:
+            The updated JobApplication entity.
+        """
+        job_application.updated_at = datetime.now(UTC)
+        self.session.add(job_application)
+        await self.session.flush()
+        return job_application

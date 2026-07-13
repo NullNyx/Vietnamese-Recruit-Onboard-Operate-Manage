@@ -297,18 +297,13 @@ class TestMixedBatchRulesAndAI:
             f"got {elapsed:.2f}s"
         )
 
-        # --- First 3 emails classified by rules ---
-        for email in emails[:3]:
-            assert email.category == EmailCategory.recruitment.value
-            assert email.processing_status == "classified"
-
-        # --- Last 3 emails classified by AI ---
-        for email in emails[3:]:
+        # --- All 6 emails get the AI-assigned category (rules never final-route) ---
+        for email in emails:
             assert email.category == EmailCategory.payroll.value
             assert email.processing_status == "classified"
 
-        # --- AI classifier called only 3 times (not 6) ---
-        assert ai_classifier.classify.call_count == 3
+        # --- AI classifier is called for ALL emails (rules never final-route) ---
+        assert ai_classifier.classify.call_count == 6
 
         # --- Session flush and audit log called ---
         session.flush.assert_awaited_once()

@@ -536,6 +536,9 @@ class EmailSyncService:
             from src.modules.gmail.application.rules_classifier import RulesClassifier
             from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
             from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
+            from src.modules.recruitment.application.job_application_service import (
+                build_job_application_ingestion,
+            )
 
             # Re-query persisted emails from DB to get session-attached instances
             statement = (
@@ -560,6 +563,9 @@ class EmailSyncService:
                 audit_logger=self._audit_logger,
                 settings=self._settings,
                 session=self._email_repo.session,
+                on_application_created=build_job_application_ingestion(
+                    self._email_repo.session
+                ).create_from_classification,
             )
 
             classified_count = await classification_service.classify_batch(
