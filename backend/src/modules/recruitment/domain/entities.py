@@ -445,6 +445,9 @@ class JobApplication(SQLModel, table=True):
     job_opening_id: UUID | None = Field(
         default=None, foreign_key="job_openings.id", nullable=True, index=True
     )
+    candidate_id: UUID | None = Field(
+        default=None, foreign_key="candidates.id", nullable=True, unique=True, index=True
+    )
     status: str = Field(default=JobApplicationStatus.NEW, max_length=20, nullable=False, index=True)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

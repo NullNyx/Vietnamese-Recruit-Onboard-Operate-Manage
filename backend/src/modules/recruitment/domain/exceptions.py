@@ -50,6 +50,49 @@ class RecruitmentError(Exception):
         super().__init__(self.message)
 
 
+class JobApplicationNotFoundError(RecruitmentError):
+    """JobApplication with given ID does not exist.
+
+    Raised when an operation targets a Job Application ID that cannot be
+    found in the database.
+    """
+
+    status_code = 404
+    error_code = "JOB_APPLICATION_NOT_FOUND"
+    message = "Job Application not found"
+
+
+class JobApplicationPromotionBlockedError(RecruitmentError):
+    """Job Application cannot be promoted to Candidate.
+
+    Raised when the Job Application is dismissed, has invalid applicant identity,
+    or references a promoted Candidate that no longer exists.
+    """
+
+    status_code = 409
+    error_code = "JOB_APPLICATION_PROMOTION_BLOCKED"
+    message = "Job Application cannot be promoted to Candidate"
+
+    def __init__(self, reason: str) -> None:
+        self.message = "Job Application cannot be promoted: " + reason
+        super().__init__(self.message)
+
+
+class JobApplicationAssignmentBlockedError(RecruitmentError):
+    """Job Application cannot be assigned to a Job Opening.
+
+    Raised when the Job Application is dismissed or has already been promoted.
+    """
+
+    status_code = 409
+    error_code = "JOB_APPLICATION_ASSIGNMENT_BLOCKED"
+    message = "Job Application assignment is blocked"
+
+    def __init__(self, reason: str) -> None:
+        self.message = "Job Application assignment is blocked: " + reason
+        super().__init__(self.message)
+
+
 class CalendarConflictNotFoundError(RecruitmentError):
     """CalendarConflict with given ID does not exist.
 

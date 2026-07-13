@@ -630,6 +630,12 @@ class JobApplicationRepository:
         result = await self.session.execute(statement)
         return result.scalars().first()
 
+    async def get_by_id_for_update(self, id: UUID) -> JobApplication | None:
+        """Lock and return a Job Application for an atomic HR decision."""
+        statement = select(JobApplication).where(JobApplication.id == id).with_for_update()
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
     async def get_by_gmail_message_id(self, gmail_message_id: str) -> JobApplication | None:
         """Retrieve a Job Application by its Gmail message ID.
 

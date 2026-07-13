@@ -780,6 +780,7 @@ class JobApplicationResponse(BaseModel):
     message_references: list[dict[str, Any]]
     audit_history: list[dict[str, Any]]
     job_opening_id: UUID | None = None
+    candidate_id: UUID | None = None
     status: str
     created_at: datetime
     updated_at: datetime
@@ -817,3 +818,72 @@ class LinkProposalResponse(BaseModel):
     resolved_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Job Application Assignment and Promotion schemas (GH #186)
+# ---------------------------------------------------------------------------
+
+
+class AssignJobApplicationRequest(BaseModel):
+    """Request schema for assigning a Job Application to a Job Opening.
+
+    Attributes:
+        job_opening_id: UUID of the target Job Opening, or null to unassign.
+    """
+
+    job_opening_id: UUID | None = None
+
+
+class PromoteJobApplicationRequest(BaseModel):
+    """Request schema for promoting a Job Application to a Candidate.
+
+    Attributes:
+        applicant_name: Applicant's full name (required for promotion).
+        applicant_email: Applicant's email address (required for promotion).
+        job_opening_id: Optional UUID of the Job Opening to assign after promotion.
+    """
+
+    applicant_name: str = Field(min_length=1, max_length=255)
+    applicant_email: str = Field(min_length=1, max_length=255)
+    job_opening_id: UUID | None = None
+
+
+class JobApplicationAssignmentResponse(BaseModel):
+    """Response after assigning/unassigning a Job Application to a Job Opening.
+
+    Attributes:
+        id: Job Application UUID.
+        job_opening_id: Assigned Job Opening UUID, or null if unassigned.
+        candidate_id: Candidate UUID if promoted, or null.
+        status: Current Job Application status.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    job_opening_id: UUID | None = None
+    candidate_id: UUID | None = None
+    status: str
+
+
+class JobApplicationPromoteResponse(BaseModel):
+    """Response after promoting a Job Application to a Candidate.
+
+    Attributes:
+        id: Job Application UUID.
+        candidate_id: UUID of the newly created Candidate.
+        candidate_name: Name of the created Candidate.
+        candidate_email: Email of the created Candidate.
+        job_opening_id: Assigned Job Opening UUID, or null.
+        status: Updated Job Application status.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    candidate_id: UUID
+    candidate_name: str
+    candidate_email: str
+    job_opening_id: UUID | None = None
+    status: str

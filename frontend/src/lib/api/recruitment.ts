@@ -1037,6 +1037,58 @@ export async function splitInboxItem(
   return handleResponse<SplitInboxItemResult>(res);
 }
 
+export interface JobApplicationAssignmentResponse {
+  id: string;
+  job_opening_id: string | null;
+  candidate_id: string | null;
+  status: string;
+}
+
+export interface JobApplicationPromoteRequest {
+  applicant_name: string;
+  applicant_email: string;
+  job_opening_id?: string | null;
+}
+
+export interface JobApplicationPromoteResponse {
+  id: string;
+  candidate_id: string;
+  candidate_name: string;
+  candidate_email: string;
+  job_opening_id: string | null;
+  status: string;
+}
+
+export async function assignJobApplication(
+  id: string,
+  jobOpeningId: string | null,
+): Promise<JobApplicationAssignmentResponse> {
+  const res = await fetchWithTimeout(
+    `/api/recruitment/job-applications/${id}/assignment`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ job_opening_id: jobOpeningId }),
+    },
+  );
+  return handleResponse<JobApplicationAssignmentResponse>(res);
+}
+
+export async function promoteJobApplication(
+  id: string,
+  data: JobApplicationPromoteRequest,
+): Promise<JobApplicationPromoteResponse> {
+  const res = await fetchWithTimeout(
+    `/api/recruitment/job-applications/${id}/promote`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    },
+  );
+  return handleResponse<JobApplicationPromoteResponse>(res);
+}
+
 /** Create an inert cross-thread link proposal for HR review. */
 export async function proposeInboxLink(
   id: string,
