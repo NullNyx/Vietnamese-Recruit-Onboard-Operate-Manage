@@ -26,10 +26,16 @@ class ClassificationRolloutRepository:
                 stable_intent=event.stable_intent or None,
                 candidate_intent=event.candidate_intent,
                 policy_version=event.policy_version,
+                prompt_version=event.prompt_version,
                 has_cv=event.has_cv,
                 stable_latency_ms=event.stable_latency_ms,
                 candidate_latency_ms=event.candidate_latency_ms,
                 candidate_provider_error=event.candidate_provider_error,
+                retry_count=event.retry_count,
+                retry_failure=event.retry_failure,
+                prompt_tokens=event.prompt_tokens,
+                completion_tokens=event.completion_tokens,
+                estimated_cost_usd=event.estimated_cost_usd,
             )
         )
 
@@ -51,7 +57,11 @@ class ClassificationRolloutRepository:
                     item.inbox_status,
                     event.has_cv,
                     COALESCE(event.candidate_latency_ms, event.stable_latency_ms) AS latency_ms,
-                    event.candidate_provider_error
+                    event.candidate_provider_error,
+                    event.retry_failure,
+                    event.prompt_tokens,
+                    event.completion_tokens,
+                    event.estimated_cost_usd
                 FROM latest AS event
                 LEFT JOIN recruitment_inbox_items AS item USING (gmail_message_id)
                 """
@@ -67,6 +77,10 @@ class ClassificationRolloutRepository:
                 has_cv=row["has_cv"],
                 latency_ms=row["latency_ms"],
                 provider_error=row["candidate_provider_error"],
+                retry_failure=row["retry_failure"],
+                prompt_tokens=row["prompt_tokens"],
+                completion_tokens=row["completion_tokens"],
+                estimated_cost_usd=float(row["estimated_cost_usd"] or 0),
             )
             for row in result.mappings().all()
         ]

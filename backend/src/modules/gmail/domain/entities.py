@@ -74,10 +74,16 @@ class ClassificationRolloutEventRecord(SQLModel, table=True):
     stable_intent: str | None = Field(default=None, max_length=50)
     candidate_intent: str | None = Field(default=None, max_length=50)
     policy_version: str = Field(max_length=100, nullable=False)
+    prompt_version: str = Field(default="unknown", max_length=100, nullable=False)
     has_cv: bool = Field(default=False, nullable=False)
     stable_latency_ms: int = Field(default=0, nullable=False)
     candidate_latency_ms: int | None = Field(default=None)
     candidate_provider_error: bool = Field(default=False, nullable=False)
+    retry_count: int = Field(default=0, nullable=False)
+    retry_failure: bool = Field(default=False, nullable=False)
+    prompt_tokens: int = Field(default=0, nullable=False)
+    completion_tokens: int = Field(default=0, nullable=False)
+    estimated_cost_usd: float = Field(default=0.0, nullable=False)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False, index=True),

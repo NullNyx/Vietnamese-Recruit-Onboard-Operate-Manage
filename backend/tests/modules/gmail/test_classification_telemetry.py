@@ -18,6 +18,11 @@ def test_summarizes_release_metrics_and_no_cv_cohort() -> None:
             has_cv=False,
             latency_ms=100,
             provider_error=False,
+            retry_count=1,
+            retry_failure=False,
+            prompt_tokens=100,
+            completion_tokens=20,
+            estimated_cost_usd=0.01,
         ),
         TelemetrySample(
             stable_intent=None,
@@ -27,6 +32,11 @@ def test_summarizes_release_metrics_and_no_cv_cohort() -> None:
             has_cv=True,
             latency_ms=500,
             provider_error=True,
+            retry_count=3,
+            retry_failure=True,
+            prompt_tokens=200,
+            completion_tokens=40,
+            estimated_cost_usd=0.02,
         ),
     ]
 
@@ -42,3 +52,7 @@ def test_summarizes_release_metrics_and_no_cv_cohort() -> None:
     assert telemetry.p95_latency_ms == 500
     assert telemetry.provider_error_rate == pytest.approx(0.5)
     assert telemetry.duplicate_count == 1
+    assert telemetry.retry_failure_rate == pytest.approx(0.5)
+    assert telemetry.total_prompt_tokens == 300
+    assert telemetry.total_completion_tokens == 60
+    assert telemetry.estimated_cost_usd == pytest.approx(0.03)

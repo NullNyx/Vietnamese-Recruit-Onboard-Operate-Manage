@@ -14,6 +14,11 @@ class TelemetrySample:
     has_cv: bool
     latency_ms: int
     provider_error: bool
+    retry_count: int = 0
+    retry_failure: bool = False
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    estimated_cost_usd: float = 0.0
 
     @property
     def selected_intent(self) -> str | None:
@@ -33,6 +38,10 @@ class OperationalTelemetry:
     p95_latency_ms: int
     provider_error_rate: float
     duplicate_count: int
+    retry_failure_rate: float
+    total_prompt_tokens: int
+    total_completion_tokens: int
+    estimated_cost_usd: float
 
 
 def summarize_telemetry(
@@ -41,7 +50,22 @@ def summarize_telemetry(
     """Compute operational metrics from the latest event for each email."""
     total = len(samples)
     if total == 0:
-        return OperationalTelemetry(0, 0.0, 0.0, None, 0.0, 0.0, 0.0, 0, 0.0, duplicate_count)
+        return OperationalTelemetry(
+            0,
+            0.0,
+            0.0,
+            None,
+            0.0,
+            0.0,
+            0.0,
+            0,
+            0.0,
+            duplicate_count,
+            0.0,
+            0,
+            0,
+            0.0,
+        )
 
     labelled = [sample for sample in samples if sample.corrected_intent == "job_application"]
     selected_hits = sum(sample.selected_intent in _JOB_APPLICATION_INTENTS for sample in labelled)
@@ -70,4 +94,8 @@ def summarize_telemetry(
         p95_latency_ms=latencies[p95_index],
         provider_error_rate=sum(sample.provider_error for sample in samples) / total,
         duplicate_count=duplicate_count,
+        retry_failure_rate=sum(sample.retry_failure for sample in samples) / total,
+        total_prompt_tokens=sum(sample.prompt_tokens for sample in samples),
+        total_completion_tokens=sum(sample.completion_tokens for sample in samples),
+        estimated_cost_usd=sum(sample.estimated_cost_usd for sample in samples),
     )
