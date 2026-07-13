@@ -10,6 +10,9 @@ import {
   X,
   ThumbsUp,
   RotateCw,
+  Link2,
+  Plus,
+  Scissors,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,8 +44,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { listInbox, correctInboxIntent, dismissInboxItem } from "@/lib/api/recruitment";
-import type { InboxItem, InboxStatus } from "@/lib/api/recruitment";
+import {
+  listInbox,
+  correctInboxIntent,
+  dismissInboxItem,
+  proposeInboxLink,
+  resolveInboxLinkProposal,
+  splitInboxItem,
+} from "@/lib/api/recruitment";
+import type {
+  ApplicationSource,
+  InboxItem,
+  InboxStatus,
+  JobApplicationLinkProposal,
+  SplitApplicantInput,
+} from "@/lib/api/recruitment";
 import { ApiError } from "@/lib/api/types";
 
 // ---------------------------------------------------------------------------
@@ -201,6 +217,15 @@ function InboxItemDetailDialog({
   const [correctIntentOpen, setCorrectIntentOpen] = React.useState(false);
   const [correctedIntent, setCorrectedIntent] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [splitOpen, setSplitOpen] = React.useState(false);
+  const [splitSource, setSplitSource] = React.useState<ApplicationSource>("direct");
+  const [splitApplicants, setSplitApplicants] = React.useState<SplitApplicantInput[]>([
+    { name: "", email: "" },
+  ]);
+  const [linkOpen, setLinkOpen] = React.useState(false);
+  const [targetApplicationId, setTargetApplicationId] = React.useState("");
+  const [linkProposal, setLinkProposal] =
+    React.useState<JobApplicationLinkProposal | null>(null);
 
   const handleCorrect = async () => {
     if (!correctedIntent.trim()) return;
@@ -225,6 +250,59 @@ function InboxItemDetailDialog({
       onDismissed();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Lỗi khi bỏ qua");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSplit = async () => {
+    const applicants = splitApplicants
+      .filter((applicant) => applicant.name.trim())
+      .map((applicant) => ({
+        name: applicant.name.trim(),
+        ...(applicant.email?.trim() ? { email: applicant.email.trim() } : {}),
+        ...(applicant.job_opening_id?.trim()
+          ? { job_opening_id: applicant.job_opening_id.trim() }
+          : {}),
+      }));
+    if (applicants.length === 0) return;
+    setLoading(true);
+    try {
+      await splitInboxItem(item.id, { source: splitSource, applicants });
+      toast.success(`Đã tạo ${applicants.length} Job Application`);
+      setSplitOpen(false);
+      onCorrected();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Lỗi khi tách ứng viên");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProposeLink = async () => {
+    if (!targetApplicationId.trim()) return;
+    setLoading(true);
+    try {
+      const proposal = await proposeInboxLink(item.id, targetApplicationId.trim());
+      setLinkProposal(proposal);
+      toast.success("Đã tạo đề xuất liên kết; chưa thay đổi Job Application");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Lỗi khi đề xuất liên kết");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResolveLink = async (decision: "confirmed" | "rejected") => {
+    if (!linkProposal) return;
+    setLoading(true);
+    try {
+      await resolveInboxLinkProposal(linkProposal.id, decision);
+      toast.success(decision === "confirmed" ? "Đã xác nhận liên kết" : "Đã từ chối liên kết");
+      setLinkOpen(false);
+      onCorrected();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Lỗi khi xử lý liên kết");
     } finally {
       setLoading(false);
     }
@@ -403,6 +481,14 @@ function InboxItemDetailDialog({
         <DialogFooter className="flex gap-2">
           {!item.dismissed && (
             <>
+              <Button variant="outline" onClick={() => setSplitOpen(true)} disabled={loading}>
+                <Scissors className="h-4 w-4 mr-2" />
+                Tách ứng viên
+              </Button>
+              <Button variant="outline" onClick={() => setLinkOpen(true)} disabled={loading}>
+                <Link2 className="h-4 w-4 mr-2" />
+                Liên kết email
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => setCorrectIntentOpen(true)}
@@ -451,6 +537,140 @@ function InboxItemDetailDialog({
               {loading ? <RotateCw className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4 mr-2" />}
               Xác nhận
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={splitOpen} onOpenChange={setSplitOpen}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Tách ứng viên</DialogTitle>
+            <DialogDescription>
+              Mỗi người sẽ trở thành một Job Application dùng chung email nguồn.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="application-source">Nguồn ứng tuyển</Label>
+              <select
+                id="application-source"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                value={splitSource}
+                onChange={(event) => setSplitSource(event.target.value as ApplicationSource)}
+              >
+                <option value="direct">Trực tiếp</option>
+                <option value="employee_referral">Nhân viên giới thiệu</option>
+                <option value="agency">Agency</option>
+              </select>
+            </div>
+            {splitApplicants.map((applicant, index) => (
+              <div key={index} className="grid grid-cols-2 gap-2 rounded-md border p-3">
+                <Input
+                  aria-label={`Tên ứng viên ${index + 1}`}
+                  placeholder="Tên ứng viên"
+                  value={applicant.name}
+                  onChange={(event) =>
+                    setSplitApplicants((current) =>
+                      current.map((value, itemIndex) =>
+                        itemIndex === index ? { ...value, name: event.target.value } : value,
+                      ),
+                    )
+                  }
+                />
+                <Input
+                  aria-label={`Email ứng viên ${index + 1}`}
+                  placeholder="Email ứng viên"
+                  type="email"
+                  value={applicant.email ?? ""}
+                  onChange={(event) =>
+                    setSplitApplicants((current) =>
+                      current.map((value, itemIndex) =>
+                        itemIndex === index ? { ...value, email: event.target.value } : value,
+                      ),
+                    )
+                  }
+                />
+                <Input
+                  className="col-span-2"
+                  aria-label={`Job Opening ${index + 1}`}
+                  placeholder="Job Opening ID (không bắt buộc)"
+                  value={applicant.job_opening_id ?? ""}
+                  onChange={(event) =>
+                    setSplitApplicants((current) =>
+                      current.map((value, itemIndex) =>
+                        itemIndex === index
+                          ? { ...value, job_opening_id: event.target.value || undefined }
+                          : value,
+                      ),
+                    )
+                  }
+                />
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                setSplitApplicants((current) => [...current, { name: "", email: "" }])
+              }
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Thêm ứng viên
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSplitOpen(false)}>Hủy</Button>
+            <Button
+              onClick={handleSplit}
+              disabled={loading || !splitApplicants.some((applicant) => applicant.name.trim())}
+            >
+              Xác nhận tách
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle>Liên kết email ngoài thread</DialogTitle>
+            <DialogDescription>
+              Hệ thống chỉ tạo đề xuất. Job Application không đổi cho tới khi HR xác nhận.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label htmlFor="target-job-application">Job Application đích</Label>
+            <Input
+              id="target-job-application"
+              placeholder="Job Application ID"
+              value={targetApplicationId}
+              onChange={(event) => setTargetApplicationId(event.target.value)}
+              disabled={Boolean(linkProposal)}
+            />
+            {linkProposal && (
+              <p className="rounded-md border p-3 text-sm">
+                Đề xuất đang chờ xác nhận: {linkProposal.id}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            {!linkProposal ? (
+              <Button
+                onClick={handleProposeLink}
+                disabled={loading || !targetApplicationId.trim()}
+              >
+                Tạo đề xuất
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => handleResolveLink("rejected")}>
+                  Từ chối
+                </Button>
+                <Button onClick={() => handleResolveLink("confirmed")}>
+                  Xác nhận liên kết
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

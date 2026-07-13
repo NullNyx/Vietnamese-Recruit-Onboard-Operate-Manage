@@ -75,6 +75,21 @@ class ClassificationResult:
     token_usage: dict[str, int] = field(default_factory=dict)
     source_hints: tuple[tuple[str, str], ...] = field(default_factory=tuple)
 
+    @property
+    def requires_hr_split(self) -> bool:
+        """Whether provider evidence says one source contains several applicants."""
+        for key, value in self.source_hints:
+            normalized_key = key.lower()
+            normalized_value = value.lower()
+            if normalized_key in {"multiple_applicants", "contains_multiple_applicants"}:
+                return normalized_value in {"true", "yes", "1"}
+            if normalized_key in {"applicant_count", "number_of_applicants"}:
+                try:
+                    return int(normalized_value) > 1
+                except ValueError:
+                    return False
+        return False
+
 
 class AIClassifier:
     """LLM-based email classifier using Gemma 4 via OpenAI-compatible API.

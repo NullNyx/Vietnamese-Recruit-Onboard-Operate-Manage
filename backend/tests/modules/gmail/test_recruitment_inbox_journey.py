@@ -242,6 +242,7 @@ class TestUncertainEmailRouting:
 
         job_app_repo = MagicMock()
         job_app_repo.get_by_gmail_message_id = AsyncMock(return_value=None)
+        job_app_repo.list_by_gmail_thread_id = AsyncMock(return_value=[])
         job_app_repo.create = AsyncMock()
 
         from src.modules.recruitment.application.job_application_service import (
@@ -984,3 +985,64 @@ class TestInboxService:
         assert created.attachments_metadata[0]["name"] == "CV.pdf"
         assert created.attachments_metadata[0]["type"] == "application/pdf"
         assert created.attachments_metadata[0]["size"] == 123456
+
+
+class TestMultiApplicantRouting:
+    """Multi-applicant sources require HR splitting at every confidence."""
+
+    @pytest.mark.parametrize("confidence", [0.40, 0.95])
+    async def test_multi_applicant_email_routes_to_ready_inbox_without_single_application(
+        self,
+        confidence: float,
+        settings: GmailSettings,
+        session: AsyncMock,
+        audit_logger: AsyncMock,
+        email_repo: AsyncMock,
+    ) -> None:
+        result = ClassificationResult(
+            category=EmailCategory.recruitment,
+            confidence=confidence,
+            source="ai",
+            matched_signals=["application_language", "multiple_applicants"],
+            source_hints=(
+                ("sender_role", "agency"),
+                ("multiple_applicants", "true"),
+            ),
+        )
+        inbox_repo = MagicMock(spec=RecruitmentInboxItemRepository)
+        inbox_repo.find_dismissed_by_gmail_message_id = AsyncMock(return_value=None)
+        inbox_repo.get_by_gmail_message_id = AsyncMock(return_value=None)
+        inbox_repo.create = AsyncMock(side_effect=lambda item: item)
+        inbox_service = InboxService(session=session, inbox_repo=inbox_repo)
+        job_application_callback = AsyncMock()
+        rules_classifier = MagicMock()
+        rules_classifier.classify = MagicMock(return_value=result)
+        ai_classifier = AsyncMock()
+        ai_classifier.classify = AsyncMock(return_value=result)
+        service = ClassificationService(
+            rules_classifier=rules_classifier,
+            ai_classifier=ai_classifier,
+            email_repo=email_repo,
+            audit_logger=audit_logger,
+            settings=settings,
+            session=session,
+            on_application_created=job_application_callback,
+            on_uncertain_classification=inbox_service.create_from_classification,
+        )
+        email = _make_mock_email(
+            email_id="msg_multi_applicant",
+            thread_id="thread_multi_applicant",
+            sender_email="recruiter@agency.example",
+        )
+
+        classified_count = await service.classify_batch(user_id=uuid4(), emails=[email])
+
+        assert classified_count == 1
+        job_application_callback.assert_not_awaited()
+        inbox_repo.create.assert_awaited_once()
+        created = inbox_repo.create.await_args[0][0]
+        assert created.inbox_status == InboxStatus.READY_FOR_REVIEW
+        assert created.source_hints == [
+            {"key": "sender_role", "value": "agency"},
+            {"key": "multiple_applicants", "value": "true"},
+        ]

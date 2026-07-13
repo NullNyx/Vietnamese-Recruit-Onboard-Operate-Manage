@@ -23,14 +23,26 @@ from src.modules.recruitment.api.schemas import (
     CorrectIntentRequest,
     InboxItemResponse,
     InboxListResponse,
+    JobApplicationResponse,
+    LinkProposalResponse,
+    ProposeLinkRequest,
+    ResolveLinkProposalRequest,
+    SplitInboxItemRequest,
+    SplitInboxItemResponse,
 )
 from src.modules.recruitment.application.inbox_service import (
     InboxItemDismissedError,
     InboxService,
+    InvalidLinkProposalError,
+    JobApplicationNotFoundError,
+    LinkProposalNotFoundError,
     RecruitmentInboxItemNotFoundError,
+    SplitApplicant,
 )
 from src.modules.recruitment.domain.enums import InboxStatus
 from src.modules.recruitment.infrastructure.repositories import (
+    JobApplicationLinkProposalRepository,
+    JobApplicationRepository,
     RecruitmentInboxItemRepository,
 )
 
@@ -64,6 +76,8 @@ def _build_inbox_service(
     return InboxService(
         session=session,
         inbox_repo=inbox_repo,
+        job_application_repo=JobApplicationRepository(session),
+        link_proposal_repo=JobApplicationLinkProposalRepository(session),
     )
 
 
@@ -243,3 +257,97 @@ async def dismiss_inbox_item(
         item = await service.get_item(item_id)
 
     return InboxItemResponse.model_validate(item)
+
+
+@router.post("/{item_id}/split", response_model=SplitInboxItemResponse)
+async def split_inbox_item(
+    item_id: UUID,
+    body: SplitInboxItemRequest,
+    current_user: CurrentUserDep,
+    session: DbSessionDep,
+    inbox_repo: RecruitmentInboxItemRepository = Depends(get_inbox_repo),
+) -> SplitInboxItemResponse:
+    """Create one Job Application per HR-identified applicant."""
+    _require_hr(current_user)
+    service = _build_inbox_service(session, inbox_repo)
+    try:
+        applications = await service.split_item(
+            item_id=item_id,
+            applicants=[
+                SplitApplicant(
+                    name=applicant.name,
+                    email=str(applicant.email) if applicant.email else None,
+                    job_opening_id=applicant.job_opening_id,
+                )
+                for applicant in body.applicants
+            ],
+            source=body.source,
+            user_id=current_user.id,
+        )
+    except RecruitmentInboxItemNotFoundError:
+        raise HTTPException(status_code=404, detail="Recruitment Inbox item not found")
+    except InboxItemDismissedError:
+        raise HTTPException(status_code=409, detail="Cannot split a dismissed inbox item")
+
+    return SplitInboxItemResponse(
+        applications=[
+            JobApplicationResponse.model_validate(application) for application in applications
+        ]
+    )
+
+
+@router.post("/{item_id}/link-proposals", response_model=LinkProposalResponse)
+async def propose_cross_thread_link(
+    item_id: UUID,
+    body: ProposeLinkRequest,
+    current_user: CurrentUserDep,
+    session: DbSessionDep,
+    inbox_repo: RecruitmentInboxItemRepository = Depends(get_inbox_repo),
+) -> LinkProposalResponse:
+    """Propose, but do not apply, a link outside the Gmail thread."""
+    _require_hr(current_user)
+    service = _build_inbox_service(session, inbox_repo)
+    try:
+        proposal = await service.propose_cross_thread_link(
+            item_id=item_id,
+            target_job_application_id=body.target_job_application_id,
+            user_id=current_user.id,
+        )
+    except (RecruitmentInboxItemNotFoundError, JobApplicationNotFoundError):
+        raise HTTPException(status_code=404, detail="Inbox item or Job Application not found")
+    except (InboxItemDismissedError, InvalidLinkProposalError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    return LinkProposalResponse.model_validate(proposal)
+
+
+@router.post(
+    "/link-proposals/{proposal_id}/resolve",
+    response_model=LinkProposalResponse,
+)
+async def resolve_cross_thread_link(
+    proposal_id: UUID,
+    body: ResolveLinkProposalRequest,
+    current_user: CurrentUserDep,
+    session: DbSessionDep,
+    inbox_repo: RecruitmentInboxItemRepository = Depends(get_inbox_repo),
+) -> LinkProposalResponse:
+    """Confirm or reject a pending cross-thread link proposal."""
+    _require_hr(current_user)
+    service = _build_inbox_service(session, inbox_repo)
+    try:
+        proposal = await service.resolve_link_proposal(
+            proposal_id=proposal_id,
+            decision=body.decision,
+            user_id=current_user.id,
+        )
+    except (
+        LinkProposalNotFoundError,
+        JobApplicationNotFoundError,
+        RecruitmentInboxItemNotFoundError,
+    ):
+        raise HTTPException(status_code=404, detail="Link proposal or Job Application not found")
+    except InvalidLinkProposalError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    return LinkProposalResponse.model_validate(proposal)

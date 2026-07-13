@@ -414,4 +414,86 @@ describe("Recruitment Inbox API Client (GH #184)", () => {
 
     await expect(correctInboxIntent("dismissed-id", "other")).rejects.toThrow(ApiError);
   });
+  it("splits one source email into multiple Job Applications", async () => {
+    const { splitInboxItem } = await import("@/lib/api/recruitment");
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          applications: [
+            { id: "app-a", applicant_email: "a@example.com" },
+            { id: "app-b", applicant_email: "b@example.com" },
+          ],
+        }),
+    });
+
+    const result = await splitInboxItem("inbox-1", {
+      source: "agency",
+      applicants: [
+        { name: "Nguyen A", email: "a@example.com" },
+        { name: "Tran B", email: "b@example.com" },
+      ],
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/recruitment/inbox/inbox-1/split",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          source: "agency",
+          applicants: [
+            { name: "Nguyen A", email: "a@example.com" },
+            { name: "Tran B", email: "b@example.com" },
+          ],
+        }),
+      }),
+    );
+    expect(result.applications).toHaveLength(2);
+  });
+
+  it("requires confirmation before applying a cross-thread link", async () => {
+    const { proposeInboxLink, resolveInboxLinkProposal } = await import(
+      "@/lib/api/recruitment"
+    );
+    const pending = {
+      id: "proposal-1",
+      recruitment_inbox_item_id: "inbox-1",
+      target_job_application_id: "application-1",
+      status: "pending",
+    };
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(pending),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ ...pending, status: "confirmed" }),
+      });
+
+    const proposal = await proposeInboxLink("inbox-1", "application-1");
+    expect(proposal.status).toBe("pending");
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      1,
+      "/api/recruitment/inbox/inbox-1/link-proposals",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ target_job_application_id: "application-1" }),
+      }),
+    );
+
+    const confirmed = await resolveInboxLinkProposal("proposal-1", "confirmed");
+    expect(confirmed.status).toBe("confirmed");
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
+      "/api/recruitment/inbox/link-proposals/proposal-1/resolve",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ decision: "confirmed" }),
+      }),
+    );
+  });
 });

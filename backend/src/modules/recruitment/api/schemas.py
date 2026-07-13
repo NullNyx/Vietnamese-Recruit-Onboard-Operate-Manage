@@ -10,7 +10,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from src.modules.recruitment.domain.enums import CandidateStatus, JobOpeningStatus, ProcessingStatus
+from src.modules.recruitment.domain.enums import (
+    ApplicationSource,
+    CandidateStatus,
+    JobOpeningStatus,
+    LinkProposalStatus,
+    ProcessingStatus,
+)
 from src.modules.recruitment.domain.value_objects import EducationItem, ExperienceItem
 
 # ---------------------------------------------------------------------------
@@ -738,3 +744,76 @@ class CorrectIntentRequest(BaseModel):
     """
 
     corrected_intent: str = Field(..., min_length=1, max_length=50)
+
+
+class SplitApplicantRequest(BaseModel):
+    """One applicant extracted by HR from a source message."""
+
+    name: str = Field(..., min_length=1, max_length=255)
+    email: EmailStr | None = None
+    job_opening_id: UUID | None = None
+
+
+class SplitInboxItemRequest(BaseModel):
+    """Split one source message into one Job Application per applicant."""
+
+    source: ApplicationSource
+    applicants: list[SplitApplicantRequest] = Field(..., min_length=1)
+
+
+class JobApplicationResponse(BaseModel):
+    """Job Application created or linked from Recruitment Inbox work."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    source_email_message_id: UUID
+    gmail_message_id: str
+    gmail_thread_id: str
+    source: str
+    applicant_name: str | None = None
+    applicant_email: str | None = None
+    sender_name: str
+    sender_email: str
+    evidence: list[dict[str, Any]]
+    source_hints: list[dict[str, Any]]
+    message_references: list[dict[str, Any]]
+    audit_history: list[dict[str, Any]]
+    job_opening_id: UUID | None = None
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class SplitInboxItemResponse(BaseModel):
+    """Applications created from a split action."""
+
+    applications: list[JobApplicationResponse]
+
+
+class ProposeLinkRequest(BaseModel):
+    """Target for a cross-thread link proposal."""
+
+    target_job_application_id: UUID
+
+
+class ResolveLinkProposalRequest(BaseModel):
+    """HR decision for a pending cross-thread link proposal."""
+
+    decision: LinkProposalStatus
+
+
+class LinkProposalResponse(BaseModel):
+    """Auditable state of a cross-thread link proposal."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    recruitment_inbox_item_id: UUID
+    target_job_application_id: UUID
+    status: str
+    proposed_by_user_id: UUID
+    resolved_by_user_id: UUID | None = None
+    resolved_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime

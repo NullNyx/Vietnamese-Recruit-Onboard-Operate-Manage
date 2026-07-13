@@ -121,6 +121,14 @@ class JobApplicationProcessingStatus(StrEnum):
     PERMANENTLY_FAILED = "permanently_failed"
 
 
+class LinkProposalStatus(StrEnum):
+    """HR decision state for a proposed cross-thread message link."""
+
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    REJECTED = "rejected"
+
+
 class InboxStatus(StrEnum):
     """Filter status for Recruitment Inbox items.
 

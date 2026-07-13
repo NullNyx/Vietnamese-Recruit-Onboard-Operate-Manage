@@ -976,3 +976,95 @@ export async function dismissInboxItem(id: string): Promise<InboxItem> {
   });
   return handleResponse<InboxItem>(res);
 }
+
+
+export type ApplicationSource = "direct" | "employee_referral" | "agency";
+
+export interface SplitApplicantInput {
+  name: string;
+  email?: string;
+  job_opening_id?: string;
+}
+
+export interface SplitInboxItemInput {
+  source: ApplicationSource;
+  applicants: SplitApplicantInput[];
+}
+
+export interface JobApplicationInboxResult {
+  id: string;
+  source_email_message_id: string;
+  gmail_message_id: string;
+  gmail_thread_id: string;
+  source: ApplicationSource;
+  applicant_name: string | null;
+  applicant_email: string | null;
+  sender_name: string;
+  sender_email: string;
+  job_opening_id: string | null;
+  status: string;
+  message_references: Array<Record<string, unknown>>;
+}
+
+export interface SplitInboxItemResult {
+  applications: JobApplicationInboxResult[];
+}
+
+export type LinkProposalStatus = "pending" | "confirmed" | "rejected";
+
+export interface JobApplicationLinkProposal {
+  id: string;
+  recruitment_inbox_item_id: string;
+  target_job_application_id: string;
+  status: LinkProposalStatus;
+  proposed_by_user_id: string;
+  resolved_by_user_id: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Split one source message into one Job Application per applicant. */
+export async function splitInboxItem(
+  id: string,
+  data: SplitInboxItemInput,
+): Promise<SplitInboxItemResult> {
+  const res = await fetchWithTimeout(`/api/recruitment/inbox/${id}/split`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<SplitInboxItemResult>(res);
+}
+
+/** Create an inert cross-thread link proposal for HR review. */
+export async function proposeInboxLink(
+  id: string,
+  targetJobApplicationId: string,
+): Promise<JobApplicationLinkProposal> {
+  const res = await fetchWithTimeout(
+    `/api/recruitment/inbox/${id}/link-proposals`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_job_application_id: targetJobApplicationId }),
+    },
+  );
+  return handleResponse<JobApplicationLinkProposal>(res);
+}
+
+/** Confirm or reject a pending cross-thread link proposal. */
+export async function resolveInboxLinkProposal(
+  proposalId: string,
+  decision: Exclude<LinkProposalStatus, "pending">,
+): Promise<JobApplicationLinkProposal> {
+  const res = await fetchWithTimeout(
+    `/api/recruitment/inbox/link-proposals/${proposalId}/resolve`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision }),
+    },
+  );
+  return handleResponse<JobApplicationLinkProposal>(res);
+}

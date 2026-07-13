@@ -16,6 +16,7 @@ from src.modules.recruitment.domain.entities import (
     Candidate,
     CVDocument,
     JobApplication,
+    JobApplicationLinkProposal,
     JobOpening,
     RecruitmentInboxItem,
 )
@@ -647,6 +648,12 @@ class JobApplicationRepository:
         result = await self.session.execute(statement)
         return result.scalars().first()
 
+    async def list_by_gmail_thread_id(self, gmail_thread_id: str) -> list[JobApplication]:
+        """Return applications already associated with a Gmail thread."""
+        statement = select(JobApplication).where(JobApplication.gmail_thread_id == gmail_thread_id)
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
     async def update(self, job_application: JobApplication) -> JobApplication:
         """Update an existing Job Application entity.
 
@@ -662,6 +669,29 @@ class JobApplicationRepository:
         self.session.add(job_application)
         await self.session.flush()
         return job_application
+
+
+class JobApplicationLinkProposalRepository:
+    """Persist and resolve proposed cross-thread links."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def create(self, proposal: JobApplicationLinkProposal) -> JobApplicationLinkProposal:
+        self.session.add(proposal)
+        await self.session.flush()
+        return proposal
+
+    async def get_by_id(self, id: UUID) -> JobApplicationLinkProposal | None:
+        statement = select(JobApplicationLinkProposal).where(JobApplicationLinkProposal.id == id)
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
+    async def update(self, proposal: JobApplicationLinkProposal) -> JobApplicationLinkProposal:
+        proposal.updated_at = datetime.now(UTC)
+        self.session.add(proposal)
+        await self.session.flush()
+        return proposal
 
 
 class RecruitmentInboxItemRepository:
