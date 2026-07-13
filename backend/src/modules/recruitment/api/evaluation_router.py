@@ -18,6 +18,8 @@ from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User, UserRole
 from src.modules.recruitment.application.evaluation_service import (
     CorrectionEvaluationService,
+    CorrectionRecordNotFoundError,
+    EvaluationSetNotFoundError,
 )
 from src.modules.recruitment.infrastructure.repositories import (
     CorrectionRecordRepository,
@@ -214,9 +216,9 @@ async def commit_correction_to_evaluation_set(
             correction_record_id=correction_id,
             evaluation_set_id=body.evaluation_set_id,
         )
-    except CorrectionEvaluationService.CorrectionRecordNotFoundError as exc:
+    except CorrectionRecordNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
-    except CorrectionEvaluationService.EvaluationSetNotFoundError as exc:
+    except EvaluationSetNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc))

@@ -25,7 +25,6 @@ from src.modules.recruitment.domain.entities import (
     CorrectionRecord,
     EvaluationSample,
     EvaluationSet,
-    RecruitmentInboxItem,
 )
 from src.modules.recruitment.domain.enums import CorrectionEvaluationStatus
 from src.modules.recruitment.infrastructure.repositories import (
@@ -242,9 +241,7 @@ class CorrectionEvaluationService:
 
         evaluation_set = await self._eval_sets.get_by_id(evaluation_set_id)
         if evaluation_set is None:
-            raise EvaluationSetNotFoundError(
-                f"Evaluation set {evaluation_set_id} not found"
-            )
+            raise EvaluationSetNotFoundError(f"Evaluation set {evaluation_set_id} not found")
 
         now = datetime.now(UTC)
 
@@ -256,11 +253,12 @@ class CorrectionEvaluationService:
                 if "cv" not in signal.lower() and "attachment" not in signal.lower():
                     pass  # no-CV signal detection
             # Check if there's evidence of no CV
-            has_no_cv = all(
-                "cv" not in ev.get("signal", "").lower() and "attachment" not in ev.get("signal", "").lower()
-                for ev in record.evidence
+            signals = [ev.get("signal", "").lower() for ev in record.evidence]
+            has_no_cv = bool(signals) and all(
+                "cv" not in signal and "attachment" not in signal
+                for signal in signals
             )
-            if has_no_cv and record.evidence:
+            if has_no_cv:
                 cohorts.append("no-cv")
 
         # Derive sender name and email from context if available
@@ -332,9 +330,7 @@ class CorrectionEvaluationService:
         """
         return await self._corrections.get_by_source_id(source_id)
 
-    async def list_corrections_by_evaluation_status(
-        self, status: str
-    ) -> list[CorrectionRecord]:
+    async def list_corrections_by_evaluation_status(self, status: str) -> list[CorrectionRecord]:
         """List correction records filtered by evaluation status.
 
         Args:

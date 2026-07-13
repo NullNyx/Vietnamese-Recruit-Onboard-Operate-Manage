@@ -33,6 +33,7 @@ from src.modules.recruitment.api.schemas import (
 )
 from src.modules.recruitment.application.evaluation_service import (
     CorrectionEvaluationService,
+    CorrectionRecordNotFoundError,
 )
 from src.modules.recruitment.application.inbox_service import (
     InboxItemDismissedError,
@@ -452,7 +453,7 @@ async def select_correction_for_evaluation(
             redacted_subject=redacted_subject,
             redacted_snippet=redacted_snippet,
         )
-    except CorrectionEvaluationService.CorrectionRecordNotFoundError:
+    except CorrectionRecordNotFoundError:
         raise HTTPException(status_code=404, detail="Correction record not found")
 
     return {
