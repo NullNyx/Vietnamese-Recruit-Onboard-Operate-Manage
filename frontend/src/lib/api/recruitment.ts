@@ -857,3 +857,122 @@ export async function resolveCalendarConflict(
   );
   return handleResponse<CalendarConflict>(res);
 }
+
+// ---------------------------------------------------------------------------
+// Recruitment Inbox Types & API (GH #184)
+// ---------------------------------------------------------------------------
+
+export type InboxStatus =
+  | "needs_classification"
+  | "needs_information"
+  | "ready_for_review"
+  | "resolved";
+
+export interface InboxEvidence {
+  signal: string;
+}
+
+export interface InboxSourceHint {
+  key: string;
+  value: string;
+}
+
+export interface CorrectionHistoryEntry {
+  previous_intent: string | null;
+  corrected_intent: string;
+  previous_inbox_status: string;
+  corrected_by_user_id: string;
+  corrected_at: string;
+}
+
+    export interface AttachmentMeta {
+      name?: string;
+      type?: string;
+      size?: number;
+    }
+
+    export interface InboxItem {
+      id: string;
+      gmail_message_id: string;
+      gmail_thread_id: string;
+      sender_name: string;
+      sender_email: string;
+      subject: string;
+      snippet: string;
+      has_attachments: boolean;
+      attachments_metadata: AttachmentMeta[] | null;
+      inbox_status: InboxStatus;
+  prediction_intent: string | null;
+  confidence_raw: number | null;
+  confidence_calibrated: number | null;
+  evidence: InboxEvidence[] | null;
+  source_hints: InboxSourceHint[] | null;
+  corrected_intent: string | null;
+  corrected_by_user_id: string | null;
+  corrected_at: string | null;
+  correction_history: CorrectionHistoryEntry[] | null;
+  dismissed: boolean;
+  dismissed_at: string | null;
+  dismissed_by_user_id: string | null;
+  processing_error: string | null;
+  retry_count: number;
+  is_retry_exhausted: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InboxListResponse {
+  items: InboxItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+/**
+ * List Recruitment Inbox items with optional status filter.
+ */
+export async function listInbox(
+  params: { inbox_status?: InboxStatus; page?: number; page_size?: number } = {},
+): Promise<InboxListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params.inbox_status) searchParams.set("inbox_status", params.inbox_status);
+  if (params.page) searchParams.set("page", String(params.page));
+  if (params.page_size) searchParams.set("page_size", String(params.page_size));
+  const query = searchParams.toString();
+  const url = `/api/recruitment/inbox${query ? `?${query}` : ""}`;
+  const res = await fetchWithTimeout(url);
+  return handleResponse<InboxListResponse>(res);
+}
+
+/**
+ * Get a single Recruitment Inbox item with full detail.
+ */
+export async function getInboxItem(id: string): Promise<InboxItem> {
+  const res = await fetchWithTimeout(`/api/recruitment/inbox/${id}`);
+  return handleResponse<InboxItem>(res);
+}
+
+/**
+ * Correct the routing intent of an inbox item.
+ */
+export async function correctInboxIntent(
+  id: string,
+  corrected_intent: string,
+): Promise<InboxItem> {
+  const res = await fetchWithTimeout(`/api/recruitment/inbox/${id}/correct-intent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ corrected_intent }),
+  });
+  return handleResponse<InboxItem>(res);
+}
+
+/**
+ * Dismiss an inbox item.
+ */
+export async function dismissInboxItem(id: string): Promise<InboxItem> {
+  const res = await fetchWithTimeout(`/api/recruitment/inbox/${id}/dismiss`, {
+    method: "POST",
+  });
+  return handleResponse<InboxItem>(res);
+}

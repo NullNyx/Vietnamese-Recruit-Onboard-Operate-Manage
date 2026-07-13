@@ -47,6 +47,7 @@ from src.modules.identity.infrastructure.connection_state_repository import (
 from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
 from src.modules.recruitment.infrastructure.repositories import (
     CandidateRepository,
+    RecruitmentInboxItemRepository,
 )
 
 # ---------------------------------------------------------------------------
@@ -326,15 +327,18 @@ async def get_classification_service(
     audit_logger: AuditLogger = Depends(get_audit_logger),
     session: AsyncSession = Depends(get_db_session),
 ) -> ClassificationService:
-    """Provide classification with idempotent Job Application ingestion."""
+    """Provide classification with idempotent Job Application ingestion and Recruitment Inbox."""
     from src.modules.gmail.application.rules_classifier import RulesClassifier
     from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
+    from src.modules.recruitment.application.inbox_service import InboxService
     from src.modules.recruitment.application.job_application_service import (
         build_job_application_ingestion,
     )
 
     settings = get_gmail_settings()
     job_app_service = build_job_application_ingestion(session)
+    inbox_repo = RecruitmentInboxItemRepository(session)
+    inbox_service = InboxService(session=session, inbox_repo=inbox_repo)
     return ClassificationService(
         rules_classifier=RulesClassifier(),
         ai_classifier=AIClassifier(settings),
@@ -343,6 +347,7 @@ async def get_classification_service(
         settings=settings,
         session=email_repo.session,
         on_application_created=job_app_service.create_from_classification,
+        on_uncertain_classification=inbox_service.create_from_classification,
     )
 
 

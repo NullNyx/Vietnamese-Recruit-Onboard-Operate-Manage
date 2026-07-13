@@ -56,6 +56,7 @@ from src.modules.recruitment.api.cv_review_router import cv_review_router  # noq
 from src.modules.recruitment.api.error_handler import (  # noqa: E402
     register_recruitment_error_handlers,
 )
+from src.modules.recruitment.api.inbox_router import router as inbox_router
 from src.modules.recruitment.api.job_opening_router import job_opening_router  # noqa: E402
 from src.modules.recruitment.api.metrics_router import metrics_router  # noqa: E402
 from src.modules.recruitment.api.runtime_router import runtime_router
@@ -219,6 +220,7 @@ app.include_router(cv_review_router)
 app.include_router(metrics_router)
 app.include_router(onboarding_router)
 app.include_router(attendance_router)
+app.include_router(inbox_router)
 app.include_router(job_opening_router)
 app.include_router(runtime_router)
 app.include_router(assistant_router)

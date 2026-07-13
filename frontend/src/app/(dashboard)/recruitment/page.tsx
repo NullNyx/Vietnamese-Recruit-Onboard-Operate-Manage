@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users } from "lucide-react";
+import { MailQuestion, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -138,13 +138,29 @@ export default function RecruitmentPage() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="font-heading text-2xl font-bold">Tuyển dụng</h1>
-        <p className="text-sm text-muted-foreground">
-          Quản lý ứng viên từ pipeline CV tự động
-        </p>
-      </div>
+          {/* Page Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-heading text-2xl font-bold">Tuyển dụng</h1>
+              <p className="text-sm text-muted-foreground">
+                Quản lý ứng viên từ pipeline CV tự động
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <a href="/recruitment/inbox">
+                  <MailQuestion className="h-4 w-4 mr-2" />
+                  Inbox
+                </a>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a href="/recruitment/review">
+                  <Users className="h-4 w-4 mr-2" />
+                  Review
+                </a>
+              </Button>
+            </div>
+          </div>
 
       {/* Filter Panel */}
       <CandidateFilterPanel onFilterChange={handleFilterChange} />

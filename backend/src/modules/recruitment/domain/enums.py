@@ -119,3 +119,19 @@ class JobApplicationProcessingStatus(StrEnum):
     COMPLETED = "completed"
     FAILED = "failed"
     PERMANENTLY_FAILED = "permanently_failed"
+
+
+class InboxStatus(StrEnum):
+    """Filter status for Recruitment Inbox items.
+
+    - needs_classification: Email below policy threshold or exhausted retry;
+      requires HR to review and decide routing intent.
+    - needs_information: Email needs additional information from sender.
+    - ready_for_review: Job Application ready for HR review.
+    - resolved: Item has been handled by HR.
+    """
+
+    NEEDS_CLASSIFICATION = "needs_classification"
+    NEEDS_INFORMATION = "needs_information"
+    READY_FOR_REVIEW = "ready_for_review"
+    RESOLVED = "resolved"

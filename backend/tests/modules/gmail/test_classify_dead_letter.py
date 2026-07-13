@@ -124,7 +124,7 @@ class TestDeadLetterQueue:
         classified_count = await service.classify_batch(user_id=user_id, emails=[email])
 
         assert classified_count == 1
-        assert email.processing_status == "needs_review"
+        assert email.processing_status == "needs_classification"
 
     async def test_ai_failure_with_rules_fallback_marked_needs_review(
         self,

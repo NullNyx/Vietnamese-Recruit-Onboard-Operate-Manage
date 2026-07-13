@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     )
     from src.modules.gmail.infrastructure.audit_logger import AuditLogger
     from src.modules.gmail.infrastructure.email_repository import EmailRepository
-    from src.modules.recruitment.domain.entities import JobApplication
+    from src.modules.recruitment.domain.entities import JobApplication, RecruitmentInboxItem
 
 logger = logging.getLogger(__name__)
 
@@ -78,11 +78,16 @@ class ClassificationService:
             [EmailMessage, ClassificationResult], Awaitable[JobApplication]
         ]
         | None = None,  # noqa: E501
+        on_uncertain_classification: Callable[
+            [EmailMessage, ClassificationResult], Awaitable[RecruitmentInboxItem]
+        ]
+        | None = None,
     ) -> None:
         self._rules = rules_classifier
         self._ai = ai_classifier
         self._email_repo = email_repo
         self._on_application_created = on_application_created
+        self._on_uncertain_classification = on_uncertain_classification
         self._audit_logger = audit_logger
         self._settings = settings
         self._session = session
@@ -178,6 +183,10 @@ class ClassificationService:
         Tier 2: AI classifier (LLM) - always invoked.
         Rule matched_signals are merged as evidence into the AI result.
 
+        When provider retries are exhausted, the `on_uncertain_classification`
+        callback is invoked to create a RecruitmentInboxItem so that HR can
+        review the permanently-failed email.
+
         Args:
             email: The EmailMessage entity to classify.
 
@@ -227,6 +236,20 @@ class ClassificationService:
             else:
                 email.next_retry_at = None
                 email.is_permanently_failed = True
+                # Create inbox item for exhausted retries so HR can review
+                if self._on_uncertain_classification is not None:
+                    exhausted_result = ClassificationResult(
+                        category=EmailCategory.uncategorized,
+                        confidence=0.0,
+                        source="ai_unavailable",
+                    )
+                    try:
+                        await self._on_uncertain_classification(email, exhausted_result)
+                    except Exception:
+                        logger.exception(
+                            "RecruitmentInboxItem callback failed for exhausted email %s",
+                            email.gmail_message_id[:10],
+                        )
             email.retry_count += 1
             self._session.add(email)
             logger.warning(
@@ -280,9 +303,10 @@ class ClassificationService:
         """Persist classification result to the email record.
 
         Updates the email's category and processing_status fields.
-        If confidence is below needs_review_threshold, marks as needs_review
-        instead of classified. If the JobApplication callback fails, marks
-        as needs_review with processing_error so the outcome is reviewable.
+        If confidence is below needs_review_threshold, marks recruitment
+        emails as needs_classification (other categories as needs_review).
+        If the JobApplication callback fails, marks as needs_review with
+        processing_error so the outcome is reviewable.
 
         Args:
             email: The EmailMessage entity to update.
@@ -301,16 +325,44 @@ class ClassificationService:
         email.retry_count = 0
         email.is_permanently_failed = False
 
-        # Dead-letter queue: if confidence below threshold, mark for human review
+        # If confidence below threshold, route to Recruitment Inbox or needs_review
         if result.confidence < self._settings.classification_needs_review_threshold:
-            email.processing_status = "needs_review"
-            email.processing_error = None
-            logger.info(
-                "Email %s marked needs_review (confidence=%.2f < threshold=%.2f)",
-                email.gmail_message_id[:10],
-                result.confidence,
-                self._settings.classification_needs_review_threshold,
-            )
+            # Recruitment emails below threshold → needs_classification + inbox item
+            if result.category == EmailCategory.recruitment:
+                callback_ok = True
+                if self._on_uncertain_classification is not None:
+                    try:
+                        await self._on_uncertain_classification(email, result)
+                    except Exception:
+                        logger.exception(
+                            "RecruitmentInboxItem callback failed for email %s",
+                            email.gmail_message_id[:10],
+                        )
+                        callback_ok = False
+
+                if not callback_ok:
+                    email.processing_status = "needs_review"
+                    email.processing_error = "RecruitmentInboxItem creation failed"
+                    self._session.add(email)
+                    return False
+
+                email.processing_status = "needs_classification"
+                email.processing_error = None
+                logger.info(
+                    "Email %s marked needs_classification (confidence=%.2f < threshold=%.2f)",
+                    email.gmail_message_id[:10],
+                    result.confidence,
+                    self._settings.classification_needs_review_threshold,
+                )
+            else:
+                email.processing_status = "needs_review"
+                email.processing_error = None
+                logger.info(
+                    "Email %s marked needs_review (confidence=%.2f < threshold=%.2f)",
+                    email.gmail_message_id[:10],
+                    result.confidence,
+                    self._settings.classification_needs_review_threshold,
+                )
             self._session.add(email)
             return True
 

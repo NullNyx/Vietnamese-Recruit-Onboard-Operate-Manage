@@ -332,7 +332,7 @@ class TestJobApplicationIngestion:
         classified_count = await service.classify_batch(user_id=user_id, emails=[email])
 
         assert classified_count == 1
-        assert email.processing_status == "needs_review"
+        assert email.processing_status == "needs_classification"
         assert email.category == "recruitment"
         # No JobApplication created for low confidence
         job_app_repo.create.assert_not_awaited()
