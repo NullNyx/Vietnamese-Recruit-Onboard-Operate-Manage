@@ -57,7 +57,7 @@ _Avoid_: Salary record, Payroll run, Payment
 Hệ thống có ba khái niệm AI riêng biệt. KHÔNG được gộp chúng dưới tên gọi chung “AI Agent”.
 
 **AI Automation**:
-Các tác vụ AI chạy nền theo event, không có hội thoại: phân loại intent của email (cv/partner/event/internal/other) và parse CV thành dữ liệu có cấu trúc. Đã được triển khai trong module recruitment. Đây là pipeline, không phải agent.
+Các tác vụ AI chạy nền theo event, không có hội thoại: phân loại intent của email (job_application/partner/event/internal/other) và parse CV thành dữ liệu có cấu trúc. `job_application` biểu thị ý định ứng tuyển, không phụ thuộc việc email đã có CV hay chưa. Đã được triển khai trong module recruitment. Đây là pipeline, không phải agent.
 _Avoid_: gọi khái niệm này là “the AI Agent”
 
 **AI Assistant**:
@@ -74,8 +74,16 @@ _Avoid_: User AI Settings, Employee AI Configuration, AI Agent Configuration
 
 ## Recruitment & Onboarding
 
+**Job Application**:
+Đầu vào tuyển dụng ghi nhận ý định ứng tuyển vào Organization, dù do ứng viên gửi trực tiếp, nhân viên giới thiệu hay agency chuyển tiếp, và dù có file CV, link hồ sơ hay chưa cung cấp CV. Job Application phân biệt nguồn gửi với danh tính người ứng tuyển; có thể chưa xác định Job Opening nhưng sau khi HR làm rõ chỉ nhắm tối đa một Job Opening. Nó tồn tại trước Candidate và chỉ được chuyển thành Candidate khi đủ thông tin hoặc được HR chấp nhận đưa vào quy trình tuyển dụng.
+_Avoid_: CV email, Applicant email, dùng `cv` làm tên intent
+
+**Recruitment Inbox**:
+Không gian làm việc thống nhất để HR xử lý email tuyển dụng và Job Application theo trạng thái, bao gồm trường hợp cần xác nhận phân loại, cần bổ sung thông tin, sẵn sàng review và đã xử lý. Đây không phải hộp thư Gmail tổng quát hoặc trang lỗi AI.
+_Avoid_: AI Error Queue, Classification Queue, Gmail Inbox
+
 **Candidate**:
-Một người đang được cân nhắc tuyển dụng, được tạo tự động hoặc thủ công từ CV đã parse. Candidate đi qua pipeline: new → reviewing → interview*scheduled → accepted/rejected/archived. Candidate CHƯA phải Employee. Candidate có thể chưa được gán hoặc được gán vào đúng một Job Opening; việc gán có thể thay đổi cho đến trước khi Candidate đạt accepted/rejected/archived.
+Một người đã được đưa vào quy trình tuyển dụng, được tạo từ Job Application đủ điều kiện hoặc do HR tạo thủ công. Candidate đi qua pipeline: new → reviewing → interview*scheduled → accepted/rejected/archived. Candidate CHƯA phải Employee. Candidate có thể chưa được gán hoặc được gán vào đúng một Job Opening; việc gán có thể thay đổi cho đến trước khi Candidate đạt accepted/rejected/archived.
 _Avoid_: Applicant, Employee (Employee chỉ tồn tại sau onboarding)
 
 **Interview**: Một buổi phỏng vấn cụ thể của một Candidate. Một Candidate có thể có nhiều Interview để biểu diễn nhiều vòng hoặc lần lên lịch lại mà không ghi đè lịch sử phỏng vấn. Vòng đời: scheduled → completed/cancelled. Việc đổi lịch giữ nguyên Interview; nếu hủy buổi cũ và tạo buổi thay thế thì tạo Interview mới. Interview không tự động thay đổi Candidate pipeline.
@@ -86,7 +94,7 @@ Một nhu cầu tuyển dụng cụ thể cho một Position trong Organization.
 _Avoid_: Recruitment Plan, Hiring Plan, Vacancy, Requisition
 
 **Backbone Flow**:
-Workflow cốt lõi duy nhất của project: email đến → AI phân loại intent → parse CV → Candidate → HR review → lên lịch phỏng vấn → accept → email chúc mừng → onboarding → Employee. Đây là flow mà project được xây dựng xoay quanh; mọi thứ khác là thứ yếu hoặc đã tạm gác.
+Workflow cốt lõi duy nhất của project: email đến → AI nhận diện Job Application → thu thập/parse CV khi có → Candidate → HR review → lên lịch phỏng vấn → accept → email chúc mừng → onboarding → Employee. Đây là flow mà project được xây dựng xoay quanh; mọi thứ khác là thứ yếu hoặc đã tạm gác.
 _Avoid_: Pipeline (Pipeline chỉ machine status của Candidate)
 
 **Onboarding**:
