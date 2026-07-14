@@ -52,6 +52,7 @@ class AssistantLLMClient:
             base_url=settings.base_url,
             api_key=settings.api_key or "not-needed",
             timeout=settings.timeout_seconds,
+            max_retries=settings.max_retries,
         )
         self._model = settings.model
 
@@ -93,27 +94,39 @@ class AssistantLLMClient:
             logger.error("LLM API error: %s", exc)
             raise LLMConnectionError(f"LLM API error {exc.status_code}: {exc}") from exc
 
-        choice = response.choices[0]
-        message = choice.message
-
-        tool_calls: list[dict[str, Any]] = []
-        if message.tool_calls:
-            for tc in message.tool_calls:
-                tool_calls.append(
-                    {
-                        "id": tc.id,
-                        "type": "function",
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
-                        },
-                    }
-                )
+        choices = response.choices
+        if choices:
+            choice = choices[0]
+            message = choice.message
+            content = message.content
+            raw_tool_calls = message.tool_calls or []
+            tool_calls = [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    },
+                }
+                for tc in raw_tool_calls
+            ]
+        else:
+            # Some OpenAI-compatible gateways wrap the completion in a
+            # top-level ``data`` object. OpenAI's SDK preserves that payload
+            # in ``model_extra`` instead of populating ``choices``.
+            extra = getattr(response, "model_extra", None) or {}
+            wrapped_choices = (extra.get("data") or {}).get("choices", [])
+            if not wrapped_choices:
+                raise LLMConnectionError("LLM response contained no choices")
+            raw_message = wrapped_choices[0].get("message") or {}
+            content = raw_message.get("content")
+            tool_calls = raw_message.get("tool_calls") or []
 
         token_usage = self._extract_token_usage(response)
 
         return LLMResponse(
-            content=message.content,
+            content=content,
             tool_calls=tool_calls,
             token_usage=token_usage,
         )

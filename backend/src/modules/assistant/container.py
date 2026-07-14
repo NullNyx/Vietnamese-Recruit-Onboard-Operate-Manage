@@ -14,12 +14,21 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.assistant.application.assistant_service import AssistantService
 from src.modules.assistant.application.tool_registry import ToolRegistry
 from src.modules.assistant.infrastructure.config import AssistantSettings
 from src.modules.assistant.infrastructure.llm_client import AssistantLLMClient
+from src.modules.identity.application.organization_ai_config_service import (
+    OrganizationAIConfigService,
+    OrganizationAIConfigValidationError,
+)
+from src.modules.identity.container import get_crypto_utils, get_db_session
+from src.modules.identity.infrastructure.organization_ai_config_repository import (
+    OrganizationAIConfigRepository,
+)
 from src.modules.onboarding.application.onboarding_service import OnboardingService
 from src.modules.onboarding.container import get_onboarding_service
 from src.modules.recruitment.application.candidate_service import CandidateService
@@ -62,16 +71,42 @@ async def get_tool_registry(
     )
 
 
+async def get_configured_assistant_settings(
+    session: AsyncSession = Depends(get_db_session),
+) -> AssistantSettings:
+    """Resolve Organization AI settings, falling back only before setup."""
+    service = OrganizationAIConfigService(
+        repository=OrganizationAIConfigRepository(session),
+        crypto=get_crypto_utils(),
+    )
+    try:
+        runtime = await service.get_runtime_config(capability="assistant")
+    except OrganizationAIConfigValidationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    if runtime is None:
+        return get_assistant_settings()
+
+    return AssistantSettings(
+        base_url=runtime.base_url,
+        api_key=runtime.api_key,
+        model=runtime.model,
+    )
+
+
+async def get_configured_assistant_llm_client(
+    settings: AssistantSettings = Depends(get_configured_assistant_settings),
+) -> AssistantLLMClient:
+    """Create an LLM client from the active Organization provider config."""
+    return AssistantLLMClient(settings)
+
+
 async def get_assistant_service(
     tool_registry: ToolRegistry = Depends(get_tool_registry),
+    llm_client: AssistantLLMClient = Depends(get_configured_assistant_llm_client),
+    settings: AssistantSettings = Depends(get_configured_assistant_settings),
 ) -> AssistantService:
-    """Provide an AssistantService for the current request.
-
-    Assembles the LLM client, tool registry, and settings into
-    the orchestration service.
-    """
-    llm_client = get_assistant_llm_client()
-    settings = get_assistant_settings()
+    """Provide an AssistantService using the active Organization provider."""
     return AssistantService(
         llm_client=llm_client,
         tool_registry=tool_registry,

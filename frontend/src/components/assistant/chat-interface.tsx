@@ -43,6 +43,7 @@ export function ChatInterface({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
   const [draftAction, setDraftAction] = useState<DraftAction | null>(null);
   const [prefillValues, setPrefillValues] = useState<{
     leave?: Record<string, string>;
@@ -71,14 +72,15 @@ export function ChatInterface({
     }
   }, [prefillValues]);
 
-  const handleSend = async () => {
+  const handleSend = async (retry = false) => {
     const trimmed = input.trim();
     if (!trimmed || loading) return;
 
     const userMessage: ChatMessage = { role: "user", content: trimmed };
-    const updatedMessages = [...messages, userMessage];
+    const updatedMessages = retry ? messages : [...messages, userMessage];
     setMessages(updatedMessages);
     setInput("");
+    setLastError(null);
     setDraftAction(null);
     setLoading(true);
 
@@ -97,9 +99,10 @@ export function ChatInterface({
         setDraftAction(response.draft_action);
       }
     } catch (err) {
-      toast.error(
-        `Lỗi: ${err instanceof Error ? err.message : "Không thể kết nối trợ lý"}`,
-      );
+      const message = err instanceof Error ? err.message : "Không thể kết nối trợ lý";
+      setInput(trimmed);
+      setLastError(message);
+      toast.error(`Lỗi: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -216,6 +219,23 @@ export function ChatInterface({
         </div>
       )}
 
+      {lastError && (
+        <div className="flex items-center justify-between gap-3 border-t px-4 py-2 text-sm text-destructive">
+          <span>Không thể kết nối trợ lý: {lastError}</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setLastError(null);
+              handleSend(true);
+            }}
+            disabled={loading}
+          >
+            Thử lại
+          </Button>
+        </div>
+      )}
+
       <div className="border-t px-4 py-3">
         <div className="flex gap-2">
           <Textarea
@@ -229,7 +249,7 @@ export function ChatInterface({
             disabled={loading}
           />
           <Button
-            onClick={handleSend}
+            onClick={() => handleSend()}
             disabled={!input.trim() || loading}
             size="icon"
             className="shrink-0"
