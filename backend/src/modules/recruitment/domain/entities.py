@@ -54,6 +54,13 @@ class Candidate(SQLModel, table=True):
     accepted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     archived_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
 
+    # Compatibility projection for the Candidate scheduling contract.
+    calendar_event_id: str | None = Field(default=None, max_length=1024, index=True)
+    interview_start_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True))
+    )
+    interview_timezone: str | None = Field(default=None, max_length=64)
+
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

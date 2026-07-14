@@ -1,11 +1,9 @@
-"""Drop legacy candidate calendar fields after verifying Interview coverage.
+"""Verify legacy candidate calendar fields after introducing Interview rows.
 
-Safely removes the three legacy calendar columns from the ``candidates``
-table that were added in ``029_add_interview_calendar_fields.py``. Every
-non-null value in those columns MUST have a corresponding ``interviews``
-row; if any orphan values are found the migration aborts with a detailed
-verification report so the operator can intervene before the columns are
-dropped.
+The normalized ``interviews`` table is the source of truth for new flows, but
+Candidate keeps the three nullable calendar fields for API compatibility and
+for deployments that still consume the single-interview contract. This
+migration verifies legacy coverage without dropping those columns.
 
 Upgrade
 -------
@@ -123,17 +121,9 @@ def upgrade() -> None:
         )
         raise AssertionError("\n".join(report_lines))
 
-    # ------------------------------------------------------------------
-    # Step 2 — drop the partial unique index
-    # ------------------------------------------------------------------
-    op.drop_index("ix_candidates_calendar_event_id", table_name="candidates")
-
-    # ------------------------------------------------------------------
-    # Step 3 — drop the legacy columns
-    # ------------------------------------------------------------------
-    op.drop_column("candidates", "calendar_event_id")
-    op.drop_column("candidates", "interview_start_at")
-    op.drop_column("candidates", "interview_timezone")
+    # Keep the columns: Candidate remains a compatibility projection of the
+    # scheduled Interview. The partial unique index also protects the legacy
+    # single-event invariant for callers that write Candidate directly.
 
 
 def downgrade() -> None:
@@ -160,23 +150,5 @@ def downgrade() -> None:
        pipeline exclusively use the ``interviews`` table.
     """
 
-    op.add_column(
-        "candidates",
-        sa.Column("calendar_event_id", sa.String(length=1024), nullable=True),
-    )
-    op.add_column(
-        "candidates",
-        sa.Column("interview_start_at", sa.DateTime(timezone=True), nullable=True),
-    )
-    op.add_column(
-        "candidates",
-        sa.Column("interview_timezone", sa.String(length=64), nullable=True),
-    )
-
-    op.create_index(
-        "ix_candidates_calendar_event_id",
-        "candidates",
-        ["calendar_event_id"],
-        unique=True,
-        postgresql_where=sa.text("calendar_event_id IS NOT NULL"),
-    )
+    # Upgrade 054 intentionally leaves the compatibility projection in place;
+    # there is nothing to restore when downgrading this revision.

@@ -445,6 +445,9 @@ _SNAPSHOT_FIELDS: tuple[str, ...] = (
     "rejected_at",
     "accepted_at",
     "archived_at",
+    "calendar_event_id",
+    "interview_start_at",
+    "interview_timezone",
 )
 
 
@@ -599,6 +602,10 @@ class _FakeScalars:
     def all(self) -> list[Employee]:
         """Return all matched Employee entities."""
         return list(self._employees)
+
+    def first(self) -> Employee | None:
+        """Return the first matched row, matching SQLAlchemy scalars."""
+        return self._employees[0] if self._employees else None
 
 
 def _extract_in_clause_uuids(statement: Any) -> list[UUID] | None:
@@ -851,6 +858,9 @@ def make_candidate(
     status: str = CandidateStatus.NEW,
     email: str = "candidate@example.com",
     candidate_id: UUID | None = None,
+    calendar_event_id: str | None = None,
+    interview_start_at: datetime | None = None,
+    interview_timezone: str | None = None,
 ) -> Candidate:
     """Build a Candidate for interview-scheduling tests.
 
@@ -877,6 +887,9 @@ def make_candidate(
         summary="Test candidate",
         status=status,
         confidence_score=0.9,
+        calendar_event_id=calendar_event_id,
+        interview_start_at=interview_start_at,
+        interview_timezone=interview_timezone,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
     )
