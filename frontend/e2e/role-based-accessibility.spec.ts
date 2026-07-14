@@ -11,20 +11,22 @@ function requireSession(state: string | undefined) {
   );
 }
 
-function observeConsoleErrors() {
-  const errors: string[] = [];
+function observeConsoleIssues() {
+  const issues: string[] = [];
   return {
-    errors,
+    issues,
     onMessage(message: { type(): string; text(): string }) {
-      if (message.type() === "error") errors.push(message.text());
+      if (message.type() === "error" || message.type() === "warning") {
+        issues.push(`[${message.type()}] ${message.text()}`);
+      }
     },
   };
 }
 
 test("HR can search with keyboard and return focus @hr", async ({ page }) => {
   requireSession(hrState);
-  const consoleErrors = observeConsoleErrors();
-  page.on("console", consoleErrors.onMessage);
+  const consoleIssues = observeConsoleIssues();
+  page.on("console", consoleIssues.onMessage);
 
   await page.goto("/");
   await expect(page.getByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
@@ -43,18 +45,24 @@ test("HR can search with keyboard and return focus @hr", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(searchTrigger).toBeFocused();
-  expect(consoleErrors.errors).toEqual([]);
+  expect(consoleIssues.issues).toEqual([]);
 });
 
 test("Employee Account has named controls at mobile width @employee", async ({ page }) => {
   requireSession(employeeState);
-  const consoleErrors = observeConsoleErrors();
-  page.on("console", consoleErrors.onMessage);
+  const consoleIssues = observeConsoleIssues();
+  page.on("console", consoleIssues.onMessage);
 
   await page.goto("/");
   await expect(page.getByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Mở menu" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Tài khoản" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Tìm kiếm (Ctrl+K)" })).toBeVisible();
-  expect(consoleErrors.errors).toEqual([]);
+
+  if ((page.viewportSize()?.width ?? 0) <= 768) {
+    await expect(page.getByRole("button", { name: "Mở menu" })).toBeVisible();
+  } else {
+    await expect(page.getByRole("button", { name: "Mở menu" })).toBeHidden();
+  }
+
+  expect(consoleIssues.issues).toEqual([]);
 });

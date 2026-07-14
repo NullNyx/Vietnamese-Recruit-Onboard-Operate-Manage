@@ -113,7 +113,7 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
   // Ctrl+K / ⌘K to open CommandBar
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key === "k") {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setCommandBarOpen((prev) => !prev);
       }

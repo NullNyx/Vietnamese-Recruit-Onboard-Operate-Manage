@@ -26,6 +26,7 @@ export default defineConfig({
       name: "hr-mobile",
       use: {
         ...devices["iPhone 12"],
+        browserName: "chromium",
         storageState: hrState,
       },
       grep: /@hr/,
@@ -39,6 +40,7 @@ export default defineConfig({
       name: "employee-mobile",
       use: {
         ...devices["iPhone 12"],
+        browserName: "chromium",
         storageState: employeeState,
       },
       grep: /@employee/,

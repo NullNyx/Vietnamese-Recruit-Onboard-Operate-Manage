@@ -202,7 +202,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 </Button>
               )}
             </div>
-          )
+          )}
 
         {/* Loading State */}
         {!error && loading &&
