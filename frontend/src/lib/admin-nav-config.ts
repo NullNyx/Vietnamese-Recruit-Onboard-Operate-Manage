@@ -3,23 +3,16 @@ import {
   Bot,
   Briefcase,
   Building2,
-  Calendar,
-  CalendarOff,
   Clock,
   DollarSign,
   FileSearch,
   FileText,
-  Gift,
   Globe,
   KeyRound,
   ListChecks,
   Mail,
-  PartyPopper,
-  Receipt,
   ScrollText,
-  Settings,
   Shield,
-  Timer,
   Upload,
   UserCog,
   Users,
@@ -62,11 +55,8 @@ export const adminNavConfig: HeaderNavConfig = {
       label: 'Chấm công',
       links: [
         { href: '/attendance', label: 'Danh sách', icon: Clock },
-        { href: '/attendance/schedules', label: 'Lịch làm', icon: Calendar },
-        { href: '/attendance/leave', label: 'Nghỉ phép', icon: CalendarOff },
-        { href: '/attendance/overtime', label: 'Tăng ca', icon: Timer },
-        { href: '/attendance/holidays', label: 'Ngày lễ', icon: PartyPopper },
       ],
+
       activeRoutes: ['/attendance'],
     },
     {
@@ -74,10 +64,8 @@ export const adminNavConfig: HeaderNavConfig = {
       label: 'Lương',
       links: [
         { href: '/payroll', label: 'Bảng lương', icon: DollarSign },
-        { href: '/payroll/config', label: 'Cấu hình', icon: Settings },
-        { href: '/payroll/allowances', label: 'Phụ cấp', icon: Gift },
-        { href: '/payroll/tax', label: 'Thuế', icon: Receipt },
       ],
+
       activeRoutes: ['/payroll'],
     },
     {

@@ -24,9 +24,11 @@ function getAllHrefs(config: typeof adminNavConfig): string[] {
   return hrefs;
 }
 
-describe("Route Completeness: All existing routes are accessible in header nav", () => {
-  describe("Admin routes (Requirement 10.1)", () => {
+  describe("Route Completeness: All existing routes are accessible in header nav", () => {
     const adminHrefs = getAllHrefs(adminNavConfig);
+
+    describe("Admin routes (Requirement 10.1)", () => {
+
 
     it("should include all routes from the old navItems array", () => {
       // Old navItems: /, /employees, /settings/departments, /settings/positions, /gmail, /recruitment
@@ -110,10 +112,47 @@ describe("Route Completeness: All existing routes are accessible in header nav",
     });
   });
 
-  describe("Role-based route separation (Requirement 10.4)", () => {
-    const essHrefs = getAllHrefs(essNavConfig);
+    describe("Active HR surfaces and retired placeholders", () => {
+      it("keeps active attendance, request, and payslip surfaces in navigation", () => {
+        expect(adminHrefs).toEqual(
+          expect.arrayContaining([
+            "/attendance",
+            "/admin/employee-requests",
+            "/payroll",
+          ]),
+        );
 
-    it("should NOT include admin-only routes in the ESS config", () => {
+        const essHrefs = getAllHrefs(essNavConfig);
+        expect(essHrefs).toEqual(
+          expect.arrayContaining(["/employee/requests", "/employee/payslips"]),
+        );
+      });
+
+      it("does not advertise placeholder attendance or payroll surfaces", () => {
+        const retiredRoutes = [
+          "/attendance/schedules",
+          "/attendance/leave",
+          "/attendance/overtime",
+          "/attendance/holidays",
+          "/payroll/config",
+          "/payroll/allowances",
+          "/payroll/tax",
+        ];
+
+        for (const route of retiredRoutes) {
+          expect(
+            adminHrefs,
+            `Retired placeholder route "${route}" must not be in navigation`,
+          ).not.toContain(route);
+        }
+      });
+    });
+
+    describe("Role-based route separation (Requirement 10.4)", () => {
+      const essHrefs = getAllHrefs(essNavConfig);
+
+      it("should NOT include admin-only routes in the ESS config", () => {
+
       const adminOnlyRoutes = [
         "/admin/whitelist",
         "/admin/oauth",
