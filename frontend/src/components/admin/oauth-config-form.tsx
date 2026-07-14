@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, CalendarDays } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,8 +25,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-import { updateOAuthConfig, type OAuthConfig } from "@/lib/api/admin";
+import {
+  updateOAuthConfig,
+  getGoogleWorkspaceCalendars,
+  selectGoogleWorkspaceCalendar,
+  type OAuthConfig,
+  type CalendarEntry,
+} from "@/lib/api/admin";
 import {
   oauthConfigUpdateSchema,
   type OAuthConfigUpdateFormData,
@@ -39,7 +52,10 @@ export interface OAuthConfigFormProps {
 
 export function OAuthConfigForm({ config, onUpdated }: OAuthConfigFormProps) {
   const [backendError, setBackendError] = useState<string | null>(null);
-  const [connection, setConnection] = useState<{ status: "disconnected" | "connected" | "reauthorization_required"; email: string | null; redirect_url: string | null } | null>(null);
+  const [connection, setConnection] = useState<{ status: "disconnected" | "connected" | "reauthorization_required"; email: string | null; redirect_url: string | null; selected_calendar_id: string | null } | null>(null);
+  const [calendars, setCalendars] = useState<CalendarEntry[]>([]);
+  const [calendarsLoading, setCalendarsLoading] = useState(false);
+  const [calendarSaving, setCalendarSaving] = useState(false);
 
   const form = useForm<OAuthConfigUpdateFormData>({
     resolver: zodResolver(oauthConfigUpdateSchema),
@@ -63,9 +79,47 @@ export function OAuthConfigForm({ config, onUpdated }: OAuthConfigFormProps) {
     }
   };
 
+  const loadCalendars = async () => {
+    try {
+      setCalendarsLoading(true);
+      const data = await getGoogleWorkspaceCalendars();
+      setCalendars(data.calendars);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Không thể tải danh sách lịch";
+      toast.error(message);
+    } finally {
+      setCalendarsLoading(false);
+    }
+  };
+
+  const handleCalendarChange = async (value: string) => {
+    try {
+      setCalendarSaving(true);
+      const calendarId = value === "__none__" ? "" : value;
+      await selectGoogleWorkspaceCalendar(calendarId);
+      setConnection((prev) =>
+        prev ? { ...prev, selected_calendar_id: value === "__none__" ? null : value } : prev
+      );
+      toast.success("Đã chọn lịch mặc định");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Không thể chọn lịch";
+      toast.error(message);
+    } finally {
+      setCalendarSaving(false);
+    }
+  };
+
   useEffect(() => {
     void loadConnection();
   }, []);
+
+  useEffect(() => {
+    if (connection?.status === "connected" && connection?.email) {
+      void loadCalendars();
+    } else {
+      setCalendars([]);
+    }
+  }, [connection?.status, connection?.email]);
 
   const handleSubmit = async (values: OAuthConfigUpdateFormData) => {
     setBackendError(null);
@@ -190,6 +244,45 @@ export function OAuthConfigForm({ config, onUpdated }: OAuthConfigFormProps) {
               Ngắt kết nối
             </Button>
           </div>
+
+          {statusLabel === "connected" && connectedEmail && (
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Lịch mặc định cho phỏng vấn</span>
+              </div>
+              {calendarsLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Đang tải danh sách lịch...
+                </div>
+              ) : (
+                <Select
+                  value={connection?.selected_calendar_id ?? "__none__"}
+                  onValueChange={handleCalendarChange}
+                  disabled={calendarSaving}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Chọn lịch mặc định" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__" className="hidden">Chưa chọn lịch</SelectItem>
+                    {calendars.map((cal) => (
+                      <SelectItem key={cal.id} value={cal.id}>
+                        {cal.summary}{cal.primary ? " (Chính)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {calendarSaving && (
+                <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Đang lưu...
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -74,7 +74,7 @@ class CalendarSyncService:
         self,
         adapter: CalendarAdapter,
         sync_cursor_repo: CalendarSyncCursorRepository,
-        calendar_id: str = "primary",
+        calendar_id: str,
     ) -> None:
         self._adapter = adapter
         self._sync_cursor_repo = sync_cursor_repo

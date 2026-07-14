@@ -3,10 +3,14 @@
 Covers the event time-window invariant on ``CalendarEventSpec``: the end is
 always ``start + timedelta(minutes=duration)`` and strictly after ``start`` for
 the boundary durations of the valid 15-180 minute range (Requirement 2.2).
+
+Issue 214: calendar_id is now required (no implicit primary fallback).
 """
 
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
+import pytest
 
 from src.modules.recruitment.domain.value_objects import CalendarEventSpec
 
@@ -27,6 +31,7 @@ def _make_spec(duration_minutes: int) -> CalendarEventSpec:
         end=end,
         timezone="Asia/Ho_Chi_Minh",
         attendee_emails=("candidate@example.com",),
+        calendar_id="test-calendar-id",
     )
 
 
@@ -54,3 +59,18 @@ class TestEventTimeWindowInvariant:
         """The 180-minute boundary spans exactly 180 minutes."""
         spec = _make_spec(180)
         assert spec.end - spec.start == timedelta(minutes=180)
+
+
+def test_calendar_id_must_be_provided() -> None:
+    """CalendarEventSpec requires an explicit calendar_id (no implicit primary)."""
+    start = datetime(2025, 6, 1, 9, 0, tzinfo=_TZ)
+    end = start + timedelta(hours=1)
+    with pytest.raises(TypeError):
+        CalendarEventSpec(  # type: ignore[call-arg]
+            summary="Interview",
+            description=None,
+            start=start,
+            end=end,
+            timezone="Asia/Ho_Chi_Minh",
+            attendee_emails=("candidate@example.com",),
+        )

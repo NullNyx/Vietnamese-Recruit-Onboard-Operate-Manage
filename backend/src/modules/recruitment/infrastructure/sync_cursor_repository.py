@@ -1,7 +1,10 @@
 """Repository for CalendarSyncCursor entity persistence.
 
 Provides async database access for retrieving and upserting the calendar
-sync token (sync_token + page_token) for the Organization singleton.
+sync cursor (sync_token + page_token) scoped to an Organization and a
+specific calendar_id. Each (organization, calendar_id) pair has its own
+cursor so that switching the selected calendar does not reuse a stale
+sync token from the previous calendar.
 """
 
 from datetime import UTC, datetime
@@ -15,26 +18,32 @@ from src.modules.recruitment.domain.entities import CalendarSyncCursor
 class CalendarSyncCursorRepository:
     """Handles CalendarSyncCursor persistence using async SQLAlchemy sessions.
 
-    Attributes:
-        session: The async database session for executing queries.
+    All cursor operations are scoped by ``calendar_id`` so the sync token
+    is tracked per calendar, not per organization. This ensures that
+    switching the selected calendar starts a fresh sync rather than
+    reusing a stale token from the previous calendar.
     """
 
     def __init__(self, session: AsyncSession) -> None:
         """Initialize the repository with an async database session.
 
         Args:
-            session: An SQLAlchemy AsyncSession instance for database operations.
+            session: The async database session for executing queries.
         """
         self.session = session
 
-    async def get_cursor(self) -> CalendarSyncCursor | None:
-        """Retrieve the calendar sync cursor for the Organization singleton.
+    async def get_cursor(self, calendar_id: str) -> CalendarSyncCursor | None:
+        """Retrieve the calendar sync cursor for the given calendar.
+
+        Args:
+            calendar_id: The Google Calendar ID to look up.
 
         Returns:
-            The CalendarSyncCursor entity if found, None otherwise.
+            The CalendarSyncCursor if found, else None.
         """
         statement = select(CalendarSyncCursor).where(
-            CalendarSyncCursor.organization_singleton_key == "default"
+            CalendarSyncCursor.organization_singleton_key == "default",
+            CalendarSyncCursor.calendar_id == calendar_id,
         )
         result = await self.session.execute(statement)
         return result.scalars().first()
@@ -42,16 +51,19 @@ class CalendarSyncCursorRepository:
     async def upsert_cursor(
         self,
         *,
+        calendar_id: str,
         sync_token: str | None = None,
         page_token: str | None = None,
     ) -> CalendarSyncCursor:
-        """Create or update the calendar sync cursor for the Organization.
+        """Create or update the calendar sync cursor for the given calendar.
 
-        Updates sync_token and/or page_token and the last_sync_at timestamp.
-        This ensures the unique constraint on organization_singleton_key is
-        respected.
+        The composite unique constraint on (organization_singleton_key, calendar_id)
+        ensures one cursor per calendar. When the selected calendar changes,
+        a new cursor is created automatically (old cursor remains for
+        potential rollback but is no longer queried).
 
         Args:
+            calendar_id: The Google Calendar ID this cursor belongs to.
             sync_token: The next sync token from Google Calendar, or None
                 to clear it (on 410 GONE).
             page_token: The next page token for pagination, or None.
@@ -62,7 +74,8 @@ class CalendarSyncCursorRepository:
         now = datetime.now(UTC)
 
         statement = select(CalendarSyncCursor).where(
-            CalendarSyncCursor.organization_singleton_key == "default"
+            CalendarSyncCursor.organization_singleton_key == "default",
+            CalendarSyncCursor.calendar_id == calendar_id,
         )
         result = await self.session.execute(statement)
         cursor = result.scalars().first()
@@ -79,6 +92,7 @@ class CalendarSyncCursorRepository:
 
         cursor = CalendarSyncCursor(
             organization_singleton_key="default",
+            calendar_id=calendar_id,
             sync_token=sync_token,
             page_token=page_token,
             last_sync_at=now,
@@ -87,13 +101,16 @@ class CalendarSyncCursorRepository:
         await self.session.flush()
         return cursor
 
-    async def clear_sync_token(self) -> None:
-        """Clear the sync token after a 410 GONE response.
+    async def clear_sync_token(self, calendar_id: str) -> None:
+        """Clear the sync token for the given calendar after a 410 GONE response.
 
         The page_token is also cleared. The cursor record itself is kept
         so the next sync starts from a bounded full sync.
+
+        Args:
+            calendar_id: The Google Calendar ID whose token to clear.
         """
-        cursor = await self.get_cursor()
+        cursor = await self.get_cursor(calendar_id)
         if cursor is not None:
             cursor.sync_token = None
             cursor.page_token = None

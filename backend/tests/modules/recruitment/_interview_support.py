@@ -243,7 +243,7 @@ class FakeCalendarPort:
             return self._default_event(spec, event_id=event_id)
         return self._resolve_event(outcome, call)
 
-    async def delete_event(self, access_token: str, event_id: str) -> None:
+    async def delete_event(self, access_token: str, event_id: str, calendar_id: str) -> None:
         """Record a delete call and raise its scripted outcome, if any."""
         call = RecordedCalendarCall(
             method="delete_event", access_token=access_token, event_id=event_id, spec=None
@@ -260,7 +260,7 @@ class FakeCalendarPort:
         self,
         access_token: str,
         event_id: str,
-        calendar_id: str = "primary",
+        calendar_id: str,
     ) -> CalendarEvent:
         """Record a get_event call and return a default or scripted outcome."""
         call = RecordedCalendarCall(
@@ -279,7 +279,7 @@ class FakeCalendarPort:
     async def list_events(
         self,
         access_token: str,
-        calendar_id: str = "primary",
+        calendar_id: str,
         *,
         sync_token: str | None = None,
         page_token: str | None = None,
@@ -1045,10 +1045,9 @@ def build_calendar_harness(
     org_timezone: str = DEFAULT_TIMEZONE,
     clock: FixedClock | None = None,
     user_id: UUID | None = None,
+    connection_repo: object | None | _Default = _DEFAULT,
 ) -> CalendarServiceHarness:
-    """Wire a :class:`CandidateService` over the interview test seams.
-
-    Builds the in-memory candidate repository/session (seeded with
+    """Builds the in-memory candidate repository/session (seeded with
     ``candidates`` and ``employees``), the :class:`FakeCalendarPort`, the
     identity-side grant/refresh/cipher seams, and an organization-timezone
     stub, then constructs the service with all of them. The returned
@@ -1099,6 +1098,24 @@ def build_calendar_harness(
     oauth_service = FakeCalendarGrantChecker(refreshed_tokens=refreshed_tokens)
     crypto = FakeTokenCipher()
 
+    if isinstance(connection_repo, _Default):
+        class _FakeOrgConnRepo:
+            async def get_singleton(self):
+                from types import SimpleNamespace
+                return SimpleNamespace(
+                    status="connected",
+                    selected_calendar_id="recruitment@company.vn",
+                    access_token_enc="enc:test-access-token",
+                    refresh_token_enc="enc:test-refresh-token",
+                    client_secret_enc="enc:test-secret",
+                    token_expires_at=None,
+                )
+            async def upsert_singleton(self, conn):
+                pass
+        resolved_conn_repo = _FakeOrgConnRepo()
+    else:
+        resolved_conn_repo = connection_repo
+
     org_settings_repo = AsyncMock()
     org_settings_repo.get_timezone = AsyncMock(return_value=org_timezone)
 
@@ -1110,6 +1127,7 @@ def build_calendar_harness(
         user_id=acting_user_id,
         calendar_port=calendar,
         org_settings_repo=org_settings_repo,
+        connection_repo=resolved_conn_repo,  # type: ignore[arg-type]
         oauth_grant_repo=grant_repo,
         oauth_service=oauth_service,
         crypto=crypto,

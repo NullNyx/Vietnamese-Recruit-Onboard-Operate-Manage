@@ -374,6 +374,7 @@ async def test_connection_status_exposes_degraded_state(
         email="shared@example.com",
         google_sub="sub",
         client_secret_enc="encrypted-secret",
+        selected_calendar_id="test-calendar-id",
     )
 
     result = await service.get_status()
@@ -381,6 +382,7 @@ async def test_connection_status_exposes_degraded_state(
     assert result.status == "degraded"
     assert result.email == "shared@example.com"
     assert result.has_secret is True
+    assert result.selected_calendar_id == "test-calendar-id"
 
 
 @pytest.mark.asyncio

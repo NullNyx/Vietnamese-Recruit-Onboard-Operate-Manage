@@ -116,7 +116,7 @@ class CalendarEventSpec:
     end: datetime
     timezone: str
     attendee_emails: tuple[str, ...]
-    calendar_id: str = "primary"
+    calendar_id: str
     request_meet_link: bool = True
 
     def __post_init__(self) -> None:

@@ -492,7 +492,7 @@ class CalendarAdapter:
         self,
         access_token: str,
         event_id: str,
-        calendar_id: str = "primary",
+        calendar_id: str,
         if_match: str | None = None,
     ) -> None:
         """Delete (cancel) a Calendar event idempotently.
@@ -582,7 +582,7 @@ class CalendarAdapter:
         self,
         access_token: str,
         event_id: str,
-        calendar_id: str = "primary",
+        calendar_id: str,
     ) -> CalendarEvent:
         """Fetch a single Calendar event by ID for conflict snapshot capture.
 

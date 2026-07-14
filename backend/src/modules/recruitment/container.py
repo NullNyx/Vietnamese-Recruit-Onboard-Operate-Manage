@@ -31,6 +31,9 @@ from src.modules.identity.container import (
 )
 from src.modules.identity.domain.entities import User
 from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
+from src.modules.identity.infrastructure.connection_state_repository import (
+    OrganizationGoogleConnectionRepository,
+)
 from src.modules.recruitment.application.calendar_sync_service import CalendarSyncService
 from src.modules.recruitment.application.candidate_service import CandidateService
 from src.modules.recruitment.application.cv_processor import CVProcessorService
@@ -190,6 +193,7 @@ async def get_candidate_service(
 
     # Calendar scheduling dependencies (ADR-0008).
     org_settings_repo = OrganizationSettingsRepository(session, get_recruitment_settings())
+    connection_repo = OrganizationGoogleConnectionRepository(session)
     oauth_grant_repo = OAuthGrantRepository(session)
     crypto = get_crypto_utils()
     oauth_service = OAuthService(
@@ -207,6 +211,7 @@ async def get_candidate_service(
         user_id=current_user.id,
         calendar_port=get_calendar_adapter(),
         org_settings_repo=org_settings_repo,
+        connection_repo=connection_repo,
         oauth_grant_repo=oauth_grant_repo,
         oauth_service=oauth_service,
         crypto=crypto,

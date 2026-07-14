@@ -50,6 +50,7 @@ class OrganizationGoogleConnectionResponse:
     email: str | None = None
     has_secret: bool = False
     redirect_url: str | None = None
+    selected_calendar_id: str | None = None
 
 
 class OrganizationGoogleConnectionService:

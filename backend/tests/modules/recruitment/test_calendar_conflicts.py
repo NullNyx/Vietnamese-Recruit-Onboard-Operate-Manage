@@ -104,8 +104,8 @@ def test_412_during_patch_triggers_conflict_capture() -> None:
                         start=_FUTURE_START,
                         end=_FUTURE_START + timedelta(minutes=30),
                         timezone="Asia/Ho_Chi_Minh",
+                        calendar_id="recruitment@company.vn",
                         attendee_emails=(),
-                        request_meet_link=False,
                     )
                     await harness.service._patch_calendar_event(
                         user_id=harness.user_id,

@@ -10,6 +10,7 @@ Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9,
 from __future__ import annotations
 
 import logging
+import os
 import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -63,15 +64,16 @@ from src.modules.recruitment.infrastructure.repositories import (
 )
 
 if TYPE_CHECKING:
-    from src.modules.identity.api.schemas import GoogleTokens, GrantStatus
-    from src.modules.identity.domain.entities import OAuthGrant
+    from src.modules.identity.infrastructure.connection_state_repository import (
+        OrganizationGoogleConnectionRepository,
+    )
     from src.modules.recruitment.infrastructure.org_settings_repository import (
         OrganizationSettingsRepository,
     )
 
 logger = logging.getLogger(__name__)
 
-# Return type for adapter calls executed through ``_with_calendar_token``.
+# Return type for adapter calls executed through ``_with_org_token``.
 _CalendarResultT = TypeVar("_CalendarResultT")
 
 
@@ -222,71 +224,40 @@ class CalendarPort(Protocol):
         """Conditionally patch an existing Calendar event."""
         ...
 
-        async def delete_event(
-            self,
-            access_token: str,
-            event_id: str,
-            calendar_id: str = "primary",
-            if_match: str | None = None,
-        ) -> None:
-            """Conditionally delete (cancel) an existing Calendar event."""
-            ...
-
-        async def get_event(
-            self,
-            access_token: str,
-            event_id: str,
-            calendar_id: str = "primary",
-        ) -> CalendarEvent:
-            """Fetch a single Calendar event by ID to get the remote snapshot."""
-            ...
-
-        async def list_events(
-            self,
-            access_token: str,
-            calendar_id: str = "primary",
-            *,
-            sync_token: str | None = None,
-            page_token: str | None = None,
-            max_results: int = 250,
-        ) -> SyncEventChanges:
-            """List events (sync) from a Calendar, with optional sync token.
-
-            Returns changes since the last sync token, or a full snapshot.
-            """
-            ...
-
-
-@runtime_checkable
-class OAuthGrantReader(Protocol):
-    """Protocol for reading a user's stored OAuth grant.
-
-    Abstracts the identity module's ``OAuthGrantRepository`` so the
-    recruitment service can read the acting HR user's granted scopes and
-    encrypted access token without a hard cross-module dependency.
-    """
-
-    async def get_by_user_id(self, user_id: UUID) -> OAuthGrant | None:
-        """Return the active OAuth grant for the user, or ``None``."""
+    async def delete_event(
+        self,
+        access_token: str,
+        event_id: str,
+        calendar_id: str,
+        if_match: str | None = None,
+    ) -> None:
+        """Conditionally delete (cancel) an existing Calendar event."""
         ...
 
-
-@runtime_checkable
-class CalendarGrantChecker(Protocol):
-    """Protocol for computing grant status and refreshing Google tokens.
-
-    Abstracts the identity module's ``OAuthService`` to compute
-    ``calendar_grant_valid`` from granted scopes (R9) and to refresh an
-    expired access token during the 401 retry flow.
-    """
-
-    def determine_grant_status(self, scopes: list[str]) -> GrantStatus:
-        """Compute the Gmail/Calendar grant status from granted scopes."""
+    async def get_event(
+        self,
+        access_token: str,
+        event_id: str,
+        calendar_id: str,
+    ) -> CalendarEvent:
+        """Fetch a single Calendar event by ID to get the remote snapshot."""
         ...
 
-    async def refresh_google_token(self, user_id: UUID) -> GoogleTokens | None:
-        """Refresh the user's Google access token, or ``None`` if revoked."""
+    async def list_events(
+        self,
+        access_token: str,
+        calendar_id: str,
+        *,
+        sync_token: str | None = None,
+        page_token: str | None = None,
+        max_results: int = 250,
+    ) -> SyncEventChanges:
+        """List events (sync) from a Calendar, with optional sync token.
+
+        Returns changes since the last sync token, or a full snapshot.
+        """
         ...
+
 
 
 @runtime_checkable
@@ -301,6 +272,12 @@ class TokenCipher(Protocol):
     def decrypt(self, ciphertext: str) -> str:
         """Decrypt a stored ciphertext into plaintext."""
         ...
+
+    def encrypt(self, plaintext: str) -> str:
+        """Encrypt a plaintext into ciphertext."""
+        ...
+
+
 
 
 @dataclass
@@ -377,8 +354,10 @@ class CandidateService:
         user_id_provider: Optional callable returning the current user UUID.
         calendar_port: Optional Calendar adapter (protocol) for event operations.
         org_settings_repo: Optional Organization settings repository (timezone).
-        oauth_grant_repo: Optional OAuth grant repository for token lookup/refresh.
-        oauth_service: Optional OAuth service computing grant status and refresh.
+        connection_repo: Optional Organization Google Connection repository for
+            selected calendar and organization-owned OAuth tokens.
+        oauth_grant_repo: Deprecated, ignored — use ``connection_repo`` instead.
+        oauth_service: Deprecated, ignored — use ``connection_repo`` instead.
         crypto: Optional AES-256-GCM utilities for decrypting the access token.
     """
 
@@ -396,8 +375,9 @@ class CandidateService:
         user_id: UUID | None = None,
         calendar_port: CalendarPort | None = None,
         org_settings_repo: OrganizationSettingsRepository | None = None,
-        oauth_grant_repo: OAuthGrantReader | None = None,
-        oauth_service: CalendarGrantChecker | None = None,
+        connection_repo: OrganizationGoogleConnectionRepository | None = None,
+        oauth_grant_repo: object | None = None,
+        oauth_service: object | None = None,
         crypto: TokenCipher | None = None,
         job_opening_repo: JobOpeningRepository | None = None,
     ) -> None:
@@ -412,9 +392,8 @@ class CandidateService:
         self._user_id_provider = user_id_provider
         self._user_id = user_id
         self._calendar_port = calendar_port
+        self._connection_repo = connection_repo
         self._org_settings_repo = org_settings_repo
-        self._oauth_grant_repo = oauth_grant_repo
-        self._oauth_service = oauth_service
         self._crypto = crypto
         self._job_opening_repo = job_opening_repo
 
@@ -1201,14 +1180,13 @@ class CandidateService:
         2. Load the Candidate and validate the transition to
            ``interview_scheduled``; no Calendar event is created on an invalid
            transition — R2.4.
-        3. Assert the acting HR user's Calendar grant before any Calendar call —
+        3. Ensure the Organization Google Connection is active before any Calendar call —
            R9.
         4. Resolve interviewer Employees and their emails — R1.7, R10.
         5. Resolve the Organization timezone, compute ``end = start + duration``,
            build the attendee list, and assemble the (tz-aware) event spec —
            R2.2, R5, R6, R11.
-        6. Create the Calendar event via ``_with_calendar_token`` (401 → refresh
-           → retry once) before committing — R2.1.
+        6. Create the Calendar event via ``_with_org_token`` (401 → refresh → retry once) before committing — R2.1.
         7. On success, persist the event reference, start, timezone, and status,
            then commit — R2.3, R4.1-R4.3.
         8. On Calendar failure, roll back, write a failure audit entry, and raise
@@ -1230,7 +1208,7 @@ class CandidateService:
             ValueError: If a request field violates its bounds (mapped to 422).
             CandidateNotFoundError: If the candidate doesn't exist.
             InvalidStatusTransitionError: If the transition is not allowed.
-            CalendarGrantMissingError: If the acting HR user's Calendar grant is
+            CalendarGrantMissingError: If the Organization Google Connection is
                 missing or invalid.
             InterviewerNotFoundError: If any interviewer id has no Employee.
             InterviewerMissingEmailError: If a matched interviewer has no email.
@@ -1261,8 +1239,9 @@ class CandidateService:
             action="schedule_interview",
         )
 
-        # Step 3: assert the Calendar grant before any Calendar call (R9).
-        await self._assert_calendar_grant(user_id)
+        # Step 3: ensure org connection is active before any Calendar call (R9).
+        await self._ensure_org_connection_active()
+        calendar_id = await self._resolve_org_calendar_id()
 
         # Step 4: resolve interviewer Employees and their emails (R1.7, R10).
         resolved = await self._resolve_interviewers(interviewer_ids)
@@ -1280,6 +1259,7 @@ class CandidateService:
             start=start_resolved,
             end=end_resolved,
             timezone=timezone,
+            calendar_id=calendar_id,
             attendee_emails=tuple(attendee_emails),
             request_meet_link=True,
         )
@@ -1348,16 +1328,14 @@ class CandidateService:
         1. Load the Candidate and require an existing ``calendar_event_id``;
            when absent, raise ``NoInterviewToRescheduleError`` before any
            Calendar call — R7.5.
-        2. Assert the acting HR user's Calendar grant before any Calendar call —
-           R9.2, R9.3.
+        2. Ensure the Organization Google Connection is active before any Calendar call —
         3. Validate the request fields (duration 15-180, 1-10 interviewers,
            future ``start``, notes <= 1000) — R1.2-R1.5.
         4. Resolve the Organization timezone, compute ``end = start + duration``,
            resolve interviewers, build attendees, and assemble the (tz-aware)
            patch spec with ``request_meet_link=False`` so the Meet link is
            preserved — R7.2, R11.1, R11.2.
-        5. Patch the EXACT existing event via ``_with_calendar_token`` (401 →
-           refresh → retry once); a new event is never created — R7.1.
+        5. Patch the EXACT existing event via ``_with_org_token`` (401 → refresh → retry once); a new event is never created — R7.1.
         6. On success, update only the stored ``start`` and timezone, leaving the
            ``calendar_event_id`` unchanged, then commit — R7.1, R7.3.
         7. On patch failure, roll back any staged change, write a failure audit
@@ -1380,7 +1358,7 @@ class CandidateService:
             ValueError: If a request field violates its bounds (mapped to 422).
             CandidateNotFoundError: If the candidate doesn't exist.
             NoInterviewToRescheduleError: If the Candidate has no stored event.
-            CalendarGrantMissingError: If the acting HR user's Calendar grant is
+            CalendarGrantMissingError: If the Organization Google Connection is
                 missing or invalid.
             InterviewerNotFoundError: If any interviewer id has no Employee.
             InterviewerMissingEmailError: If a matched interviewer has no email.
@@ -1401,8 +1379,9 @@ class CandidateService:
         if event_id is None:
             raise NoInterviewToRescheduleError()
 
-        # Step 2: assert the Calendar grant before any Calendar call (R9.2, R9.3).
-        await self._assert_calendar_grant(user_id)
+        # Step 2: ensure org connection is active before any Calendar call (R9.2, R9.3).
+        await self._ensure_org_connection_active()
+        calendar_id = await self._resolve_org_calendar_id()
 
         # Step 3: validate the request fields (re-asserted for direct-call safety).
         self._validate_schedule_request(
@@ -1427,6 +1406,7 @@ class CandidateService:
             start=start_resolved,
             end=end_resolved,
             timezone=timezone,
+            calendar_id=calendar_id,
             attendee_emails=tuple(attendee_emails),
             request_meet_link=False,
         )
@@ -1581,8 +1561,7 @@ class CandidateService:
         calendar_port = self._calendar_port
 
         try:
-            await self._with_calendar_token(
-                user_id,
+            await self._with_org_token(
                 lambda token: (
                     calendar_port.patch_event(token, event_id, spec, if_match)
                     if if_match is not None
@@ -1592,6 +1571,7 @@ class CandidateService:
         except httpx.HTTPStatusError as exc:
             await self._session.rollback()
             if exc.response.status_code == 412:
+
                 await self._capture_calendar_conflict(
                     user_id=user_id,
                     candidate_id=candidate_id,
@@ -1644,32 +1624,74 @@ class CandidateService:
             )
             await self._session.commit()
             raise CalendarEventUpdateFailedError() from exc
+    # ─── Organization Google Connection helpers ─────────────────────
 
-    async def _assert_calendar_grant(self, user_id: UUID) -> None:
-        """Assert the acting HR user has a valid Google Calendar grant.
+    async def _ensure_org_connection_active(self) -> None:
+        """Assert the Organization Google Connection is active.
 
-        Reuses ``OAuthService.determine_grant_status`` against the user's
-        stored ``OAuthGrant.scopes``. Raises before any Calendar call when the
-        grant is missing or ``calendar_grant_valid`` is false, directing the
-        user to re-consent to Calendar access (R9).
-
-        Args:
-            user_id: The acting HR user's identifier.
+        Checks that the organization has a connected Google account with
+        valid credentials. Raises before any Calendar call when the
+        connection is missing, not connected, or has no stored credentials.
 
         Raises:
-            CalendarGrantMissingError: If no grant exists or the Calendar scope
-                is not currently granted.
+            RuntimeError: If ``connection_repo`` is not configured.
+            CalendarGrantMissingError: If no connection exists, the status
+                is not ``"connected"``, or the connection lacks credentials.
         """
-        if self._oauth_grant_repo is None or self._oauth_service is None:
-            raise RuntimeError("Calendar grant dependencies are not configured")
+        if self._connection_repo is None:
+            raise RuntimeError("Organization connection repository is not configured")
 
-        grant = await self._oauth_grant_repo.get_by_user_id(user_id)
-        if grant is None:
+        connection = await self._connection_repo.get_singleton()
+        if connection is None:
+            raise CalendarGrantMissingError()
+        if connection.status != "connected":
+            raise CalendarGrantMissingError()
+        if not connection.access_token_enc:
             raise CalendarGrantMissingError()
 
-        grant_status = self._oauth_service.determine_grant_status(grant.scopes)
-        if not grant_status.calendar_grant_valid:
-            raise CalendarGrantMissingError()
+    async def _resolve_org_calendar_id(self) -> str:
+        """Return the Organization's selected calendar id, falling back to ``"primary"``.
+
+        Returns the ``selected_calendar_id`` from the active connection or
+        ``"primary"`` when no explicit calendar has been selected.
+
+        Returns:
+            The ``selected_calendar_id`` from the connection, or ``"primary"``.
+
+        Raises:
+            RuntimeError: If ``connection_repo`` is not configured.
+            CalendarGrantMissingError: If no connection or the connection is
+                not active.
+        """
+        if self._connection_repo is None:
+            raise RuntimeError("Organization connection repository is not configured")
+
+        connection = await self._connection_repo.get_singleton()
+        if connection is None or connection.status != "connected":
+            raise CalendarGrantMissingError(
+                message="Organization Google Connection is not active"
+            )
+        if not connection.selected_calendar_id:
+            raise CalendarGrantMissingError(
+                message="No recruitment calendar selected; "
+                "select a calendar in Organization settings first"
+            )
+        return connection.selected_calendar_id
+
+    async def _delete_calendar_event(
+        self, token: str, event_id: str, calendar_id: str
+    ) -> None:
+        if self._calendar_port is None:
+            raise RuntimeError("Calendar port is not configured")
+        await self._calendar_port.delete_event(token, event_id, calendar_id)
+
+    async def _get_calendar_event(
+        self, token: str, event_id: str, calendar_id: str
+    ) -> CalendarEvent:
+        if self._calendar_port is None:
+            raise RuntimeError("Calendar port is not configured")
+        return await self._calendar_port.get_event(token, event_id, calendar_id)
+
 
     async def _resolve_interviewers(
         self, interviewer_ids: list[UUID]
@@ -1767,7 +1789,7 @@ class CandidateService:
           behavior for callers constructed without Calendar wiring.
         - When the Candidate has no stored ``calendar_event_id``, make no
           Calendar call (R8.3).
-        - Otherwise delete the EXACT stored event via ``_with_calendar_token``.
+        - Otherwise delete the EXACT stored event via ``_with_org_token``.
           On success, write an ``interview_event_cancelled`` audit entry
           recording the acting HR user, the Candidate id, the cancelled
           ``calendar_event_id``, and the trigger (R12.3). On any failure, swallow
@@ -1790,14 +1812,12 @@ class CandidateService:
             # No interview event to cancel (R8.3).
             return
 
-        calendar_port = self._calendar_port
-        user_id = self._user_id
-
         try:
-            await self._with_calendar_token(
-                user_id,
-                lambda token: calendar_port.delete_event(token, event_id),
+            calendar_id = await self._resolve_org_calendar_id()
+            await self._with_org_token(
+                lambda token: self._delete_calendar_event(token, event_id, calendar_id),
             )
+
             # Update corresponding Interview status to cancelled on success
             interview = await self._get_interview_by_event_id(candidate.id, event_id)
             if interview:
@@ -1858,20 +1878,18 @@ class CandidateService:
         )
         await self._session.commit()
 
-    async def _with_calendar_token(
+    async def _with_org_token(
         self,
-        user_id: UUID,
         fn: Callable[[str], Awaitable[_CalendarResultT]],
     ) -> _CalendarResultT:
-        """Run a Calendar adapter call, refreshing the token once on 401.
+        """Run a Calendar adapter call with the org connection's access token.
 
-        Decrypts the acting HR user's stored access token and invokes ``fn``
-        with it. If the adapter raises an ``httpx`` ``401``, the token is
-        refreshed via ``OAuthService``/``OAuthGrantRepository`` and ``fn`` is
-        retried exactly once, mirroring the Gmail ``SendService`` pattern.
+        Fetches the Organization Google Connection singleton, decrypts the
+        stored access token, and invokes ``fn`` with it. If the adapter raises
+        an ``httpx`` ``401``, the token is refreshed via the connection's
+        stored refresh token and ``fn`` is retried exactly once.
 
         Args:
-            user_id: The acting HR user's identifier.
             fn: An async callable that performs the adapter call given a valid
                 access token.
 
@@ -1879,28 +1897,112 @@ class CandidateService:
             The result of the adapter call.
 
         Raises:
-            CalendarGrantMissingError: If no grant exists or the token refresh
-                fails (the grant was revoked).
+            RuntimeError: If ``connection_repo`` or ``crypto`` is not configured.
+            CalendarGrantMissingError: If no connection exists or the token
+                refresh fails (the connection was revoked).
             httpx.HTTPStatusError: For non-401 HTTP errors from the adapter.
         """
-        if self._oauth_grant_repo is None or self._crypto is None or self._oauth_service is None:
-            raise RuntimeError("Calendar token dependencies are not configured")
+        if self._connection_repo is None or self._crypto is None:
+            raise RuntimeError("Organization connection dependencies are not configured")
 
-        grant = await self._oauth_grant_repo.get_by_user_id(user_id)
-        if grant is None:
+        connection = await self._connection_repo.get_singleton()
+        if connection is None or connection.status != "connected" or not connection.access_token_enc:
             raise CalendarGrantMissingError()
 
-        access_token = self._crypto.decrypt(grant.access_token_enc)
+        access_token = self._crypto.decrypt(connection.access_token_enc)
 
         try:
             return await fn(access_token)
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code != 401:
                 raise
-            tokens = await self._oauth_service.refresh_google_token(user_id)
-            if tokens is None:
-                raise CalendarGrantMissingError() from exc
-            return await fn(tokens.access_token)
+            new_token = await self._refresh_org_token(connection)
+            return await fn(new_token)
+
+    async def _refresh_org_token(self, connection: Any) -> str:
+        """Refresh the org connection's access token via Google's token endpoint.
+
+        Args:
+            connection: The ``OrganizationGoogleConnection`` singleton with
+                stored refresh token.
+
+        Returns:
+            The new decrypted access token string.
+
+        Raises:
+            CalendarGrantMissingError: If refresh fails.
+        """
+        if self._crypto is None:
+            raise RuntimeError("Crypto dependency is not configured")
+
+        if not connection.refresh_token_enc:
+            raise CalendarGrantMissingError()
+
+        refresh_token = self._crypto.decrypt(connection.refresh_token_enc)
+
+        # Look up OAuth config from DB or fall back to env.
+        from src.modules.identity.infrastructure.oauth_config_repository import (
+            OAuthConfigRepository,
+        )
+
+        oauth_config_repo = OAuthConfigRepository(self._session)
+        oauth_config = await oauth_config_repo.get_active("google")
+        if oauth_config is not None:
+            client_id = oauth_config.client_id
+            client_secret = self._crypto.decrypt(oauth_config.client_secret_enc)
+        else:
+            client_id = os.environ.get("AUTH_GOOGLE_CLIENT_ID", "")
+            client_secret = os.environ.get("AUTH_GOOGLE_CLIENT_SECRET", "")
+
+        GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                GOOGLE_TOKEN_URL,
+                data={
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "refresh_token": refresh_token,
+                    "grant_type": "refresh_token",
+                },
+            )
+            if response.status_code != 200:
+                # Only mark reauthorization on auth-level failures (e.g. revoked/
+                # invalid grant). Transient 5xx errors should remain retriable.
+                if 400 <= response.status_code < 500:
+                    try:
+                        error_body = response.json()
+                        error_str = error_body.get("error", "")
+                    except Exception:
+                        error_str = ""
+                    is_auth_failure = error_str in (
+                        "invalid_grant", "invalid_client", "unauthorized_client",
+                        "access_denied", "unsupported_grant_type",
+                    )
+                    if is_auth_failure:
+                        from src.modules.identity.domain.entities import OrganizationGoogleConnection
+
+                        if isinstance(connection, OrganizationGoogleConnection):
+                            connection.status = "reauthorization_required"
+                            connection.access_token_enc = None
+                            connection.refresh_token_enc = None
+                            self._session.add(connection)
+                            await self._session.flush()
+                raise CalendarGrantMissingError()
+            data = response.json()
+            new_access_token: str = data["access_token"]
+            expires_in: int = data.get("expires_in", 3600)
+
+        # Encrypt and store the new access token on the connection.
+        from datetime import UTC, datetime, timedelta
+        from src.modules.identity.domain.entities import OrganizationGoogleConnection
+
+        if isinstance(connection, OrganizationGoogleConnection):
+            connection.access_token_enc = self._crypto.encrypt(new_access_token)
+            connection.token_expires_at = datetime.now(UTC) + timedelta(seconds=expires_in)
+            self._session.add(connection)
+            await self._session.flush()
+
+        return new_access_token
 
     async def send_email_to_candidate(
         self,
@@ -1975,10 +2077,10 @@ class CandidateService:
         spec: CalendarEventSpec,
     ) -> CalendarEvent:
         try:
-            return await self._with_calendar_token(
-                user_id,
+            return await self._with_org_token(
                 lambda token: calendar_port.create_event(token, spec),
             )
+
         except Exception as exc:
             await self._session.rollback()
             await log_audit(
@@ -2187,7 +2289,7 @@ class CandidateService:
         Steps:
         1. Validate request fields.
         2. Load the Candidate.
-        3. Assert Calendar grant.
+        3. Ensure org connection is active.
         4. Resolve employee interviewers and their emails.
         5. Validate external participant emails.
         6. Build the attendee list (candidate + employees + externals).
@@ -2215,7 +2317,7 @@ class CandidateService:
         Raises:
             ValueError: If request fields violate bounds.
             CandidateNotFoundError: If the candidate doesn't exist.
-            CalendarGrantMissingError: If Calendar grant is missing.
+            CalendarGrantMissingError: If the Organization Google Connection is missing or invalid.
             InterviewerNotFoundError: If any interviewer id has no Employee.
             InterviewerMissingEmailError: If a matched interviewer has no email.
             CalendarEventCreateFailedError: If Calendar event creation fails.
@@ -2259,8 +2361,8 @@ class CandidateService:
         if not self._EMAIL_PATTERN_INTERVIEW.match(candidate_email):
             raise ValueError(f"Candidate email is invalid: {candidate.email!r}")
 
-        # Step 3: assert Calendar grant.
-        await self._assert_calendar_grant(user_id)
+        # Step 3: ensure org connection is active.
+        await self._ensure_org_connection_active()
 
         # Step 4: resolve employee interviewers.
         resolved: list[tuple[Employee, str]] = []
@@ -2298,15 +2400,7 @@ class CandidateService:
         attendee_emails = [e.strip() for e in attendee_emails if e and e.strip()]
 
         # Step 7: resolve calendar_id from Organization Google Connection.
-        calendar_id = "primary"
-        from src.modules.identity.domain.entities import OrganizationGoogleConnection
-
-        selected_calendar = await self._session.execute(
-            select(OrganizationGoogleConnection.selected_calendar_id).limit(1)
-        )
-        selected_calendar_id = selected_calendar.scalar_one_or_none()
-        if selected_calendar_id:
-            calendar_id = selected_calendar_id
+        calendar_id = await self._resolve_org_calendar_id()
 
         # Step 8: build CalendarEventSpec.
         request_meet = mode == "google_meet"
@@ -2327,10 +2421,10 @@ class CandidateService:
 
         # Step 9: create Calendar event.
         try:
-            event = await self._with_calendar_token(
-                user_id,
+            event = await self._with_org_token(
                 lambda token: calendar_port.create_event(token, spec),
             )
+
         except Exception as exc:
             await self._session.rollback()
             await log_audit(
@@ -2512,9 +2606,9 @@ class CandidateService:
         event_id = interview.calendar_event_id
         if event_id is not None and calendar_port is not None:
             try:
-                await self._with_calendar_token(
-                    user_id,
-                    lambda token: calendar_port.delete_event(token, event_id),
+                calendar_id = await self._resolve_org_calendar_id()
+                await self._with_org_token(
+                    lambda token: self._delete_calendar_event(token, event_id, calendar_id),
                 )
             except Exception as exc:
                 # Check if the event is already gone (404/410) -- treat as success.
@@ -2684,9 +2778,9 @@ class CandidateService:
         # Fetch the remote event snapshot.
         remote_event: CalendarEvent | None = None
         try:
-            remote_event = await self._with_calendar_token(
-                user_id,
-                lambda token: calendar_port.get_event(token, event_id),
+            calendar_id = await self._resolve_org_calendar_id()
+            remote_event = await self._with_org_token(
+                lambda token: self._get_calendar_event(token, event_id, calendar_id),
             )
         except Exception as exc:
             logger.warning(
@@ -2858,21 +2952,21 @@ class CandidateService:
             await self._session.commit()
 
         elif choice == "overwrite_vroom":
-            # Push Vroom's current state to Google.
             if interview is not None:
                 timezone = interview.timezone or "Asia/Ho_Chi_Minh"
+                calendar_id = await self._resolve_org_calendar_id()
                 spec = CalendarEventSpec(
                     summary=f"Interview with {interview.candidate_id}",
                     description=None,
                     start=interview.start_at,
                     end=interview.end_at,
                     timezone=timezone,
+                    calendar_id=calendar_id,
                     attendee_emails=(),
                     request_meet_link=False,
                 )
                 try:
-                    result_event = await self._with_calendar_token(
-                        acting_user_id,
+                    result_event = await self._with_org_token(
                         lambda token: calendar_port.patch_event(
                             token,
                             conflict.calendar_event_id,

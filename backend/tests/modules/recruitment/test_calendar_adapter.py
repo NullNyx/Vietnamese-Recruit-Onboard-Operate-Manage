@@ -84,6 +84,7 @@ def _make_spec(duration_minutes: int = 60, *, request_meet_link: bool = True) ->
         end=end,
         timezone=_TZ_NAME,
         attendee_emails=("candidate@example.com", "interviewer@example.com"),
+        calendar_id="recruitment@company.vn",
         request_meet_link=request_meet_link,
     )
 
@@ -147,7 +148,7 @@ class TestCreateEventRequestConstruction:
         await adapter.create_event(_ACCESS_TOKEN, _make_spec())
 
         captured = recorder.by_method["POST"]
-        assert captured.path == "/calendar/v3/calendars/primary/events"
+        assert captured.path == "/calendar/v3/calendars/recruitment@company.vn/events"
         assert captured.params["conferenceDataVersion"] == "1"
         assert captured.body is not None
         conference_data = captured.body["conferenceData"]
@@ -231,7 +232,7 @@ class TestPatchEventRequestConstruction:
         await adapter.patch_event(_ACCESS_TOKEN, _EVENT_ID, _make_spec())
 
         captured = recorder.by_method["PATCH"]
-        assert captured.path == f"/calendar/v3/calendars/primary/events/{_EVENT_ID}"
+        assert captured.path == f"/calendar/v3/calendars/recruitment@company.vn/events/{_EVENT_ID}"
         assert captured.body is not None
         assert "conferenceData" not in captured.body
 
@@ -291,7 +292,7 @@ class TestSendUpdatesOnAllOperations:
         spec = _make_spec()
         await adapter.create_event(_ACCESS_TOKEN, spec)
         await adapter.patch_event(_ACCESS_TOKEN, _EVENT_ID, spec)
-        await adapter.delete_event(_ACCESS_TOKEN, _EVENT_ID)
+        await adapter.delete_event(_ACCESS_TOKEN, _EVENT_ID, calendar_id="cal-001")
 
         assert recorder.by_method["POST"].params["sendUpdates"] == "all"
         assert recorder.by_method["PATCH"].params["sendUpdates"] == "all"
@@ -343,7 +344,7 @@ class TestUnauthorizedReRaise:
 
         adapter = make_adapter(handler)
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
-            await adapter.delete_event(_ACCESS_TOKEN, _EVENT_ID)
+            await adapter.delete_event(_ACCESS_TOKEN, _EVENT_ID, calendar_id="recruitment@company.vn")
         assert exc_info.value.response.status_code == 401
 
 
@@ -382,7 +383,7 @@ class TestDeleteIdempotency:
 
         adapter = make_adapter(handler)
         # Should not raise: an already-gone event is an idempotent success.
-        await adapter.delete_event(_ACCESS_TOKEN, _EVENT_ID)
+        await adapter.delete_event(_ACCESS_TOKEN, _EVENT_ID, calendar_id="recruitment@company.vn")
 
     async def test_delete_treats_410_as_success(self, make_adapter: AdapterFactory) -> None:
         """A 410 (event already deleted) is treated as a successful cancellation."""
@@ -392,7 +393,7 @@ class TestDeleteIdempotency:
 
         adapter = make_adapter(handler)
         # Should not raise.
-        await adapter.delete_event(_ACCESS_TOKEN, _EVENT_ID)
+        await adapter.delete_event(_ACCESS_TOKEN, _EVENT_ID, calendar_id="recruitment@company.vn")
 
     async def test_delete_2xx_succeeds(self, make_adapter: AdapterFactory) -> None:
         """A normal 204 delete succeeds without raising."""
@@ -402,4 +403,4 @@ class TestDeleteIdempotency:
 
         adapter = make_adapter(handler)
         # Should not raise.
-        await adapter.delete_event(_ACCESS_TOKEN, _EVENT_ID)
+        await adapter.delete_event(_ACCESS_TOKEN, _EVENT_ID, calendar_id="recruitment@company.vn")

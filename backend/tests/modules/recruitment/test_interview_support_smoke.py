@@ -61,6 +61,7 @@ def _spec(
         start=start,
         end=start.replace(hour=10),
         timezone="Asia/Ho_Chi_Minh",
+        calendar_id="recruitment@company.vn",
         attendee_emails=attendees,
         request_meet_link=meet,
     )
@@ -122,7 +123,7 @@ class TestFakeCalendarPort:
         patched = await port.patch_event("t", "evt-99", _spec())
         assert patched.event_id == "evt-99"
 
-        await port.delete_event("t", "evt-99")
+        await port.delete_event("t", "evt-99", "recruitment@company.vn")
         assert port.delete_calls[0].event_id == "evt-99"
 
 
@@ -178,39 +179,36 @@ class TestGrantAndTokenSeams:
     """Identity seams drive the grant guard and the 401-refresh path."""
 
     async def test_valid_grant_passes_and_missing_scope_blocks(self) -> None:
-        """_assert_calendar_grant passes with the scope and blocks without it."""
-        valid = build_calendar_harness(
-            candidates=[make_candidate()], granted_scopes=(CALENDAR_SCOPE,)
+        """_ensure_org_connection_active passes with a valid org connection."""
+        valid = build_calendar_harness(candidates=[make_candidate()])
+        await valid.service._ensure_org_connection_active()  # no raise
+
+        # When connection_repo is not set, it must raise.
+        no_repo = build_calendar_harness(
+            candidates=[make_candidate()], connection_repo=None
         )
-        await valid.service._assert_calendar_grant(valid.user_id)  # no raise
+        if hasattr(no_repo.service, "_connection_repo"):
+            no_repo.service._connection_repo = None
+        with pytest.raises(RuntimeError, match="not configured"):
+            await no_repo.service._ensure_org_connection_active()
 
-        missing = build_calendar_harness(candidates=[make_candidate()], granted_scopes=())
-        with pytest.raises(CalendarGrantMissingError):
-            await missing.service._assert_calendar_grant(missing.user_id)
+    async def test_connection_repo_active_grant_passes(self) -> None:
+        """A valid org connection with selected calendar passes the check."""
+        valid = build_calendar_harness(candidates=[make_candidate()])
+        await valid.service._ensure_org_connection_active()  # no raise
 
-    async def test_missing_grant_blocks(self) -> None:
-        """A None grant is treated as missing."""
-        harness = build_calendar_harness(candidates=[make_candidate()], grant=None)
-        with pytest.raises(CalendarGrantMissingError):
-            await harness.service._assert_calendar_grant(harness.user_id)
-
-    async def test_with_calendar_token_decrypts_and_passes_token(self) -> None:
-        """_with_calendar_token decrypts the stored token before the adapter call."""
-        user_id = make_candidate().id  # any uuid
-        grant = make_oauth_grant(user_id=user_id, access_token_enc="enc:plain-token")
-        harness = build_calendar_harness(
-            candidates=[make_candidate()], grant=grant, user_id=user_id
-        )
-
+    async def test_with_org_token_decrypts_and_passes_token(self) -> None:
+        """_with_org_token decrypts the org token before the adapter call."""
+        harness = build_calendar_harness(candidates=[make_candidate()])
         seen: list[str] = []
 
         async def _call(token: str) -> str:
             seen.append(token)
             return token
 
-        result = await harness.service._with_calendar_token(user_id, _call)
-        assert result == "plain-token"
-        assert seen == ["plain-token"]
+        result = await harness.service._with_org_token(_call)
+        assert result == "test-access-token"
+        assert seen == ["test-access-token"]
 
 
 class TestSpyAuditSink:

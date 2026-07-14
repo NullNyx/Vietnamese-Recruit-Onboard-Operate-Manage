@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import Column, DateTime, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlmodel import Field, SQLModel
 
@@ -230,17 +230,27 @@ class RecruitmentAuditLog(SQLModel, table=True):
 class CalendarSyncCursor(SQLModel, table=True):
     """Tracks the sync token for incremental calendar synchronization.
 
-    One cursor per Organization (singleton). The sync_token is used with
-    Google Calendar's events.list API to fetch only events newer than the
-    last successful sync. A 410 GONE from Google clears the token and
-    triggers a bounded full sync.
+    One cursor per (Organization, selected_calendar_id) pair. The
+    sync_token is used with Google Calendar's events.list API to fetch
+    only events newer than the last successful sync. A 410 GONE from
+    Google clears the token and triggers a bounded full sync.
     """
 
     __tablename__ = "calendar_sync_cursors"
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_singleton_key",
+            "calendar_id",
+            name="uq_org_calendar_sync_cursor",
+        ),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     organization_singleton_key: str = Field(
-        default="default", max_length=32, unique=True, nullable=False
+        default="default", max_length=32, nullable=False
+    )
+    calendar_id: str = Field(
+        max_length=255, nullable=False, index=True
     )
     sync_token: str | None = Field(default=None, max_length=1024)
     page_token: str | None = Field(default=None, max_length=1024)
@@ -253,7 +263,6 @@ class CalendarSyncCursor(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-
 
 class OrganizationSettings(SQLModel, table=True):
     """Single-row settings for the Organization (the company deployment).

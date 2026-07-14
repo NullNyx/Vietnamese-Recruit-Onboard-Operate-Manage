@@ -89,6 +89,7 @@ export interface GoogleWorkspaceConnection {
   email: string | null;
   has_secret: boolean;
   redirect_url: string | null;
+  selected_calendar_id: string | null;
 }
 
 export type UserRole = 'admin' | 'user';
@@ -447,6 +448,33 @@ export async function completeGoogleWorkspaceCallback(code: string, state: strin
 export async function disconnectGoogleWorkspaceConnection(): Promise<GoogleWorkspaceConnection> {
   const res = await fetch('/api/auth/organization-google-connection', { method: 'DELETE' });
   return handleResponse<GoogleWorkspaceConnection>(res);
+}
+
+export interface CalendarEntry {
+  id: string;
+  summary: string;
+  description: string | null;
+  primary: boolean;
+  access_role: string;
+}
+
+export interface CalendarListResponse {
+  calendars: CalendarEntry[];
+  selected_calendar_id: string | null;
+}
+
+export async function getGoogleWorkspaceCalendars(): Promise<CalendarListResponse> {
+  const res = await fetch('/api/auth/organization-google-connection/calendars');
+  return handleResponse<CalendarListResponse>(res);
+}
+
+export async function selectGoogleWorkspaceCalendar(calendarId: string): Promise<void> {
+  const res = await fetch('/api/auth/organization-google-connection/selected-calendar', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ calendar_id: calendarId }),
+  });
+  if (!res.ok) throw new Error('Failed to select calendar');
 }
 
 // ---------------------------------------------------------------------------

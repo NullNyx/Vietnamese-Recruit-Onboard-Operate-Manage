@@ -490,6 +490,7 @@ class TestApplyChanges:
         service = CalendarSyncService(
             adapter=AsyncMock(),
             sync_cursor_repo=FakeSyncCursorRepo(),
+            calendar_id=_CALENDAR_ID,
         )
         changes = SyncEventChanges(
             events=(
@@ -515,6 +516,7 @@ class TestApplyChanges:
         service = CalendarSyncService(
             adapter=AsyncMock(),
             sync_cursor_repo=FakeSyncCursorRepo(),
+            calendar_id=_CALENDAR_ID,
         )
         changes = SyncEventChanges(
             events=(
@@ -541,6 +543,7 @@ class TestApplyChanges:
         service = CalendarSyncService(
             adapter=AsyncMock(),
             sync_cursor_repo=FakeSyncCursorRepo(),
+            calendar_id=_CALENDAR_ID,
         )
         changes = SyncEventChanges(
             events=(
@@ -569,6 +572,7 @@ class TestApplyChanges:
         service = CalendarSyncService(
             adapter=AsyncMock(),
             sync_cursor_repo=FakeSyncCursorRepo(),
+            calendar_id=_CALENDAR_ID,
         )
         changes = SyncEventChanges(
             events=(
@@ -611,6 +615,7 @@ class TestApplyChanges:
         service = CalendarSyncService(
             adapter=AsyncMock(),
             sync_cursor_repo=FakeSyncCursorRepo(),
+            calendar_id=_CALENDAR_ID,
         )
         changes = SyncEventChanges(
             events=(
