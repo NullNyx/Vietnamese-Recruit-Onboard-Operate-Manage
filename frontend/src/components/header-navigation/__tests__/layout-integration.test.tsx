@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 
 // --- Mocks ---
@@ -295,6 +295,18 @@ describe("Layout Integration: HeaderNavigation", () => {
       // Should NOT render any nav groups
       expect(screen.queryByText("Nhân sự")).not.toBeInTheDocument();
       expect(screen.queryByText("Hồ sơ")).not.toBeInTheDocument();
+      });
+
+      it("does not show an unread badge and opens an observable empty state", async () => {
+        mockUseCurrentUser.mockReturnValue({
+          user: adminUser,
+          loading: false,
+          error: null,
+        });
+        render(React.createElement(HeaderNavigation));
+        expect(screen.queryByText("3")).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: "Thông báo" }));
+        expect(await screen.findByText("Bạn không có thông báo mới.")).toBeInTheDocument();
+      });
     });
   });
-});

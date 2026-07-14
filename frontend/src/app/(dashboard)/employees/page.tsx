@@ -50,6 +50,7 @@ export default function EmployeesPage() {
     data: employeesData,
     isLoading,
     error,
+    refetch,
   } = useEmployees({
     page,
     page_size: pageSize,
@@ -131,8 +132,14 @@ export default function EmployeesPage() {
         columns={columns}
         data={rows}
         loading={isLoading}
-        error={error?.message ?? null}
-        pagination={{ page, pageSize, total: employeesData?.total ?? 0 }}
+            error={error?.message ?? null}
+            onRetry={() => void refetch()}
+            emptyDataAction={
+              <Link href="/employees/new">
+                <Button variant="outline" size="sm">Thêm nhân viên</Button>
+              </Link>
+            }
+            pagination={{ page, pageSize, total: employeesData?.total ?? 0 }}
         searchPlaceholder="Tìm kiếm theo tên hoặc email..."
         onSearch={handleSearch}
         onPageChange={handlePageChange}

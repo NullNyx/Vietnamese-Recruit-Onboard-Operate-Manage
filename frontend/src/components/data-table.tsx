@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useState, useEffect } from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -38,6 +38,7 @@ export interface DataTableProps<T> {
   data: T[];
   loading?: boolean;
   error?: string | null;
+  onRetry?: () => void;
   pagination?: {
     page: number;
     pageSize: number;
@@ -48,6 +49,7 @@ export interface DataTableProps<T> {
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
   onRowClick?: (row: T) => void;
+  emptyDataAction?: React.ReactNode;
   toolbar?: React.ReactNode;
 }
 
@@ -56,12 +58,14 @@ export function DataTable<T extends Record<string, unknown>>({
   data,
   loading = false,
   error = null,
+  onRetry,
   pagination,
   searchPlaceholder = "Tìm kiếm...",
   onSearch,
   onPageChange,
   onPageSizeChange,
   onRowClick,
+  emptyDataAction,
   toolbar,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -111,11 +115,16 @@ export function DataTable<T extends Record<string, unknown>>({
             {/* Error State */}
             {error && (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center text-destructive"
-                >
-                  Lỗi: {error}
+                <TableCell colSpan={columns.length} className="h-32 text-center">
+                  <div className="flex flex-col items-center gap-2 text-destructive">
+                    <span>Lỗi tải dữ liệu: {error}</span>
+                    {onRetry && (
+                      <Button variant="outline" size="sm" onClick={onRetry}>
+                        <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Thử lại
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -138,11 +147,20 @@ export function DataTable<T extends Record<string, unknown>>({
             {/* Empty State */}
             {!error && !loading && data.length === 0 && (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  Không có dữ liệu
+                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                  {searchQuery ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <span>Không tìm thấy dữ liệu phù hợp với bộ lọc hiện tại.</span>
+                      <Button variant="link" size="sm" onClick={() => setSearchQuery("")}>
+                        Xóa bộ lọc
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <span>Chưa có bản ghi nào trong phạm vi này.</span>
+                      {emptyDataAction}
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             )}
@@ -174,11 +192,17 @@ export function DataTable<T extends Record<string, unknown>>({
       {/* Mobile card view */}
       <div className="space-y-3 md:hidden">
         {/* Error State */}
-        {error && (
-          <div className="rounded-md border p-6 text-center text-destructive">
-            Lỗi: {error}
-          </div>
-        )}
+          {error && (
+            <div className="flex flex-col items-center gap-3 rounded-md border p-6 text-center text-destructive">
+              <span>Lỗi tải dữ liệu: {error}</span>
+              {onRetry && (
+                <Button variant="outline" size="sm" onClick={onRetry}>
+                  <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Thử lại
+                </Button>
+              )}
+            </div>
+          )
 
         {/* Loading State */}
         {!error && loading &&
@@ -196,11 +220,23 @@ export function DataTable<T extends Record<string, unknown>>({
           ))}
 
         {/* Empty State */}
-        {!error && !loading && data.length === 0 && (
-          <div className="rounded-md border p-6 text-center text-muted-foreground">
-            Không có dữ liệu
-          </div>
-        )}
+          {!error && !loading && data.length === 0 && (
+            <div className="rounded-md border p-6 text-center text-muted-foreground">
+              {searchQuery ? (
+                <div className="flex flex-col items-center gap-2">
+                  <span>Không tìm thấy dữ liệu phù hợp với bộ lọc hiện tại.</span>
+                  <Button variant="link" size="sm" onClick={() => setSearchQuery("")}>
+                    Xóa bộ lọc
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <span>Chưa có bản ghi nào trong phạm vi này.</span>
+                  {emptyDataAction}
+                </div>
+              )}
+            </div>
+          )}
 
         {/* Data Cards */}
         {!error && !loading &&

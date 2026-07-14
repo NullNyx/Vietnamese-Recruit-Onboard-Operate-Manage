@@ -2,6 +2,8 @@
 
 import { Search, Bell, LogOut, Settings } from "lucide-react";
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -59,18 +61,22 @@ export function HeaderUtilities({
         </kbd>
       </Button>
 
-      {/* Notifications indicator */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="relative"
-        aria-label="Thông báo"
-      >
+      {/* Notifications: no badge until unread data is backed by a real source. */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="Thông báo">
             <Bell className="h-4 w-4" aria-hidden="true" />
-        <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
-          3
-        </span>
-      </Button>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-80">
+          <div className="space-y-1">
+            <h2 className="text-sm font-semibold">Thông báo</h2>
+            <p className="text-sm text-muted-foreground">
+              Bạn không có thông báo mới.
+            </p>
+          </div>
+        </PopoverContent>
+      </Popover>
 
       {/* Account menu */}
       <DropdownMenu>

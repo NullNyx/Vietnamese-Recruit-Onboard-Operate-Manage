@@ -20,6 +20,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDashboardStats } from "@/hooks/queries";
 import { RuntimeHealthPanel } from "@/components/admin/runtime-health-panel";
 import { StatCard } from "@/components/stat-card";
+import { Button } from "@/components/ui/button";
 
 // ─── Quick Action ───────────────────────────────────────────────────────────
 function QuickAction({
@@ -120,7 +121,12 @@ function formatDate() {
 
 // ─── Main Dashboard ─────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const { data: stats, isLoading: loading } = useDashboardStats();
+  const {
+    data: stats,
+    isLoading: loading,
+    isError,
+    refetch,
+  } = useDashboardStats();
   const { user } = useCurrentUser();
   const router = useRouter();
 
@@ -154,26 +160,36 @@ export default function DashboardPage() {
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
           Tổng quan
         </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <StatCard
-            title="Nhân viên"
-            value={stats?.employees ?? 0}
-            icon={Users}
-            loading={loading}
-          />
-          <StatCard
-            title="Phòng ban"
-            value={stats?.departments ?? 0}
-            icon={Building2}
-            loading={loading}
-          />
-          <StatCard
-            title="Chức vụ"
-            value={stats?.positions ?? 0}
-            icon={Briefcase}
-            loading={loading}
-          />
-        </div>
+        {isError ? (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-sm">
+            <p className="font-medium text-destructive">Không thể tải số liệu tổng quan.</p>
+            <p className="mt-1 text-muted-foreground">Kiểm tra kết nối rồi thử lại.</p>
+            <Button className="mt-4" variant="outline" size="sm" onClick={() => void refetch()}>
+              Thử lại
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <StatCard
+              title="Nhân viên"
+              value={stats?.employees ?? 0}
+              icon={Users}
+              loading={loading}
+            />
+            <StatCard
+              title="Phòng ban"
+              value={stats?.departments ?? 0}
+              icon={Building2}
+              loading={loading}
+            />
+            <StatCard
+              title="Chức vụ"
+              value={stats?.positions ?? 0}
+              icon={Briefcase}
+              loading={loading}
+            />
+          </div>
+        )}
         </div>
 
         {user?.role === "admin" && <RuntimeHealthPanel />}
