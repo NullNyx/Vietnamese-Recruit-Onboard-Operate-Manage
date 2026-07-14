@@ -192,7 +192,7 @@ class TestPollEmails:
 
         assert result == 0
         gmail_adapter.get_latest_history_id.assert_called_once_with("test_access_token")
-        sync_cursor_repo.upsert_cursor.assert_called_once_with(user_id=user_id, history_id="55555")
+        sync_cursor_repo.upsert_cursor.assert_called_once_with("55555")
         email_repo.batch_upsert.assert_not_called()
 
     async def test_no_new_emails_returns_zero(
@@ -242,6 +242,34 @@ class TestPollEmails:
             start_history_id="99999",
             max_results=100,
         )
+
+    async def test_history_404_clears_cursor_before_bounded_recovery(
+        self,
+        sync_service: EmailSyncService,
+        sync_cursor_repo: AsyncMock,
+        gmail_adapter: AsyncMock,
+        email_repo: AsyncMock,
+        user_id,
+    ) -> None:
+        """Expired history must reset the org cursor before bounded recovery."""
+        cursor = MagicMock(spec=SyncCursor)
+        cursor.history_id = "expired"
+        sync_cursor_repo.get_cursor.return_value = cursor
+        response_404 = MagicMock(status_code=404)
+        gmail_adapter.fetch_history.side_effect = httpx.HTTPStatusError(
+            "history expired", request=MagicMock(), response=response_404
+        )
+        gmail_adapter.fetch_messages.return_value = [_make_message_metadata(history_id="200000")]
+        email_repo.batch_upsert.return_value = 1
+
+        result = await sync_service.poll_emails(user_id)
+
+        assert result == 1
+        sync_cursor_repo.clear_cursor.assert_awaited_once_with()
+        email_repo.clear_incomplete_ingestion_state.assert_awaited_once_with()
+        gmail_adapter.fetch_messages.assert_awaited_once()
+        assert gmail_adapter.fetch_messages.call_args.kwargs["query"].startswith("after:")
+        sync_cursor_repo.upsert_cursor.assert_awaited_once_with("200000")
 
     async def test_token_refresh_on_401(
         self,
@@ -494,7 +522,7 @@ class TestFetchAndPersist:
 
         assert result == 0
         gmail_adapter.get_latest_history_id.assert_called_once_with("token")
-        sync_cursor_repo.upsert_cursor.assert_called_once_with(user_id=user_id, history_id="55555")
+        sync_cursor_repo.upsert_cursor.assert_called_once_with("55555")
 
     async def test_incremental_sync_uses_fetch_history(
         self,
@@ -799,5 +827,5 @@ class TestOrganizationConnectionSync:
 
         assert result == 0
         gmail_adapter.get_latest_history_id.assert_called_once_with("token")
-        sync_cursor_repo.upsert_cursor.assert_called_once_with(user_id=user_id, history_id="88888")
+        sync_cursor_repo.upsert_cursor.assert_called_once_with("88888")
         email_repo.batch_upsert.assert_not_called()

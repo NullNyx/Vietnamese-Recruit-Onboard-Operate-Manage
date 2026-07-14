@@ -91,16 +91,19 @@ class ClassificationRolloutEventRecord(SQLModel, table=True):
 
 
 class SyncCursor(SQLModel, table=True):
-    """Tracks the Gmail history_id for incremental email synchronization.
+    """Tracks the Gmail history_id for the Organization singleton.
 
-    One cursor per user. The history_id is used with Gmail's history.list
-    API to fetch only emails newer than the last successful poll.
+    The history_id is used with Gmail's history.list API to fetch only
+    emails newer than the last successful poll. HR/User identity is not
+    part of cursor ownership.
     """
 
     __tablename__ = "sync_cursors"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(foreign_key="users.id", unique=True, nullable=False)
+    organization_singleton_key: str = Field(
+        default="default", max_length=32, unique=True, nullable=False
+    )
     history_id: str = Field(max_length=50, nullable=False)
     last_poll_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     created_at: datetime = Field(

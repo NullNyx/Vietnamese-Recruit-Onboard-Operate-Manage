@@ -1,9 +1,9 @@
 """ARQ worker configuration for Gmail email polling.
 
-Defines the cron job that periodically fetches new emails for all connected
-Gmail users. Runs every GMAIL_POLL_INTERVAL_SECONDS (default 300 = 5 minutes).
-The worker iterates over all users with valid Gmail OAuth grants, checks their
-connection status, and calls EmailSyncService.poll_emails for each connected user.
+Defines the cron job that periodically fetches new emails for the connected
+Organization Google Connection. Runs every GMAIL_POLL_INTERVAL_SECONDS
+(default 300 = 5 minutes). The worker exits cleanly when the singleton
+connection is absent or not connected.
 
 Usage:
     arq src.modules.gmail.worker.WorkerSettings
@@ -121,16 +121,12 @@ async def poll_gmail_emails(ctx: dict[str, Any]) -> None:
     # Refresh heartbeat so runtime health stays accurate
     await refresh_heartbeat(ctx)
 
-    """ARQ cron job: fetch new emails for all connected Gmail users.
+    """ARQ cron job: fetch new emails for the Organization singleton.
 
-    Iterates over all users with valid Gmail OAuth grants, checks their
-    connection status (skips non-connected users), and calls
-    EmailSyncService.poll_emails for each connected user.
-
-    Exceptions for individual users are caught and logged with stack traces.
-    Gmail polling now uses the singleton Organization Google Connection.
-    If no active connection is found the job exits cleanly.
-    ARQ automatically retries the job at the next scheduled interval.
+    The worker checks the singleton connection status and polls only when it
+    is connected. Exceptions are logged and re-raised for the next interval.
+    Gmail polling uses the Organization Google Connection; HR identity is
+    retained only as the actor for existing email and audit records.
 
     Args:
         ctx: The ARQ worker context dictionary containing shared resources.

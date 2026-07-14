@@ -191,7 +191,7 @@ class EmailSyncService:
             access_token = self._crypto.decrypt(connection.access_token_enc)
 
             connected_user_id = connection.connected_by_user_id or user_id
-            cursor = await self._sync_cursor_repo.get_cursor(connected_user_id)
+            cursor = await self._sync_cursor_repo.get_cursor()
 
             if connection.token_expires_at and connection.token_expires_at <= datetime.now(UTC):
                 new_access_token = await self._handle_connection_token_refresh(
@@ -261,7 +261,7 @@ class EmailSyncService:
             access_token = self._crypto.decrypt(connection.access_token_enc)
 
             connected_user_id = connection.connected_by_user_id or user_id
-            cursor = await self._sync_cursor_repo.get_cursor(connected_user_id)
+            cursor = await self._sync_cursor_repo.get_cursor()
 
             if connection.token_expires_at and connection.token_expires_at <= datetime.now(UTC):
                 new_access_token = await self._handle_connection_token_refresh(
@@ -322,12 +322,10 @@ class EmailSyncService:
         latest_history_id: str | None = None
 
         if cursor is None:
-            # First poll: establish baseline history ID, do not import historical emails
+            # First poll: establish baseline history ID, do not import historical emails.
             latest_history_id = await self._gmail_adapter.get_latest_history_id(access_token)
             if latest_history_id:
-                await self._sync_cursor_repo.upsert_cursor(
-                    user_id=user_id, history_id=latest_history_id
-                )
+                await self._sync_cursor_repo.upsert_cursor(latest_history_id)
             return 0
         else:
             # Incremental sync: fetch since last history_id
@@ -341,9 +339,11 @@ class EmailSyncService:
             except httpx.HTTPStatusError as exc:
                 if exc.response.status_code == 404:
                     logger.warning(
-                        "History ID %s expired/404. Triggering bounded full-sync recovery.",
+                        "History ID %s expired/404. Clearing cursor before bounded recovery.",
                         cursor.history_id,
                     )
+                    await self._sync_cursor_repo.clear_cursor()
+                    await self._email_repo.clear_incomplete_ingestion_state()
                     days_ago = datetime.now(UTC) - timedelta(days=self._settings.initial_sync_days)
                     epoch_seconds = int(days_ago.timestamp())
                     query = f"after:{epoch_seconds}"
@@ -369,11 +369,9 @@ class EmailSyncService:
         messages = [m for m in messages if "INBOX" in (m.label_ids or [])]
 
         if not messages:
-            # No new emails — update cursor timestamp if we have a new history_id
+            # No new emails — update cursor timestamp if we have a new history_id.
             if latest_history_id and cursor is not None:
-                await self._sync_cursor_repo.upsert_cursor(
-                    user_id=user_id, history_id=latest_history_id
-                )
+                await self._sync_cursor_repo.upsert_cursor(latest_history_id)
             return 0
 
         # Convert metadata to EmailMessage entities and persist
@@ -404,11 +402,9 @@ class EmailSyncService:
         if failed_message_ids or persisted_count < len(email_entities):
             return persisted_count
 
-        # Atomic cursor update: update cursor to latest history_id
+        # Atomic cursor update: update cursor to latest history_id.
         if latest_history_id:
-            await self._sync_cursor_repo.upsert_cursor(
-                user_id=user_id, history_id=latest_history_id
-            )
+            await self._sync_cursor_repo.upsert_cursor(latest_history_id)
 
         # Classify newly synced emails (async, non-blocking).
         # Re-query from DB to get session-attached instances, since

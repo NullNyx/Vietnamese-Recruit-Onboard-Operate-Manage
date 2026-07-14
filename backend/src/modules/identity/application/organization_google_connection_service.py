@@ -65,7 +65,7 @@ class OrganizationGoogleConnectionService:
         org_settings_repo: OrganizationSettingsRepository,
         http_client: httpx.AsyncClient,
         sync_cursor_repo: SyncCursorRepository | None = None,
-) -> None:
+    ) -> None:
         self._connection_repo = connection_repo
         self._oauth_config_manager = oauth_config_manager
         self._oauth_grant_repo = oauth_grant_repo
@@ -100,10 +100,8 @@ class OrganizationGoogleConnectionService:
             has_legacy_grants = False
         if not has_legacy_grants:
             return False
-        if self._sync_cursor_repo is not None and isinstance(
-            owner_ids, (list, tuple, set)
-        ):
-            await self._sync_cursor_repo.delete_for_users(list(owner_ids))
+        if self._sync_cursor_repo is not None:
+            await self._sync_cursor_repo.clear_cursor()
 
 
         mark_reauthorization = getattr(
@@ -326,6 +324,8 @@ class OrganizationGoogleConnectionService:
             + timedelta(seconds=int(data.get("expires_in", 3600))),
             connected_by_user_id=hr.id,
         )
+        if self._sync_cursor_repo is not None:
+            await self._sync_cursor_repo.clear_cursor()
         await self._connection_repo.upsert_singleton(connection)
         action_type = AuditActionType.ORG_GOOGLE_CONNECT
         if current.email and current.email != email:
@@ -351,6 +351,8 @@ class OrganizationGoogleConnectionService:
                 )
             except Exception:
                 pass
+        if self._sync_cursor_repo is not None:
+            await self._sync_cursor_repo.clear_cursor()
         await self._connection_repo.disconnect()
         await self._audit_service.log_action(
             admin=hr,

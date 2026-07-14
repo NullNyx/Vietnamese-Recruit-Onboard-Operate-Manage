@@ -136,11 +136,10 @@ def oauth_config_manager() -> AsyncMock:
     )
     return manager
 
+
 @pytest.fixture
 def oauth_grant_repo() -> AsyncMock:
     return AsyncMock()
-
-
 
 
 @pytest.fixture
@@ -179,6 +178,7 @@ def http_client() -> FakeHttpClient:
 @pytest.fixture
 def connection_repo() -> DurableConnectionRepo:
     return DurableConnectionRepo()
+
 
 @pytest.fixture
 def sync_cursor_repo() -> AsyncMock:
@@ -273,11 +273,10 @@ async def test_callback_accepts_google_canonical_email_scope(
     http_client: FakeHttpClient,
 ) -> None:
     assert isinstance(http_client.token, FakeResponse)
-    http_client.token._payload["scope"] = " ".join(
-        scope
-        for scope in REQUIRED_SCOPES
-        if scope != "email"
-    ) + " https://www.googleapis.com/auth/userinfo.email"
+    http_client.token._payload["scope"] = (
+        " ".join(scope for scope in REQUIRED_SCOPES if scope != "email")
+        + " https://www.googleapis.com/auth/userinfo.email"
+    )
     init = await service.initiate(hr_user)
     state = parse_qs(urlparse(init.redirect_url or "").query)["state"][0]
 
@@ -322,6 +321,7 @@ async def test_disconnect_revoke_best_effort(
     )
     await service.disconnect(hr_user)
     assert any(url == GOOGLE_REVOKE_URL for url, _ in http_client.posts)
+    service._sync_cursor_repo.clear_cursor.assert_awaited_once_with()
 
 
 @pytest.mark.asyncio
@@ -355,9 +355,7 @@ async def test_callback_allows_any_verified_email_when_allowed_domains_empty(
     http_client: FakeHttpClient,
 ) -> None:
     org_settings_repo.get_allowed_domains = AsyncMock(return_value=[])
-    http_client.userinfo = FakeResponse(
-        200, {"email": "personal@gmail.com", "sub": "gmail-sub"}
-    )
+    http_client.userinfo = FakeResponse(200, {"email": "personal@gmail.com", "sub": "gmail-sub"})
     init = await service.initiate(hr_user)
     state = parse_qs(urlparse(init.redirect_url or "").query)["state"][0]
 
@@ -437,6 +435,7 @@ async def test_reconnect_preserves_refresh_token_when_google_omits_it(
     assert result.status == "connected"
     assert connection_repo.state is not None
     assert crypto.decrypt(connection_repo.state.refresh_token_enc) == "existing-refresh"
+    service._sync_cursor_repo.clear_cursor.assert_awaited_once_with()
 
 
 @pytest.mark.asyncio
@@ -474,7 +473,7 @@ async def test_legacy_grants_are_revoked_and_connection_requires_reauthorization
     assert result.email is None
     assert result.has_secret is False
     oauth_grant_repo.revoke_all.assert_awaited_once()
-    sync_cursor_repo.delete_for_users.assert_awaited_once_with([hr_user.id])
+    sync_cursor_repo.clear_cursor.assert_awaited_once_with()
     assert connection_repo.state is not None
     assert connection_repo.state.access_token_enc is None
     assert connection_repo.state.refresh_token_enc is None

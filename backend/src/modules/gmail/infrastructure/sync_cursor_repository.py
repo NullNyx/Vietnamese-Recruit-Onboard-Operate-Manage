@@ -1,14 +1,11 @@
 """Repository for SyncCursor entity persistence.
 
-Provides async database access for retrieving and upserting the Gmail
-synchronization cursor (history_id) per user. Each user has at most one
-cursor, enforced by a unique constraint on user_id.
+Provides async database access for the single Organization-scoped Gmail
+synchronization cursor.
 """
 
 from datetime import UTC, datetime
-from uuid import UUID
 
-from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -30,46 +27,24 @@ class SyncCursorRepository:
         """
         self.session = session
 
-    async def get_cursor(self, user_id: UUID) -> SyncCursor | None:
-        """Retrieve the sync cursor for a given user.
-
-        Args:
-            user_id: The UUID of the user whose cursor to retrieve.
-
-        Returns:
-            The SyncCursor entity if found, None otherwise.
-        """
-        statement = select(SyncCursor).where(SyncCursor.user_id == user_id)
+    async def get_cursor(self) -> SyncCursor | None:
+        """Retrieve the Gmail cursor for the Organization singleton."""
+        statement = select(SyncCursor).where(SyncCursor.organization_singleton_key == "default")
         result = await self.session.execute(statement)
         return result.scalars().first()
 
-    async def delete_for_users(self, user_ids: list[UUID]) -> None:
-        """Delete cursors left by revoked HR-owned Google grants."""
-        if not user_ids:
-            return
-        await self.session.execute(delete(SyncCursor).where(SyncCursor.user_id.in_(user_ids)))
-        await self.session.flush()
+    async def clear_cursor(self) -> None:
+        """Clear the cursor so the next poll establishes a fresh baseline."""
+        cursor = await self.get_cursor()
+        if cursor is not None:
+            await self.session.delete(cursor)
+            await self.session.flush()
 
-    async def upsert_cursor(self, user_id: UUID, history_id: str) -> SyncCursor:
-        """Create or update the sync cursor for a user.
-
-        If a cursor already exists for the user, updates the history_id
-        and last_poll_at timestamp. Otherwise, creates a new cursor record.
-        This ensures the unique constraint on user_id is respected.
-
-        Args:
-            user_id: The UUID of the user whose cursor to upsert.
-            history_id: The latest Gmail history_id to store.
-
-        Returns:
-            The created or updated SyncCursor entity.
-        """
+    async def upsert_cursor(self, history_id: str) -> SyncCursor:
+        """Create or update the Organization-scoped Gmail cursor."""
         now = datetime.now(UTC)
 
-        statement = select(SyncCursor).where(SyncCursor.user_id == user_id)
-        result = await self.session.execute(statement)
-        cursor = result.scalars().first()
-
+        cursor = await self.get_cursor()
         if cursor is not None:
             cursor.history_id = history_id
             cursor.last_poll_at = now
@@ -79,7 +54,7 @@ class SyncCursorRepository:
             return cursor
 
         cursor = SyncCursor(
-            user_id=user_id,
+            organization_singleton_key="default",
             history_id=history_id,
             last_poll_at=now,
         )

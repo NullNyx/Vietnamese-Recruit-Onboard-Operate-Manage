@@ -9,6 +9,7 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
+from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -141,6 +142,33 @@ class EmailRepository:
         """
         for message in messages:
             self.session.add(message)
+        await self.session.flush()
+
+    async def clear_incomplete_ingestion_state(self) -> None:
+        """Reset transient local ingestion state before Gmail history recovery."""
+        statement = (
+            update(EmailMessage)
+            .where(
+                EmailMessage.processing_status.in_(  # type: ignore[attr-defined]
+                    (
+                        "unprocessed",
+                        "cv_processing",
+                        "ai_unavailable",
+                        "classification_failed",
+                    )
+                )
+            )
+            .values(
+                processing_status="unprocessed",
+                category=None,
+                retry_count=0,
+                processing_error=None,
+                next_retry_at=None,
+                last_retry_at=None,
+                is_permanently_failed=False,
+            )
+        )
+        await self.session.execute(statement)
         await self.session.flush()
 
     async def update_labels(
