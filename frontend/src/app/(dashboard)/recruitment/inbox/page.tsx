@@ -728,63 +728,63 @@ export default function RecruitmentInboxPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Recruitment Inbox</h1>
-          <p className="text-muted-foreground mt-1">
-            Email tuyển dụng và Job Application cần xử lý
-          </p>
-        </div>
-        <Button variant="outline" onClick={fetchList} disabled={loading}>
-          <RotateCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-          Làm mới
-        </Button>
-      </div>
+          {/* Header */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold tracking-tight">Hộp thư tuyển dụng</h1>
+              <p className="mt-1 text-muted-foreground">
+                Email tuyển dụng và Job Application cần xử lý
+              </p>
+            </div>
+            <Button className="w-full sm:w-auto" variant="outline" onClick={fetchList} disabled={loading}>
+              <RotateCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              Làm mới
+            </Button>
+          </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="w-64">
-          <Select
-            value={statusFilter}
-            onValueChange={(v) => {
-              setStatusFilter(v as "all" | InboxStatus);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Bộ lọc trạng thái" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
-              <SelectItem value="needs_classification">Cần phân loại</SelectItem>
-              <SelectItem value="needs_information">Cần bổ sung thông tin</SelectItem>
-              <SelectItem value="ready_for_review">Sẵn sàng xem xét</SelectItem>
-              <SelectItem value="resolved">Đã xử lý</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          {/* Filters */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="w-full sm:w-64">
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => {
+                  setStatusFilter(v as "all" | InboxStatus);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Bộ lọc trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="needs_classification">Cần phân loại</SelectItem>
+                  <SelectItem value="needs_information">Cần bổ sung thông tin</SelectItem>
+                  <SelectItem value="ready_for_review">Sẵn sàng xem xét</SelectItem>
+                  <SelectItem value="resolved">Đã xử lý</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="w-32">
-          <Select
-            value={String(pageSize)}
-            onValueChange={(v) => {
-              setPageSize(Number(v));
-              setPage(1);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Số lượng" />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n} mục
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <div className="w-full sm:w-32">
+              <Select
+                value={String(pageSize)}
+                onValueChange={(v) => {
+                  setPageSize(Number(v));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Số lượng" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n} mục
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
         <span className="text-sm text-muted-foreground">
           Tổng số: {total} mục

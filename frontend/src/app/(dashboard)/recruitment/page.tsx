@@ -139,24 +139,24 @@ export default function RecruitmentPage() {
   return (
     <div className="space-y-6 p-6">
           {/* Page Header */}
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <h1 className="font-heading text-2xl font-bold">Tuyển dụng</h1>
               <p className="text-sm text-muted-foreground">
-                Quản lý ứng viên từ pipeline CV tự động
+                Quản lý ứng viên trong quy trình tuyển dụng
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" asChild>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button className="w-full sm:w-auto" variant="outline" size="sm" asChild>
                 <a href="/recruitment/inbox">
-                  <MailQuestion className="h-4 w-4 mr-2" />
-                  Inbox
+                  <MailQuestion className="mr-2 h-4 w-4" />
+                  Hộp thư
                 </a>
               </Button>
-              <Button variant="outline" size="sm" asChild>
+              <Button className="w-full sm:w-auto" variant="outline" size="sm" asChild>
                 <a href="/recruitment/review">
-                  <Users className="h-4 w-4 mr-2" />
-                  Review
+                  <Users className="mr-2 h-4 w-4" />
+                  Xem xét
                 </a>
               </Button>
             </div>

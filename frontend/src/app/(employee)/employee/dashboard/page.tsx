@@ -5,11 +5,10 @@ import {
   DollarSign,
   FileText,
   User,
-  Clock,
-  ClipboardList,
-  Sparkles,
-  LogIn,
-  Loader2,
+      Clock,
+      ClipboardList,
+      LogIn,
+      Loader2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -113,22 +112,7 @@ export default function EmployeeDashboardPage() {
         </Link>
       </div>
 
-      {/* AI Assistant hint — phase 2 */}
-      <div className="rounded-xl border border-[#e4f222]/10 bg-[#e4f222]/5 p-5">
-        <div className="flex items-center gap-3">
-          <Sparkles className="h-5 w-5 text-[#e4f222]" />
-          <div>
-            <h3 className="text-[14px] font-medium text-[#e4f222]">
-              AI Assistant
-            </h3>
-            <p className="text-[12px] text-[#8a8f98]">
-              Các tính năng AI sẽ được tích hợp trong phiên bản tiếp theo — bao
-              gồm smart notifications, document analysis, và personalized
-              insights.
-            </p>
-          </div>
-        </div>
-      </div>
+
     </div>
   );
 

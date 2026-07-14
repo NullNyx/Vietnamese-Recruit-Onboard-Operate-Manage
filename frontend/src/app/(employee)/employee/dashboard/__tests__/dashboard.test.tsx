@@ -132,13 +132,13 @@ describe("EmployeeDashboardPage", () => {
     });
   });
 
-  it("shows AI Assistant hint", async () => {
-    mockFetch.mockImplementation(() => new Promise(() => {}));
+      it("does not advertise unavailable AI capabilities", async () => {
+        mockFetch.mockImplementation(() => new Promise(() => {}));
 
-    render(<DashboardPage />);
+        render(<DashboardPage />);
 
-    expect(screen.getByText("AI Assistant")).toBeInTheDocument();
-  });
+        expect(screen.queryByText("AI Assistant")).not.toBeInTheDocument();
+      });
 
   it("requests card links to requests page", async () => {
     mockFetch.mockImplementation(() => new Promise(() => {}));
