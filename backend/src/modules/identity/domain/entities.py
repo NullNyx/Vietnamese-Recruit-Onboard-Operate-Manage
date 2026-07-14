@@ -253,8 +253,13 @@ class OrganizationAIConfiguration(SQLModel, table=True):
     # Independent capability toggles
     ai_automation_enabled: bool = Field(default=False, nullable=False)
     ai_assistant_enabled: bool = Field(default=False, nullable=False)
+    ai_automation_consent: bool = Field(default=False, nullable=False)
+    ai_assistant_consent: bool = Field(default=False, nullable=False)
+    ai_policy_preset: str = Field(default="balanced", max_length=32, nullable=False)
+    ai_policy_preset_version: str = Field(default="balanced-v1", max_length=64, nullable=False)
 
     # Organization-owned Job Application classification rollout
+
     classification_policy: str = Field(default="recall_first", max_length=50, nullable=False)
     classification_policy_version: str = Field(
         default="recall-first-v1", max_length=100, nullable=False

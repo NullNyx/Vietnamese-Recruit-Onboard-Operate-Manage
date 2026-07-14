@@ -16,7 +16,7 @@ if TYPE_CHECKING:
         OrganizationSettingsRepository,
     )
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -61,6 +61,7 @@ from src.modules.identity.application.oauth_config_manager import (
 )
 from src.modules.identity.application.organization_ai_config_service import (
     AIConfigurationCandidate,
+    AIPolicyPreset,
     ClassificationRolloutCandidate,
     OrganizationAIConfigService,
     OrganizationAIConfigTestError,
@@ -185,6 +186,10 @@ def _ai_view_response(view: object) -> OrganizationAIConfigurationResponse:
         candidate_classification_policy_version=view.candidate_classification_policy_version,  # type: ignore[attr-defined]
         rollout_mode=view.rollout_mode,  # type: ignore[attr-defined]
         canary_percentage=view.canary_percentage,  # type: ignore[attr-defined]
+        ai_automation_consent=view.ai_automation_consent,  # type: ignore[attr-defined]
+        ai_assistant_consent=view.ai_assistant_consent,  # type: ignore[attr-defined]
+        ai_policy_preset=view.ai_policy_preset,  # type: ignore[attr-defined]
+        ai_policy_preset_version=view.ai_policy_preset_version,  # type: ignore[attr-defined]
     )
 
 
@@ -206,7 +211,6 @@ async def get_organization_ai_config(
     response_model=ClassificationRolloutTelemetryResponse,
 )
 async def get_classification_rollout_telemetry(
-    admin_user: AdminUserDep,
     session: AsyncSession = Depends(get_db_session),
     hours: int = Query(default=24, ge=1, le=720),
 ) -> ClassificationRolloutTelemetryResponse:
@@ -526,7 +530,45 @@ async def accept_data_policy(
     return _ai_view_response(result.view)
 
 
-# --- Capability toggles: AI Automation ---
+# --- Independent capability consent ---
+
+
+@admin_router.post(
+    "/organization/ai-config/automation/consent",
+    response_model=OrganizationAIConfigurationResponse,
+)
+async def accept_automation_consent(
+    admin_user: AdminUserDep,
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> OrganizationAIConfigurationResponse:
+    result = await service.accept_automation_consent(admin_user)
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_AI_CONSENT,
+        details=result.audit_details,
+    )
+    return _ai_view_response(result.view)
+
+
+@admin_router.post(
+    "/organization/ai-config/assistant/consent",
+    response_model=OrganizationAIConfigurationResponse,
+)
+async def accept_assistant_consent(
+    admin_user: AdminUserDep,
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> OrganizationAIConfigurationResponse:
+    result = await service.accept_assistant_consent(admin_user)
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_AI_CONSENT,
+        details=result.audit_details,
+    )
+    return _ai_view_response(result.view)
+
+    # --- Capability toggles: AI Automation ---
 
 
 @admin_router.post(
@@ -642,7 +684,27 @@ async def disable_ai_assistant(
     return _ai_view_response(result.view)
 
 
-# --- Whitelist Endpoints ---
+# --- Versioned AI policy preset ---
+
+
+@admin_router.put(
+    "/organization/ai-config/policy-preset", response_model=OrganizationAIConfigurationResponse
+)
+async def set_ai_policy_preset(
+    admin_user: AdminUserDep,
+    preset: AIPolicyPreset = Body(...),
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> OrganizationAIConfigurationResponse:
+    result = await service.set_policy_preset(preset, admin_user)
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_AI_CONFIG_UPDATE,
+        details=result.audit_details,
+    )
+    return _ai_view_response(result.view)
+
+    # --- Whitelist Endpoints ---
 
 
 @admin_router.get("/whitelist", response_model=WhitelistListResponse)

@@ -38,6 +38,10 @@ class OrganizationAIConfigurationResponse(BaseModel):
     candidate_classification_policy_version: str | None = None
     rollout_mode: str = "stable"
     canary_percentage: int = 0
+    ai_automation_consent: bool = False
+    ai_assistant_consent: bool = False
+    ai_policy_preset: str = "balanced"
+    ai_policy_preset_version: str = "balanced-v1"
 
 
 class OrganizationAIConfigurationRequest(BaseModel):

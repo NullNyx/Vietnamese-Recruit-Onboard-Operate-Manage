@@ -27,6 +27,22 @@ from src.modules.identity.infrastructure.organization_ai_config_repository impor
 
 DATA_POLICY_VERSION = "1.0"
 
+
+class AIPolicyPreset(str, Enum):
+    """Organization-level automation posture; thresholds stay centrally owned."""
+
+    CONSERVATIVE = "conservative"
+    BALANCED = "balanced"
+    HIGH_RECALL = "high_recall"
+
+
+_POLICY_PRESET_VERSIONS = {
+    AIPolicyPreset.CONSERVATIVE: "conservative-v1",
+    AIPolicyPreset.BALANCED: "balanced-v1",
+    AIPolicyPreset.HIGH_RECALL: "high-recall-v1",
+}
+
+
 DATA_POLICY_ITEMS: list[dict[str, str]] = [
     {
         "category": "email_intent_classification",
@@ -100,6 +116,10 @@ class AIConfigurationView:
     candidate_classification_policy_version: str | None = None
     rollout_mode: str = RolloutMode.STABLE.value
     canary_percentage: int = 0
+    ai_automation_consent: bool = False
+    ai_assistant_consent: bool = False
+    ai_policy_preset: str = AIPolicyPreset.BALANCED.value
+    ai_policy_preset_version: str = "balanced-v1"
 
 
 @dataclass(frozen=True)
@@ -294,6 +314,10 @@ class OrganizationAIConfigService:
             ),
             rollout_mode=config.rollout_mode,
             canary_percentage=config.canary_percentage,
+            ai_automation_consent=config.ai_automation_consent,
+            ai_assistant_consent=config.ai_assistant_consent,
+            ai_policy_preset=config.ai_policy_preset,
+            ai_policy_preset_version=config.ai_policy_preset_version,
         )
         if config.credential_source == CredentialSource.DEPLOYMENT_KEY.value:
             params["api_key_masked"] = "****" if deployment_key else None
@@ -405,11 +429,20 @@ class OrganizationAIConfigService:
             raise OrganizationAIConfigTestError(
                 f"Cannot enable {capability_name}: provider health check failed — {exc}"
             ) from exc
-        # Data policy must be accepted
+        # The shared data policy and the capability's own consent are both required.
         if not config.data_policy_accepted:
             raise OrganizationAIConfigValidationError(
                 f"Cannot enable {capability_name}: data policy has not been accepted. "
                 "Please review and accept the data policy first."
+            )
+        consent_field = (
+            "ai_automation_consent"
+            if capability_name == "AI Automation"
+            else "ai_assistant_consent"
+        )
+        if not getattr(config, consent_field):
+            raise OrganizationAIConfigValidationError(
+                f"Cannot enable {capability_name}: {capability_name} consent has not been accepted."
             )
 
     def _build_toggle_audit(
@@ -458,6 +491,58 @@ class OrganizationAIConfigService:
                 "provider": config.provider,
                 "model": config.model,
                 "credential_source": config.credential_source,
+            },
+        )
+
+    async def _accept_capability_consent(
+        self, capability: str, admin: User
+    ) -> AIConfigurationUpdateResult:
+        config = await self.repository.get()
+        if config is None:
+            raise OrganizationAIConfigValidationError(
+                "No provider configuration exists. Configure provider and model first."
+            )
+        field_name = (
+            "ai_automation_consent" if capability == "automation" else "ai_assistant_consent"
+        )
+        setattr(config, field_name, True)
+        now = datetime.now(UTC)
+        config.updated_at = now
+        config.updated_by_user_id = admin.id
+        await self.repository.save(config)
+        return AIConfigurationUpdateResult(
+            view=await self.get_view(),
+            audit_details={
+                "action": "capability_consent_accept",
+                "capability": capability,
+                "policy_version": DATA_POLICY_VERSION,
+            },
+        )
+
+    async def accept_automation_consent(self, admin: User) -> AIConfigurationUpdateResult:
+        return await self._accept_capability_consent("automation", admin)
+
+    async def accept_assistant_consent(self, admin: User) -> AIConfigurationUpdateResult:
+        return await self._accept_capability_consent("assistant", admin)
+
+    async def set_policy_preset(
+        self, preset: AIPolicyPreset, admin: User
+    ) -> AIConfigurationUpdateResult:
+        config = await self.repository.get()
+        if config is None:
+            raise OrganizationAIConfigValidationError("No provider configuration exists.")
+        version = _POLICY_PRESET_VERSIONS[preset]
+        config.ai_policy_preset = preset.value
+        config.ai_policy_preset_version = version
+        config.updated_at = datetime.now(UTC)
+        config.updated_by_user_id = admin.id
+        await self.repository.save(config)
+        return AIConfigurationUpdateResult(
+            view=await self.get_view(),
+            audit_details={
+                "action": "ai_policy_preset_update",
+                "policy_preset": preset.value,
+                "policy_preset_version": version,
             },
         )
 

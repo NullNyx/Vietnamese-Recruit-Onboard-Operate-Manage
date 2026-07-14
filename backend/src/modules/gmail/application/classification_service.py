@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from src.modules.gmail.application.classification_rollout import ClassificationRollout
+    from src.modules.gmail.application.provider_fallback import ProviderFallbackPolicy
     from src.modules.gmail.application.rules_classifier import RulesClassifier
     from src.modules.gmail.domain.entities import EmailMessage
     from src.modules.gmail.infrastructure.ai_classifier import (
@@ -85,7 +86,10 @@ class ClassificationService:
         | None = None,
         rollout: ClassificationRollout | None = None,
         candidate_ai_classifier: AIClassifier | None = None,
+        fallback_ai_classifier: AIClassifier | None = None,
+        fallback_policy: ProviderFallbackPolicy | None = None,
     ) -> None:
+
         self._rules = rules_classifier
         self._ai = ai_classifier
         self._email_repo = email_repo
@@ -96,6 +100,8 @@ class ClassificationService:
         self._session = session
         self._rollout = rollout
         self._candidate_ai = candidate_ai_classifier
+        self._fallback_ai = fallback_ai_classifier
+        self._fallback_policy = fallback_policy
 
     async def classify_batch(
         self,
@@ -234,7 +240,37 @@ class ClassificationService:
             else:
                 ai_result = await classify_with(self._ai)
         except Exception as exc:
+            # A fallback is a policy decision, never an unconditional retry.
+            if (
+                self._fallback_ai is not None
+                and self._fallback_policy is not None
+                and self._fallback_policy.allows()
+            ):
+                try:
+                    fallback_result = await classify_with(self._fallback_ai)
+                except Exception:
+                    fallback_result = None
+                if fallback_result is not None:
+                    logger.warning(
+                        "Primary AI provider failed; privacy-compatible fallback used for %s",
+                        email.gmail_message_id,
+                    )
+                    return ClassificationResult(
+                        category=fallback_result.category,
+                        confidence=fallback_result.confidence,
+                        source="ai_fallback",
+                        matched_signals=list(rules_result.matched_signals)
+                        + list(fallback_result.matched_signals),
+                        token_usage=fallback_result.token_usage,
+                        source_hints=fallback_result.source_hints,
+                        intent=fallback_result.intent,
+                        application_source=fallback_result.application_source,
+                        has_cv=fallback_result.has_cv
+                        if fallback_result.has_cv is not None
+                        else email.has_attachments,
+                    )
             latency_ms = int((time.monotonic() - start_time) * 1000)
+
             raw_retry_count = getattr(email, "retry_count", 0)
             if not isinstance(raw_retry_count, int):
                 return ClassificationResult(

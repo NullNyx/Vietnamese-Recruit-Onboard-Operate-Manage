@@ -56,7 +56,12 @@ export interface OrganizationAIConfiguration {
   candidate_classification_policy: string | null;
   candidate_classification_policy_version: string | null;
   rollout_mode: 'stable' | 'shadow' | 'canary' | 'full';
-  canary_percentage: number;
+        canary_percentage: number;
+      ai_automation_consent: boolean;
+      ai_assistant_consent: boolean;
+      ai_policy_preset: string;
+      ai_policy_preset_version: string;
+
 }
 
 
@@ -270,7 +275,27 @@ async function handleResponse<T>(res: Response): Promise<T> {
       }
 
 
-      // --- Capability toggles: AI Automation ---
+          export async function acceptAutomationConsent(): Promise<OrganizationAIConfiguration> {
+            const res = await fetch(`${BASE}/organization/ai-config/automation/consent`, { method: 'POST' });
+            return handleResponse<OrganizationAIConfiguration>(res);
+          }
+
+          export async function acceptAssistantConsent(): Promise<OrganizationAIConfiguration> {
+            const res = await fetch(`${BASE}/organization/ai-config/assistant/consent`, { method: 'POST' });
+            return handleResponse<OrganizationAIConfiguration>(res);
+          }
+
+          export async function setAIPolicyPreset(preset: 'conservative' | 'balanced' | 'high_recall'): Promise<OrganizationAIConfiguration> {
+            const res = await fetch(`${BASE}/organization/ai-config/policy-preset`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(preset),
+            });
+            return handleResponse<OrganizationAIConfiguration>(res);
+          }
+
+          // --- Capability toggles: AI Automation ---
+
 
 
       export async function enableAutomation(): Promise<OrganizationAIConfiguration> {
