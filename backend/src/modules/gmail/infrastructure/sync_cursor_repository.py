@@ -8,6 +8,7 @@ cursor, enforced by a unique constraint on user_id.
 from datetime import UTC, datetime
 from uuid import UUID
 
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -41,6 +42,13 @@ class SyncCursorRepository:
         statement = select(SyncCursor).where(SyncCursor.user_id == user_id)
         result = await self.session.execute(statement)
         return result.scalars().first()
+
+    async def delete_for_users(self, user_ids: list[UUID]) -> None:
+        """Delete cursors left by revoked HR-owned Google grants."""
+        if not user_ids:
+            return
+        await self.session.execute(delete(SyncCursor).where(SyncCursor.user_id.in_(user_ids)))
+        await self.session.flush()
 
     async def upsert_cursor(self, user_id: UUID, history_id: str) -> SyncCursor:
         """Create or update the sync cursor for a user.

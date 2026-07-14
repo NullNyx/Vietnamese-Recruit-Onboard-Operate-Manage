@@ -87,6 +87,7 @@ async def _get_connection_service(
 ) -> OrganizationGoogleConnectionService:
     from httpx import AsyncClient
 
+    from src.modules.gmail.infrastructure.sync_cursor_repository import SyncCursorRepository
     from src.modules.identity.application.audit_service import AuditService
     from src.modules.identity.infrastructure.audit_log_repository import AuditLogRepository
     from src.modules.identity.infrastructure.connection_state_repository import (
@@ -106,6 +107,7 @@ async def _get_connection_service(
         audit_service=AuditService(repository=audit_log_repo),
         crypto=get_crypto_utils(),
         state_jwt=get_jwt_utils(),
+        sync_cursor_repo=SyncCursorRepository(session),
         org_settings_repo=OrganizationSettingsRepository(session),
         http_client=AsyncClient(),
     )
@@ -260,6 +262,15 @@ async def callback_google_connection_redirect(
     return RedirectResponse(f"{frontend_url}/gmail?google_connection=connected", status_code=303)
 
 
+@router.delete("/organization-google-connection")
+async def disconnect_google_connection(
+    current_user: AdminOnlyDep,
+    connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
+) -> GoogleWorkspaceConnectionResponse:
+    res = await connection_service.disconnect(current_user)
+    return GoogleWorkspaceConnectionResponse(**res.__dict__)
+
+
 @router.post("/organization-google-connection/callback")
 async def callback_google_connection(
     body: GoogleWorkspaceCallbackRequest,
@@ -269,13 +280,6 @@ async def callback_google_connection(
     res = await connection_service.callback(hr=current_user, state=body.state, code=body.code)
     return GoogleWorkspaceConnectionResponse(**res.__dict__)
 
-    @router.delete("/organization-google-connection")
-    async def disconnect_google_connection(
-        current_user: AdminOnlyDep,
-        connection_service: OrganizationGoogleConnectionService = Depends(_get_connection_service),
-    ) -> GoogleWorkspaceConnectionResponse:
-        res = await connection_service.disconnect(current_user)
-        return GoogleWorkspaceConnectionResponse(**res.__dict__)
 
     # ---------------------------------------------------------------------------
     # Calendar list + selection (Issue 154)

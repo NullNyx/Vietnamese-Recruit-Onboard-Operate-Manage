@@ -3,11 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from uuid import uuid4
 
 import httpx
 
+from src.modules.gmail.infrastructure.sync_cursor_repository import SyncCursorRepository
 from src.modules.identity.application.audit_service import AuditService
 from src.modules.identity.application.oauth_config_manager import OAuthConfigManager
 from src.modules.identity.domain.entities import AuditActionType, OrganizationGoogleConnection, User
@@ -38,6 +39,9 @@ REQUIRED_SCOPES = [
     "https://www.googleapis.com/auth/calendar.events",
     "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
 ]
+VALID_CONNECTION_STATUSES = frozenset(
+    {"disconnected", "connected", "degraded", "reauthorization_required"}
+)
 
 
 @dataclass
@@ -60,7 +64,8 @@ class OrganizationGoogleConnectionService:
         state_jwt: JWTUtils,
         org_settings_repo: OrganizationSettingsRepository,
         http_client: httpx.AsyncClient,
-    ) -> None:
+        sync_cursor_repo: SyncCursorRepository | None = None,
+) -> None:
         self._connection_repo = connection_repo
         self._oauth_config_manager = oauth_config_manager
         self._oauth_grant_repo = oauth_grant_repo
@@ -69,29 +74,93 @@ class OrganizationGoogleConnectionService:
         self._state_jwt = state_jwt
         self._org_settings_repo = org_settings_repo
         self._http_client = http_client
+        self._sync_cursor_repo = sync_cursor_repo
 
     def _state_hash(self, state: str) -> str:
         return sha256(state.encode("utf-8")).hexdigest()
 
+    @staticmethod
+    def _is_valid_redirect_uri(redirect_uri: str) -> bool:
+        parsed = urlparse(redirect_uri)
+        return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+    async def _reconcile_legacy_grants(self) -> bool:
+        """Revoke legacy HR-owned grants before exposing connection state."""
+        revoke_all = getattr(self._oauth_grant_repo, "revoke_all", None)
+        if not callable(revoke_all):
+            return False
+        owner_ids = await revoke_all()
+        if isinstance(owner_ids, bool):
+            has_legacy_grants = owner_ids
+        elif isinstance(owner_ids, (list, tuple, set)):
+            has_legacy_grants = bool(owner_ids)
+        elif isinstance(owner_ids, int):
+            has_legacy_grants = owner_ids > 0
+        else:
+            has_legacy_grants = False
+        if not has_legacy_grants:
+            return False
+        if self._sync_cursor_repo is not None and isinstance(
+            owner_ids, (list, tuple, set)
+        ):
+            await self._sync_cursor_repo.delete_for_users(list(owner_ids))
+
+
+        mark_reauthorization = getattr(
+            self._connection_repo, "mark_reauthorization_required", None
+        )
+        if callable(mark_reauthorization):
+            await mark_reauthorization()
+            return True
+
+        current = await self._connection_repo.get_singleton()
+        if current is None:
+            await self._connection_repo.upsert_singleton(
+                OrganizationGoogleConnection(status="reauthorization_required")
+            )
+            return True
+        await self._connection_repo.upsert_singleton(
+            OrganizationGoogleConnection(
+                status="reauthorization_required",
+                connected_by_user_id=getattr(current, "connected_by_user_id", None),
+            )
+        )
+        return True
+
     async def get_status(self) -> OrganizationGoogleConnectionResponse:
+        await self._reconcile_legacy_grants()
         current = await self._connection_repo.get_singleton()
         if current is None:
             return OrganizationGoogleConnectionResponse(status="disconnected")
+        status = (
+            current.status
+            if current.status in VALID_CONNECTION_STATUSES
+            else "degraded"
+        )
         return OrganizationGoogleConnectionResponse(
-            status=current.status,
+            status=status,
             email=current.email,
             has_secret=bool(current.client_secret_enc),
         )
 
     async def initiate(self, hr: User) -> OrganizationGoogleConnectionResponse:
+        await self._reconcile_legacy_grants()
         config = await self._oauth_config_manager.get_effective_credentials()
-        if not config.client_id or not config.client_secret or not config.redirect_uri:
-            raise GoogleAuthError("Google OAuth config missing")
+        if (
+            not config.client_id
+            or not config.client_secret
+            or not config.redirect_uri
+            or not self._is_valid_redirect_uri(config.redirect_uri)
+        ):
+            raise GoogleAuthError("Google OAuth config missing or invalid")
 
         state_nonce = str(uuid4())
-        session_id = str(getattr(hr, "session_id", hr.id))
         state = self._state_jwt.create_state_token(
-            {"nonce": state_nonce, "hr_id": str(hr.id), "session_id": session_id}
+            {
+                "nonce": state_nonce,
+                "client_id": config.client_id,
+                "redirect_uri": config.redirect_uri,
+            }
         )
         current = await self._connection_repo.get_singleton()
         await self._connection_repo.upsert_singleton(
@@ -108,7 +177,7 @@ class OrganizationGoogleConnectionService:
                 client_secret_enc=current.client_secret_enc if current else None,
                 oauth_state_hash=self._state_hash(state),
                 oauth_state_nonce=state_nonce,
-                oauth_state_session_id=session_id,
+                oauth_state_session_id=None,
                 oauth_state_expires_at=datetime.now(UTC) + timedelta(minutes=10),
                 token_expires_at=current.token_expires_at if current else None,
                 connected_by_user_id=current.connected_by_user_id if current else None,
@@ -127,7 +196,8 @@ class OrganizationGoogleConnectionService:
             }
         )
         return OrganizationGoogleConnectionResponse(
-            status="disconnected", redirect_url=f"{GOOGLE_AUTH_URL}?{params}"
+            status=current.status if current else "disconnected",
+            redirect_url=f"{GOOGLE_AUTH_URL}?{params}",
         )
 
     async def callback(
@@ -135,36 +205,59 @@ class OrganizationGoogleConnectionService:
     ) -> OrganizationGoogleConnectionResponse:
         payload = self._state_jwt.verify_state_token(state)
         current = await self._connection_repo.get_singleton()
-        if current is None or current.oauth_state_hash != self._state_hash(state):
+        state_hash = self._state_hash(state)
+        if (
+            current is None
+            or current.oauth_state_hash != state_hash
+            or current.oauth_state_nonce != payload.get("nonce")
+            or payload.get("client_id") is None
+            or payload.get("redirect_uri") is None
+        ):
             raise InvalidStateError()
-        session_id_check = str(getattr(hr, "session_id", hr.id))
-        if payload.get("hr_id") != str(hr.id) or payload.get("session_id") != session_id_check:
+        if (
+            current.oauth_state_expires_at is None
+            or current.oauth_state_expires_at < datetime.now(UTC)
+        ):
             raise InvalidStateError()
-        if current.oauth_state_expires_at and current.oauth_state_expires_at < datetime.now(UTC):
-            raise InvalidStateError()
-        await self._connection_repo.upsert_singleton(
-            OrganizationGoogleConnection(
-                status=current.status,
-                email=current.email,
-                google_sub=current.google_sub,
-                email_domain=current.email_domain,
-                selected_calendar_id=current.selected_calendar_id,
-                credential_format_version=current.credential_format_version,
-                credential_key_version=current.credential_key_version,
-                access_token_enc=current.access_token_enc,
-                refresh_token_enc=current.refresh_token_enc,
-                client_secret_enc=current.client_secret_enc,
-                oauth_state_hash=None,
-                oauth_state_nonce=None,
-                oauth_state_session_id=None,
-                oauth_state_expires_at=None,
-                token_expires_at=current.token_expires_at,
-                connected_by_user_id=current.connected_by_user_id,
-            )
-        )
+
         config = await self._oauth_config_manager.get_effective_credentials()
-        if not config.client_id or not config.client_secret or not config.redirect_uri:
-            raise GoogleAuthError("Google OAuth config missing")
+        if (
+            not config.client_id
+            or not config.client_secret
+            or not config.redirect_uri
+            or not self._is_valid_redirect_uri(config.redirect_uri)
+            or payload["client_id"] != config.client_id
+            or payload["redirect_uri"] != config.redirect_uri
+        ):
+            raise InvalidStateError("OAuth redirect configuration changed")
+
+        consume_state = getattr(self._connection_repo, "consume_oauth_state", None)
+        if callable(consume_state):
+            current = await consume_state(state_hash)
+            if current is None:
+                raise InvalidStateError()
+        else:
+            await self._connection_repo.upsert_singleton(
+                OrganizationGoogleConnection(
+                    status=current.status,
+                    email=current.email,
+                    google_sub=current.google_sub,
+                    email_domain=current.email_domain,
+                    selected_calendar_id=current.selected_calendar_id,
+                    credential_format_version=current.credential_format_version,
+                    credential_key_version=current.credential_key_version,
+                    access_token_enc=current.access_token_enc,
+                    refresh_token_enc=current.refresh_token_enc,
+                    client_secret_enc=current.client_secret_enc,
+                    oauth_state_hash=None,
+                    oauth_state_nonce=None,
+                    oauth_state_session_id=None,
+                    oauth_state_expires_at=None,
+                    token_expires_at=current.token_expires_at,
+                    connected_by_user_id=current.connected_by_user_id,
+                )
+            )
+
         token = await self._http_client.post(
             GOOGLE_TOKEN_URL,
             data={
@@ -178,58 +271,66 @@ class OrganizationGoogleConnectionService:
         if token.status_code != 200:
             raise GoogleAuthError("OAuth token exchange failed")
         data = token.json()
+        access_token = data.get("access_token")
+        if not isinstance(access_token, str) or not access_token:
+            raise GoogleAuthError("OAuth token exchange returned no access token")
         granted = set(str(data.get("scope", "")).split())
-        # Google canonicalizes the OIDC `email` scope to the equivalent
-        # userinfo.email URI in token responses.
         if "https://www.googleapis.com/auth/userinfo.email" in granted:
             granted.add("email")
         if not set(REQUIRED_SCOPES).issubset(granted):
             raise GoogleAuthError("Missing required Google scopes")
         userinfo = await self._http_client.get(
             GOOGLE_USERINFO_URL,
-            headers={"Authorization": f"Bearer {data['access_token']}"},
+            headers={"Authorization": f"Bearer {access_token}"},
         )
         if userinfo.status_code != 200:
             raise GoogleAuthError("Google identity verification failed")
         profile = userinfo.json()
         email = profile.get("email")
         hd = profile.get("hd")
-        if not email:
+        if not isinstance(email, str) or not email:
             raise DomainAccessDeniedError()
         domains = await self._org_settings_repo.get_allowed_domains()
-        if domains and (not hd or hd.lower() not in {d.lower() for d in domains}):
+        allowed_domains = {str(domain).lower().lstrip("@") for domain in domains}
+        if allowed_domains and (
+            not isinstance(hd, str) or hd.lower() not in allowed_domains
+        ):
             raise DomainAccessDeniedError()
-        email_domain = hd or email.rsplit("@", 1)[-1].lower()
+        email_domain = (
+            hd.lower()
+            if isinstance(hd, str) and hd
+            else email.rsplit("@", 1)[-1].lower()
+        )
         refresh_token = data.get("refresh_token")
-        if current and current.refresh_token_enc and refresh_token is None:
-            refresh_token = self._crypto.decrypt(current.refresh_token_enc)
+        if not refresh_token and current.refresh_token_enc:
+            try:
+                refresh_token = self._crypto.decrypt(current.refresh_token_enc)
+            except Exception as exc:
+                raise GoogleAuthError("Existing refresh token is unavailable") from exc
         connection = OrganizationGoogleConnection(
             status="connected",
             email=email,
             google_sub=profile.get("sub"),
             email_domain=email_domain,
-            selected_calendar_id=current.selected_calendar_id if current else None,
-            credential_format_version=1,
-            credential_key_version=1,
-            access_token_enc=self._crypto.encrypt(data["access_token"]),
+            selected_calendar_id=current.selected_calendar_id,
+            credential_format_version=current.credential_format_version,
+            credential_key_version=current.credential_key_version,
+            access_token_enc=self._crypto.encrypt(access_token),
             refresh_token_enc=(
                 self._crypto.encrypt(refresh_token)
-                if refresh_token
+                if isinstance(refresh_token, str) and refresh_token
                 else current.refresh_token_enc
-                if current
-                else None
             ),
             client_secret_enc=self._crypto.encrypt(config.client_secret),
-            token_expires_at=(
-                datetime.now(UTC) + timedelta(seconds=int(data.get("expires_in", 3600)))
-            ),
+            token_expires_at=datetime.now(UTC)
+            + timedelta(seconds=int(data.get("expires_in", 3600))),
             connected_by_user_id=hr.id,
         )
         await self._connection_repo.upsert_singleton(connection)
         action_type = AuditActionType.ORG_GOOGLE_CONNECT
-        if current and current.email and current.email != email:
+        if current.email and current.email != email:
             action_type = AuditActionType.ORG_GOOGLE_SWITCH_ACCOUNT
-        elif current and current.status == "connected":
+        elif current.status == "connected":
             action_type = AuditActionType.ORG_GOOGLE_RECONNECT
         await self._audit_service.log_action(
             admin=hr,

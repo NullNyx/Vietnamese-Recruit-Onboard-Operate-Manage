@@ -118,7 +118,12 @@ class GrantStatusResponse(BaseModel):
 
 
 class GoogleWorkspaceConnectionResponse(BaseModel):
-    status: Literal["disconnected", "connected", "reauthorization_required"]
+    status: Literal[
+        "disconnected",
+        "connected",
+        "degraded",
+        "reauthorization_required",
+    ]
     email: str | None = None
     has_secret: bool = False
     redirect_url: str | None = None

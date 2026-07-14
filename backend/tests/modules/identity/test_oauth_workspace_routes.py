@@ -136,6 +136,12 @@ def oauth_config_manager() -> AsyncMock:
     )
     return manager
 
+@pytest.fixture
+def oauth_grant_repo() -> AsyncMock:
+    return AsyncMock()
+
+
+
 
 @pytest.fixture
 def org_settings_repo() -> AsyncMock:
@@ -174,11 +180,17 @@ def http_client() -> FakeHttpClient:
 def connection_repo() -> DurableConnectionRepo:
     return DurableConnectionRepo()
 
+@pytest.fixture
+def sync_cursor_repo() -> AsyncMock:
+    return AsyncMock()
+
 
 @pytest.fixture
 def service(
     connection_repo,
     oauth_config_manager,
+    oauth_grant_repo,
+    sync_cursor_repo,
     audit_service,
     crypto,
     state_jwt,
@@ -188,7 +200,8 @@ def service(
     return OrganizationGoogleConnectionService(
         connection_repo=connection_repo,
         oauth_config_manager=oauth_config_manager,
-        oauth_grant_repo=AsyncMock(),
+        oauth_grant_repo=oauth_grant_repo,
+        sync_cursor_repo=sync_cursor_repo,
         audit_service=audit_service,
         crypto=crypto,
         state_jwt=state_jwt,
@@ -351,3 +364,117 @@ async def test_callback_allows_any_verified_email_when_allowed_domains_empty(
     result = await service.callback(hr=hr_user, state=state, code="code")
 
     assert result.status == "connected"
+
+
+@pytest.mark.asyncio
+async def test_connection_status_exposes_degraded_state(
+    service: OrganizationGoogleConnectionService,
+    connection_repo: DurableConnectionRepo,
+) -> None:
+    connection_repo.state = SimpleNamespace(
+        status="degraded",
+        email="shared@example.com",
+        google_sub="sub",
+        client_secret_enc="encrypted-secret",
+    )
+
+    result = await service.get_status()
+
+    assert result.status == "degraded"
+    assert result.email == "shared@example.com"
+    assert result.has_secret is True
+
+
+@pytest.mark.asyncio
+async def test_callback_rejects_when_redirect_uri_changes(
+    service: OrganizationGoogleConnectionService,
+    hr_user: User,
+    oauth_config_manager: AsyncMock,
+) -> None:
+    init = await service.initiate(hr_user)
+    state = parse_qs(urlparse(init.redirect_url or "").query)["state"][0]
+    oauth_config_manager.get_effective_credentials.return_value.redirect_uri = (
+        "http://test/changed-callback"
+    )
+
+    with pytest.raises(InvalidStateError):
+        await service.callback(hr=hr_user, state=state, code="code")
+
+
+@pytest.mark.asyncio
+async def test_reconnect_preserves_refresh_token_when_google_omits_it(
+    service: OrganizationGoogleConnectionService,
+    hr_user: User,
+    connection_repo: DurableConnectionRepo,
+    http_client: FakeHttpClient,
+    crypto: CryptoUtils,
+) -> None:
+    connection_repo.state = SimpleNamespace(
+        status="connected",
+        email="hr@example.com",
+        google_sub="old-sub",
+        email_domain="example.com",
+        selected_calendar_id="calendar",
+        credential_format_version=1,
+        credential_key_version=1,
+        access_token_enc=crypto.encrypt("old-access"),
+        refresh_token_enc=crypto.encrypt("existing-refresh"),
+        client_secret_enc=crypto.encrypt("secret"),
+        oauth_state_hash=None,
+        oauth_state_nonce=None,
+        oauth_state_session_id=None,
+        oauth_state_expires_at=None,
+        token_expires_at=datetime.now(UTC),
+        connected_by_user_id=hr_user.id,
+    )
+    assert isinstance(http_client.token, FakeResponse)
+    http_client.token._payload.pop("refresh_token")
+
+    init = await service.initiate(hr_user)
+    state = parse_qs(urlparse(init.redirect_url or "").query)["state"][0]
+    result = await service.callback(hr=hr_user, state=state, code="code")
+
+    assert result.status == "connected"
+    assert connection_repo.state is not None
+    assert crypto.decrypt(connection_repo.state.refresh_token_enc) == "existing-refresh"
+
+
+@pytest.mark.asyncio
+async def test_legacy_grants_are_revoked_and_connection_requires_reauthorization(
+    service: OrganizationGoogleConnectionService,
+    hr_user: User,
+    connection_repo: DurableConnectionRepo,
+    oauth_grant_repo: AsyncMock,
+    sync_cursor_repo: AsyncMock,
+    crypto: CryptoUtils,
+) -> None:
+    connection_repo.state = SimpleNamespace(
+        status="connected",
+        email="legacy@example.com",
+        google_sub="legacy-sub",
+        email_domain="example.com",
+        selected_calendar_id="calendar",
+        credential_format_version=1,
+        credential_key_version=1,
+        access_token_enc=crypto.encrypt("access"),
+        refresh_token_enc=crypto.encrypt("refresh"),
+        client_secret_enc=crypto.encrypt("secret"),
+        oauth_state_hash=None,
+        oauth_state_nonce=None,
+        oauth_state_session_id=None,
+        oauth_state_expires_at=None,
+        token_expires_at=datetime.now(UTC),
+        connected_by_user_id=hr_user.id,
+    )
+    oauth_grant_repo.revoke_all = AsyncMock(return_value=[hr_user.id])
+
+    result = await service.get_status()
+
+    assert result.status == "reauthorization_required"
+    assert result.email is None
+    assert result.has_secret is False
+    oauth_grant_repo.revoke_all.assert_awaited_once()
+    sync_cursor_repo.delete_for_users.assert_awaited_once_with([hr_user.id])
+    assert connection_repo.state is not None
+    assert connection_repo.state.access_token_enc is None
+    assert connection_repo.state.refresh_token_enc is None

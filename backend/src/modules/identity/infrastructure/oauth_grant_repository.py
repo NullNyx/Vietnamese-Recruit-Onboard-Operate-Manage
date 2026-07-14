@@ -119,6 +119,29 @@ class OAuthGrantRepository:
             grant for grant in grants if all(scope in grant.scopes for scope in required_scopes)
         ]
 
+    async def revoke_all(self) -> list[UUID]:
+        """Revoke every still-valid legacy Google grant.
+
+        Returns the former owner IDs for audit and migration cleanup. The
+        grants remain as historical records but can no longer be used at
+        runtime.
+        """
+        statement = select(OAuthGrant).where(
+            OAuthGrant.provider == "google",
+            OAuthGrant.is_valid == True,  # noqa: E712
+        )
+        result = await self.session.execute(statement)
+        grants = list(result.scalars().all())
+        now = datetime.now(UTC)
+        for grant in grants:
+            grant.is_valid = False
+            grant.updated_at = now
+            self.session.add(grant)
+        if grants:
+            await self.session.flush()
+        return [grant.user_id for grant in grants]
+
+
     async def mark_invalid(self, user_id: UUID) -> None:
         """Mark the user's OAuth grant as invalid.
 
