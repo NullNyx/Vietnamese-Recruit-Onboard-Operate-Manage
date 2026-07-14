@@ -72,10 +72,10 @@ export default function PayrollPage() {
   async function handlePublish(id: string) {
     try {
       await publishPayslip(id);
-      toast.success("Đã publish phiếu lương");
+      toast.success("Đã phát hành phiếu lương");
       load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Publish thất bại");
+      toast.error(err instanceof Error ? err.message : "Phát hành thất bại");
     }
   }
 
@@ -121,8 +121,8 @@ export default function PayrollPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tất cả</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Đã publish</SelectItem>
+                    <SelectItem value="draft">Bản nháp</SelectItem>
+                    <SelectItem value="published">Đã phát hành</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -151,8 +151,8 @@ export default function PayrollPage() {
                     <TableRow>
                       <TableHead>Kỳ lương</TableHead>
                       <TableHead>Mã NV</TableHead>
-                      <TableHead>Gross</TableHead>
-                      <TableHead>Net</TableHead>
+                      <TableHead>Lương gộp</TableHead>
+                      <TableHead>Lương thực nhận</TableHead>
                       <TableHead>Thuế TNCN</TableHead>
                       <TableHead>Trạng thái</TableHead>
                       <TableHead>Ngày tạo</TableHead>
@@ -169,7 +169,7 @@ export default function PayrollPage() {
                         <TableCell>{formatCurrency(ps.pit_amount)}</TableCell>
                         <TableCell>
                           <Badge variant={ps.status === "published" ? "default" : "secondary"}>
-                            {ps.status === "published" ? "Đã publish" : "Draft"}
+                            {ps.status === "published" ? "Đã phát hành" : "Bản nháp"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm">{formatDate(ps.created_at)}</TableCell>

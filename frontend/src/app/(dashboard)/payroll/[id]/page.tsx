@@ -100,9 +100,9 @@ export default function PayslipDetailPage() {
     try {
       const updated = await publishPayslip(id);
       setPayslip(updated);
-      toast.success("Đã publish phiếu lương");
+      toast.success("Đã phát hành phiếu lương");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Publish thất bại");
+      toast.error(err instanceof Error ? err.message : "Phát hành thất bại");
     }
   }
 
@@ -138,11 +138,11 @@ export default function PayslipDetailPage() {
             Phiếu lương {formatPeriod(payslip.period_month)}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Employee: {payslip.employee_id.slice(0, 8)}...
+            Nhân viên: {payslip.employee_id.slice(0, 8)}...
           </p>
         </div>
         <Badge variant={payslip.status === "published" ? "default" : "secondary"} className="text-sm px-3 py-1">
-          {payslip.status === "published" ? "Đã publish" : "Draft"}
+          {payslip.status === "published" ? "Đã phát hành" : "Bản nháp"}
         </Badge>
       </div>
 
@@ -164,7 +164,7 @@ export default function PayslipDetailPage() {
                         <Save className="mr-2 h-4 w-4" /> Chỉnh sửa
                       </Button>
                       <Button onClick={handlePublish}>
-                        <Send className="mr-2 h-4 w-4" /> Publish
+                        <Send className="mr-2 h-4 w-4" /> Phát hành
                       </Button>
                       <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
                         <Trash2 className="h-4 w-4" />
@@ -189,11 +189,11 @@ export default function PayslipDetailPage() {
             {editMode ? (
               <>
                 <div className="space-y-2">
-                  <Label>Lương Gross</Label>
+                  <Label>Lương gộp</Label>
                   <Input value={grossSalary} onChange={e => setGrossSalary(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Lương Net</Label>
+                  <Label>Lương thực nhận</Label>
                   <Input value={netSalary} onChange={e => setNetSalary(e.target.value)} />
                 </div>
                 <div className="space-y-2">
@@ -216,11 +216,11 @@ export default function PayslipDetailPage() {
             ) : (
               <>
                 <div className="space-y-1">
-                  <Label className="text-muted-foreground">Lương Gross</Label>
+                  <Label className="text-muted-foreground">Lương gộp</Label>
                   <p className="text-lg font-semibold font-mono">{formatCurrency(payslip.gross_salary)}</p>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-muted-foreground">Lương Net</Label>
+                  <Label className="text-muted-foreground">Lương thực nhận</Label>
                   <p className="text-lg font-semibold font-mono text-green-600">{formatCurrency(payslip.net_salary)}</p>
                 </div>
                 <div className="space-y-1">

@@ -28,6 +28,9 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: "Vroom HR",
   description: "Nền tảng quản lý nhân sự thông minh cho doanh nghiệp Việt Nam",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

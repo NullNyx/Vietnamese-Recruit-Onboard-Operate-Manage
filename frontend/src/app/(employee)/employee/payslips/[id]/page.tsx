@@ -192,7 +192,7 @@ export default function EmployeePayslipDetailPage() {
           {/* Gross & Deductions */}
           <div className="py-2 space-y-0">
             <DetailRow
-              label="Lương gross"
+              label="Lương gộp"
               value={formatCurrency(payslip.gross_salary)}
             />
             <DetailRow
@@ -209,12 +209,12 @@ export default function EmployeePayslipDetailPage() {
               value={formatCurrency(payslip.taxable_income)}
             />
             <DetailRow
-              label="Thuế TNCN (PIT)"
+              label="Thuế TNCN"
               value={formatCurrency(payslip.pit_amount)}
             />
             <Divider />
             <DetailRow
-              label="Lương net (thực nhận)"
+              label="Lương thực nhận"
               value={formatCurrency(payslip.net_salary)}
               highlight
             />
