@@ -54,13 +54,6 @@ class Candidate(SQLModel, table=True):
     accepted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     archived_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
 
-    # Compatibility projection for the Candidate scheduling contract.
-    calendar_event_id: str | None = Field(default=None, max_length=1024, index=True)
-    interview_start_at: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
-    interview_timezone: str | None = Field(default=None, max_length=64)
-
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -246,12 +239,8 @@ class CalendarSyncCursor(SQLModel, table=True):
     )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    organization_singleton_key: str = Field(
-        default="default", max_length=32, nullable=False
-    )
-    calendar_id: str = Field(
-        max_length=255, nullable=False, index=True
-    )
+    organization_singleton_key: str = Field(default="default", max_length=32, nullable=False)
+    calendar_id: str = Field(max_length=255, nullable=False, index=True)
     sync_token: str | None = Field(default=None, max_length=1024)
     page_token: str | None = Field(default=None, max_length=1024)
     last_sync_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
@@ -263,6 +252,7 @@ class CalendarSyncCursor(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+
 
 class OrganizationSettings(SQLModel, table=True):
     """Single-row settings for the Organization (the company deployment).
@@ -339,6 +329,7 @@ class Interview(SQLModel, table=True):
     end_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     timezone: str = Field(max_length=64, nullable=False)
     calendar_event_id: str | None = Field(default=None, max_length=1024, index=True)
+    calendar_id: str | None = Field(default=None, max_length=1024, index=True)
     remote_location: str | None = Field(default=None, max_length=1024)
     needs_relink: bool = Field(default=False, nullable=False)
     calendar_etag: str | None = Field(default=None, max_length=255)

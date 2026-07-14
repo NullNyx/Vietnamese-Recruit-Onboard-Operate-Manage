@@ -51,10 +51,10 @@ from tests.modules.recruitment._interview_support import (
     make_employee,
 )
 
-# The decrypted access token the adapter must receive. ``make_oauth_grant``
-# defaults ``access_token_enc="enc:tok-access"`` and ``FakeTokenCipher`` strips
-# the ``"enc:"`` prefix, so the token handed to the adapter is ``"tok-access"``.
-_EXPECTED_ACCESS_TOKEN = "tok-access"
+# The default connection repo in ``build_calendar_harness`` stores
+# ``"enc:test-access-token"``, which ``FakeTokenCipher`` decrypts to
+# ``"test-access-token"`` by stripping the ``"enc:"`` prefix.
+_EXPECTED_ACCESS_TOKEN = "test-access-token"
 
 # Statuses from which a transition to ``interview_scheduled`` is permitted.
 _PERMITTING_STATUSES = st.sampled_from([CandidateStatus.NEW, CandidateStatus.REVIEWING])
@@ -123,29 +123,25 @@ def test_successful_schedule_persists_references_and_audits(
         assert len(harness.calendar.create_calls) == 1
         create_call = harness.calendar.create_calls[0]
         assert create_call.access_token == _EXPECTED_ACCESS_TOKEN
-        assert create_call.access_token == harness.crypto.decrypt("enc:tok-access")
+        assert create_call.access_token == harness.crypto.decrypt("enc:test-access-token")
 
         # R2.3: the Candidate transitions to ``interview_scheduled``.
         assert returned.status == CandidateStatus.INTERVIEW_SCHEDULED
 
-        # R4.1: the returned Calendar event id is stored as ``calendar_event_id``.
-        assert returned.calendar_event_id is not None
+        # R4.1: an Interview record carries the Calendar event reference.
+        # (The Candidate entity no longer stores calendar fields — Interview is
+        #  the single source of truth, per migration 074.)
+        interviews = [
+            iv for iv in harness.session.interviews.values() if iv.candidate_id == candidate.id
+        ]
+        assert len(interviews) == 1
+        iv = interviews[0]
+        assert iv.calendar_event_id is not None
+        assert iv.status == "scheduled"
+        assert iv.timezone == org_timezone
+        assert iv.start_at.astimezone(UTC) == start.astimezone(UTC)
 
-        # The committed Candidate carries the same persisted references (the
-        # service committed before returning).
-        persisted = await harness.candidate_repo.get_by_id(candidate.id)
-        assert persisted is not None
-        assert persisted.status == CandidateStatus.INTERVIEW_SCHEDULED
-        assert persisted.calendar_event_id == returned.calendar_event_id
-        # R4.2: the stored start equals the requested start instant (tz-robust:
-        # the service expresses it in the org timezone but the instant is fixed).
-        assert persisted.interview_start_at is not None
-        assert persisted.interview_start_at.astimezone(UTC) == start.astimezone(UTC)
-        # R4.3: the stored timezone is the Organization's configured timezone.
-        assert persisted.interview_timezone == org_timezone
-
-        # R12.1: an audit entry records the schedule action, the acting HR user,
-        # the Candidate id, and the ``calendar_event_id``.
+        # R12.1: an audit entry records the schedule action.
         scheduled_entries = harness.audit_sink.entries_for("interview_scheduled")
         assert len(scheduled_entries) == 1
         entry = scheduled_entries[0]
@@ -153,6 +149,6 @@ def test_successful_schedule_persists_references_and_audits(
         assert entry.entity_id == candidate.id
         assert entry.success is True
         assert entry.new_value is not None
-        assert entry.new_value["calendar_event_id"] == persisted.calendar_event_id
+        assert entry.new_value["calendar_event_id"] == iv.calendar_event_id
 
     asyncio.run(_run())

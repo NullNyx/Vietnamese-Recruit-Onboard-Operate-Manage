@@ -80,9 +80,7 @@ class CandidateRepository:
         Returns:
             The persisted Candidate entity with generated fields populated.
         """
-        values = candidate.model_dump(
-            exclude={"calendar_event_id", "interview_start_at", "interview_timezone"}
-        )
+        values = candidate.model_dump()
         await self.session.execute(insert(Candidate).values(values))
         return candidate
 

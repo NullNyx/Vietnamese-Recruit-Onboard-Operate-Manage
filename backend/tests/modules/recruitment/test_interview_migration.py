@@ -80,16 +80,15 @@ def migrated_engine() -> Iterator[Engine]:
 
 
 @pytest.mark.integration
-def test_migration_adds_interview_columns_to_candidates(
+def test_migration_drops_legacy_candidate_columns(
     migrated_engine: Engine,
 ) -> None:
+    """Verify legacy calendar columns are dropped after migration 074."""
     inspector = inspect(migrated_engine)
-    tables = set(inspector.get_table_names())
-
-    assert "candidates" in tables, "candidates table is missing"
-
     columns = {col["name"] for col in inspector.get_columns("candidates")}
-    assert "calendar_event_id" in columns
+    assert "calendar_event_id" not in columns
+    assert "interview_start_at" not in columns
+    assert "interview_timezone" not in columns
 
 
 @pytest.mark.integration

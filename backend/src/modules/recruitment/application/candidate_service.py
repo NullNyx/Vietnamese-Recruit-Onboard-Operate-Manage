@@ -259,7 +259,6 @@ class CalendarPort(Protocol):
         ...
 
 
-
 @runtime_checkable
 class TokenCipher(Protocol):
     """Protocol for decrypting stored OAuth tokens.
@@ -276,8 +275,6 @@ class TokenCipher(Protocol):
     def encrypt(self, plaintext: str) -> str:
         """Encrypt a plaintext into ciphertext."""
         ...
-
-
 
 
 @dataclass
@@ -1279,7 +1276,8 @@ class CandidateService:
             timezone,
             duration_minutes,
             interviewer_ids,
-            notes,
+            calendar_id=calendar_id,
+            notes=notes,
         )
         # Some lightweight repository doubles do not return the updated entity.
         # Keep the loaded candidate for auditing and the response in that case.
@@ -1375,7 +1373,9 @@ class CandidateService:
         # calendar columns (removed in migration 054).
         candidate = await self._get_candidate_or_raise(candidate_id)
         interview = await self._get_scheduled_interview(candidate.id)
-        event_id = interview.calendar_event_id if interview else candidate.calendar_event_id
+        if interview is None:
+            raise NoInterviewToRescheduleError()
+        event_id = interview.calendar_event_id
         if event_id is None:
             raise NoInterviewToRescheduleError()
 
@@ -1412,9 +1412,7 @@ class CandidateService:
         )
 
         # Capture the previous start and remote version before any mutation.
-        previous_start = (
-            interview.start_at if interview is not None else candidate.interview_start_at
-        )
+        previous_start = interview.start_at
         stored_interview = await self._get_interview_by_event_id(candidate.id, event_id)
         stored_etag = stored_interview.calendar_etag if stored_interview else None
 
@@ -1431,14 +1429,11 @@ class CandidateService:
 
         # Step 6: update the Interview start/end/timezone, leaving the
         # calendar_event_id unchanged, then commit (R7.1, R7.3).
-        candidate.calendar_event_id = event_id
-        candidate.interview_start_at = start_resolved
-        candidate.interview_timezone = timezone
-        await self._candidate_repo.update(candidate)
         if interview is not None:
             interview.start_at = start_resolved
             interview.end_at = start_resolved + timedelta(minutes=duration_minutes)
             interview.timezone = timezone
+            interview.calendar_id = calendar_id
             self._session.add(interview)
         await self._session.commit()
 
@@ -1571,7 +1566,6 @@ class CandidateService:
         except httpx.HTTPStatusError as exc:
             await self._session.rollback()
             if exc.response.status_code == 412:
-
                 await self._capture_calendar_conflict(
                     user_id=user_id,
                     candidate_id=candidate_id,
@@ -1624,6 +1618,7 @@ class CandidateService:
             )
             await self._session.commit()
             raise CalendarEventUpdateFailedError() from exc
+
     # ─── Organization Google Connection helpers ─────────────────────
 
     async def _ensure_org_connection_active(self) -> None:
@@ -1668,9 +1663,7 @@ class CandidateService:
 
         connection = await self._connection_repo.get_singleton()
         if connection is None or connection.status != "connected":
-            raise CalendarGrantMissingError(
-                message="Organization Google Connection is not active"
-            )
+            raise CalendarGrantMissingError(message="Organization Google Connection is not active")
         if not connection.selected_calendar_id:
             raise CalendarGrantMissingError(
                 message="No recruitment calendar selected; "
@@ -1678,9 +1671,7 @@ class CandidateService:
             )
         return connection.selected_calendar_id
 
-    async def _delete_calendar_event(
-        self, token: str, event_id: str, calendar_id: str
-    ) -> None:
+    async def _delete_calendar_event(self, token: str, event_id: str, calendar_id: str) -> None:
         if self._calendar_port is None:
             raise RuntimeError("Calendar port is not configured")
         await self._calendar_port.delete_event(token, event_id, calendar_id)
@@ -1691,7 +1682,6 @@ class CandidateService:
         if self._calendar_port is None:
             raise RuntimeError("Calendar port is not configured")
         return await self._calendar_port.get_event(token, event_id, calendar_id)
-
 
     async def _resolve_interviewers(
         self, interviewer_ids: list[UUID]
@@ -1805,9 +1795,12 @@ class CandidateService:
         # No Calendar wiring → preserve legacy transition-only behavior (R8.3).
         if self._calendar_port is None or self._user_id is None:
             return
+        user_id = self._user_id
 
         interview = await self._get_scheduled_interview(candidate.id)
-        event_id = interview.calendar_event_id if interview else candidate.calendar_event_id
+        if interview is None:
+            return
+        event_id = interview.calendar_event_id
         if event_id is None:
             # No interview event to cancel (R8.3).
             return
@@ -1906,7 +1899,11 @@ class CandidateService:
             raise RuntimeError("Organization connection dependencies are not configured")
 
         connection = await self._connection_repo.get_singleton()
-        if connection is None or connection.status != "connected" or not connection.access_token_enc:
+        if (
+            connection is None
+            or connection.status != "connected"
+            or not connection.access_token_enc
+        ):
             raise CalendarGrantMissingError()
 
         access_token = self._crypto.decrypt(connection.access_token_enc)
@@ -1975,11 +1972,16 @@ class CandidateService:
                     except Exception:
                         error_str = ""
                     is_auth_failure = error_str in (
-                        "invalid_grant", "invalid_client", "unauthorized_client",
-                        "access_denied", "unsupported_grant_type",
+                        "invalid_grant",
+                        "invalid_client",
+                        "unauthorized_client",
+                        "access_denied",
+                        "unsupported_grant_type",
                     )
                     if is_auth_failure:
-                        from src.modules.identity.domain.entities import OrganizationGoogleConnection
+                        from src.modules.identity.domain.entities import (
+                            OrganizationGoogleConnection,
+                        )
 
                         if isinstance(connection, OrganizationGoogleConnection):
                             connection.status = "reauthorization_required"
@@ -2108,6 +2110,7 @@ class CandidateService:
         timezone: str,
         duration_minutes: int,
         interviewer_ids: list[UUID],
+        calendar_id: str,
         notes: str | None = None,
     ) -> Candidate:
         # Check if an Interview with this event_id already exists for this candidate
@@ -2123,6 +2126,7 @@ class CandidateService:
                     end_at=start_resolved + timedelta(minutes=duration_minutes),
                     timezone=timezone,
                     calendar_event_id=event_id,
+                    calendar_id=calendar_id,
                     needs_relink=False,
                 )
                 self._session.add(interview)
@@ -2161,9 +2165,7 @@ class CandidateService:
                         self._session.add(emp_part)
 
         candidate.status = CandidateStatus.INTERVIEW_SCHEDULED
-        candidate.calendar_event_id = event_id
-        candidate.interview_start_at = start_resolved
-        candidate.interview_timezone = timezone
+        # Calendar fields live on Interview (migration 074), not Candidate
         candidate = await self._candidate_repo.update(candidate)
         await self._session.commit()
         return candidate
@@ -2451,6 +2453,7 @@ class CandidateService:
             end_at=end,
             timezone=timezone,
             calendar_event_id=event.event_id,
+            calendar_id=calendar_id,
             calendar_etag=event.etag,
             calendar_updated=event.updated,
             meeting_mode=mode,
