@@ -98,7 +98,7 @@ Workflow cốt lõi duy nhất của project: email đến → AI nhận diện 
 _Avoid_: Pipeline (Pipeline chỉ machine status của Candidate)
 
 **Onboarding**:
-Quy trình dựa trên checklist, biến Candidate accepted thành Employee active. Quy trình được kích hoạt bởi event Candidate “accepted”. Một OnboardingProcess chứa danh sách task (ví dụ ký hợp đồng, nộp hồ sơ, gán department/position, đặt start date); HR hoàn tất từng task, và khi tất cả task xong thì Candidate trở thành Employee active. Đây là mắt xích hiện còn thiếu trong Backbone Flow.
+Quy trình dựa trên checklist, biến Candidate accepted thành Employee active. Quy trình được kích hoạt bởi event Candidate “accepted”. Một OnboardingProcess chứa danh sách task (ví dụ ký hợp đồng, nộp hồ sơ, gán department/position, đặt start date); HR hoàn tất từng task, và chỉ khi mọi task bắt buộc hoàn tất cùng với thông tin department, position, manager và start date đầy đủ thì Employee mới trở thành active.
 _Avoid_: Promotion, Hiring
 
 **Onboarding Task**:

@@ -4,11 +4,7 @@ Vietnamese Recruit-Onboard-Operate-Manage — HRM platform for Vietnamese busine
 
 ## Project status & features
 
-This repo keeps no static progress doc on purpose — status would rot. To see where
-things stand, ask your AI agent: "tiến độ dự án tới đâu rồi?", "dự án có những tính
-năng gì?", or "tìm hiểu luồng tuyển dụng giúp tôi". It reports live from the wired
-routers in `backend/src/main.py`, the specs under `.kiro/specs/`, the ADRs in
-`docs/decisions/`, and open GitHub Issues.
+Status reports are dated snapshots, such as [`docs/project-status-2026-07-14.md`](./docs/project-status-2026-07-14.md), and are not the current source of truth. To see where things stand now, inspect the wired routers in `backend/src/main.py`, the backend and frontend tests, the ADRs in `docs/adr/`, and open GitHub Issues.
 
 Start with [`CONTEXT.md`](./CONTEXT.md) for the domain language (Organization,
 Candidate, Onboarding, Backbone Flow...). For contribution conventions (skills
@@ -94,9 +90,7 @@ NEXT_PUBLIC_NEXTAUTH_URL=http://localhost:3000
 | `recruitment` | Candidate pipeline, CV processing (AI)           |
 | `gmail`       | Gmail connection, sending, sync metadata         |
 
-Archived specs exist for `attendance`, `payroll`, and `self_service`, but those
-modules are not active in the current backend after migration
-`027_drop_attendance_payroll_tables.py`.
+Attendance đã có backend và UI HR chính; các trang schedule/holiday/leave/overtime còn chưa hoàn thiện. Payslip đã có CRUD/publish cho HR và read-only cho Employee. Payroll calculation engine, cấu hình phụ cấp và thuế chưa được triển khai.
 
 ## Development
 

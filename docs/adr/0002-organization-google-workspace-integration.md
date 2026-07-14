@@ -47,7 +47,7 @@ Sức khỏe `gmail_ingestion`, `gmail_sending` và `calendar_sync` được the
 ### Gmail ingestion
 
 - ARQ worker poll Gmail mỗi 1–5 phút. Lần kết nối đầu chỉ thiết lập `history_id` baseline hiện tại và không tự nhập email cũ.
-- Các lần sau dùng Gmail History API để xử lý email mới trong `INBOX`. `gmail_message_id` là khóa idempotency trong phạm vi connection/account; attachment có checksum để chống xử lý trùng ở Backbone Flow.
+- Các lần sau dùng Gmail History API để xử lý email mới trong `INBOX`. `gmail_message_id` là khóa idempotency trong phạm vi connection/account; attachment có checksum để chống xử lý trùng ở Backbone Flow. Gmail cursor thuộc **Organization Google Connection**, không thuộc HR/User; reconnect hoặc đổi shared account phải thiết lập baseline mới.
 - Nếu `startHistoryId` không còn hợp lệ và Gmail trả 404, worker xóa cursor cùng local ingestion state chưa hoàn tất rồi thực hiện full sync mới theo phạm vi dữ liệu Vroom thực sự cần (INBOX và cửa sổ thời gian có giới hạn), sau đó lưu baseline mới. Đây là full sync phục hồi theo contract của Gmail, không phải quét mailbox không giới hạn.
 - HR có action **Import previous emails** riêng, chọn cửa sổ 7 hoặc 30 ngày, xem preview số lượng, theo dõi tiến độ và có thể dừng. Import không làm hỏng cursor đồng bộ email mới.
 - Chỉ lưu message/thread ID, sender, subject, received time và metadata tối thiểu. Nội dung dùng để phân loại là dữ liệu tạm; chỉ attachment CV được chọn cho Backbone Flow mới được lưu bền vững.
@@ -76,9 +76,9 @@ Mỗi Interview chứa tối thiểu Candidate, `round_name`, start/end UTC, tim
 
 HR chọn một calendar tuyển dụng chuyên biệt khi cấu hình connection; backend lưu `calendar_id` và không mặc định dùng `primary`. Khi HR xác nhận tạo/đổi/hủy Interview, Calendar API dùng `sendUpdates=all`. Google Meet là tùy chọn theo Interview và được tạo bằng `conferenceDataVersion=1` với `requestId` idempotent. Event không recurring trong phiên bản đầu; timezone mặc định lấy từ Organization nhưng HR có thể đổi theo Interview.
 
-Mỗi Interview liên kết tối đa một Google event và lưu `calendar_id`, `event_id`, `etag`, Google `updated` và sync metadata. Calendar sync dùng `syncToken`, xử lý phân trang và deleted events; token 410 buộc bounded full sync trên calendar đã chọn. RSVP (`needsAction/accepted/declined/tentative`) chỉ cung cấp thông tin và cảnh báo cho HR, không tự hủy Interview.
+Mỗi Interview liên kết tối đa một Google event và lưu `calendar_id`, `event_id`, `etag`, Google `updated` và sync metadata. Calendar sync dùng `syncToken`, xử lý phân trang và deleted events; token 410 buộc bounded full sync trên calendar đã chọn. Chỉ event deletion/cancelled rõ ràng mới được chuyển Interview thành `cancelled`; không suy ra event bị xóa chỉ vì không xuất hiện trong full sync hữu hạn. RSVP (`needsAction/accepted/declined/tentative`) chỉ cung cấp thông tin và cảnh báo cho HR, không tự hủy Interview.
 
-Mọi update/delete gửi `If-Match` với `etag`. Phản hồi 412 tạo conflict thay vì last-write-wins: hệ thống đọc phiên bản mới từ Google và yêu cầu HR chọn giữ Google hoặc ghi đè từ Vroom. Event bị xóa trực tiếp trên Google làm Interview `cancelled` nhưng không đổi Candidate pipeline. Resolve conflict được audit.
+Mọi update/delete gửi `If-Match` với `etag`. Phản hồi 412 tạo conflict thay vì last-write-wins và đóng băng write tự động. **Giữ Google** đọc phiên bản mới rồi cập nhật local; **ghi đè từ Vroom** phải là xác nhận rõ của HR, đọc ETag hiện tại và gửi update mới. Nếu lại gặp 412 thì tạo conflict mới. Mọi resolve conflict được audit. Event bị xóa trực tiếp trên Google làm Interview `cancelled` nhưng không đổi Candidate pipeline.
 
 Không cho xóa/anonymize Candidate khi còn Interview `scheduled`; HR phải hủy Interview trước để Calendar gửi cancellation. Interview lịch sử sau đó được xóa hoặc anonymize cùng Candidate theo chính sách retention.
 
@@ -103,7 +103,7 @@ Thứ tự triển khai đề xuất:
 2. Thay scope hiện tại bằng bộ scope đã chốt; bỏ LabelService/write-label; thêm kiểm tra Internal Workspace account và allowed domain.
 3. Chuyển Gmail worker sang baseline-no-backfill, incremental History API và import job riêng; giữ pipeline phân loại/CV hiện có sau boundary ingestion.
 4. Thêm Interview, Interview participant và calendar sync metadata; chuyển Calendar adapter từ `primary`/HR token sang selected `calendar_id`/Organization token, thêm syncToken, RSVP, ETag conflict và optional Meet.
-5. Backfill một Interview `scheduled` cho mỗi Candidate đang có calendar fields. Nếu event cũ không truy cập được bằng Organization Shared Google Account, giữ Interview lịch sử ở trạng thái cần relink và yêu cầu HR hủy/tạo lịch thay thế; không âm thầm tạo event trùng.
+5. Backfill một Interview `scheduled` cho mỗi Candidate đang có calendar fields. Nếu event cũ không truy cập được bằng Organization Shared Google Account, giữ lifecycle status của Interview (`scheduled`/`completed`/`cancelled`) và đặt cờ `needs_relink=true`; yêu cầu HR hủy/tạo lịch thay thế trước khi ghi Calendar, không âm thầm tạo event trùng.
 6. Chuyển toàn bộ read/write sang Interview trong cùng release, kiểm chứng migration rồi xóa calendar fields trên Candidate. Không duy trì dual-write dài hạn.
 7. Sau migration, vô hiệu/revoke các OAuth grant Gmail theo HR và loại các endpoint cho phép gửi email hoặc sửa lịch mà không qua bước HR confirmation.
 
