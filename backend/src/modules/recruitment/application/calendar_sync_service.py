@@ -105,7 +105,7 @@ class CalendarSyncService:
         Raises:
             httpx.HTTPStatusError: On 401 (caller should refresh token).
         """
-        cursor = await self._sync_cursor_repo.get_cursor()
+        cursor = await self._sync_cursor_repo.get_cursor(self._calendar_id)
         sync_token = None if full_sync else (cursor.sync_token if cursor else None)
 
         if sync_token is not None:
@@ -117,7 +117,7 @@ class CalendarSyncService:
                     logger.warning(
                         "Calendar sync token expired (410); clearing and falling back to full sync"
                     )
-                    await self._sync_cursor_repo.clear_sync_token()
+                    await self._sync_cursor_repo.clear_sync_token(self._calendar_id)
                     return await self.sync_events(access_token, session, full_sync=True)
                 raise
         else:
@@ -139,6 +139,7 @@ class CalendarSyncService:
         # Persist the next sync token.
         if changes.next_sync_token:
             await self._sync_cursor_repo.upsert_cursor(
+                calendar_id=self._calendar_id,
                 sync_token=changes.next_sync_token,
             )
 
@@ -245,7 +246,6 @@ class CalendarSyncService:
                 and cal_event.updated <= interview.calendar_updated
             ):
                 continue
-
             if cal_event.status == "cancelled":
                 if interview.status != "cancelled":
                     interview.status = "cancelled"
@@ -253,6 +253,13 @@ class CalendarSyncService:
                 # Update time/location/metadata.
                 interview.calendar_etag = cal_event.etag
                 interview.calendar_updated = cal_event.updated
+
+                if cal_event.start_at is not None:
+                    interview.start_at = cal_event.start_at
+                if cal_event.end_at is not None:
+                    interview.end_at = cal_event.end_at
+                if cal_event.timezone is not None:
+                    interview.timezone = cal_event.timezone
 
                 if cal_event.location is not None:
                     interview.remote_location = cal_event.location
@@ -317,5 +324,5 @@ class CalendarSyncService:
         This clears any stored sync token and runs a bounded full sync so the
         system catches up with any changes that occurred while disconnected.
         """
-        await self._sync_cursor_repo.clear_sync_token()
+        await self._sync_cursor_repo.clear_sync_token(self._calendar_id)
         return await self.sync_events(access_token, session, full_sync=True)

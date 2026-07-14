@@ -151,6 +151,9 @@ class CalendarEvent:
         updated: RFC3339 update timestamp from Google.
         status: Event status ("confirmed", "cancelled", "tentative").
         attendees: Raw attendee list with "email", "responseStatus", etc.
+        start_at: Event start datetime, when Google returns a dateTime start.
+        end_at: Event end datetime, when Google returns a dateTime end.
+        timezone: IANA timezone returned for the event time window.
     """
 
     event_id: str
@@ -162,6 +165,9 @@ class CalendarEvent:
     updated: datetime | None = None
     status: str | None = None
     attendees: tuple[dict[str, Any], ...] = ()
+    start_at: datetime | None = None
+    end_at: datetime | None = None
+    timezone: str | None = None
 
 
 @dataclass(frozen=True)

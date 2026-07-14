@@ -55,3 +55,13 @@ def test_interview_not_found_error_accepts_uuid() -> None:
     fake_id = uuid4()
     error = InterviewNotFoundError(f"Interview not found: {fake_id}")
     assert str(fake_id) in str(error)
+
+
+def test_calendar_relink_required_error_importable() -> None:
+    """CalendarRelinkRequiredError is importable and carries 409 status."""
+    from src.modules.recruitment.domain.exceptions import CalendarRelinkRequiredError
+
+    error = CalendarRelinkRequiredError()
+    assert error.status_code == 409
+    assert error.error_code == "CALENDAR_RELINK_REQUIRED"
+    assert "Calendar event binding" in error.message

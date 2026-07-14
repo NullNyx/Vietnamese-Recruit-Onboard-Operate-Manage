@@ -548,26 +548,48 @@ async def arq_retention_cleanup(ctx: dict[str, Any]) -> int:
 # ---------------------------------------------------------------------------
 
 
-def get_calendar_sync_service(
+async def get_calendar_sync_service(
     session: AsyncSession = Depends(get_db_session),
 ) -> CalendarSyncService:
     """Provide a CalendarSyncService instance with all dependencies.
+
+    Reads the selected ``calendar_id`` from the Organization Google
+    Connection so the sync service operates on the correct calendar.
 
     Args:
         session: The async database session from DI.
 
     Returns:
         A configured CalendarSyncService.
+
+    Raises:
+        CalendarGrantMissingError: If no org connection or no selected calendar.
     """
     from src.modules.recruitment.application.calendar_sync_service import (
         CalendarSyncService,
     )
+    from src.modules.recruitment.domain.exceptions import CalendarGrantMissingError
 
     calendar_adapter = get_calendar_adapter()
     sync_cursor_repo = CalendarSyncCursorRepository(session)
+
+    conn_repo = OrganizationGoogleConnectionRepository(session)
+    connection = await conn_repo.get_singleton()
+    if connection is None or connection.status != "connected":
+        raise CalendarGrantMissingError(
+            message="Organization Google Connection is not active"
+        )
+    calendar_id = connection.selected_calendar_id
+    if not calendar_id:
+        raise CalendarGrantMissingError(
+            message="No recruitment calendar selected; "
+            "select a calendar in Organization settings first"
+        )
+
     return CalendarSyncService(
         adapter=calendar_adapter,
         sync_cursor_repo=sync_cursor_repo,
+        calendar_id=calendar_id,
     )
 
 

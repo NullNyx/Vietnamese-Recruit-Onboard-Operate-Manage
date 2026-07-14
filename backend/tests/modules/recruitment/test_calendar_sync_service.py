@@ -326,20 +326,20 @@ class FakeSyncCursorRepo:
         self.upsert_calls: list[dict[str, Any]] = []
         self.clear_calls = 0
 
-    async def get_cursor(self) -> CalendarSyncCursor | None:
+    async def get_cursor(self, calendar_id: str) -> CalendarSyncCursor | None:
         return self.cursor
 
     async def upsert_cursor(
-        self, *, sync_token: str | None = None, page_token: str | None = None
+        self, *, calendar_id: str, sync_token: str | None = None, page_token: str | None = None
     ) -> CalendarSyncCursor:
-        self.upsert_calls.append({"sync_token": sync_token, "page_token": page_token})
+        self.upsert_calls.append({"calendar_id": calendar_id, "sync_token": sync_token, "page_token": page_token})
         if sync_token is not None:
             self.cursor.sync_token = sync_token
         self.cursor.page_token = page_token
         self.cursor.last_sync_at = datetime.now(UTC)
         return self.cursor
 
-    async def clear_sync_token(self) -> None:
+    async def clear_sync_token(self, calendar_id: str) -> None:
         self.clear_calls += 1
         self.cursor.sync_token = None
         self.cursor.page_token = None

@@ -336,6 +336,24 @@ class CalendarEventConflictError(RecruitmentError):
     message = "The Google Calendar event changed; review the conflict before retrying"
 
 
+class CalendarRelinkRequiredError(RecruitmentError):
+    """Calendar event binding is stale; HR intervention required.
+
+    Raised when an Interview has ``needs_relink=True`` and the requested
+    operation requires writing to the existing Calendar event. HR must
+    cancel the Interview and create a replacement (which sends fresh
+    Calendar invitations) rather than silently patching or deleting a
+    potentially inaccessible event.
+    """
+
+    status_code = 409
+    error_code = "CALENDAR_RELINK_REQUIRED"
+    message = (
+        "This interview's Calendar event binding is stale. "
+        "Cancel this interview and create a replacement instead."
+    )
+
+
 class CalendarEventUpdateFailedError(RecruitmentError):
     """Google Calendar event update failed.
 

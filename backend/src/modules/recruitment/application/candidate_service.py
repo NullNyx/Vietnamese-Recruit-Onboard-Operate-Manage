@@ -39,6 +39,7 @@ from src.modules.recruitment.domain.exceptions import (
     CalendarEventCreateFailedError,
     CalendarEventUpdateFailedError,
     CalendarGrantMissingError,
+    CalendarRelinkRequiredError,
     CandidateAssignmentBlockedError,
     CandidateNotFoundError,
     GmailNotConnectedError,
@@ -1379,6 +1380,10 @@ class CandidateService:
         if event_id is None:
             raise NoInterviewToRescheduleError()
 
+        # Guard: a relink-required Interview blocks Calendar writes until HR
+        # cancels and creates a replacement (or explicitly relinks).
+        if interview.needs_relink:
+            raise CalendarRelinkRequiredError()
         # Step 2: ensure org connection is active before any Calendar call (R9.2, R9.3).
         await self._ensure_org_connection_active()
         calendar_id = await self._resolve_org_calendar_id()
@@ -2822,6 +2827,9 @@ class CandidateService:
                 "html_link": remote_event.html_link,
                 "meet_link": remote_event.meet_link,
                 "location": remote_event.location,
+                "start_at": remote_event.start_at.isoformat() if remote_event.start_at else None,
+                "end_at": remote_event.end_at.isoformat() if remote_event.end_at else None,
+                "timezone": remote_event.timezone,
             }
 
         # Compute conflict details: what fields differ.
@@ -2935,17 +2943,50 @@ class CandidateService:
         remote_etag = conflict.remote_snapshot.get("etag")
 
         if choice == "keep_google":
-            # Update local Interview to match remote.
+            # Apply Google's version to the local Interview.
+            # Time window, location, meeting link, etag, and — when the remote
+            # event status is explicitly "cancelled" — the Interview status.
+            applied_fields: list[str] = []
             if interview is not None:
-                # Only update metadata; don't change interview status from the event status
-                # since Google event status != Vroom interview status mapping is not 1:1.
                 if remote_event_etag := conflict.remote_snapshot.get("etag"):
                     interview.calendar_etag = remote_event_etag
+                    applied_fields.append("calendar_etag")
                 if remote_updated := conflict.remote_snapshot.get("updated"):
                     try:
                         interview.calendar_updated = datetime.fromisoformat(remote_updated)
+                        applied_fields.append("calendar_updated")
                     except (ValueError, TypeError):
                         pass
+
+                if remote_start := conflict.remote_snapshot.get("start_at"):
+                    try:
+                        interview.start_at = datetime.fromisoformat(remote_start)
+                        applied_fields.append("start_at")
+                    except (ValueError, TypeError):
+                        pass
+                if remote_end := conflict.remote_snapshot.get("end_at"):
+                    try:
+                        interview.end_at = datetime.fromisoformat(remote_end)
+                        applied_fields.append("end_at")
+                    except (ValueError, TypeError):
+                        pass
+                if remote_tz := conflict.remote_snapshot.get("timezone"):
+                    interview.timezone = remote_tz
+                    applied_fields.append("timezone")
+
+                if remote_location := conflict.remote_snapshot.get("location"):
+                    interview.remote_location = remote_location
+                    applied_fields.append("remote_location")
+                if remote_meet := conflict.remote_snapshot.get("meet_link"):
+                    interview.meeting_link = remote_meet
+                    applied_fields.append("meeting_link")
+
+                # Only cancel the Interview when Google explicitly reports cancelled.
+                if conflict.remote_snapshot.get("status") == "cancelled":
+                    if interview.status != "cancelled":
+                        interview.status = "cancelled"
+                        applied_fields.append("status")
+
                 self._session.add(interview)
 
             conflict.status = "resolved_keep_google"
@@ -3013,6 +3054,21 @@ class CandidateService:
             await self._session.commit()
 
         # Audit the resolution.
+        resolution_summary: dict[str, Any] = {
+            "conflict_id": str(conflict.id),
+            "choice": choice,
+            "status": conflict.status,
+            "calendar_event_id": conflict.calendar_event_id,
+            "candidate_id": str(conflict.candidate_id),
+            "interview_id": str(conflict.interview_id),
+        }
+        if choice == "keep_google" and applied_fields:
+            resolution_summary["applied_fields"] = applied_fields
+
+        change_text = f"Calendar conflict {conflict.id} resolved by {choice}: event {conflict.calendar_event_id}"
+        if choice == "keep_google" and applied_fields:
+            change_text += f"; applied: {', '.join(applied_fields)}"
+
         await log_audit(
             session=self._session,
             operation_type="calendar_conflict_resolved",
@@ -3020,18 +3076,8 @@ class CandidateService:
             entity_id=conflict.id,
             user_id=acting_user_id,
             previous_value={"status": "unresolved"},
-            new_value={
-                "conflict_id": str(conflict.id),
-                "choice": choice,
-                "status": conflict.status,
-                "calendar_event_id": conflict.calendar_event_id,
-                "candidate_id": str(conflict.candidate_id),
-                "interview_id": str(conflict.interview_id),
-            },
-            change_summary=(
-                f"Calendar conflict {conflict.id} resolved by {choice}: "
-                f"event {conflict.calendar_event_id}"
-            ),
+            new_value=resolution_summary,
+            change_summary=change_text,
             success=True,
         )
         await self._session.commit()

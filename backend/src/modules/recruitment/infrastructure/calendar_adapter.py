@@ -294,6 +294,9 @@ class CalendarAdapter:
         Returns:
             The parsed :class:`CalendarEvent` value object.
         """
+        start_dt = self._parse_time_field(data.get("start"))
+        end_dt = self._parse_time_field(data.get("end"))
+        timezone_val = self._extract_timezone(data.get("start"))
         return CalendarEvent(
             event_id=str(data.get("id", "")),
             html_link=self._optional_str(data.get("htmlLink")),
@@ -304,6 +307,9 @@ class CalendarAdapter:
             invited_emails=self._extract_attendees(data),
             status=self._optional_str(data.get("status")),
             attendees=tuple(data.get("attendees") or ()),
+            start_at=start_dt,
+            end_at=end_dt,
+            timezone=timezone_val,
         )
 
     def _optional_str(self, value: Any) -> str | None:
@@ -332,6 +338,42 @@ class CalendarAdapter:
             return datetime.fromisoformat(value)
         except (ValueError, TypeError):
             return None
+
+    def _parse_time_field(self, value: Any) -> datetime | None:
+        """Parse a Calendar API start/end time object into a datetime.
+
+        Google Calendar returns ``start`` and ``end`` as
+        ``{"dateTime": "<RFC3339>", "timeZone": "<IANA>"}``.
+
+        Args:
+            value: The ``start`` or ``end`` dict from a Calendar API response.
+
+        Returns:
+            The parsed datetime, or ``None`` if the value is absent or invalid.
+        """
+        if not isinstance(value, dict):
+            return None
+        date_time = value.get("dateTime")
+        if not isinstance(date_time, str):
+            return None
+        try:
+            return datetime.fromisoformat(date_time)
+        except (ValueError, TypeError):
+            return None
+
+    def _extract_timezone(self, value: Any) -> str | None:
+        """Extract the IANA timezone from a Calendar API start/end object.
+
+        Args:
+            value: The ``start`` or ``end`` dict from a Calendar API response.
+
+        Returns:
+            The IANA timezone string, or ``None``.
+        """
+        if not isinstance(value, dict):
+            return None
+        tz = value.get("timeZone")
+        return tz if isinstance(tz, str) else None
 
     def _extract_meet_link(self, data: dict[str, Any]) -> str | None:
         """Extract the Google Meet link from a Calendar event response.

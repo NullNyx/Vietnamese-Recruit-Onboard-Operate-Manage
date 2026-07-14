@@ -454,6 +454,26 @@ class _FakeOrgSettingsRepo:
         return self._timezone
 
 
+class _FakeConnection:
+    """Minimal fake OrganizationGoogleConnection returning connected state."""
+
+    def __init__(self) -> None:
+        self.status = "connected"
+        self.access_token_enc = "enc"
+        self.selected_calendar_id = "recruitment@company.vn"
+
+
+class _FakeConnectionRepo:
+    """Fake OrganizationGoogleConnectionRepository returning a scripted record."""
+
+    def __init__(self, connected: bool = True) -> None:
+        self._connected = connected
+
+    async def get_singleton(self):
+        if not self._connected:
+            return None
+        return _FakeConnection()
+
 class _FakeCalendarPort:
     """Fake CalendarPort recording create calls; returns or raises scripted."""
 
@@ -526,6 +546,7 @@ class TestScheduleInterview:
             user_id=user_id,
             calendar_port=calendar_port,
             org_settings_repo=_FakeOrgSettingsRepo(),
+            connection_repo=_FakeConnectionRepo(),
             oauth_grant_repo=_FakeOAuthGrantRepo(
                 _FakeGrant(scopes=["https://www.googleapis.com/auth/calendar.events"])
             ),
@@ -540,7 +561,6 @@ class TestScheduleInterview:
     async def test_schedule_from_valid_statuses(
         self, schedule_service, mock_candidate_repo, mock_session, initial_status
     ):
-        """Should transition to interview_scheduled from new and reviewing."""
         candidate = _make_candidate(status=initial_status)
         mock_candidate_repo.get_by_id.return_value = candidate
 
@@ -654,6 +674,7 @@ class TestScheduleInterview:
             user_id=user_id,
             calendar_port=calendar_port,
             org_settings_repo=_FakeOrgSettingsRepo(),
+            connection_repo=_FakeConnectionRepo(connected=False),
             oauth_grant_repo=_FakeOAuthGrantRepo(_FakeGrant(scopes=[])),
             oauth_service=_FakeOAuthService(calendar_grant_valid=False),
             crypto=_FakeCrypto(),
@@ -683,6 +704,7 @@ class TestScheduleInterview:
         interviewer_id = uuid4()
         _set_interviewers(mock_session, [SimpleNamespace(id=interviewer_id, email="a@example.com")])
 
+
         failing_port = _FakeCalendarPort(error=RuntimeError("calendar down"))
         service = CandidateService(
             candidate_repo=mock_candidate_repo,
@@ -692,6 +714,7 @@ class TestScheduleInterview:
             user_id=user_id,
             calendar_port=failing_port,
             org_settings_repo=_FakeOrgSettingsRepo(),
+            connection_repo=_FakeConnectionRepo(),
             oauth_grant_repo=_FakeOAuthGrantRepo(
                 _FakeGrant(scopes=["https://www.googleapis.com/auth/calendar.events"])
             ),
