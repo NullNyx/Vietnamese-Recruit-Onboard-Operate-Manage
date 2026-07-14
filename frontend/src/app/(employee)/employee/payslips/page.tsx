@@ -65,14 +65,14 @@ function PayslipCard({ payslip }: { payslip: Payslip }) {
             {formatPeriodMonth(payslip.period_month)}
           </p>
           <p className="text-[12px] text-[#8a8f98]">
-            Gross: {formatCurrency(payslip.gross_salary)}
+            Lương gộp: {formatCurrency(payslip.gross_salary)}
           </p>
         </div>
         <div className="text-right">
           <p className="text-[16px] font-semibold text-[#f7f8f8]">
             {formatCurrency(payslip.net_salary)}
           </p>
-          <p className="text-[11px] text-[#8a8f98]">Net</p>
+          <p className="text-[11px] text-[#8a8f98]">Lương thực nhận</p>
         </div>
       </div>
     </Link>

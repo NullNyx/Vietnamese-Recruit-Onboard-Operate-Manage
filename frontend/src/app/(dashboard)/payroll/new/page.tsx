@@ -52,7 +52,7 @@ export default function NewPayslipPage() {
 
   async function handleSubmit() {
     if (!employeeId) { toast.error("Chọn nhân viên"); return; }
-    if (!netSalary) { toast.error("Nhập lương net"); return; }
+    if (!netSalary) { toast.error("Nhập lương thực nhận"); return; }
 
     setLoading(true);
     const payload: CreatePayslipRequest = {
@@ -93,7 +93,7 @@ export default function NewPayslipPage() {
         <CardHeader>
           <CardTitle>Thông tin phiếu lương</CardTitle>
           <CardDescription>
-            Nhập lương gross, các khoản khấu trừ và lương net. Tất cệ giá trị là VND.
+            Nhập lương gộp, các khoản khấu trừ và lương thực nhận. Tất cả giá trị là VND.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -123,7 +123,7 @@ export default function NewPayslipPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Lương Gross (VND) *</Label>
+              <Label>Lương gộp (VND) *</Label>
               <Input
                 placeholder="15,000,000"
                 value={grossSalary}
@@ -131,7 +131,7 @@ export default function NewPayslipPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Lương Net (VND) *</Label>
+              <Label>Lương thực nhận (VND) *</Label>
               <Input
                 placeholder="12,082,500"
                 value={netSalary}

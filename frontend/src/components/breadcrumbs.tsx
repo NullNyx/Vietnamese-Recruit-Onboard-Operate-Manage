@@ -15,6 +15,12 @@ const labelMap: Record<string, string> = {
   recruitment: "Tuyển dụng",
   review: "Xem xét CV",
   metrics: "Số liệu",
+  payroll: "Bảng lương",
+  config: "Cấu hình",
+  allowances: "Phụ cấp",
+  tax: "Thuế",
+  attendance: "Chấm công",
+  payslips: "Phiếu lương",
 };
 
 interface BreadcrumbItem {
