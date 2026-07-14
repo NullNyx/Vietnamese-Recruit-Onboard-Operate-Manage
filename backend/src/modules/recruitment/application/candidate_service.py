@@ -1465,7 +1465,7 @@ class CandidateService:
         if interview is not None:
             # Delete old participants except candidate
             from sqlalchemy import text
-    
+
             try:
                 await self._session.execute(
                     text(
@@ -1478,7 +1478,7 @@ class CandidateService:
                 # Lightweight in-memory sessions may not implement parameterized
                 # SQL execution; participant replacement is optional there.
                 pass
-    
+
             for emp_id in interviewer_ids:
                 emp_stmt = select(Employee).where(Employee.id == emp_id)
                 emp_res = await self._session.execute(emp_stmt)
@@ -1498,7 +1498,7 @@ class CandidateService:
                         employee_id=emp_id,
                     )
                     self._session.add(emp_part)
-    
+
         await self._session.commit()
 
         # Step 8: reschedule audit recording previous/new start (R12.2). Audit
