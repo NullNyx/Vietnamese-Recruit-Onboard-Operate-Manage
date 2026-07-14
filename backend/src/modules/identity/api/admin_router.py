@@ -32,6 +32,7 @@ from src.modules.identity.api.admin_schemas import (
     AssistantToolConfigResponse,
     AssistantToolConfigUpdateRequest,
     AuditLogResponse,
+    ClassificationReleaseMetricsRequest,
     ClassificationRolloutRequest,
     ClassificationRolloutTelemetryResponse,
     DataPolicyResponse,
@@ -256,6 +257,28 @@ async def configure_classification_rollout(
             status_code=422,
             detail={"code": "CLASSIFICATION_ROLLOUT_BLOCKED", "message": str(exc)},
         ) from exc
+    await audit_service.log_action(
+        admin=admin_user,
+        action_type=AuditActionType.ORG_AI_CLASSIFICATION_ROLLOUT,
+        details=result.audit_details,
+    )
+    return _ai_view_response(result.view)
+
+
+@admin_router.post(
+    "/organization/ai-config/classification-rollout/guardrails",
+    response_model=OrganizationAIConfigurationResponse,
+)
+async def enforce_classification_guardrails(
+    body: ClassificationReleaseMetricsRequest,
+    admin_user: AdminUserDep,
+    service: OrganizationAIConfigService = Depends(get_organization_ai_config_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> OrganizationAIConfigurationResponse:
+    """Apply measured guardrails and automatically roll back unsafe rollout state."""
+    result = await service.enforce_classification_guardrails(
+        ReleaseMetrics(**body.model_dump()), admin_user
+    )
     await audit_service.log_action(
         admin=admin_user,
         action_type=AuditActionType.ORG_AI_CLASSIFICATION_ROLLOUT,

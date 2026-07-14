@@ -77,6 +77,37 @@ async def test_full_rollout_is_blocked_until_release_gates_pass() -> None:
 
 
 @pytest.mark.asyncio
+async def test_operational_guardrail_failure_auto_rolls_back_active_candidate() -> None:
+    service, repository = _service()
+    admin = User(id=uuid4(), email="hr@example.com", role="admin")
+    repository.config.candidate_classifier_version = "classifier-v2"
+    repository.config.candidate_classification_policy = BusinessPolicy.RECALL_FIRST.value
+    repository.config.candidate_classification_policy_version = "recall-first-v2"
+    repository.config.rollout_mode = RolloutMode.CANARY.value
+    repository.config.canary_percentage = 25
+
+    result = await service.enforce_classification_guardrails(
+        ReleaseMetrics(
+            job_application_recall=0.99,
+            baseline_recall=0.98,
+            needs_classification_rate=0.10,
+            no_cv_recall=0.99,
+            correction_rate=0.02,
+            review_rate=0.10,
+            p95_latency_ms=2_001,
+            provider_error_rate=0.0,
+            duplicate_count=0,
+        ),
+        admin,
+    )
+
+    assert repository.config.rollout_mode == RolloutMode.STABLE.value
+    assert repository.config.candidate_classifier_version is None
+    assert result.audit_details["action"] == "classification_rollout_auto_rollback"
+    assert result.audit_details["failures"] == ["p95_latency_above_2000ms"]
+
+
+@pytest.mark.asyncio
 async def test_rollback_restores_stable_versions_and_audits_policy() -> None:
     service, repository = _service()
     admin = User(id=uuid4(), email="hr@example.com", role="admin")

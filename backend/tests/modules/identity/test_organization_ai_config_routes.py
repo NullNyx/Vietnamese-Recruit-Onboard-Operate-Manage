@@ -21,5 +21,9 @@ def test_core_organization_ai_config_routes_are_registered() -> None:
     ) in registered
     assert (
         "POST",
+        "/api/admin/organization/ai-config/classification-rollout/guardrails",
+    ) in registered
+    assert (
+        "POST",
         "/api/admin/organization/ai-config/classification-rollout/rollback",
     ) in registered

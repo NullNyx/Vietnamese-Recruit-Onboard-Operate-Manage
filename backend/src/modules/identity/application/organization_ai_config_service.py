@@ -816,6 +816,36 @@ class OrganizationAIConfigService:
             },
         )
 
+    async def enforce_classification_guardrails(
+        self, metrics: ReleaseMetrics, admin: User
+    ) -> AIConfigurationUpdateResult:
+        """Automatically roll back an active candidate that violates guardrails."""
+        decision = evaluate_release_gates(metrics)
+        config = await self.repository.get()
+        if config is None:
+            raise OrganizationAIConfigValidationError("No provider configuration exists.")
+        if decision.allowed or config.rollout_mode == RolloutMode.STABLE.value:
+            return AIConfigurationUpdateResult(
+                view=await self.get_view(),
+                audit_details={
+                    "action": "classification_rollout_guardrails_passed",
+                    "failures": list(decision.failures),
+                },
+            )
+
+        result = await self.rollback_classification_rollout(admin)
+        result.audit_details = {
+            "action": "classification_rollout_auto_rollback",
+            "failures": list(decision.failures),
+            "rolled_back_classifier_version": result.audit_details.get(
+                "rolled_back_classifier_version"
+            ),
+            "rolled_back_policy_version": result.audit_details.get("rolled_back_policy_version"),
+            "restored_classifier_version": result.audit_details.get("restored_classifier_version"),
+            "restored_policy_version": result.audit_details.get("restored_policy_version"),
+        }
+        return result
+
     async def rollback_classification_rollout(self, admin: User) -> AIConfigurationUpdateResult:
         """Restore retained stable versions without touching workflow records."""
         config = await self.repository.get()

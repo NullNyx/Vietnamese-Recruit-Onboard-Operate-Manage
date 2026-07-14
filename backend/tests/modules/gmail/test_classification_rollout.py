@@ -166,7 +166,7 @@ async def test_gmail_flow_applies_stable_result_while_shadow_only_records() -> N
     stable = MagicMock()
     stable.classify = AsyncMock(
         return_value=ClassificationResult(
-            category=EmailCategory.vendor, confidence=0.9, source="ai"
+            category=EmailCategory.recruitment, confidence=0.9, source="ai"
         )
     )
     candidate = MagicMock()
@@ -216,9 +216,9 @@ async def test_gmail_flow_applies_stable_result_while_shadow_only_records() -> N
     classified = await service.classify_batch(email.user_id, [email])
 
     assert classified == 1
-    assert email.category == EmailCategory.vendor.value
+    assert email.category == EmailCategory.recruitment.value
     assert email.processing_status == "classified"
-    application_created.assert_not_awaited()
+    application_created.assert_awaited_once()
     assert record.await_args.args[0].candidate_intent == EmailCategory.recruitment.value
 
 

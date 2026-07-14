@@ -6,7 +6,8 @@ Hoàn thiện issue #205 cho shadow/canary rollout của classifier Job Applicat
 
 - Bổ sung `retry_failure_rate`, token usage và estimated cost vào response telemetry của Admin API.
 - Bổ sung các operational release gates cho p95 latency, provider error rate và retry failure rate.
-- Thêm test chứng minh candidate có recall tốt vẫn bị chặn nếu operational guardrail vượt ngưỡng.
+- Bổ sung endpoint guardrail để tự động rollback rollout đang active khi operational guardrail vượt ngưỡng.
+- Thêm test chứng minh candidate có recall tốt vẫn bị chặn nếu operational guardrail vượt ngưỡng và shadow không tạo duplicate workflow.
 
 # The real problem
 
@@ -18,7 +19,7 @@ Threshold vận hành được giữ trong module rollout, không cho Organizati
 
 # Production shape
 
-Telemetry được tổng hợp theo email mới nhất, hiển thị chất lượng workflow cùng latency, provider error, retry failure và chi phí. Full rollout chỉ được cấu hình khi mọi hard và operational gate đều đạt; stable version vẫn được giữ để rollback.
+Telemetry được tổng hợp theo email mới nhất, hiển thị chất lượng workflow cùng latency, provider error, retry failure và chi phí. Full rollout chỉ được cấu hình khi mọi hard và operational gate đều đạt; nếu rollout active vi phạm gate, endpoint guardrail tự động chuyển về stable. Stable version vẫn được giữ để rollback.
 
 # Other possible approaches
 
