@@ -42,7 +42,10 @@ def _build_processor(
     mock_session,
     recruitment_settings,
     mock_candidate_creator,
-    ocr_text: str = "Nguyen Van A Python Developer 5 years experience in software engineering",
+        ocr_text: str = (
+            "Nguyen Van A a@example.com 0901234567 Python Developer "
+            "5 years experience in software engineering"
+        ),
     parsed_cv: ParsedCV | None = None,
 ):
     """Build a CVProcessorService with mocked dependencies."""
@@ -126,8 +129,8 @@ def mock_candidate_creator():
     return creator
 
 
-class TestHighConfidenceCreatesCandidate:
-    """High confidence CV (>= 0.7) should create Candidate and set status=completed."""
+class TestHighConfidenceProducesDraft:
+    """High confidence CV produces a completed draft without a Candidate write."""
 
     async def test_high_confidence_creates_candidate(
         self,
@@ -160,7 +163,9 @@ class TestHighConfidenceCreatesCandidate:
         )
 
         assert cv_doc.processing_status == ProcessingStatus.COMPLETED
-        assert mock_candidate_creator.create_or_update_candidate.called
+        assert not mock_candidate_creator.create_or_update_candidate.called
+        assert cv_doc.field_provenance
+        assert cv_doc.validation_errors == []
 
 
 class TestLowConfidenceRoutesToReview:

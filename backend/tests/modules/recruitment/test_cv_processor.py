@@ -211,7 +211,8 @@ class TestProcessSingleAttachment:
         assert result.confidence_score >= 0.7
         assert result.file_path == "storage/cv/msg123/resume.pdf"
         assert result.original_filename == "resume.pdf"
-        mock_candidate_creator.create_or_update_candidate.assert_called_once()
+        # AI Automation only produces a draft; HR must promote explicitly.
+        mock_candidate_creator.create_or_update_candidate.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_successful_pipeline_low_confidence(

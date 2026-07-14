@@ -331,7 +331,9 @@ class TestSubmitCorrection:
         )
 
         # CVDocument should be updated with corrected data and completed status
-        assert sample_cv_document.parsed_cv_data == valid_parsed_cv.model_dump()
+        assert sample_cv_document.parsed_cv_data["name"] == valid_parsed_cv.name
+        assert sample_cv_document.confirmed_fields
+        assert sample_cv_document.field_provenance["name"]["status"] == "confirmed"
         assert sample_cv_document.processing_status == ProcessingStatus.COMPLETED
         mock_cv_document_repo.update.assert_called()
 
@@ -383,7 +385,9 @@ class TestSubmitCorrection:
                 corrected_data=valid_parsed_cv,
             )
 
-        assert sample_cv_document.parsed_cv_data == valid_parsed_cv.model_dump()
+        assert sample_cv_document.parsed_cv_data["name"] == valid_parsed_cv.name
+        assert sample_cv_document.confirmed_fields
+        assert sample_cv_document.field_provenance["name"]["status"] == "confirmed"
 
 
 # ─── Tests: retry_parse ────────────────────────────────────────────────

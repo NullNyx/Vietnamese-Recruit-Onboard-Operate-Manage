@@ -260,8 +260,28 @@ class ReviewService:
         if cv_doc is None:
             raise CVDocumentNotFoundError(f"CV document not found: {cv_document_id}")
 
-        # Step 3: Store corrected parsed_cv_data
-        cv_doc.parsed_cv_data = corrected_data.model_dump()
+        # Step 3: Store corrected draft and mark every submitted field as HR-owned.
+        confirmed_fields = {
+            "name",
+            "email",
+            "phone",
+            "skills",
+            "experience",
+            "education",
+            "summary",
+        }
+        corrected_draft = corrected_data.model_copy(update={"confirmed_fields": confirmed_fields})
+        cv_doc.parsed_cv_data = corrected_draft.model_dump()
+        cv_doc.confirmed_fields = sorted(confirmed_fields)
+        cv_doc.field_provenance = {
+            field: {
+                "source_fragment": "HR correction",
+                "status": "confirmed",
+                "needs_confirmation": False,
+            }
+            for field in confirmed_fields
+        }
+        cv_doc.validation_errors = []
 
         # Step 4: Create or update candidate
         candidate = await self._candidate_creator.create_or_update_candidate(

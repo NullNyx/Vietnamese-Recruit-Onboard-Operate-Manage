@@ -162,6 +162,10 @@ class CVDocument(SQLModel, table=True):
     checksum: str | None = Field(default=None, max_length=64, index=True)
     ocr_output: str | None = Field(default=None)
     parsed_cv_data: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    field_provenance: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    confirmed_fields: list[str] = Field(
+        default_factory=list, sa_column=Column(JSONB, nullable=False)
+    )
     confidence_score: float | None = Field(default=None)
     processing_status: str = Field(default="pending", max_length=30, nullable=False, index=True)
     processing_error: str | None = Field(default=None, max_length=500)

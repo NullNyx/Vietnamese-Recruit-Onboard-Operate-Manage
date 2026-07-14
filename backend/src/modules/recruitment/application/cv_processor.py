@@ -22,6 +22,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.recruitment.application.confidence import calculate_confidence_score
+from src.modules.recruitment.application.cv_draft import assess_cv_draft, merge_confirmed_fields
 from src.modules.recruitment.application.validators import validate_attachment
 from src.modules.recruitment.domain.entities import Candidate, CVDocument
 from src.modules.recruitment.domain.enums import ProcessingStatus
@@ -402,19 +403,36 @@ class CVProcessorService:
 
         try:
             parse_result = await self._llm_adapter.parse_cv(redacted_text)
-            parsed_cv = parse_result.parsed_cv
+            parsed_cv = merge_confirmed_fields(
+                parse_result.parsed_cv,
+                cv_doc.parsed_cv_data,
+                cv_doc.confirmed_fields,
+            )
+            parsed_cv = assess_cv_draft(parsed_cv, cv_doc.ocr_output or "")
 
-            # Calculate confidence
+            # Calculate confidence only after the draft has been validated.
             confidence = calculate_confidence_score(parsed_cv)
 
-            # Update CVDocument with new parse results
-            cv_doc.parsed_cv_data = parsed_cv.model_dump()
+            # Update CVDocument with the structured draft and its evidence.
+            cv_doc.parsed_cv_data = parsed_cv.model_dump(
+                exclude={"provenance", "validation_errors", "confirmed_fields"}
+            )
+            cv_doc.field_provenance = {
+                key: value.model_dump() for key, value in parsed_cv.provenance.items()
+            }
+            cv_doc.validation_errors = [
+                item.model_dump() for item in parsed_cv.validation_errors
+            ]
             cv_doc.confidence_score = confidence
 
-            if confidence >= self._settings.auto_accept_threshold:
+            has_blocking_findings = any(
+                item.get("severity") == "error" for item in (cv_doc.validation_errors or [])
+            )
+            if confidence >= self._settings.auto_accept_threshold and not has_blocking_findings:
                 cv_doc.processing_status = ProcessingStatus.COMPLETED
             else:
                 cv_doc.processing_status = ProcessingStatus.NEEDS_REVIEW
+
 
             cv_doc.processing_error = None
             cv_doc = await self._cv_document_repo.update(cv_doc)
@@ -604,12 +622,21 @@ class CVProcessorService:
             )
             return cv_doc
 
-        parsed_cv = parse_result.parsed_cv
+        parsed_cv = assess_cv_draft(parse_result.parsed_cv, cv_doc.ocr_output or "")
         confidence = calculate_confidence_score(parsed_cv)
 
-        # Store parse results on CVDocument
-        cv_doc.parsed_cv_data = parsed_cv.model_dump()
+        # Store the structured draft, provenance and validation findings.
+        cv_doc.parsed_cv_data = parsed_cv.model_dump(
+            exclude={"provenance", "validation_errors", "confirmed_fields"}
+        )
+        cv_doc.field_provenance = {
+            key: value.model_dump() for key, value in parsed_cv.provenance.items()
+        }
+        cv_doc.validation_errors = [
+            item.model_dump() for item in parsed_cv.validation_errors
+        ]
         cv_doc.confidence_score = confidence
+
         cv_doc = await self._cv_document_repo.update(cv_doc)
         await self._session.commit()
 
@@ -647,9 +674,9 @@ class CVProcessorService:
     ) -> CVDocument:
         """Route CVDocument based on confidence score threshold.
 
-        If confidence >= auto_accept_threshold (0.7): create/update candidate,
-        set status to completed.
-        If confidence < threshold: set status to needs_review.
+        If confidence >= auto_accept_threshold and no blocking finding exists,
+        set the draft status to completed. Candidate promotion is never done
+        by this AI Automation pipeline. Otherwise set status to needs_review.
 
         Args:
             cv_doc: CVDocument with parsed data and confidence score.
@@ -661,28 +688,14 @@ class CVProcessorService:
         confidence = cv_doc.confidence_score or 0.0
         threshold = self._settings.auto_accept_threshold
 
-        if confidence >= threshold:
-            # Auto-accept: create or update candidate
-            if self._candidate_creator and cv_doc.parsed_cv_data:
-                try:
-                    parsed_cv = ParsedCV.model_validate(cv_doc.parsed_cv_data)
-                    await self._candidate_creator.create_or_update_candidate(
-                        parsed_cv=parsed_cv,
-                        cv_document_id=cv_doc.id,
-                        source_email_id=email_message_id,
-                        confidence_score=confidence,
-                    )
-                except Exception as exc:
-                    logger.error(
-                        "Failed to create candidate for CV document %s: %s",
-                        cv_doc.id,
-                        exc,
-                    )
-                    # Still mark as completed — candidate creation failure
-                    # shouldn't block the pipeline
+        has_blocking_findings = any(
+            item.get("severity") == "error" for item in (cv_doc.validation_errors or [])
+        )
+        if confidence >= threshold and not has_blocking_findings:
+            # AI Automation only produces a draft. Candidate promotion remains
+            # an explicit HR action at the Job Application boundary.
             cv_doc.processing_status = ProcessingStatus.COMPLETED
         else:
-            # Below threshold: flag for manual review
             cv_doc.processing_status = ProcessingStatus.NEEDS_REVIEW
 
         cv_doc = await self._cv_document_repo.update(cv_doc)

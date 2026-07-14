@@ -64,8 +64,11 @@ class CVReviewItemResponse(BaseModel):
     file_path: str
     ocr_output: str | None = None
     parsed_cv_data: dict[str, Any] | None = None
+    field_provenance: dict[str, Any] | None = None
+    confirmed_fields: list[str] = Field(default_factory=list)
     confidence_score: float | None = None
     processing_status: str
+
     processing_error: str | None = None
     validation_errors: list[dict[str, Any]] | None = None
     retry_count: int = 0
