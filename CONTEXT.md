@@ -142,3 +142,29 @@ _Avoid_: HR Google Account, Employee Google Connection, Personal Google Connecti
 
 **Organization Shared Google Account**: Tài khoản Google Workspace dùng chung đại diện cho hoạt động tuyển dụng của Organization, ví dụ mailbox tuyển dụng và calendar phỏng vấn. Đây là tài khoản được Organization Google Connection kết nối tới.
 _Avoid_: Gmail cá nhân của HR, Employee Account
+
+## Ngôn ngữ giao diện UX
+
+**Tên hiển thị**:
+Tên có nghĩa dùng để định danh người dùng trong điều hướng và giao diện; ưu tiên hơn mã nội bộ hoặc UUID.
+_Avoid_: UUID, internal ID trong breadcrumb.
+
+**Thông báo chưa đọc**:
+Số lượng thông báo có dữ liệu thật mà người dùng chưa xem; badge chỉ được hiển thị khi số này được xác nhận.
+_Avoid_: badge cố định, notification count giả.
+
+**Trạng thái rỗng do bộ lọc**:
+Trạng thái trong đó dữ liệu tồn tại nhưng không có bản ghi khớp từ khóa hoặc bộ lọc hiện tại.
+_Avoid_: Chưa có dữ liệu.
+
+**Trạng thái rỗng dữ liệu**:
+Trạng thái trong đó chưa có bản ghi nào thuộc phạm vi người dùng đang xem.
+_Avoid_: Không tìm thấy khi nguyên nhân là hệ thống chưa có dữ liệu.
+
+**Checklist onboarding**:
+Danh sách các bước hoặc tài liệu mà Employee cần hoàn thành trong quá trình onboarding.
+_Avoid_: AI Assistant placeholder.
+
+**Tiếng Việt mặc định**:
+Ngôn ngữ mặc định của giao diện trong deployment dành cho doanh nghiệp Việt Nam; nhãn nghiệp vụ dùng tiếng Việt nhất quán.
+_Avoid_: trộn Việt/Anh không có chủ đích.
