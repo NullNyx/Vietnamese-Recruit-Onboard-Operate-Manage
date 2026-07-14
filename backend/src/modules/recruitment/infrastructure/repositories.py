@@ -96,9 +96,7 @@ class CandidateRepository:
             The Candidate entity if found, None otherwise.
         """
         statement = (
-            select(Candidate)
-            .options(_candidate_read_projection())
-            .where(Candidate.id == id)
+            select(Candidate).options(_candidate_read_projection()).where(Candidate.id == id)
         )
         result = await self.session.execute(statement)
         return result.scalars().first()
@@ -155,9 +153,7 @@ class CandidateRepository:
             id: The UUID of the candidate to delete.
         """
         statement = (
-            select(Candidate)
-            .options(_candidate_read_projection())
-            .where(Candidate.id == id)
+            select(Candidate).options(_candidate_read_projection()).where(Candidate.id == id)
         )
         result = await self.session.execute(statement)
         candidate = result.scalars().first()
