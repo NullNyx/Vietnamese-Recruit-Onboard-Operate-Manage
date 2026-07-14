@@ -260,3 +260,27 @@ def test_full_rollout_requires_every_release_gate() -> None:
         "no_cv_report_missing",
         "duplicates_detected",
     }
+
+
+def test_operational_guardrails_block_full_rollout() -> None:
+    decision = evaluate_release_gates(
+        ReleaseMetrics(
+            job_application_recall=0.99,
+            baseline_recall=0.98,
+            needs_classification_rate=0.10,
+            no_cv_recall=0.99,
+            correction_rate=0.02,
+            review_rate=0.10,
+            p95_latency_ms=2_001,
+            provider_error_rate=0.011,
+            duplicate_count=0,
+            retry_failure_rate=0.051,
+        )
+    )
+
+    assert decision.allowed is False
+    assert set(decision.failures) == {
+        "p95_latency_above_2000ms",
+        "provider_error_rate_above_1_percent",
+        "retry_failure_rate_above_5_percent",
+    }

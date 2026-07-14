@@ -86,6 +86,7 @@ class ClassificationReleaseMetricsRequest(BaseModel):
     p95_latency_ms: int = Field(..., ge=0)
     provider_error_rate: float = Field(..., ge=0, le=1)
     duplicate_count: int = Field(..., ge=0)
+    retry_failure_rate: float = Field(default=0, ge=0, le=1)
 
 
 class ClassificationRolloutRequest(BaseModel):
@@ -110,6 +111,10 @@ class ClassificationRolloutTelemetryResponse(BaseModel):
     p95_latency_ms: int
     provider_error_rate: float
     duplicate_count: int
+    retry_failure_rate: float
+    total_prompt_tokens: int
+    total_completion_tokens: int
+    estimated_cost_usd: float
 
 
 class DataPolicyResponse(BaseModel):

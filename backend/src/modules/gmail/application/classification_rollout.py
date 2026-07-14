@@ -28,6 +28,13 @@ _POLICY_REVIEW_THRESHOLDS: dict[BusinessPolicy, float] = {
     BusinessPolicy.RECALL_FIRST: 0.50,
 }
 
+# Operational limits are system-owned guardrails, not Organization-tunable
+# thresholds. They protect the self-hosted worker from a candidate provider that
+# is technically accurate but unsafe to operate in production.
+_MAX_P95_LATENCY_MS = 2_000
+_MAX_PROVIDER_ERROR_RATE = 0.01
+_MAX_RETRY_FAILURE_RATE = 0.05
+
 
 class RolloutMode(str, Enum):
     """Production rollout stages for a candidate classifier and policy."""
@@ -64,6 +71,7 @@ class ReleaseMetrics:
     p95_latency_ms: int
     provider_error_rate: float
     duplicate_count: int
+    retry_failure_rate: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -87,6 +95,12 @@ def evaluate_release_gates(metrics: ReleaseMetrics) -> ReleaseGateDecision:
         failures.append("no_cv_report_missing")
     if metrics.duplicate_count > 0:
         failures.append("duplicates_detected")
+    if metrics.p95_latency_ms > _MAX_P95_LATENCY_MS:
+        failures.append("p95_latency_above_2000ms")
+    if metrics.provider_error_rate > _MAX_PROVIDER_ERROR_RATE:
+        failures.append("provider_error_rate_above_1_percent")
+    if metrics.retry_failure_rate > _MAX_RETRY_FAILURE_RATE:
+        failures.append("retry_failure_rate_above_5_percent")
     return ReleaseGateDecision(allowed=not failures, failures=tuple(failures))
 
 
