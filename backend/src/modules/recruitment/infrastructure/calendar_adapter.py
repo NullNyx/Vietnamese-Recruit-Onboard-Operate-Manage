@@ -6,8 +6,8 @@ with an ``httpx.AsyncClient`` plus module settings, implements
 ``retry_with_backoff`` (retry on 5xx/429, never retry non-429 4xx) and re-raises
 ``401`` so the calling service can refresh the OAuth token and retry once.
 
-Per ADR-0008 the adapter creates the interview event on the selected calendar
-(defaulting to ``primary``), invites the Candidate plus interviewer Employees,
+Per ADR-0008 the adapter creates the interview event on the Organization's
+selected calendar, invites the Candidate plus interviewer Employees,
 and attaches a Google Meet link when requested. Reschedule patches the existing
 event while preserving the Meet link, and cancellation deletes the event
 idempotently.
@@ -425,11 +425,12 @@ class CalendarAdapter:
 
         Sends ``POST {CAL_BASE}/calendars/{calendar_id}/events`` with
         ``conferenceDataVersion=1`` (required for Meet) and ``sendUpdates=all``
-        (sends invitation emails). The ``calendar_id`` is read from the spec,
-        defaulting to ``primary``.
+        (sends invitation emails). The ``calendar_id`` is read from the spec
+        and must be explicit.
 
         Args:
-            access_token: OAuth2 access token for the acting HR user.
+            access_token: OAuth2 access token for the Organization Google Connection.
+
             spec: The timezone-resolved event specification.
 
         Returns:
@@ -484,7 +485,7 @@ class CalendarAdapter:
         existing Google Meet link is preserved (R7.2).
 
         Args:
-            access_token: OAuth2 access token for the acting HR user.
+            access_token: OAuth2 access token for the Organization Google Connection.
             event_id: The Google Calendar event identifier to patch.
             spec: The event specification carrying the new start/end times.
 
@@ -545,9 +546,9 @@ class CalendarAdapter:
         idempotent.
 
         Args:
-            access_token: OAuth2 access token for the acting HR user.
+            access_token: OAuth2 access token for the Organization Google Connection.
             event_id: The Google Calendar event identifier to delete.
-            calendar_id: The Google Calendar ID (default ``primary``).
+            calendar_id: The explicitly selected Google Calendar ID.
 
         Raises:
             httpx.HTTPStatusError: For non-2xx responses other than 404/410,
@@ -633,9 +634,9 @@ class CalendarAdapter:
         when a conditional write (If-Match) fails with 412.
 
         Args:
-            access_token: OAuth2 access token for the acting HR user.
+            access_token: OAuth2 access token for the Organization Google Connection.
             event_id: The Google Calendar event identifier to fetch.
-            calendar_id: The Google Calendar ID (default ``primary``).
+            calendar_id: The explicitly selected Google Calendar ID.
 
         Returns:
             The :class:`CalendarEvent` representing the remote event state.

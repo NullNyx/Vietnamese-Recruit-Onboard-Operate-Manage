@@ -130,7 +130,10 @@ class OrganizationGoogleConnectionService:
         await self._reconcile_legacy_grants()
         current = await self._connection_repo.get_singleton()
         if current is None:
-            return OrganizationGoogleConnectionResponse(status="disconnected")
+            return OrganizationGoogleConnectionResponse(
+                status="disconnected",
+                selected_calendar_id=None,
+            )
         status = (
             current.status
             if current.status in VALID_CONNECTION_STATUSES
@@ -140,6 +143,7 @@ class OrganizationGoogleConnectionService:
             status=status,
             email=current.email,
             has_secret=bool(current.client_secret_enc),
+            selected_calendar_id=current.selected_calendar_id,
         )
 
     async def initiate(self, hr: User) -> OrganizationGoogleConnectionResponse:

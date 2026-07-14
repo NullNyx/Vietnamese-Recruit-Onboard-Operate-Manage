@@ -22,7 +22,6 @@ from arq.connections import RedisSettings
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.identity.application.oauth_service import OAuthService
 from src.modules.identity.container import (
     get_crypto_utils,
     get_current_user,
@@ -30,7 +29,6 @@ from src.modules.identity.container import (
     get_settings,
 )
 from src.modules.identity.domain.entities import User
-from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
 from src.modules.identity.infrastructure.connection_state_repository import (
     OrganizationGoogleConnectionRepository,
 )
@@ -171,13 +169,11 @@ async def get_candidate_service(
     """Provide a CandidateService instance with all dependencies.
 
     Wires the Calendar scheduling dependencies (per ADR-0008) so the
-    synchronous schedule/reschedule/cancel flows work end-to-end: the
-    ``CalendarAdapter`` (shared httpx client), the
-    ``OrganizationSettingsRepository`` (interview timezone), and the identity
-    ``OAuthService``/``OAuthGrantRepository``/``CryptoUtils`` stack used to read
-    the acting HR user's grant status and refresh their Google token. The
-    OAuth/crypto wiring mirrors the Gmail container and the
-    ``arq_process_cv_from_email`` task in this module.
+    synchronous schedule/reschedule/cancel flows work end-to-end. Calendar
+    credentials and selected-calendar state come exclusively from the
+    Organization Google Connection; the acting HR user is retained only for
+    audit attribution.
+
 
     Args:
         session: The async database session from DI.
@@ -194,13 +190,8 @@ async def get_candidate_service(
     # Calendar scheduling dependencies (ADR-0008).
     org_settings_repo = OrganizationSettingsRepository(session, get_recruitment_settings())
     connection_repo = OrganizationGoogleConnectionRepository(session)
-    oauth_grant_repo = OAuthGrantRepository(session)
     crypto = get_crypto_utils()
-    oauth_service = OAuthService(
-        settings=get_settings(),
-        crypto=crypto,
-        grant_repository=oauth_grant_repo,
-    )
+
 
     return CandidateService(
         candidate_repo=candidate_repo,
@@ -212,9 +203,8 @@ async def get_candidate_service(
         calendar_port=get_calendar_adapter(),
         org_settings_repo=org_settings_repo,
         connection_repo=connection_repo,
-        oauth_grant_repo=oauth_grant_repo,
-        oauth_service=oauth_service,
         crypto=crypto,
+
         job_opening_repo=job_opening_repo,
     )
 
@@ -383,10 +373,10 @@ async def arq_process_cv_from_email(ctx: dict[str, Any], email_message_id: UUID)
             from src.modules.gmail.infrastructure.gmail_adapter import GmailAdapter
             from src.modules.gmail.infrastructure.quota_tracker import QuotaTracker
             from src.modules.identity.infrastructure.config import AuthSettings
-            from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
-            from src.modules.identity.infrastructure.oauth_grant_repository import (
-                OAuthGrantRepository,
+            from src.modules.identity.infrastructure.connection_state_repository import (
+                OrganizationGoogleConnectionRepository,
             )
+            from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
             from src.modules.recruitment.application.cv_processor import AttachmentInput
 
             # Get email message record
@@ -415,20 +405,26 @@ async def arq_process_cv_from_email(ctx: dict[str, Any], email_message_id: UUID)
                 )
                 return
 
-            # Get OAuth grant for the user to access Gmail API
+            # Resolve the shared Organization Google Connection. The HR user
+            # on the email is an audit actor, never a Google credential owner.
             auth_settings = AuthSettings()  # type: ignore[call-arg]
             gmail_settings = GmailSettings()
             crypto = CryptoUtils(auth_settings.oauth_token_encryption_key)
-            oauth_grant_repo = OAuthGrantRepository(session)
+            connection = await OrganizationGoogleConnectionRepository(session).get_singleton()
 
-            grant = await oauth_grant_repo.get_by_user_id(user_id)
-
-            if grant is None or not grant.is_valid:
-                logger.error("No valid Gmail grant for user %s, cannot process CV", user_id)
+            if (
+                connection is None
+                or connection.status != "connected"
+                or not connection.access_token_enc
+            ):
+                logger.error(
+                    "No active Organization Google Connection, cannot process CV for %s",
+                    email_message_id,
+                )
                 return
 
-            # Decrypt access token
-            access_token = crypto.decrypt(grant.access_token_enc)
+            access_token = crypto.decrypt(connection.access_token_enc)
+
 
             # Build Gmail adapter and AttachmentService to fetch binary data
             redis_client = ctx.get("redis_client")

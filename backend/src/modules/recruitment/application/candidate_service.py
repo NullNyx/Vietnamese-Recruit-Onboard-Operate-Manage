@@ -1650,13 +1650,15 @@ class CandidateService:
             raise CalendarGrantMissingError()
 
     async def _resolve_org_calendar_id(self) -> str:
-        """Return the Organization's selected calendar id, falling back to ``"primary"``.
+        """Return the Organization's explicitly selected calendar id.
 
-        Returns the ``selected_calendar_id`` from the active connection or
-        ``"primary"`` when no explicit calendar has been selected.
+        Calendar writes are blocked until HR selects a calendar on the
+        Organization Google Connection; there is no implicit Google default.
+
 
         Returns:
-            The ``selected_calendar_id`` from the connection, or ``"primary"``.
+            The explicitly selected ``selected_calendar_id`` from the connection.
+
 
         Raises:
             RuntimeError: If ``connection_repo`` is not configured.
@@ -2300,7 +2302,8 @@ class CandidateService:
         4. Resolve employee interviewers and their emails.
         5. Validate external participant emails.
         6. Build the attendee list (candidate + employees + externals).
-        7. Resolve calendar_id (selected_calendar_id or primary).
+        7. Resolve the explicitly selected calendar_id.
+
         8. Build CalendarEventSpec with the appropriate mode.
         9. Create the Calendar event.
         10. Persist Interview + InterviewParticipant records with metadata.
