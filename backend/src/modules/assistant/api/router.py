@@ -18,6 +18,7 @@ from src.modules.assistant.api.schemas import (
     ChatRequest,
     ChatResponseSchema,
     DraftActionSchema,
+    DraftDecisionRequest,
     OutgoingMessageSchema,
 )
 from src.modules.assistant.application.assistant_service import (
@@ -121,4 +122,28 @@ async def chat(
     return ChatResponseSchema(
         messages=new_messages,
         draft_action=draft_action,
+    )
+
+
+@router.post("/draft-decision", status_code=204)
+async def record_draft_decision(
+    body: DraftDecisionRequest,
+    _user: AdminUserDep,
+    audit_service: AuditServiceDep,
+) -> None:
+    """Record HR's confirm/reject decision without storing conversation text."""
+    await audit_service.log_action(
+        admin=_user,
+        action_type=AuditActionType.ASSISTANT_CHAT,
+        details={
+            "event": "draft_action_decision",
+            "decision": body.decision,
+            "action_type": body.action_type,
+            "scope": body.provenance.get("scope", "unknown"),
+            "tool": body.provenance.get("tool", "unknown"),
+            "version": "assistant-v1",
+            "status": "confirmed" if body.decision == "confirm" else "rejected",
+            "confirm_endpoint": body.confirm_endpoint,
+            "parameters": {"candidate_id": body.provenance.get("candidate_id")},
+        },
     )

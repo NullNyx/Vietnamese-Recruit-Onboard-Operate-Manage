@@ -61,6 +61,7 @@ class DraftAction:
     action_type: str
     parameters: dict[str, Any]
     preview: str
+    provenance: dict[str, Any]
     confirm_endpoint: str
     confirm_method: str
     confirm_body: dict[str, Any]

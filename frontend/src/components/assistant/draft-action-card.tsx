@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import type { DraftAction } from "@/lib/api/assistant";
-import { confirmDraftAction } from "@/lib/api/assistant";
+import { confirmDraftAction, recordDraftDecision } from "@/lib/api/assistant";
 
 interface DraftActionCardProps {
   draft: DraftAction;
@@ -44,6 +44,7 @@ export function DraftActionCard({
     try {
       const fn: (draft: DraftAction) => Promise<unknown> = confirmAction ?? confirmDraftAction;
       await fn(draft);
+      await recordDraftDecision(draft, "confirm");
       setConfirmed(true);
       toast.success("Đã gửi thành công!");
       
@@ -58,7 +59,16 @@ export function DraftActionCard({
     }
   };
 
-  const handleDismiss = () => {
+  const handleDismiss = async () => {
+    if (!onDismissed) {
+      try {
+        await recordDraftDecision(draft, "reject");
+      } catch (err) {
+        toast.error(
+          `Không thể ghi nhận từ chối: ${err instanceof Error ? err.message : "Lỗi không xác định"}`,
+        );
+      }
+    }
     onDismissed?.();
   };
 

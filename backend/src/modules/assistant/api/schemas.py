@@ -77,6 +77,10 @@ class DraftActionSchema(BaseModel):
     action_type: str = Field(..., description="Action type (e.g. send_email)")
     parameters: dict[str, Any] = Field(..., description="Action parameters")
     preview: str = Field(..., description="Human-readable preview for HR")
+    provenance: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Redacted source and scope metadata used to create the draft",
+    )
     confirm_endpoint: str = Field(..., description="Real API endpoint to call on confirm")
     confirm_method: str = Field(..., description="HTTP method (POST, PATCH, etc.)")
     confirm_body: dict[str, Any] = Field(..., description="Request body for the confirm endpoint")
@@ -88,6 +92,22 @@ class DraftActionSchema(BaseModel):
             raise ValueError(
                 "confirm_endpoint must start with /api/ — external URLs are not allowed"
             )
+        return v
+
+
+class DraftDecisionRequest(BaseModel):
+    """HR decision for a Draft Action; the write remains outside the LLM loop."""
+
+    decision: Literal["confirm", "reject"]
+    action_type: str = Field(..., min_length=1, max_length=100)
+    provenance: dict[str, Any] = Field(default_factory=dict)
+    confirm_endpoint: str = Field(..., min_length=1, max_length=500)
+
+    @field_validator("confirm_endpoint")
+    @classmethod
+    def endpoint_must_be_local_api(cls, v: str) -> str:
+        if not v.startswith("/api/"):
+            raise ValueError("confirm_endpoint must start with /api/")
         return v
 
 

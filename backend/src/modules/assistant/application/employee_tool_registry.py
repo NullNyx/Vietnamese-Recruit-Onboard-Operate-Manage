@@ -338,6 +338,11 @@ class EmployeeToolRegistry:
                 "reason": reason,
             },
             preview=preview,
+            provenance={
+                "tool": "draft_leave_request",
+                "scope": "employee_self_service",
+                "source_fields": [],
+            },
             confirm_endpoint="/api/employee-requests/me/leave",
             confirm_method="POST",
             confirm_body={
@@ -397,6 +402,11 @@ class EmployeeToolRegistry:
                 "project_or_task": project_or_task,
             },
             preview=preview,
+            provenance={
+                "tool": "draft_overtime_request",
+                "scope": "employee_self_service",
+                "source_fields": [],
+            },
             confirm_endpoint="/api/employee-requests/me/overtime",
             confirm_method="POST",
             confirm_body=body,
@@ -426,6 +436,7 @@ def _draft_to_dict(draft: DraftAction) -> dict[str, Any]:
         "action_type": draft.action_type,
         "parameters": draft.parameters,
         "preview": draft.preview,
+        "provenance": draft.provenance,
         "confirm_endpoint": draft.confirm_endpoint,
         "confirm_method": draft.confirm_method,
         "confirm_body": draft.confirm_body,

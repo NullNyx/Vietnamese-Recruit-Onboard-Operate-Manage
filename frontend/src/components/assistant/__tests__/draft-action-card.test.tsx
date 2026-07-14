@@ -5,12 +5,13 @@ import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DraftActionCard } from "../draft-action-card";
-import { confirmDraftAction } from "@/lib/api/assistant";
+import { confirmDraftAction, recordDraftDecision } from "@/lib/api/assistant";
 import { toast } from "sonner";
 
 // Mock dependencies
 vi.mock("@/lib/api/assistant", () => ({
   confirmDraftAction: vi.fn(),
+  recordDraftDecision: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("sonner", () => ({
@@ -79,9 +80,11 @@ describe("DraftActionCard", () => {
     fireEvent.click(screen.getByText("Xác nhận"));
     
     expect(confirmDraftAction).toHaveBeenCalledWith(mockDraft);
+
     
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith("Đã gửi thành công!");
+        expect(recordDraftDecision).toHaveBeenCalledWith(mockDraft, "confirm");
     });
   });
 

@@ -28,6 +28,7 @@ export interface DraftAction {
   action_type: string;
   parameters: Record<string, unknown>;
   preview: string;
+  provenance?: Record<string, unknown>;
   confirm_endpoint: string;
   confirm_method: string;
   confirm_body: Record<string, unknown>;
@@ -127,3 +128,25 @@ export async function confirmDraftAction(
 
   return res.json();
 }
+
+/** Record the HR decision after the write (or rejection) has completed. */
+export async function recordDraftDecision(
+  draft: DraftAction,
+  decision: "confirm" | "reject",
+): Promise<void> {
+  const res = await fetchWithTimeout(`${BASE}/draft-decision`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      decision,
+      action_type: draft.action_type,
+      provenance: draft.provenance ?? {},
+      confirm_endpoint: draft.confirm_endpoint,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Assistant audit API ${res.status}`);
+  }
+}
+

@@ -163,6 +163,8 @@ class TestToolRegistryDraftTools:
         assert draft["confirm_endpoint"] == f"/api/recruitment/candidates/{candidate_id}/send-email"
         assert draft["confirm_method"] == "POST"
         assert draft["parameters"]["candidate_id"] == candidate_id
+        assert draft["provenance"]["tool"] == "draft_interview_invitation"
+        assert draft["provenance"]["candidate_id"] == candidate_id
 
     @pytest.mark.asyncio
     async def test_draft_interview_invitation_missing_params(self, registry: ToolRegistry) -> None:
@@ -202,6 +204,8 @@ class TestToolRegistryDraftTools:
         draft = result["draft_action"]
         assert draft["action_type"] == "send_email"
         assert draft["confirm_endpoint"] == f"/api/recruitment/candidates/{candidate_id}/send-email"
+        assert draft["provenance"]["tool"] == "draft_congratulations_email"
+        assert draft["provenance"]["candidate_id"] == candidate_id
 
     @pytest.mark.asyncio
     async def test_draft_congratulations_email_missing_params(self, registry: ToolRegistry) -> None:
