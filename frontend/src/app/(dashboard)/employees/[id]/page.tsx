@@ -31,11 +31,13 @@ import {
 } from "@/lib/api/employees";
 import { listDepartments } from "@/lib/api/departments";
 import { listPositions } from "@/lib/api/positions";
+import { useBreadcrumbDisplayName } from "@/components/breadcrumbs";
 
 export default function EmployeeDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const setBreadcrumbDisplayName = useBreadcrumbDisplayName();
 
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
@@ -66,6 +68,7 @@ export default function EmployeeDetailPage() {
           getEmployeeAccountStatus(id),
         ]);
         setEmployee(emp);
+        setBreadcrumbDisplayName(id, emp.full_name);
         setDocuments(docs);
         setDepartments(depts);
         setPositions(pos);

@@ -1,7 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { createContext, useContext, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 
 const labelMap: Record<string, string> = {
@@ -28,26 +29,62 @@ interface BreadcrumbItem {
   href: string;
 }
 
-export function Breadcrumbs() {
-  const pathname = usePathname();
-  const segments = pathname.split("/").filter(Boolean);
+interface BreadcrumbsProps {
+  /** Optional display names for dynamic route segments, keyed by segment or href. */
+  displayNames?: Record<string, string>;
+}
 
-  const items: BreadcrumbItem[] = [
-    { label: "Trang chủ", href: "/" },
-  ];
+interface BreadcrumbContextValue {
+  displayNames: Record<string, string>;
+  setDisplayName: (key: string, name: string) => void;
+}
+
+const BreadcrumbContext = createContext<BreadcrumbContextValue | null>(null);
+
+export function BreadcrumbProvider({ children }: { children: React.ReactNode }) {
+  const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
+  const value = useMemo(
+    () => ({
+      displayNames,
+      setDisplayName: (key: string, name: string) =>
+        setDisplayNames((current) => ({ ...current, [key]: name })),
+    }),
+    [displayNames],
+  );
+
+  return (
+    <BreadcrumbContext.Provider value={value}>
+      {children}
+    </BreadcrumbContext.Provider>
+  );
+}
+
+export function useBreadcrumbDisplayName() {
+  const context = useContext(BreadcrumbContext);
+  return context?.setDisplayName ?? (() => undefined);
+}
+
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isInternalIdentifier(segment: string): boolean {
+  return uuidPattern.test(segment) || /^[0-9a-f]{24,}$/i.test(segment);
+}
+
+export function Breadcrumbs({ displayNames = {} }: BreadcrumbsProps) {
+  const pathname = usePathname();
+  const context = useContext(BreadcrumbContext);
+  const resolvedDisplayNames = { ...context?.displayNames, ...displayNames };
+  const segments = pathname.split("/").filter(Boolean);
+  const items: BreadcrumbItem[] = [{ label: "Trang chủ", href: "/" }];
 
   segments.forEach((segment, index) => {
     const href = "/" + segments.slice(0, index + 1).join("/");
-    let label: string;
-
-    if (labelMap[segment]) {
-      label = labelMap[segment];
-    } else if (index > 0 && segments[index - 1] === "recruitment") {
-      // Dynamic [id] segment under /recruitment — show placeholder
-      label = "...";
-    } else {
-      label = segment;
-    }
+    const label =
+      resolvedDisplayNames[segment] ??
+      resolvedDisplayNames[href] ??
+      labelMap[segment] ??
+      (isInternalIdentifier(segment) ? "Chi tiết" : segment);
 
     items.push({ label, href });
   });
@@ -66,11 +103,16 @@ export function Breadcrumbs() {
               />
             )}
             {isLast ? (
-              <span className="text-foreground font-medium">{item.label}</span>
+              <span
+                className="font-medium text-foreground"
+                aria-current="page"
+              >
+                {item.label}
+              </span>
             ) : (
               <Link
                 href={item.href}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {item.label}
               </Link>

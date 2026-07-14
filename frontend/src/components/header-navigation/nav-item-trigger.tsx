@@ -55,7 +55,7 @@ export function NavItemTrigger({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {Icon && <Icon className="size-4" />}
+          {Icon && <Icon className="size-4" aria-hidden="true" />}
       <span>{group.label}</span>
     </button>
   );

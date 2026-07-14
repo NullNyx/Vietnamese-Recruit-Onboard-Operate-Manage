@@ -16,6 +16,7 @@ import {
   type JobOpeningStatus,
 } from "@/lib/api/recruitment";
 import { ApiError } from "@/lib/api/types";
+import { useBreadcrumbDisplayName } from "@/components/breadcrumbs";
 
 // ---------------------------------------------------------------------------
 // Status labels and colors
@@ -76,6 +77,7 @@ type PageState =
 export default function JobOpeningDetailPage() {
   const params = useParams();
   const id = params.id as string;
+  const setBreadcrumbDisplayName = useBreadcrumbDisplayName();
 
   const [pageState, setPageState] = useState<PageState>({ kind: "loading" });
 
@@ -83,7 +85,8 @@ export default function JobOpeningDetailPage() {
     setPageState({ kind: "loading" });
     try {
       const jo = await getJobOpening(id);
-      setPageState({ kind: "loaded", jobOpening: jo });
+          setBreadcrumbDisplayName(id, jo.title);
+          setPageState({ kind: "loaded", jobOpening: jo });
     } catch (err) {
       if (err instanceof ApiError && err.statusCode === 404) {
         setPageState({ kind: "not_found" });
@@ -176,21 +179,6 @@ export default function JobOpeningDetailPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb">
-        <ol className="flex items-center gap-2 text-sm text-muted-foreground">
-          <li>
-            <Link
-              href="/recruitment/job-openings"
-              className="hover:text-foreground transition-colors"
-            >
-              Vị trí tuyển dụng
-            </Link>
-          </li>
-          <li aria-hidden="true">&gt;</li>
-          <li className="text-foreground font-medium">{jo.title}</li>
-        </ol>
-      </nav>
 
       {/* Header */}
       <div className="space-y-3">

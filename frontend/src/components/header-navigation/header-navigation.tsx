@@ -314,7 +314,7 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
           {/* Hamburger toggle — visible on mobile only */}
           <button
             type="button"
-            className="ml-2 inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent md:hidden"
+            className="ml-2 inline-flex h-10 w-10 items-center justify-center rounded-md hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:hidden"
             onClick={() => setMobileMenuOpen(true)}
             aria-label="Mở menu"
             aria-expanded={mobileMenuOpen}

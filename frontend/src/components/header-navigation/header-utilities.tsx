@@ -53,7 +53,7 @@ export function HeaderUtilities({
         onClick={onSearchClick}
         aria-label="Tìm kiếm (Ctrl+K)"
       >
-        <Search className="h-4 w-4" />
+            <Search className="h-4 w-4" aria-hidden="true" />
         <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
           <span className="text-xs">⌘</span>K
         </kbd>
@@ -66,7 +66,7 @@ export function HeaderUtilities({
         className="relative"
         aria-label="Thông báo"
       >
-        <Bell className="h-4 w-4" />
+            <Bell className="h-4 w-4" aria-hidden="true" />
         <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
           3
         </span>

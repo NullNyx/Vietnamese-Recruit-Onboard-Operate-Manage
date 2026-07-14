@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { FileSearch, BarChart3 } from "lucide-react";
+import { BarChart3, FileSearch } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   CommandDialog,
@@ -11,8 +14,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { navItems, adminNavSection } from "@/lib/navigation";
-import type { LucideIcon } from "lucide-react";
+import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { adminNavSection, navItems } from "@/lib/navigation";
 
 interface CommandBarItem {
   href: string;
@@ -32,19 +35,41 @@ interface CommandBarProps {
 
 export function CommandBar({ open, onOpenChange }: CommandBarProps) {
   const router = useRouter();
-
+  const inputRef = useRef<HTMLInputElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const wasOpenRef = useRef(false);
   const { user } = useCurrentUser();
-  const isAdmin = user?.role === "admin";
+
+  useEffect(() => {
+    if (open && !wasOpenRef.current) {
+      returnFocusRef.current = document.activeElement as HTMLElement | null;
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+
+    if (!open && wasOpenRef.current) {
+      requestAnimationFrame(() => returnFocusRef.current?.focus());
+    }
+
+    wasOpenRef.current = open;
+  }, [open]);
 
   const allItems: CommandBarItem[] = [
     ...navItems,
     ...additionalItems,
-    ...(isAdmin ? adminNavSection.items : []),
+    ...(user?.role === "admin" ? adminNavSection.items : []),
   ];
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Tìm kiếm trang..." />
+      <DialogTitle className="sr-only">Tìm kiếm trang</DialogTitle>
+      <DialogDescription className="sr-only">
+        Tìm và mở nhanh các trang mà bạn có quyền truy cập.
+      </DialogDescription>
+      <CommandInput
+        ref={inputRef}
+        placeholder="Tìm kiếm trang..."
+        aria-label="Tìm kiếm trang"
+      />
       <CommandList>
         <CommandEmpty>Không tìm thấy kết quả</CommandEmpty>
         <CommandGroup heading="Điều hướng">
@@ -56,7 +81,7 @@ export function CommandBar({ open, onOpenChange }: CommandBarProps) {
                 onOpenChange(false);
               }}
             >
-              <item.icon className="mr-2 h-4 w-4" />
+              <item.icon className="mr-2 h-4 w-4" aria-hidden="true" />
               <span>{item.label}</span>
             </CommandItem>
           ))}

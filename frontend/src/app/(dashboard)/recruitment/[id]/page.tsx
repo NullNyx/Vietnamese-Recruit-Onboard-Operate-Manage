@@ -45,6 +45,7 @@ import {
 import { ApiError } from "@/lib/api/types";
 import { listEmployees } from "@/lib/api/employees";
 import { formatDate, type CandidateStatus } from "@/lib/recruitment-utils";
+import { useBreadcrumbDisplayName } from "@/components/breadcrumbs";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,6 +79,7 @@ function isTerminalStatus(status: string): boolean {
 export default function CandidateDetailPage() {
   const params = useParams();
   const id = params.id as string;
+  const setBreadcrumbDisplayName = useBreadcrumbDisplayName();
 
   const [pageState, setPageState] = useState<PageState>({ kind: "loading" });
   const [activeDialog, setActiveDialog] = useState<DialogType>(null);
@@ -100,7 +102,8 @@ export default function CandidateDetailPage() {
       const candidate = await getCandidate(id);
       setCurrentJobOpeningId(candidate.job_opening_id ?? null);
       setCurrentJobOpeningTitle(candidate.job_opening_title);
-      setPageState({ kind: "loaded", candidate });
+          setBreadcrumbDisplayName(id, candidate.name);
+          setPageState({ kind: "loaded", candidate });
     } catch (err) {
       if (err instanceof ApiError && err.statusCode === 404) {
         setPageState({ kind: "not_found" });
@@ -409,21 +412,6 @@ export default function CandidateDetailPage() {
         {errorAnnouncement}
       </div>
 
-      {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb">
-        <ol className="flex items-center gap-2 text-sm text-muted-foreground">
-          <li>
-            <Link
-              href="/recruitment"
-              className="hover:text-foreground transition-colors"
-            >
-              Tuyển dụng
-            </Link>
-          </li>
-          <li aria-hidden="true">&gt;</li>
-          <li className="text-foreground font-medium">{candidate.name}</li>
-        </ol>
-      </nav>
 
       {/* Header: Name + basic info */}
       <div className="space-y-3">

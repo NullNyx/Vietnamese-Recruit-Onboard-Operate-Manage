@@ -303,8 +303,45 @@ describe("CommandBar integration with HeaderNavigation", () => {
     });
   });
 
-  describe("Search trigger button", () => {
-    it("opens CommandBar when search button is clicked", async () => {
+      describe("Search dialog accessibility", () => {
+        it("exposes a name and description and moves focus into the search field", async () => {
+          render(<HeaderNavigation />);
+          const searchButton = screen.getByLabelText("Tìm kiếm (Ctrl+K)");
+          searchButton.focus();
+
+          fireEvent.click(searchButton);
+
+          const dialog = await screen.findByRole("dialog", {
+            name: "Tìm kiếm trang",
+          });
+          expect(dialog).toHaveAccessibleDescription(
+            "Tìm và mở nhanh các trang mà bạn có quyền truy cập.",
+          );
+          await waitFor(() => {
+            const input = screen.getByPlaceholderText("Tìm kiếm trang...");
+            expect(input).toHaveAttribute("aria-label", "Tìm kiếm trang");
+            expect(input).toHaveFocus();
+          });
+        });
+
+        it("closes with Escape and returns focus to the opening control", async () => {
+          render(<HeaderNavigation />);
+          const searchButton = screen.getByLabelText("Tìm kiếm (Ctrl+K)");
+          searchButton.focus();
+          fireEvent.click(searchButton);
+          await screen.findByRole("dialog", { name: "Tìm kiếm trang" });
+
+          fireEvent.keyDown(document, { key: "Escape" });
+
+          await waitFor(() => {
+            expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+            expect(searchButton).toHaveFocus();
+          });
+        });
+      });
+
+      describe("Search trigger button", () => {
+        it("opens CommandBar when search button is clicked", async () => {
       render(<HeaderNavigation />);
 
       // Find and click the search trigger button

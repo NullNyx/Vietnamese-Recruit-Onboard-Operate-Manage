@@ -78,7 +78,7 @@ export function MobileMenuOverlay({
         <span className="text-lg font-semibold">Menu</span>
         <button
           onClick={onClose}
-          className="flex h-10 w-10 items-center justify-center rounded-md hover:bg-accent"
+          className="flex h-10 w-10 items-center justify-center rounded-md hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="Đóng menu"
         >
           <X className="h-5 w-5" aria-hidden="true" />
