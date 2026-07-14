@@ -78,6 +78,7 @@ class TestEmployeeToolBoundary:
             "get_today_attendance",
             "list_my_attendance_records",
             "list_my_employee_requests",
+            "get_my_leave_balance",
             "list_my_payslips",
             "draft_leave_request",
             "draft_overtime_request",
@@ -102,7 +103,7 @@ class TestEmployeeToolBoundary:
 
     def test_read_tool_count(self) -> None:
         read_tools = [t for t in EMPLOYEE_TOOL_DEFINITIONS if t.kind == ToolKind.READ]
-        assert len(read_tools) == 6
+        assert len(read_tools) == 7
 
     def test_all_tools_have_additional_properties_false(self) -> None:
         for tool in EMPLOYEE_TOOL_DEFINITIONS:
@@ -481,3 +482,34 @@ class TestEmployeeToolRegistryReadTools:
         assert p["pit_amount"] == 500000.00
         assert p["net_salary"] == 22500000.00
         assert p["currency"] == "VND"
+
+    @pytest.mark.asyncio
+    async def test_leave_balance_is_scoped_and_fresh(self) -> None:
+        leave_service = MagicMock()
+        leave_service.get_my_leave_balance = AsyncMock(
+            return_value={
+                "approved_days_used": 3,
+                "remaining_days": 9,
+                "as_of": "2026-07-14T00:00:00+00:00",
+            }
+        )
+        registry = _make_registry(leave_service=leave_service)
+
+        result = json.loads(await registry.execute("get_my_leave_balance", {}))
+
+        leave_service.get_my_leave_balance.assert_awaited_once_with(
+            "00000000-0000-0000-0000-000000000001",
+        )
+        assert result["approved_days_used"] == 3
+        assert result["remaining_days"] == 9
+        assert result["as_of"]
+
+    @pytest.mark.asyncio
+    async def test_forbidden_scope_is_refused_without_service_access(self) -> None:
+        candidate_service = MagicMock()
+        registry = _make_registry()
+        result = json.loads(await registry.execute("search_candidates", {"query": "Alice"}))
+
+        assert result["code"] == "scope_denied"
+        assert "Employee" in result["error"]
+        candidate_service.list_candidates.assert_not_called()

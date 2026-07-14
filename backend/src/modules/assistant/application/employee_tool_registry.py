@@ -18,8 +18,10 @@ from datetime import date
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from src.modules.assistant.domain.employee_tools import EMPLOYEE_TOOL_DEFINITIONS
-from src.modules.assistant.domain.tools import DraftAction, ToolKind
+from src.modules.assistant.domain.employee_tools import (
+    EMPLOYEE_TOOL_DEFINITIONS,
+)
+from src.modules.assistant.domain.tools import TOOL_DEFINITIONS, DraftAction, ToolKind
 
 if TYPE_CHECKING:
     from src.modules.attendance.infrastructure.attendance_record_repository import (
@@ -35,6 +37,8 @@ logger = logging.getLogger(__name__)
 
 # Generic error returned to LLM on tool failure — no PII/DB detail leaked
 _TOOL_ERROR_MSG = "Không thể xử lý yêu cầu. Vui lòng thử lại sau."
+_HR_TOOL_NAMES = frozenset(tool.name for tool in TOOL_DEFINITIONS)
+_REFUSAL_MSG = "Trợ lý Employee chỉ được truy cập dữ liệu và yêu cầu của chính bạn."
 
 
 class EmployeeToolRegistry:
@@ -66,10 +70,14 @@ class EmployeeToolRegistry:
             "get_today_attendance": self._get_today_attendance,
             "list_my_attendance_records": self._list_my_attendance_records,
             "list_my_employee_requests": self._list_my_employee_requests,
+            "get_my_leave_balance": self._get_my_leave_balance,
             "list_my_payslips": self._list_my_payslips,
             "draft_leave_request": self._draft_leave_request,
             "draft_overtime_request": self._draft_overtime_request,
         }
+
+        if tool_name in _HR_TOOL_NAMES:
+            return json.dumps({"error": _REFUSAL_MSG, "code": "scope_denied"}, ensure_ascii=False)
 
         handler = handlers.get(tool_name)
         if handler is None:
@@ -264,6 +272,11 @@ class EmployeeToolRegistry:
 
         return {"requests": all_requests[:50]}
 
+    async def _get_my_leave_balance(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Return an employee-scoped annual leave balance snapshot."""
+        args.pop("employee_id", None)
+        return await self._leave_service.get_my_leave_balance(self._employee_id)
+
     async def _list_my_payslips(self, args: dict[str, Any]) -> dict[str, Any]:
         args.pop("employee_id", None)
         payslips = await self._payslip_service.get_my_payslips(self._employee_id)
@@ -341,6 +354,8 @@ class EmployeeToolRegistry:
             provenance={
                 "tool": "draft_leave_request",
                 "scope": "employee_self_service",
+                "assistant_type": "employee_assistant",
+                "redacted": True,
                 "source_fields": [],
             },
             confirm_endpoint="/api/employee-requests/me/leave",
@@ -405,6 +420,8 @@ class EmployeeToolRegistry:
             provenance={
                 "tool": "draft_overtime_request",
                 "scope": "employee_self_service",
+                "assistant_type": "employee_assistant",
+                "redacted": True,
                 "source_fields": [],
             },
             confirm_endpoint="/api/employee-requests/me/overtime",

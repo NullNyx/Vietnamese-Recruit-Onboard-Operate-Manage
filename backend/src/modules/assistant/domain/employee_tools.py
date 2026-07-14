@@ -132,6 +132,20 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
         },
     ),
     ToolDefinition(
+        name="get_my_leave_balance",
+        kind=ToolKind.READ,
+        description=(
+            "Get the current employee's annual leave balance. "
+            "Returns the annual entitlement, approved days used, pending days, "
+            "and remaining days. This is only the current employee's balance."
+        ),
+        parameters={
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {},
+        },
+    ),
+    ToolDefinition(
         name="list_my_payslips",
         kind=ToolKind.READ,
         description=(

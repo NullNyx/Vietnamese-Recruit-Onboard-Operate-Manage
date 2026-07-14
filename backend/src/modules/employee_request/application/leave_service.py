@@ -21,6 +21,8 @@ from src.modules.employee_request.infrastructure.employee_request_repository imp
     EmployeeRequestRepository,
 )
 
+ANNUAL_LEAVE_ENTITLEMENT_DAYS = 12
+
 
 class LeaveService:
     """Service for leave request operations.
@@ -138,3 +140,30 @@ class LeaveService:
         """
         all_requests = await self.repo.get_by_employee_id(employee_id)
         return [r for r in all_requests if r.request_type == RequestType.LEAVE]
+
+    async def get_my_leave_balance(self, employee_id: UUID) -> dict[str, int | str]:
+        """Return the current employee's annual leave balance snapshot."""
+        leaves = await self.list_my_leaves(employee_id)
+        approved_days = 0
+        pending_days = 0
+        for leave in leaves:
+            if leave.leave_type != LeaveType.ANNUAL:
+                continue
+            if leave.start_date is None or leave.end_date is None:
+                continue
+            days = (leave.end_date - leave.start_date).days + 1
+            if leave.status == RequestStatus.APPROVED:
+                approved_days += days
+            elif leave.status == RequestStatus.SUBMITTED:
+                pending_days += days
+
+        return {
+            "annual_entitlement_days": ANNUAL_LEAVE_ENTITLEMENT_DAYS,
+            "approved_days_used": approved_days,
+            "pending_days": pending_days,
+            "remaining_days": max(
+                0,
+                ANNUAL_LEAVE_ENTITLEMENT_DAYS - approved_days - pending_days,
+            ),
+            "as_of": datetime.now(UTC).isoformat(),
+        }

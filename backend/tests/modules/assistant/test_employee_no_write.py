@@ -356,6 +356,7 @@ class TestStructuralNoWrite:
             "_get_today_attendance",
             "_list_my_attendance_records",
             "_list_my_employee_requests",
+            "_get_my_leave_balance",
             "_list_my_payslips",
             "_draft_leave_request",
             "_draft_overtime_request",

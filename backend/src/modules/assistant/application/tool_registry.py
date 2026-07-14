@@ -205,6 +205,8 @@ class ToolRegistry:
             provenance={
                 "tool": "draft_interview_invitation",
                 "scope": "recruitment",
+                "assistant_type": "ai_assistant",
+                "redacted": True,
                 "candidate_id": str(candidate_id),
                 "source_fields": ["name", "email"],
             },
@@ -274,6 +276,8 @@ class ToolRegistry:
             provenance={
                 "tool": "draft_congratulations_email",
                 "scope": "recruitment",
+                "assistant_type": "ai_assistant",
+                "redacted": True,
                 "candidate_id": str(candidate_id),
                 "source_fields": ["name", "email"],
             },
