@@ -26,19 +26,21 @@ from sqlalchemy.pool import NullPool
 
 from src.modules.employee.domain.entities import Employee  # noqa: F401
 from src.modules.gmail.application.classification_service import ClassificationService
-from src.modules.gmail.domain.entities import EmailMessage
+from src.modules.gmail.domain.entities import EmailMessage, GmailAuditLog
 from src.modules.gmail.domain.enums import EmailCategory
 from src.modules.gmail.infrastructure.ai_classifier import ClassificationResult
 from src.modules.gmail.infrastructure.audit_logger import AuditLogger
 from src.modules.gmail.infrastructure.config import GmailSettings
 from src.modules.gmail.infrastructure.email_repository import EmailRepository
 from src.modules.identity.domain.entities import User  # noqa: F401
+from src.modules.recruitment.application.inbox_service import InboxService
 from src.modules.recruitment.application.job_application_service import (
     JobApplicationService,
 )
-from src.modules.recruitment.domain.entities import Candidate, JobApplication
+from src.modules.recruitment.domain.entities import Candidate, JobApplication, RecruitmentInboxItem
 from src.modules.recruitment.infrastructure.repositories import (
     JobApplicationRepository,
+    RecruitmentInboxItemRepository,
 )
 
 BACKEND_DIR = Path(__file__).resolve().parents[3]
@@ -229,6 +231,76 @@ class TestJobApplicationPersistenceIntegration:
             .select_from(Candidate)
         )
         assert candidate_count.scalar() == 0
+
+    async def test_uncertain_no_cv_email_reaches_inbox_idempotently(
+        self,
+        session: AsyncSession,
+    ) -> None:
+        """Uncertain Job Application without CV is reviewable once, never promoted."""
+        email = _create_email()
+        email.has_attachments = False
+        session.add(email)
+        await session.flush()
+
+        settings = GmailSettings(
+            classification_batch_concurrency=1,
+            classification_confidence_threshold=0.75,
+            classification_needs_review_threshold=0.5,
+        )
+        email_repo = EmailRepository(session)
+        job_app_repo = JobApplicationRepository(session)
+        inbox_repo = RecruitmentInboxItemRepository(session)
+        job_app_service = JobApplicationService(session=session, job_application_repo=job_app_repo)
+        inbox_service = InboxService(session=session, inbox_repo=inbox_repo)
+        uncertain = ClassificationResult(
+            category=EmailCategory.recruitment,
+            confidence=0.49,
+            source="ai",
+            matched_signals=["subject:ung tuyen"],
+            has_cv=False,
+        )
+        rules_classifier = MagicMock()
+        rules_classifier.classify = MagicMock(return_value=uncertain)
+        ai_classifier = AsyncMock()
+        ai_classifier.classify = AsyncMock(return_value=uncertain)
+        service = ClassificationService(
+            rules_classifier=rules_classifier,
+            ai_classifier=ai_classifier,
+            email_repo=email_repo,
+            audit_logger=AuditLogger(session, settings),
+            settings=settings,
+            session=session,
+            on_application_created=job_app_service.create_from_classification,
+            on_uncertain_classification=inbox_service.create_from_classification,
+        )
+
+        await service.classify_batch(user_id=email.user_id, emails=[email])
+        await service.classify_batch(user_id=email.user_id, emails=[email])
+        await session.commit()
+
+        inbox_result = await session.execute(
+            __import__("sqlmodel")
+            .select(RecruitmentInboxItem)
+            .where(RecruitmentInboxItem.gmail_message_id == email.gmail_message_id)
+        )
+        assert len(inbox_result.scalars().all()) == 1
+        assert email.processing_status == "needs_classification"
+
+        application_result = await session.execute(
+            __import__("sqlmodel")
+            .select(JobApplication)
+            .where(JobApplication.gmail_message_id == email.gmail_message_id)
+        )
+        assert application_result.scalars().first() is None
+
+        audit_result = await session.execute(
+            __import__("sqlmodel")
+            .select(GmailAuditLog)
+            .where(GmailAuditLog.operation_type == "classify_batch")
+            .where(GmailAuditLog.user_id == email.user_id)
+        )
+        assert len(audit_result.scalars().all()) >= 2
+
 
     async def test_replay_does_not_create_second_job_application(
         self,

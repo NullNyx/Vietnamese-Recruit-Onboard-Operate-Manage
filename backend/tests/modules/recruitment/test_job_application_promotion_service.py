@@ -166,6 +166,26 @@ class TestAutomationBoundary:
 
 
 class TestAssignToJobOpening:
+    async def test_hr_can_correct_application_source_with_audit_trail(
+        self, service: JobApplicationDecisionService, mock_ja_repo: AsyncMock
+    ) -> None:
+        application = _make_job_application(status=JobApplicationStatus.NEW)
+        mock_ja_repo.get_by_id_for_update = AsyncMock(return_value=application)
+        hr_user_id = uuid4()
+
+        result = await service.correct_source(
+            application.id, ApplicationSource.AGENCY, user_id=hr_user_id
+        )
+
+        assert result.source == ApplicationSource.AGENCY
+        assert result.audit_history[-1] == {
+            "action": "source_corrected",
+            "previous_source": ApplicationSource.DIRECT,
+            "corrected_source": ApplicationSource.AGENCY,
+            "performed_by_user_id": str(hr_user_id),
+            "occurred_at": result.audit_history[-1]["occurred_at"],
+        }
+        mock_ja_repo.update.assert_awaited_once_with(application)
     async def test_assign_unassigned_to_open_succeeds(
         self, service: JobApplicationDecisionService, mock_ja_repo: AsyncMock,
         mock_job_opening_repo: AsyncMock

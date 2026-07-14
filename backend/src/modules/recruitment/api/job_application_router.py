@@ -19,8 +19,10 @@ from src.modules.identity.container import get_current_user, get_db_session
 from src.modules.identity.domain.entities import User, UserRole
 from src.modules.recruitment.api.schemas import (
     AssignJobApplicationRequest,
+    CorrectJobApplicationSourceRequest,
     JobApplicationAssignmentResponse,
     JobApplicationPromoteResponse,
+    JobApplicationSourceResponse,
     PromoteJobApplicationRequest,
 )
 from src.modules.recruitment.application.job_application_decision_service import (
@@ -81,6 +83,24 @@ ServiceDep = Annotated[JobApplicationDecisionService, Depends(_build_service)]
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/{job_application_id}/source",
+    response_model=JobApplicationSourceResponse,
+)
+async def correct_job_application_source(
+    job_application_id: UUID,
+    body: CorrectJobApplicationSourceRequest,
+    current_user: CurrentUserDep,
+    service: ServiceDep,
+) -> JobApplicationSourceResponse:
+    """Correct the source classification with an HR audit trail."""
+    _require_hr(current_user)
+    application = await service.correct_source(
+        job_application_id, body.source, user_id=current_user.id
+    )
+    return JobApplicationSourceResponse.model_validate(application)
 
 
 @router.post(

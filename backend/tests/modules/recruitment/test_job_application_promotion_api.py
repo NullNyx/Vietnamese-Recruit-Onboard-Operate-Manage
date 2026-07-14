@@ -106,6 +106,24 @@ class FakeJobApplicationService:
             audit_history=[],
         )
 
+    async def correct_source(
+        self,
+        job_application_id: UUID,
+        source: ApplicationSource,
+        user_id: UUID | None = None,
+    ) -> JobApplication:
+        return JobApplication(
+            id=job_application_id,
+            source_email_message_id=uuid4(),
+            gmail_message_id="msg_source",
+            gmail_thread_id="thread_source",
+            source=source,
+            sender_name="Sender",
+            sender_email="sender@example.com",
+            status=JobApplicationStatus.NEW,
+            audit_history=[],
+        )
+
     async def promote_to_candidate(
         self,
         job_application_id: UUID,
@@ -201,6 +219,31 @@ def _build_app(
 
 
 # ─── Assignment Access Control ────────────────────────────────────────
+
+
+class TestSourceCorrection:
+    def test_hr_can_correct_application_source(self) -> None:
+        app = _build_app(FakeAdminUser(), FakeJobApplicationService())
+        client = TestClient(app)
+
+        response = client.post(
+            f"/api/recruitment/job-applications/{uuid4()}/source",
+            json={"source": "agency"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["source"] == "agency"
+
+    def test_employee_cannot_correct_application_source(self) -> None:
+        app = _build_app(FakeEmployeeUser(), FakeJobApplicationService())
+        client = TestClient(app)
+
+        response = client.post(
+            f"/api/recruitment/job-applications/{uuid4()}/source",
+            json={"source": "agency"},
+        )
+
+        assert response.status_code == 403
 
 
 class TestAssignmentAccessControl:

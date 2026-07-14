@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.recruitment.domain.entities import Candidate, JobApplication
 from src.modules.recruitment.domain.enums import (
+    ApplicationSource,
     CandidateStatus,
     JobApplicationStatus,
     JobOpeningStatus,
@@ -43,6 +44,36 @@ class JobApplicationDecisionService:
         self._applications = job_application_repo
         self._candidates = candidate_repo
         self._job_openings = job_opening_repo
+
+    async def correct_source(
+        self,
+        job_application_id: UUID,
+        corrected_source: ApplicationSource,
+        user_id: UUID | None = None,
+    ) -> JobApplication:
+        """Correct a Job Application source without changing its lifecycle."""
+        application = await self._applications.get_by_id_for_update(job_application_id)
+        if application is None:
+            raise JobApplicationNotFoundError(f"Job Application not found: {job_application_id}")
+        if application.status == JobApplicationStatus.DISMISSED:
+            raise JobApplicationAssignmentBlockedError("Job Application is dismissed")
+
+        previous_source = application.source
+        application.source = corrected_source
+        history = list(application.audit_history or [])
+        history.append(
+            {
+                "action": "source_corrected",
+                "previous_source": previous_source,
+                "corrected_source": corrected_source,
+                "performed_by_user_id": str(user_id) if user_id else None,
+                "occurred_at": datetime.now(UTC).isoformat(),
+            }
+        )
+        application.audit_history = history
+        updated = await self._applications.update(application)
+        await self._session.commit()
+        return updated
 
     async def assign_to_job_opening(
         self,

@@ -827,6 +827,22 @@ class LinkProposalResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class CorrectJobApplicationSourceRequest(BaseModel):
+    """HR correction of the application source classification."""
+
+    source: ApplicationSource
+
+
+class JobApplicationSourceResponse(BaseModel):
+    """Source and lifecycle state after an auditable source correction."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    source: ApplicationSource
+    status: str
+
+
 class AssignJobApplicationRequest(BaseModel):
     """Request schema for assigning a Job Application to a Job Opening.
 
