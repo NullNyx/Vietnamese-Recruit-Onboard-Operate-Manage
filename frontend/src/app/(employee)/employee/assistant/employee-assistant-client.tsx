@@ -20,8 +20,6 @@ export function EmployeeAssistantClient() {
   useEffect(() => {
     if (prefillData && dialogRef.current) {
       dialogRef.current.open();
-      // Reset after opening so next open() applies fresh defaultValues
-      setPrefillData(null);
     }
   }, [prefillData]);
 

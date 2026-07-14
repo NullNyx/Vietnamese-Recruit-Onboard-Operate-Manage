@@ -131,6 +131,16 @@ class AIConfigurationCandidate:
 
 
 @dataclass(frozen=True)
+class AIProviderRuntimeConfig:
+    """Resolved provider settings for an enabled Organization capability."""
+
+    provider: str
+    base_url: str
+    model: str
+    api_key: str
+
+
+@dataclass(frozen=True)
 class ClassificationRolloutCandidate:
     """Audited Organization selection for a candidate rollout."""
 
@@ -385,6 +395,41 @@ class OrganizationAIConfigService:
         )
         self.validate(candidate)
         await self._test_completion(base_url, deployment_key, model)
+
+    async def get_runtime_config(
+        self,
+        *,
+        capability: str,
+    ) -> AIProviderRuntimeConfig | None:
+        """Resolve the active Organization provider for a capability.
+
+        ``None`` means the Organization has not configured AI yet, allowing
+        local bootstrap settings to remain useful before setup. Once a
+        configuration exists, enabled capabilities must use its provider and
+        credential; they must not silently fall back to environment values.
+        """
+        config = await self.repository.get()
+        if config is None:
+            return None
+
+        enabled_field = {
+            "assistant": "ai_assistant_enabled",
+            "automation": "ai_automation_enabled",
+        }.get(capability)
+        if enabled_field is None:
+            raise OrganizationAIConfigValidationError(f"Unknown AI capability: {capability}")
+        if not getattr(config, enabled_field):
+            raise OrganizationAIConfigValidationError(
+                f"AI {capability} is disabled for this Organization"
+            )
+
+        api_key = await self._resolve_api_key(config)
+        return AIProviderRuntimeConfig(
+            provider=config.provider,
+            base_url=config.base_url,
+            model=config.model,
+            api_key=api_key,
+        )
 
     async def _resolve_api_key(self, config: OrganizationAIConfiguration) -> str:
         """Return the actual API key for a config based on its credential source."""

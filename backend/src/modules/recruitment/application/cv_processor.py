@@ -420,9 +420,7 @@ class CVProcessorService:
             cv_doc.field_provenance = {
                 key: value.model_dump() for key, value in parsed_cv.provenance.items()
             }
-            cv_doc.validation_errors = [
-                item.model_dump() for item in parsed_cv.validation_errors
-            ]
+            cv_doc.validation_errors = [item.model_dump() for item in parsed_cv.validation_errors]
             cv_doc.confidence_score = confidence
 
             has_blocking_findings = any(
@@ -432,7 +430,6 @@ class CVProcessorService:
                 cv_doc.processing_status = ProcessingStatus.COMPLETED
             else:
                 cv_doc.processing_status = ProcessingStatus.NEEDS_REVIEW
-
 
             cv_doc.processing_error = None
             cv_doc = await self._cv_document_repo.update(cv_doc)
@@ -632,9 +629,7 @@ class CVProcessorService:
         cv_doc.field_provenance = {
             key: value.model_dump() for key, value in parsed_cv.provenance.items()
         }
-        cv_doc.validation_errors = [
-            item.model_dump() for item in parsed_cv.validation_errors
-        ]
+        cv_doc.validation_errors = [item.model_dump() for item in parsed_cv.validation_errors]
         cv_doc.confidence_score = confidence
 
         cv_doc = await self._cv_document_repo.update(cv_doc)

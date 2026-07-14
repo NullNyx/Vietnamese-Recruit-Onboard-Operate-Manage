@@ -25,8 +25,8 @@ from src.modules.assistant.application.employee_assistant_service import (
     EmployeeAssistantService,
 )
 from src.modules.assistant.container import (
-    get_assistant_llm_client,
-    get_assistant_settings,
+    get_configured_assistant_llm_client,
+    get_configured_assistant_settings,
 )
 from src.modules.assistant.infrastructure.config import AssistantSettings
 from src.modules.assistant.infrastructure.llm_client import AssistantLLMClient
@@ -74,7 +74,7 @@ ActiveEmployeeDep = Annotated[Employee, Depends(_require_active_employee)]
 
 async def get_employee_assistant_service(
     employee: ActiveEmployeeDep,
-    llm_client: AssistantLLMClient = Depends(get_assistant_llm_client),
+    llm_client: AssistantLLMClient = Depends(get_configured_assistant_llm_client),
     employee_service: EmployeeService = Depends(get_employee_service),
     document_service: DocumentService = Depends(get_document_service),
     attendance_repo: AttendanceRecordRepository = Depends(
@@ -83,7 +83,7 @@ async def get_employee_assistant_service(
     leave_service: LeaveService = Depends(get_leave_service),
     overtime_service: OvertimeService = Depends(get_overtime_service),
     payslip_service: PayslipService = Depends(get_payslip_service),
-    settings: AssistantSettings = Depends(get_assistant_settings),
+    settings: AssistantSettings = Depends(get_configured_assistant_settings),
 ) -> EmployeeAssistantService:
     """Provide an EmployeeAssistantService scoped to the current employee."""
     return EmployeeAssistantService(

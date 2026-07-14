@@ -8,8 +8,9 @@ patterns established in the employee module.
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Text, desc, func, or_
+from sqlalchemy import Text, desc, func, insert, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Load, load_only
 from sqlmodel import select
 
 from src.modules.recruitment.domain.entities import (
@@ -28,6 +29,31 @@ from src.modules.recruitment.domain.enums import (
     JobOpeningStatus,
     ProcessingStatus,
 )
+
+
+def _candidate_read_projection() -> Load:
+    """Load only columns still stored on ``candidates`` after migration 054."""
+    return load_only(
+        Candidate.id,
+        Candidate.name,
+        Candidate.email,
+        Candidate.phone,
+        Candidate.skills,
+        Candidate.experience,
+        Candidate.education,
+        Candidate.summary,
+        Candidate.parsed_cv_json,
+        Candidate.status,
+        Candidate.confidence_score,
+        Candidate.source_email_message_id,
+        Candidate.rejection_reason,
+        Candidate.rejected_at,
+        Candidate.accepted_at,
+        Candidate.archived_at,
+        Candidate.created_at,
+        Candidate.updated_at,
+        Candidate.job_opening_id,
+    )
 
 
 class CandidateRepository:
@@ -54,8 +80,10 @@ class CandidateRepository:
         Returns:
             The persisted Candidate entity with generated fields populated.
         """
-        self.session.add(candidate)
-        await self.session.flush()
+        values = candidate.model_dump(
+            exclude={"calendar_event_id", "interview_start_at", "interview_timezone"}
+        )
+        await self.session.execute(insert(Candidate).values(values))
         return candidate
 
     async def get_by_id(self, id: UUID) -> Candidate | None:
@@ -67,12 +95,19 @@ class CandidateRepository:
         Returns:
             The Candidate entity if found, None otherwise.
         """
-        statement = select(Candidate).where(Candidate.id == id)
+        statement = (
+            select(Candidate).options(_candidate_read_projection()).where(Candidate.id == id)
+        )
         result = await self.session.execute(statement)
         return result.scalars().first()
 
     async def get_by_id_for_update(self, id: UUID) -> Candidate | None:
-        statement = select(Candidate).where(Candidate.id == id).with_for_update()
+        statement = (
+            select(Candidate)
+            .options(_candidate_read_projection())
+            .where(Candidate.id == id)
+            .with_for_update()
+        )
         result = await self.session.execute(statement)
         return result.scalars().first()
 
@@ -87,7 +122,11 @@ class CandidateRepository:
         Returns:
             The Candidate entity if found, None otherwise.
         """
-        statement = select(Candidate).where(func.lower(Candidate.email) == email.lower())
+        statement = (
+            select(Candidate)
+            .options(_candidate_read_projection())
+            .where(func.lower(Candidate.email) == email.lower())
+        )
         result = await self.session.execute(statement)
         return result.scalars().first()
 
@@ -113,7 +152,9 @@ class CandidateRepository:
         Args:
             id: The UUID of the candidate to delete.
         """
-        statement = select(Candidate).where(Candidate.id == id)
+        statement = (
+            select(Candidate).options(_candidate_read_projection()).where(Candidate.id == id)
+        )
         result = await self.session.execute(statement)
         candidate = result.scalars().first()
 
@@ -151,7 +192,22 @@ class CandidateRepository:
         Returns:
             A tuple of (list of Candidate entities, total count).
         """
-        statement = select(Candidate)
+        # Candidate retains legacy scheduling attributes in the ORM model for
+        # compatibility, while those columns were moved to ``interviews``.
+        # Restrict this read projection to columns that exist on candidates.
+        statement = select(Candidate).options(
+            load_only(
+                Candidate.id,
+                Candidate.name,
+                Candidate.email,
+                Candidate.phone,
+                Candidate.skills,
+                Candidate.status,
+                Candidate.confidence_score,
+                Candidate.created_at,
+                Candidate.job_opening_id,
+            )
+        )
         count_statement = select(func.count()).select_from(Candidate)
 
         # Exclude archived candidates unless explicitly requested

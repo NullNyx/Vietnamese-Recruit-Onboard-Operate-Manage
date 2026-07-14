@@ -13,10 +13,15 @@ services:
       - ./backend/src:/app/backend/src
       - ./backend/alembic:/app/backend/alembic
       - ./backend/config:/app/backend/config
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       AUTH_AUTO_SEED_SAMPLE_DATA: "true"
       # Local-only OAuth test allowance; production compose has no such default.
       RECRUITMENT_DEFAULT_ALLOWED_DOMAINS: '["gmail.com"]'
+      ASSISTANT_LLM_BASE_URL: "http://host.docker.internal:20128/v1"
+      ASSISTANT_LLM_TIMEOUT_SECONDS: "5"
+      ASSISTANT_LLM_MAX_RETRIES: "0"
     command: >
       sh -c "uv run alembic upgrade head &&
              uv run uvicorn src.main:app --host 0.0.0.0 --port 8000"
