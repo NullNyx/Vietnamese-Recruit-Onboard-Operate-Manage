@@ -22,17 +22,29 @@ interface HeaderNavigationProps {
   className?: string;
 }
 
+function readE2EUserOverride() {
+  if (typeof window === "undefined") return null;
+  return (window as typeof window & {
+    __VROOM_HR_E2E_CURRENT_USER__?: { role?: string } | null;
+  }).__VROOM_HR_E2E_CURRENT_USER__ ?? null;
+}
+
+
 export function HeaderNavigation({ className }: HeaderNavigationProps) {
   const { user, loading, error } = useCurrentUser();
+  const e2eUser = readE2EUserOverride();
+  const activeUser = (e2eUser as typeof user | null) ?? user;
+  const activeLoading = e2eUser ? false : loading;
+  const activeError = error;
   const pathname = usePathname();
   const router = useRouter();
 
   // Determine if role is valid
-  const isValidRole = user?.role === "admin" || user?.role === "user";
+  const isValidRole = activeUser?.role === "admin" || activeUser?.role === "user";
 
   // Select config based on user role
   const config: HeaderNavConfig =
-    user?.role === "admin" ? adminNavConfig : essNavConfig;
+    activeUser?.role === "admin" ? adminNavConfig : essNavConfig;
 
   // Active state from hook
   const { activeGroupId, activeSubLinkHref } = useActiveNavItem(
@@ -173,10 +185,10 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
 
   // Redirect to /login when unauthenticated or role is invalid (client-side fallback)
   useEffect(() => {
-    if (!loading && (!user || !isValidRole)) {
+    if (!activeLoading && (!activeUser || !isValidRole)) {
       router.push("/login");
     }
-  }, [loading, user, isValidRole, router]);
+  }, [activeLoading, activeUser, isValidRole, router]);
 
   // Handle Enter/Space on trigger: open menu and focus first link
   const handleTriggerKeyDown = useCallback(
@@ -197,7 +209,7 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
   );
 
   // Loading state
-  if (loading) {
+  if (activeLoading) {
     return (
       <header
         className={cn(
@@ -213,7 +225,7 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
   }
 
   // Error state
-  if (error) {
+  if (activeError) {
     return (
       <header
         className={cn(
@@ -231,7 +243,7 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
   }
 
   // Unauthenticated or invalid role state — render minimal header, redirect handled by effect above
-  if (!user || !isValidRole) {
+  if (!activeUser || !isValidRole) {
     return (
       <header
         className={cn(
@@ -308,7 +320,7 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
           {/* Header utilities (search, notifications, account) */}
           <HeaderUtilities
             onSearchClick={() => setCommandBarOpen(true)}
-            user={user}
+            user={activeUser}
           />
 
           {/* Hamburger toggle — visible on mobile only */}

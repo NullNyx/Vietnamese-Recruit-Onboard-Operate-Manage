@@ -122,7 +122,7 @@ export default function CandidateDetailPage() {
         });
       }
     }
-  }, [id]);
+  }, [id, setBreadcrumbDisplayName]);
 
   const fetchConflicts = useCallback(async () => {
     try {

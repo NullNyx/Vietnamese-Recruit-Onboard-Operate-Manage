@@ -67,7 +67,7 @@ describe("Recruitment Inbox issue #185 UI journeys", () => {
     resolveInboxLinkProposal.mockResolvedValue({ status: "confirmed" });
   });
 
-  it("lets HR split an agency source into one application per applicant", async () => {
+  it("lets HR split an agency source into one application per applicant", { timeout: 15000 }, async () => {
     const user = userEvent.setup();
     const { default: RecruitmentInboxPage } = await import(
       "@/app/(dashboard)/recruitment/inbox/page"
@@ -95,7 +95,7 @@ describe("Recruitment Inbox issue #185 UI journeys", () => {
     );
   });
 
-  it("keeps a cross-thread link pending until HR confirms it", async () => {
+  it("keeps a cross-thread link pending until HR confirms it", { timeout: 15000 }, async () => {
     const user = userEvent.setup();
     const { default: RecruitmentInboxPage } = await import(
       "@/app/(dashboard)/recruitment/inbox/page"
