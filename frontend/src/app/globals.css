@@ -4,72 +4,135 @@
 
 @layer base {
   :root {
-    /* ===== DESIGN SYSTEM: Heritage ===== */
+    /* ===== DESIGN SYSTEM: Warm Professional — Light ===== */
 
-    /* Heritage Foundation */
-    --background: 40 23% 96%; /* #F7F5F2 - Neutral page foundation */
-    --foreground: 210 8% 11%; /* #1A1C1E - Ink text */
+    /* Heritage Foundation — warm off-white */
+    --background: 40 15% 94%;    /* #F2EFE9 — warm neutral page */
+    --foreground: 210 8% 11%;    /* #1A1C1E — ink text */
 
     /* Cards & Surfaces */
-    --card: 0 0% 100%; /* #FFFFFF - Surface */
-    --card-foreground: 210 8% 11%; /* #1A1C1E */
+    --card: 0 0% 100%;           /* #FFFFFF */
+    --card-foreground: 210 8% 11%;
 
     /* Popover */
-    --popover: 0 0% 100%; /* #FFFFFF */
-    --popover-foreground: 210 8% 11%; /* #1A1C1E */
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 8% 11%;
 
-    /* Primary Accent — Terracotta */
-    --primary: 8 62% 45%; /* #B8422E */
-    --primary-foreground: 0 0% 100%; /* #FFFFFF - On-primary */
+    /* Primary Accent — Đỏ Việt (Crimson) */
+    --primary: 0 69% 47%;        /* #C62828 */
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary */
-    --secondary: 40 23% 96%; /* #F7F5F2 */
-    --secondary-foreground: 210 8% 11%; /* #1A1C1E */
+    /* Secondary — Trust Blue */
+    --secondary: 211 82% 42%;    /* #1565C0 */
+    --secondary-foreground: 0 0% 100%;
 
-    /* Muted / Secondary */
-    --muted: 40 23% 96%; /* #F7F5F2 */
-    --muted-foreground: 210 4% 46%; /* #6C7278 */
+    /* Muted */
+    --muted: 40 10% 92%;         /* #EBE8E2 */
+    --muted-foreground: 40 5% 40%; /* #6B6760 */
 
-    /* Accent */
-    --accent: 40 23% 96%; /* #F7F5F2 */
-    --accent-foreground: 210 8% 11%; /* #1A1C1E */
+    /* Accent — Amber/Gold */
+    --accent: 34 100% 50%;       /* #FF8F00 */
+    --accent-foreground: 0 0% 0%;
 
-    /* Destructive — Warning Red */
-    --destructive: 0 80% 63%;
+    /* Destructive */
+    --destructive: 0 80% 63%;    /* #EF5350 */
     --destructive-foreground: 0 0% 100%;
 
     /* Success */
-    --success: 135 100% 28%;
+    --success: 120 100% 25%;     /* #008000 */
     --success-foreground: 0 0% 100%;
 
     /* Warning */
-    --warning: 35 85% 55%;
-    --warning-foreground: 210 8% 11%;
+    --warning: 34 100% 50%;      /* #FF8F00 */
+    --warning-foreground: 0 0% 0%;
 
     /* Borders */
-    --border: 210 4% 46%; /* #6C7278 at reduced opacity via Tailwind */
-    --input: 210 4% 46%;
-    --ring: 8 62% 45%; /* Terracotta focus ring */
+    --border: 40 10% 85%;        /* #E0DBD1 */
+    --input: 40 10% 85%;
+    --ring: 0 69% 47%;           /* Matches primary */
 
-    /* Sidebar */
-    --sidebar-background: 0 0% 100%; /* #FFFFFF */
-    --sidebar-foreground: 210 4% 46%; /* #6C7278 */
-    --sidebar-border: 210 4% 46%; /* #6C7278 */
-    --sidebar-accent: 8 62% 45%; /* Terracotta */
-    --sidebar-accent-foreground: 0 0% 100%; /* #FFFFFF */
+    /* Sidebar — Light */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 40 5% 40%;
+    --sidebar-border: 40 10% 85%;
+    --sidebar-accent: 0 69% 47%; /* Đỏ primary */
+    --sidebar-accent-foreground: 0 0% 100%;
 
     /* Chart Colors */
-    --chart-1: 8 62% 45%; /* Terracotta */
-    --chart-2: 210 4% 46%;
-    --chart-3: 185 97% 40%;
-    --chart-4: 135 100% 28%;
-    --chart-5: 35 85% 55%;
+    --chart-1: 0 69% 47%;        /* Đỏ */
+    --chart-2: 211 82% 42%;      /* Xanh */
+    --chart-3: 34 100% 50%;      /* Amber */
+    --chart-4: 120 100% 25%;     /* Xanh lá */
+    --chart-5: 270 50% 40%;      /* Tím */
 
     /* Radius */
-    --radius: 0.25rem; /* 4px - Heritage rounded md */
-    --radius-sm: 0.125rem;
-    --radius-lg: 0.5rem; /* 8px - Heritage rounded lg */
-    --radius-xl: 0.75rem;
+    --radius: 0.375rem;          /* 6px — slightly rounder */
+    --radius-sm: 0.25rem;        /* 4px */
+    --radius-lg: 0.5rem;         /* 8px */
+    --radius-xl: 0.75rem;        /* 12px */
+  }
+
+  .dark {
+    /* ===== DESIGN SYSTEM: Warm Professional — Dark ===== */
+
+    /* Dark Foundation */
+    --background: 210 8% 11%;    /* #1A1C1E */
+    --foreground: 40 10% 90%;    /* #E8E4DC */
+
+    /* Cards & Surfaces */
+    --card: 210 8% 15%;          /* #23262B */
+    --card-foreground: 40 10% 90%;
+
+    /* Popover */
+    --popover: 210 8% 15%;
+    --popover-foreground: 40 10% 90%;
+
+    /* Primary — slightly brighter for dark mode readability */
+    --primary: 0 69% 55%;        /* #D32F2F — brighter đỏ */
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary */
+    --secondary: 211 70% 50%;    /* #1E88E5 */
+    --secondary-foreground: 0 0% 100%;
+
+    /* Muted */
+    --muted: 210 8% 18%;
+    --muted-foreground: 40 5% 55%;
+
+    /* Accent */
+    --accent: 34 100% 45%;       /* #E68100 */
+    --accent-foreground: 0 0% 0%;
+
+    /* Destructive */
+    --destructive: 0 80% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Success */
+    --success: 120 70% 40%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning */
+    --warning: 34 100% 45%;
+    --warning-foreground: 0 0% 0%;
+
+    /* Borders */
+    --border: 210 5% 25%;
+    --input: 210 5% 25%;
+    --ring: 0 69% 55%;           /* Matching dark primary */
+
+    /* Sidebar — Dark */
+    --sidebar-background: 210 8% 13%;
+    --sidebar-foreground: 40 5% 55%;
+    --sidebar-border: 210 5% 22%;
+    --sidebar-accent: 0 69% 55%;
+    --sidebar-accent-foreground: 0 0% 100%;
+
+    /* Chart Colors */
+    --chart-1: 0 69% 55%;
+    --chart-2: 211 70% 50%;
+    --chart-3: 34 100% 45%;
+    --chart-4: 120 70% 40%;
+    --chart-5: 270 50% 60%;
   }
 }
 
@@ -80,46 +143,45 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "cv01", "ss03";
+    font-feature-settings: "cv01", "ss03", "tnum";
     letter-spacing: -0.13px;
   }
 }
 
-/* Stagger Animation Utilities */
+/* ===== Animation Utilities ===== */
+
+/* Stagger Children */
 @layer utilities {
-  .stagger-children > *:nth-child(1) {
-    animation-delay: 0ms;
-  }
-  .stagger-children > *:nth-child(2) {
-    animation-delay: 50ms;
-  }
-  .stagger-children > *:nth-child(3) {
-    animation-delay: 60ms;
-  }
-  .stagger-children > *:nth-child(4) {
-    animation-delay: 90ms;
-  }
-  .stagger-children > *:nth-child(5) {
-    animation-delay: 120ms;
-  }
-  .stagger-children > *:nth-child(6) {
-    animation-delay: 150ms;
-  }
-  .stagger-children > *:nth-child(7) {
-    animation-delay: 180ms;
-  }
-  .stagger-children > *:nth-child(8) {
-    animation-delay: 210ms;
-  }
-  .stagger-children > *:nth-child(9) {
-    animation-delay: 240ms;
-  }
-  .stagger-children > *:nth-child(10) {
-    animation-delay: 270ms;
-  }
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+  .stagger-children > *:nth-child(7) { animation-delay: 300ms; }
+  .stagger-children > *:nth-child(8) { animation-delay: 350ms; }
+  .stagger-children > *:nth-child(9) { animation-delay: 400ms; }
+  .stagger-children > *:nth-child(10) { animation-delay: 450ms; }
 
   .stagger-children > * {
     animation-fill-mode: both;
+  }
+}
+
+/* Card hover elevation */
+@layer utilities {
+  .card-hover {
+    @apply transition-all duration-200;
+  }
+  .card-hover:hover {
+    @apply shadow-md -translate-y-0.5;
+  }
+}
+
+/* Fade-in animation for sections */
+@layer utilities {
+  .fade-in-section {
+    @apply animate-fade-in;
   }
 }
 

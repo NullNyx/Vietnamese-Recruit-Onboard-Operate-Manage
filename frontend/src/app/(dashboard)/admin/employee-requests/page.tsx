@@ -357,84 +357,84 @@ export default function AdminEmployeeRequestsPage() {
   const isPending = approveMutation.isPending || rejectMutation.isPending;
   const requests = data?.requests ?? [];
 
-  return (
-    <div className="space-y-6 max-w-[1000px]">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-[24px] font-semibold tracking-[-0.3px] text-foreground">
-            Yêu cầu chờ duyệt
-          </h1>
-          <p className="text-[14px] text-muted-foreground">
-            Duyệt hoặc từ chối đơn nghỉ phép và tăng ca từ nhân viên
-          </p>
-        </div>
-      </div>
+      return (
+        <div className="animate-fade-in space-y-6 max-w-[1000px]">
+          {/* Header */}
+          <div className="fade-in-section flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <h1 className="text-[24px] font-semibold tracking-[-0.3px] text-foreground">
+                Yêu cầu chờ duyệt
+              </h1>
+              <p className="text-[14px] text-muted-foreground">
+                Duyệt hoặc từ chối đơn nghỉ phép và tăng ca từ nhân viên
+              </p>
+            </div>
+          </div>
 
-      {/* Loading */}
-      {isLoading && (
-        <div className="space-y-3">
-          <ReviewSkeleton />
-          <ReviewSkeleton />
-          <ReviewSkeleton />
-        </div>
-      )}
+          {/* Loading */}
+          {isLoading && (
+            <div className="fade-in-section space-y-3">
+              <ReviewSkeleton />
+              <ReviewSkeleton />
+              <ReviewSkeleton />
+            </div>
+          )}
 
-      {/* Error */}
-      {isError && !isLoading && (
-        <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-12 text-center">
-          <Loader2 className="mx-auto h-10 w-10 text-destructive" />
-          <h3 className="mt-4 text-[14px] font-medium text-foreground">
-            Không thể tải dữ liệu
-          </h3>
-          <p className="mt-1 text-[12px] text-muted-foreground">
-            {error instanceof Error ? error.message : "Đã có lỗi xảy ra. Vui lòng thử lại sau."}
-          </p>
-        </div>
-      )}
+          {/* Error */}
+          {isError && !isLoading && (
+            <div className="fade-in-section rounded-xl border border-destructive/20 bg-destructive/10 p-12 text-center">
+              <Loader2 className="mx-auto h-10 w-10 text-destructive" />
+              <h3 className="mt-4 text-[14px] font-medium text-foreground">
+                Không thể tải dữ liệu
+              </h3>
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                {error instanceof Error ? error.message : "Đã có lỗi xảy ra. Vui lòng thử lại sau."}
+              </p>
+            </div>
+          )}
 
-      {/* Empty */}
-      {!isLoading && !isError && requests.length === 0 && (
-        <div className="rounded-xl border border-border/50 bg-card/50 p-12 text-center">
-          <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground" />
-          <h3 className="mt-4 text-[14px] font-medium text-foreground">
-            Không có yêu cầu nào
-          </h3>
-          <p className="mt-1 text-[12px] text-muted-foreground">
-            Tất cả yêu cầu đã được xử lý. Yêu cầu mới sẽ xuất hiện ở đây.
-          </p>
-        </div>
-      )}
+          {/* Empty */}
+          {!isLoading && !isError && requests.length === 0 && (
+            <div className="fade-in-section rounded-xl border border-border/50 bg-card p-12 text-center">
+              <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground" />
+              <h3 className="mt-4 text-[14px] font-medium text-foreground">
+                Không có yêu cầu nào
+              </h3>
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                Tất cả yêu cầu đã được xử lý. Yêu cầu mới sẽ xuất hiện ở đây.
+              </p>
+            </div>
+          )}
 
-      {/* List */}
-      {!isLoading && !isError && requests.length > 0 && (
-        <div className="space-y-3">
-          {requests.map((request) => (
-            <ReviewCard
-              key={request.id}
-              request={request}
-              onReview={handleReviewClick}
-            />
-          ))}
-        </div>
-      )}
+          {/* List */}
+          {!isLoading && !isError && requests.length > 0 && (
+            <div className="fade-in-section space-y-3 stagger-children">
+              {requests.map((request) => (
+                <ReviewCard
+                  key={request.id}
+                  request={request}
+                  onReview={handleReviewClick}
+                />
+              ))}
+            </div>
+          )}
 
-      {/* Confirm dialog */}
-      <ConfirmReviewDialog
-        request={reviewTarget?.request ?? null}
-        action={reviewTarget?.action ?? null}
-        open={reviewDialogOpen}
-        onOpenChange={(v) => {
-          if (!v) {
-            setReviewTarget(null);
-            setReviewReason("");
-          }
-        }}
-        onConfirm={handleConfirm}
-        isPending={isPending}
-        reviewReason={reviewReason}
-        onReviewReasonChange={setReviewReason}
-      />
-    </div>
+          {/* Confirm dialog */}
+          <ConfirmReviewDialog
+            request={reviewTarget?.request ?? null}
+            action={reviewTarget?.action ?? null}
+            open={reviewDialogOpen}
+            onOpenChange={(v) => {
+              if (!v) {
+                setReviewTarget(null);
+                setReviewReason("");
+              }
+            }}
+            onConfirm={handleConfirm}
+            isPending={isPending}
+            reviewReason={reviewReason}
+            onReviewReasonChange={setReviewReason}
+          />
+        </div>
   );
 }

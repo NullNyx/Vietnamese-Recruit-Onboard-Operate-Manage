@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { listOnboardingProcesses, getOnboardingCounts, onboardingKeys, type ProcessFilter, type OnboardingProcess } from "@/lib/api/onboarding";
 import { ProcessCard } from "@/components/onboarding/ProcessCard";
 import { OnboardingDetail } from "@/components/onboarding/OnboardingDetail";
-import { Users, AlertCircle } from "lucide-react";
+import { Users, AlertCircle, UserPlus } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,14 +34,14 @@ function LoadingList() {
 
 function ErrorList({ error, onRetry }: { error: Error; onRetry: () => void }) {
   return (
-    <div className="p-4">
+    <div className="p-4 space-y-3">
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription className="text-xs">
           {error.message || "Tải danh sách thất bại"}
         </AlertDescription>
       </Alert>
-      <Button variant="outline" size="sm" className="w-full mt-3" onClick={onRetry}>
+      <Button variant="outline" size="sm" className="w-full" onClick={onRetry}>
         Thử lại
       </Button>
     </div>
@@ -50,9 +50,12 @@ function ErrorList({ error, onRetry }: { error: Error; onRetry: () => void }) {
 
 function EmptyList() {
   return (
-    <div className="flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground">
-      <Users className="h-8 w-8 opacity-30" />
-      <p className="text-sm">Không có kết quả</p>
+    <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted/50">
+        <UserPlus className="h-6 w-6 opacity-40" strokeWidth={1.5} />
+      </div>
+      <p className="text-sm font-medium">Không có kết quả</p>
+      <p className="text-xs text-muted-foreground/60">Chưa có nhân viên nào trong quy trình onboarding</p>
     </div>
   );
 }
@@ -78,10 +81,17 @@ export default function OnboardingPage() {
       <aside className="w-[360px] shrink-0 border-r flex flex-col bg-muted/20">
         {/* Header */}
         <div className="px-5 pt-6 pb-4 border-b">
-          <h1 className="text-xl font-semibold tracking-tight">Onboarding</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Theo dõi tiến độ nhân viên mới
-          </p>
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Users className="h-[18px] w-[18px]" aria-hidden="true" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground">Onboarding</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Theo dõi tiến độ nhân viên mới
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Filter tabs */}
@@ -131,7 +141,7 @@ export default function OnboardingPage() {
           {isError && <ErrorList error={error as Error} onRetry={() => refetch()} />}
           {!isLoading && !isError && processes.length === 0 && <EmptyList />}
           {!isLoading && !isError && processes.length > 0 && (
-            <div className="p-3 space-y-2">
+            <div className="p-3 space-y-2 stagger-children">
               {processes.map((p: OnboardingProcess) => (
                 <ProcessCard
                   key={p.id}
@@ -150,9 +160,14 @@ export default function OnboardingPage() {
         {selectedId ? (
           <OnboardingDetail key={selectedId} processId={selectedId} />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
-            <Users className="h-10 w-10 opacity-20" />
-            <p className="text-sm">Chọn nhân viên để xem chi tiết</p>
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted/50">
+              <Users className="h-8 w-8 opacity-30" strokeWidth={1.5} />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium">Chọn nhân viên để xem chi tiết</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Quy trình onboarding sẽ hiển thị ở đây</p>
+            </div>
           </div>
         )}
       </main>

@@ -40,11 +40,17 @@ function getValueColorClass(type: MetricType, rawValue?: number): string {
 
   switch (type) {
     case "success_rate":
-      return rawValue > 0.8 ? "text-green-600" : "";
+      return rawValue > 0.8
+        ? "text-green-600 dark:text-green-400"
+        : "";
     case "failure_rate":
-      return rawValue > 0.2 ? "text-red-600" : "";
+      return rawValue > 0.2
+        ? "text-red-600 dark:text-red-400"
+        : "";
     case "queue_depth":
-      return rawValue > 50 ? "text-amber-600" : "";
+      return rawValue > 50
+        ? "text-amber-600 dark:text-amber-400"
+        : "";
     default:
       return "";
   }
@@ -68,17 +74,21 @@ export function MetricCard({
   const valueColorClass = getValueColorClass(type, rawValue);
 
   return (
-    <Card>
+    <Card className="card-hover shadow-sm border-border/40">
       <CardContent className="flex items-center gap-4 p-6">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-          <Icon className="h-6 w-6 text-primary" aria-hidden="true" />
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 ring-1 ring-primary/10">
+          <Icon className="h-6 w-6 text-primary" aria-hidden="true" strokeWidth={1.5} />
         </div>
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">{label}</p>
+        <div className="space-y-1 min-w-0">
+          <p className="text-xs font-label uppercase tracking-[0.06em] text-muted-foreground truncate">
+            {label}
+          </p>
           {loading ? (
             <Skeleton className="h-7 w-16" />
           ) : (
-            <p className={`text-2xl font-bold font-heading ${valueColorClass}`}>
+            <p
+              className={`text-2xl font-bold font-heading tracking-tight tabular-nums ${valueColorClass}`}
+            >
               {value}
             </p>
           )}

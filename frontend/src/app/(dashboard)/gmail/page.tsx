@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { PenSquare, RotateCw, Sparkles } from "lucide-react";
+import { PenSquare, RotateCw, Sparkles, Inbox } from "lucide-react";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 
 import type { ConnectionStatus, EmailMessage, CapabilityHealth } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/types";
@@ -392,12 +393,23 @@ function GmailPageContent() {
     return handleConnect();
   }, [connectionStatus, handleConnect, handleReconnect]);
 
+  // --- AutoAnimate ref for email list ---
+    const [emailListRef] = useAutoAnimate<HTMLDivElement>();
+
   return (
-    <div className="gmail-fullbleed flex flex-col h-full overflow-hidden">
+    <div className="gmail-fullbleed flex flex-col h-full overflow-hidden animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold text-foreground">Hộp thư</h1>
+      <div className="flex items-center justify-between border-b border-border bg-card/50 backdrop-blur-sm px-4 py-3 sm:px-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+            <Inbox className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Hộp thư</h1>
+            <p className="text-[11px] text-muted-foreground hidden sm:block">
+              Tuyển dụng và liên hệ
+            </p>
+          </div>
         </div>
         {isConnected && (
           <div className="flex items-center gap-2">
@@ -412,20 +424,20 @@ function GmailPageContent() {
               }}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 reviewMode
-                  ? "bg-orange-100 text-orange-700 ring-1 ring-orange-200"
-                  : "bg-muted text-muted-foreground hover:bg-accent"
+                  ? "bg-accent/20 text-accent ring-1 ring-accent/30"
+                  : "bg-muted text-muted-foreground hover:bg-accent/10"
               }`}
             >
               <RotateCw className="h-3.5 w-3.5" />
               Cần review
               {reviewEmails.length > 0 && (
-                <span className="rounded-full bg-orange-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">
+                <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
                   {reviewEmails.length}
                 </span>
               )}
             </button>
 
-            {/* Classify button in header — always visible when there are unclassified emails */}
+            {/* Classify button in header */}
             {emails.length > 0 &&
               emails.some(
                 (e) => !e.category || e.category === "uncategorized",
@@ -476,7 +488,7 @@ function GmailPageContent() {
           {/* Classification progress overlay */}
           {classifying && classifyProgress && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80">
-              <div className="flex flex-col items-center gap-4 rounded-xl border border-border bg-card px-8 py-6 shadow-md">
+              <div className="flex flex-col items-center gap-4 rounded-xl border border-border bg-card px-8 py-6 shadow-warm">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                   <Sparkles className="h-6 w-6 text-primary animate-pulse" />
                 </div>
@@ -494,7 +506,7 @@ function GmailPageContent() {
               </div>
             </div>
           )}
-          {/* AI Classification Banner — always visible when connected */}
+          {/* AI Classification Banner */}
           <AIClassificationBanner
             emails={emails}
             selectedCategory={selectedCategory}
@@ -512,7 +524,7 @@ function GmailPageContent() {
               } w-full lg:w-[380px] lg:shrink-0 h-full`}
             >
               {/* Connection status bar (compact) with capability health */}
-              <div className="border-b border-border px-3 py-2 space-y-2">
+              <div className="border-b border-border px-3 py-2 space-y-2 bg-card/30">
                 <ConnectionPanel
                   status={connectionStatus}
                   email={connectedEmail}
@@ -525,16 +537,17 @@ function GmailPageContent() {
                   disconnectLoading={disconnectLoading}
                   compact
                 />
-                {/* Capability health cards shown separately from connection status */}
+                {/* Capability health cards */}
                 {connectionStatus === "connected" && capabilities.length > 0 && (
                   <div className="pt-1">
-                    {/* Using CapabilityHealthCards inline */}
                     {capabilities.map((cap) => (
                       <div
                         key={cap.capability}
                         className="flex items-center gap-1.5 py-0.5"
                       >
-                        <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-400" />
+                        <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                          cap.health === "healthy" ? "bg-success" : cap.health === "unknown" ? "bg-accent" : "bg-destructive"
+                        }`} />
                         <span className="text-[10px] text-muted-foreground">
                           {cap.label}:{" "}
                           {cap.health === "unknown"
@@ -552,7 +565,7 @@ function GmailPageContent() {
               </div>
 
               {/* Email list or empty state */}
-              <div className="flex-1 overflow-y-auto">
+              <div ref={emailListRef} className="flex-1 overflow-y-auto">
                 {!emailsLoading && filteredEmails.length === 0 ? (
                   <EmailEmptyState
                     isFirstSync={emails.length === 0}
@@ -577,7 +590,7 @@ function GmailPageContent() {
 
             {/* Right panel: Email Detail */}
             <div
-              className={`flex flex-1 flex-col overflow-hidden h-full ${
+              className={`flex flex-1 flex-col overflow-hidden h-full bg-card/20 ${
                 selectedEmailId ? "flex" : "hidden lg:flex"
               }`}
             >
@@ -594,12 +607,15 @@ function GmailPageContent() {
                   />
                 </div>
               ) : (
-                <div className="flex h-full items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">
+                <div className="flex h-full items-center justify-center bg-card/30">
+                  <div className="text-center p-8">
+                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                      <Inbox className="h-6 w-6 text-muted-foreground/50" strokeWidth={1.5} />
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">
                       Chọn một email để xem nội dung
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-xs text-muted-foreground/70 max-w-[200px] mx-auto">
                       Email được AI phân loại tự động sau khi đồng bộ
                     </p>
                   </div>
@@ -615,7 +631,7 @@ function GmailPageContent() {
         <button
           type="button"
           onClick={handleComposeOpen}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-warm transition-all hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background animate-scale-in"
           aria-label="Soạn email mới"
         >
           <PenSquare className="h-5 w-5" />

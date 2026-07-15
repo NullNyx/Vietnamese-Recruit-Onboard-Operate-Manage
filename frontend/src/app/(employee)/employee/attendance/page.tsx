@@ -335,162 +335,166 @@ export default function EmployeeAttendancePage() {
     return <Button disabled>Đã hoàn thành</Button>;
   }
 
-  return (
-    <div className="space-y-6 max-w-[900px]">
-      <div className="space-y-1">
-        <h1 className="text-[24px] font-semibold tracking-[-0.3px] text-[#f7f8f8]">
-          Chấm công
-        </h1>
-        <p className="text-[14px] text-[#8a8f98]">
-          Check-in/check-out và xem lịch sử chấm công
-        </p>
-      </div>
-
-      {/* Today Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div>
-            <CardTitle className="text-lg">Hôm nay</CardTitle>
-            <CardDescription>{formatCurrentDate()}</CardDescription>
-          </div>
-          {getStatusBadge()}
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            {getTodayContent()}
-            <div className="shrink-0">{getActionButton()}</div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* History List */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <div>
-            <CardTitle className="text-lg">Lịch sử chấm công</CardTitle>
-            <CardDescription>
-              {historyMode === "recent"
-                ? "7 ngày gần nhất"
-                : monthOptions.find((o) => o.value === selectedMonth)?.label || selectedMonth}
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            {historyMode === "recent" ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setHistoryMode("month")}
-              >
-                Xem theo tháng
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => {
-                    const idx = monthOptions.findIndex((o) => o.value === selectedMonth);
-                    if (idx < monthOptions.length - 1) {
-                      setSelectedMonth(monthOptions[idx + 1].value);
-                    }
-                  }}
-                  disabled={selectedMonth === monthOptions[monthOptions.length - 1].value}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => {
-                    setSelectedMonth(e.target.value);
-                    setHistoryMode("month");
-                  }}
-                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-                >
-                  {monthOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => {
-                    const idx = monthOptions.findIndex((o) => o.value === selectedMonth);
-                    if (idx > 0) {
-                      setSelectedMonth(monthOptions[idx - 1].value);
-                    }
-                  }}
-                  disabled={selectedMonth === monthOptions[0].value}
-                >
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setHistoryMode("recent")}
-                >
-                  7 ngày
-                </Button>
-              </>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {historyLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-            </div>
-          ) : historyRecords.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              {historyMode === "recent"
-                ? "Chưa có bản ghi chấm công trong 7 ngày gần nhất."
-                : "Chưa có bản ghi chấm công trong tháng này."}
+      return (
+        <div className="animate-fade-in space-y-6 max-w-[900px]">
+          <div className="fade-in-section space-y-1">
+            <h1 className="text-[24px] font-semibold tracking-[-0.3px] text-foreground">
+              Chấm công
+            </h1>
+            <p className="text-[14px] text-muted-foreground">
+              Check-in/check-out và xem lịch sử chấm công
             </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Ngày</TableHead>
-                    <TableHead>Check-in</TableHead>
-                    <TableHead>Check-out</TableHead>
-                    <TableHead>Nguồn</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {historyRecords.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell className="font-mono">
-                        {formatDate(record.work_date)}
-                      </TableCell>
-                      <TableCell className="font-mono">
-                        {formatTime(record.check_in_at)}
-                      </TableCell>
-                      <TableCell className="font-mono">
-                        {formatTime(record.check_out_at)}
-                      </TableCell>
-                      <TableCell className="capitalize">{record.source}</TableCell>
-                      <TableCell>
-                        {!record.check_in_at ? (
-                          <Badge variant="secondary">—</Badge>
-                        ) : !record.check_out_at ? (
-                          <Badge className="bg-green-600">Đã check-in</Badge>
-                        ) : (
-                          <Badge className="bg-blue-600">Hoàn thành</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          </div>
+
+          {/* Today Card */}
+          <div className="fade-in-section">
+            <Card className="card-hover">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle className="text-lg">Hôm nay</CardTitle>
+                  <CardDescription>{formatCurrentDate()}</CardDescription>
+                </div>
+                {getStatusBadge()}
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  {getTodayContent()}
+                  <div className="shrink-0">{getActionButton()}</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* History List */}
+          <div className="fade-in-section">
+            <Card className="card-hover">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                <div>
+                  <CardTitle className="text-lg">Lịch sử chấm công</CardTitle>
+                  <CardDescription>
+                    {historyMode === "recent"
+                      ? "7 ngày gần nhất"
+                      : monthOptions.find((o) => o.value === selectedMonth)?.label || selectedMonth}
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  {historyMode === "recent" ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHistoryMode("month")}
+                    >
+                      Xem theo tháng
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          const idx = monthOptions.findIndex((o) => o.value === selectedMonth);
+                          if (idx < monthOptions.length - 1) {
+                            setSelectedMonth(monthOptions[idx + 1].value);
+                          }
+                        }}
+                        disabled={selectedMonth === monthOptions[monthOptions.length - 1].value}
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                      <select
+                        value={selectedMonth}
+                        onChange={(e) => {
+                          setSelectedMonth(e.target.value);
+                          setHistoryMode("month");
+                        }}
+                        className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                      >
+                        {monthOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          const idx = monthOptions.findIndex((o) => o.value === selectedMonth);
+                          if (idx > 0) {
+                            setSelectedMonth(monthOptions[idx - 1].value);
+                          }
+                        }}
+                        disabled={selectedMonth === monthOptions[0].value}
+                      >
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setHistoryMode("recent")}
+                      >
+                        7 ngày
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {historyLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                  </div>
+                ) : historyRecords.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">
+                    {historyMode === "recent"
+                      ? "Chưa có bản ghi chấm công trong 7 ngày gần nhất."
+                      : "Chưa có bản ghi chấm công trong tháng này."}
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Ngày</TableHead>
+                          <TableHead>Check-in</TableHead>
+                          <TableHead>Check-out</TableHead>
+                          <TableHead>Nguồn</TableHead>
+                          <TableHead>Trạng thái</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {historyRecords.map((record) => (
+                          <TableRow key={record.id} className="card-hover">
+                            <TableCell className="font-mono">
+                              {formatDate(record.work_date)}
+                            </TableCell>
+                            <TableCell className="font-mono">
+                              {formatTime(record.check_in_at)}
+                            </TableCell>
+                            <TableCell className="font-mono">
+                              {formatTime(record.check_out_at)}
+                            </TableCell>
+                            <TableCell className="capitalize">{record.source}</TableCell>
+                            <TableCell>
+                              {!record.check_in_at ? (
+                                <Badge variant="secondary">—</Badge>
+                              ) : !record.check_out_at ? (
+                                <Badge className="bg-success text-success-foreground">Đã check-in</Badge>
+                              ) : (
+                                <Badge className="bg-secondary text-secondary-foreground">Hoàn thành</Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
   );
 }

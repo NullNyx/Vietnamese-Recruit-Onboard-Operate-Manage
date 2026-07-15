@@ -196,220 +196,223 @@ export default function EmployeeProfilePage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold tracking-tight">Hồ sơ cá nhân</h1>
-        <div className="grid gap-6 md:grid-cols-2">
-          {[1, 2].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-40" />
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {Array.from({ length: 5 }).map((_, j) => (
-                  <div key={j} className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-5 w-48" />
-                  </div>
-                ))}
+      if (loading) {
+        return (
+          <div className="animate-fade-in space-y-6">
+            <h1 className="text-2xl font-bold tracking-tight">Hồ sơ cá nhân</h1>
+            <div className="grid gap-6 md:grid-cols-2 fade-in-section">
+              {[1, 2].map((i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-40" />
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {Array.from({ length: 5 }).map((_, j) => (
+                      <div key={j} className="space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-5 w-48" />
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+      }
+    
+      if (!employee) {
+        return (
+          <div className="animate-fade-in space-y-6">
+            <h1 className="text-2xl font-bold tracking-tight">Hồ sơ cá nhân</h1>
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground">
+                  Chưa có hồ sơ nhân viên được liên kết với tài khoản của bạn.
+                </p>
               </CardContent>
             </Card>
-          ))}
+          </div>
+        );
+      }
+    
+      return (
+        <div className="animate-fade-in space-y-6">
+          <div className="fade-in-section">
+            <h1 className="text-2xl font-bold tracking-tight">Hồ sơ cá nhân</h1>
+            <p className="text-sm text-muted-foreground mt-1">Thông tin nhân viên và cập nhật liên hệ</p>
+          </div>
+    
+          <div className="fade-in-section grid gap-6 md:grid-cols-2">
+            <Card className="card-hover">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <User className="h-5 w-5 text-primary" />
+                  Thông tin cá nhân
+                </CardTitle>
+                <CardDescription>
+                  Thông tin cơ bản — liên hệ HR để thay đổi
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-4">
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">
+                      Họ và tên
+                    </dt>
+                    <dd className="text-sm mt-1">{employee.full_name}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">
+                      Email
+                    </dt>
+                    <dd className="text-sm mt-1">{employee.email}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">
+                      Mã nhân viên
+                    </dt>
+                    <dd className="text-sm mt-1 font-mono">
+                      {employee.employee_code}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">
+                      Ngày sinh
+                    </dt>
+                    <dd className="text-sm mt-1">
+                      {formatDate(employee.date_of_birth)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">
+                      Giới tính
+                    </dt>
+                    <dd className="text-sm mt-1">
+                      {formatGender(employee.gender)}
+                    </dd>
+                  </div>
+                </dl>
+              </CardContent>
+            </Card>
+    
+            <Card className="card-hover">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Shield className="h-5 w-5 text-secondary" />
+                  Thông tin công việc
+                </CardTitle>
+                <CardDescription>Hợp đồng và thông tin bảo mật</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-4">
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">
+                      Ngày bắt đầu
+                    </dt>
+                    <dd className="text-sm mt-1">
+                      {formatDate(employee.start_date)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">
+                      Loại hợp đồng
+                    </dt>
+                    <dd className="text-sm mt-1">
+                      {formatContractType(employee.contract_type)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">
+                      Số CMND/CCCD
+                    </dt>
+                    <dd className="text-sm mt-1 font-mono">
+                      {maskValue(employee.id_number)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">
+                      Mã số thuế
+                    </dt>
+                    <dd className="text-sm mt-1 font-mono">
+                      {maskValue(employee.tax_code)}
+                    </dd>
+                  </div>
+                </dl>
+              </CardContent>
+            </Card>
+          </div>
+    
+          <Card className="fade-in-section card-hover">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Phone className="h-5 w-5 text-accent" />
+                Thông tin liên hệ
+              </CardTitle>
+              <CardDescription>Cập nhật số điện thoại và địa chỉ</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">
+                      <Phone className="inline h-4 w-4 mr-1" />
+                      Số điện thoại
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="0912345678"
+                      value={phone}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                      className={errors.phone ? "border-destructive" : ""}
+                    />
+                    {errors.phone && (
+                      <p className="text-sm text-destructive">{errors.phone}</p>
+                    )}
+                  </div>
+                </div>
+    
+                <div className="space-y-2">
+                  <Label htmlFor="address">
+                    <MapPin className="inline h-4 w-4 mr-1" />
+                    Địa chỉ
+                  </Label>
+                  <Input
+                    id="address"
+                    type="text"
+                    placeholder="123 Đường ABC, Quận 1, TP.HCM"
+                    value={address}
+                    onChange={(e) => handleAddressChange(e.target.value)}
+                    className={errors.address ? "border-destructive" : ""}
+                    maxLength={500}
+                  />
+                  {errors.address && (
+                    <p className="text-sm text-destructive">{errors.address}</p>
+                  )}
+                </div>
+    
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    disabled={submitting || !isDirty || hasValidationErrors()}
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Đang lưu...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Lưu thay đổi
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </div>
-      </div>
-    );
-  }
-
-  if (!employee) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold tracking-tight">Hồ sơ cá nhân</h1>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-muted-foreground">
-              Chưa có hồ sơ nhân viên được liên kết với tài khoản của bạn.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Hồ sơ cá nhân</h1>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <User className="h-5 w-5" />
-              Thông tin cá nhân
-            </CardTitle>
-            <CardDescription>
-              Thông tin cơ bản — liên hệ HR để thay đổi
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <dl className="space-y-4">
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Họ và tên
-                </dt>
-                <dd className="text-sm mt-1">{employee.full_name}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Email
-                </dt>
-                <dd className="text-sm mt-1">{employee.email}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Mã nhân viên
-                </dt>
-                <dd className="text-sm mt-1 font-mono">
-                  {employee.employee_code}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Ngày sinh
-                </dt>
-                <dd className="text-sm mt-1">
-                  {formatDate(employee.date_of_birth)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Giới tính
-                </dt>
-                <dd className="text-sm mt-1">
-                  {formatGender(employee.gender)}
-                </dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Shield className="h-5 w-5" />
-              Thông tin công việc
-            </CardTitle>
-            <CardDescription>Hợp đồng và thông tin bảo mật</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <dl className="space-y-4">
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Ngày bắt đầu
-                </dt>
-                <dd className="text-sm mt-1">
-                  {formatDate(employee.start_date)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Loại hợp đồng
-                </dt>
-                <dd className="text-sm mt-1">
-                  {formatContractType(employee.contract_type)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Số CMND/CCCD
-                </dt>
-                <dd className="text-sm mt-1 font-mono">
-                  {maskValue(employee.id_number)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Mã số thuế
-                </dt>
-                <dd className="text-sm mt-1 font-mono">
-                  {maskValue(employee.tax_code)}
-                </dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Phone className="h-5 w-5" />
-            Thông tin liên hệ
-          </CardTitle>
-          <CardDescription>Cập nhật số điện thoại và địa chỉ</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid gap-6 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="phone">
-                  <Phone className="inline h-4 w-4 mr-1" />
-                  Số điện thoại
-                </Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="0912345678"
-                  value={phone}
-                  onChange={(e) => handlePhoneChange(e.target.value)}
-                  className={errors.phone ? "border-destructive" : ""}
-                />
-                {errors.phone && (
-                  <p className="text-sm text-destructive">{errors.phone}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address">
-                <MapPin className="inline h-4 w-4 mr-1" />
-                Địa chỉ
-              </Label>
-              <Input
-                id="address"
-                type="text"
-                placeholder="123 Đường ABC, Quận 1, TP.HCM"
-                value={address}
-                onChange={(e) => handleAddressChange(e.target.value)}
-                className={errors.address ? "border-destructive" : ""}
-                maxLength={500}
-              />
-              {errors.address && (
-                <p className="text-sm text-destructive">{errors.address}</p>
-              )}
-            </div>
-
-            <div className="flex justify-end">
-              <Button
-                type="submit"
-                disabled={submitting || !isDirty || hasValidationErrors()}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Đang lưu...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Lưu thay đổi
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
   );
 }

@@ -72,64 +72,71 @@ export default function WhitelistPage() {
     [fetchEntries]
   );
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">
-            Whitelist
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Quản lý danh sách email và domain được phép đăng nhập
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchEntries}
-          disabled={loading}
-        >
-          <RefreshCw
-            className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
-            aria-hidden="true"
-          />
-          Làm mới
-        </Button>
-      </div>
-
-      {/* Add Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Thêm mục mới</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <WhitelistAddForm onAdd={handleAdd} />
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            Danh sách whitelist
-            {!loading && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                ({entries.length} mục)
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div aria-live="polite" aria-atomic="true">
-            <WhitelistTable
-              entries={entries}
-              loading={loading}
-              onDelete={handleDelete}
-            />
+      return (
+        <div className="animate-fade-in space-y-6">
+          {/* Header */}
+          <div className="fade-in-section flex items-center justify-between">
+            <div>
+              <h1 className="font-heading text-2xl font-bold text-foreground tracking-tight">
+                Whitelist
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Quản lý danh sách email và domain được phép đăng nhập
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchEntries}
+              disabled={loading}
+            >
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                aria-hidden="true"
+              />
+              Làm mới
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+
+          {/* Add Form */}
+          <div className="fade-in-section">
+            <Card className="card-hover">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">+</span>
+                  Thêm mục mới
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <WhitelistAddForm onAdd={handleAdd} />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Table */}
+          <div className="fade-in-section">
+            <Card className="card-hover">
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Danh sách whitelist
+                  {!loading && (
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      ({entries.length} mục)
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div aria-live="polite" aria-atomic="true">
+                  <WhitelistTable
+                    entries={entries}
+                    loading={loading}
+                    onDelete={handleDelete}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
   );
 }

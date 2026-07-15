@@ -76,125 +76,132 @@ export default function AdminUsersPage() {
     }
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Users className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
-          <h1 className="text-2xl font-bold font-heading tracking-tight">
-            Quản lý người dùng
-          </h1>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchUsers}
-          disabled={loading}
-          aria-label="Làm mới danh sách"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
-          <span className="hidden sm:inline ml-2">Làm mới</span>
-        </Button>
-      </div>
+      return (
+        <div className="animate-fade-in space-y-6">
+          {/* Page header */}
+          <div className="fade-in-section flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <Users className="h-5 w-5 text-primary" aria-hidden="true" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold font-heading tracking-tight">
+                  Quản lý người dùng
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Quản lý tài khoản và vai trò người dùng trong hệ thống
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchUsers}
+              disabled={loading}
+              aria-label="Làm mới danh sách"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
+              <span className="hidden sm:inline ml-2">Làm mới</span>
+            </Button>
+          </div>
 
-      {/* Error state */}
-      {error && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+          {/* Error state */}
+          {error && (
+            <div className="fade-in-section rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+              {error}
+            </div>
+          )}
 
-      {/* Table */}
-      <div className="rounded-md border overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="hidden sm:table-cell w-[50px]">Avatar</TableHead>
-              <TableHead>Tên</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Vai trò</TableHead>
-              <TableHead>Trạng thái</TableHead>
-              <TableHead className="hidden sm:table-cell">Đăng nhập lần cuối</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody aria-live="polite">
-            {/* Loading state */}
-            {loading && (
-              <>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={`skeleton-${i}`}>
-                    <TableCell className="hidden sm:table-cell">
-                      <Skeleton className="h-8 w-8 rounded-full" />
+          {/* Table */}
+          <div className="fade-in-section rounded-xl border bg-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="hidden sm:table-cell w-[50px]">Avatar</TableHead>
+                  <TableHead>Tên</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Vai trò</TableHead>
+                  <TableHead>Trạng thái</TableHead>
+                  <TableHead className="hidden sm:table-cell">Đăng nhập lần cuối</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody aria-live="polite">
+                {/* Loading state */}
+                {loading && (
+                  <>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={`skeleton-${i}`}>
+                        <TableCell className="hidden sm:table-cell">
+                          <Skeleton className="h-8 w-8 rounded-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-32" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-48" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-8 w-[110px]" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-16" />
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Skeleton className="h-4 w-36" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </>
+                )}
+
+                {/* Empty state */}
+                {!loading && !error && users.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground sm:hidden">
+                      Không có người dùng nào
                     </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-32" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-48" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-8 w-[110px]" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-5 w-16" />
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <Skeleton className="h-4 w-36" />
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground hidden sm:table-cell">
+                      Không có người dùng nào
                     </TableCell>
                   </TableRow>
-                ))}
-              </>
-            )}
+                )}
 
-            {/* Empty state */}
-            {!loading && !error && users.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground sm:hidden">
-                  Không có người dùng nào
-                </TableCell>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground hidden sm:table-cell">
-                  Không có người dùng nào
-                </TableCell>
-              </TableRow>
-            )}
-
-            {/* Data rows */}
-            {!loading &&
-              users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="hidden sm:table-cell">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar_url ?? undefined} alt={user.name} />
-                      <AvatarFallback className="text-xs">
-                        {getInitials(user.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                  </TableCell>
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                  <TableCell>
-                    <UserRoleSelect
-                      userId={user.id}
-                      userName={user.name}
-                      userEmail={user.email}
-                      currentRole={user.role}
-                      onRoleChange={handleRoleChange}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={user.is_active ? "default" : "secondary"}>
-                      {user.is_active ? "Hoạt động" : "Không hoạt động"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
-                    {formatDate(user.last_login)}
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+                {/* Data rows */}
+                {!loading &&
+                  users.map((user) => (
+                    <TableRow key={user.id} className="card-hover">
+                      <TableCell className="hidden sm:table-cell">
+                        <Avatar className="h-8 w-8 ring-1 ring-border">
+                          <AvatarImage src={user.avatar_url ?? undefined} alt={user.name} />
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                            {getInitials(user.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TableCell>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                      <TableCell>
+                        <UserRoleSelect
+                          userId={user.id}
+                          userName={user.name}
+                          userEmail={user.email}
+                          currentRole={user.role}
+                          onRoleChange={handleRoleChange}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.is_active ? "default" : "secondary"}>
+                          {user.is_active ? "Hoạt động" : "Không hoạt động"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                        {formatDate(user.last_login)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
   );
 }

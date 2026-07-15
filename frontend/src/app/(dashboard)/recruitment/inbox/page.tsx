@@ -1,19 +1,23 @@
 "use client";
 
 import * as React from "react";
-import {
-  Inbox,
-  AlertTriangle,
-  CheckCircle2,
-  Info,
-  MailQuestion,
-  X,
-  ThumbsUp,
-  RotateCw,
-  Link2,
-  Plus,
-  Scissors,
-} from "lucide-react";
+    import {
+      Inbox,
+      AlertTriangle,
+      CheckCircle2,
+      Info,
+      MailQuestion,
+      X,
+      ThumbsUp,
+      RotateCw,
+      Link2,
+      Plus,
+      Scissors,
+      Sparkles,
+      RefreshCw,
+      ChevronLeft,
+      ChevronRight,
+    } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -77,7 +81,10 @@ const INBOX_STATUS_LABELS: Record<string, string> = {
   resolved: "Đã xử lý",
 };
 
-const INBOX_STATUS_VARIANTS: Record<string, "destructive" | "secondary" | "default" | "outline"> = {
+const INBOX_STATUS_VARIANTS: Record<
+  string,
+  "destructive" | "secondary" | "default" | "outline"
+> = {
   needs_classification: "destructive",
   needs_information: "secondary",
   ready_for_review: "default",
@@ -97,14 +104,14 @@ const INBOX_STATUS_ICONS: Record<string, React.ElementType> = {
 
 function InboxSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {Array.from({ length: 4 }).map((_, i) => (
-        <Card key={i}>
+        <Card key={i} className="shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
-              <Skeleton className="h-4 w-4 rounded-full" />
+              <Skeleton className="h-5 w-5 rounded-full" />
               <Skeleton className="h-5 w-48" />
-              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-5 w-28 ml-auto" />
             </div>
           </CardHeader>
         </Card>
@@ -120,11 +127,13 @@ function InboxSkeleton() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Inbox className="h-12 w-12 text-muted-foreground mb-4" />
-      <p className="text-lg font-medium text-muted-foreground">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-muted to-muted/50 ring-1 ring-border/20">
+        <Inbox className="h-6 w-6 text-muted-foreground/50" strokeWidth={1.5} />
+      </div>
+      <p className="text-sm font-medium text-muted-foreground">
         Không có mục nào trong Inbox
       </p>
-      <p className="text-sm text-muted-foreground mt-1">
+      <p className="mt-1.5 max-w-[240px] text-xs leading-relaxed text-muted-foreground/60">
         Email tuyển dụng cần phân loại hoặc xử lý sẽ xuất hiện ở đây
       </p>
     </div>
@@ -146,52 +155,61 @@ function InboxItemCard({
 
   return (
     <Card
-      className="cursor-pointer hover:bg-accent/50 transition-colors"
+      className="card-hover cursor-pointer shadow-sm border-border/40"
       onClick={() => onItemClick(item)}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0">
-            <StatusIcon className="h-5 w-5 mt-0.5 shrink-0 text-muted-foreground" />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+              <StatusIcon
+                className="h-4 w-4 text-muted-foreground"
+                aria-hidden="true"
+              />
+            </div>
             <div className="min-w-0">
-              <CardTitle className="text-base truncate">
+              <CardTitle className="text-sm font-semibold truncate">
                 {item.subject || "(Không có tiêu đề)"}
               </CardTitle>
-              <CardDescription className="mt-0.5">
+              <CardDescription className="mt-0.5 text-xs">
                 {item.sender_name || item.sender_email}
               </CardDescription>
             </div>
           </div>
-          <Badge variant={INBOX_STATUS_VARIANTS[item.inbox_status] || "secondary"}>
+          <Badge
+            variant={INBOX_STATUS_VARIANTS[item.inbox_status] || "secondary"}
+            className="shrink-0 text-xs"
+          >
             {INBOX_STATUS_LABELS[item.inbox_status] || item.inbox_status}
           </Badge>
         </div>
         {item.snippet && (
-          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+          <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2 pl-11">
             {item.snippet}
           </p>
         )}
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <CardContent className="pt-0 pl-11">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground/70">
           {item.prediction_intent && (
-            <span>Dự đoán: {item.prediction_intent}</span>
+            <span>
+              Dự đoán: <strong>{item.prediction_intent}</strong>
+            </span>
           )}
           {item.confidence_calibrated != null && (
             <span>
               Độ tin cậy: {Math.round(item.confidence_calibrated * 100)}%
             </span>
           )}
-              {item.has_attachments && (
-                <span>
-                  Có tệp đính kèm
-                  {item.attachments_metadata?.length
-                    ? ` (${item.attachments_metadata.length} tệp)`
-                    : ""}
-                </span>
-              )}
-              {item.is_retry_exhausted && (
-            <Badge variant="destructive" className="text-xs">
+          {item.has_attachments && (
+            <span>
+              {item.attachments_metadata?.length
+                ? `${item.attachments_metadata.length} tệp đính kèm`
+                : "Có tệp đính kèm"}
+            </span>
+          )}
+          {item.is_retry_exhausted && (
+            <Badge variant="destructive" className="text-[10px] h-5">
               Hết lượt thử lại
             </Badge>
           )}
@@ -220,10 +238,11 @@ function InboxItemDetailDialog({
   const [correctedIntent, setCorrectedIntent] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [splitOpen, setSplitOpen] = React.useState(false);
-  const [splitSource, setSplitSource] = React.useState<ApplicationSource>("direct");
-  const [splitApplicants, setSplitApplicants] = React.useState<SplitApplicantInput[]>([
-    { name: "", email: "" },
-  ]);
+  const [splitSource, setSplitSource] =
+    React.useState<ApplicationSource>("direct");
+  const [splitApplicants, setSplitApplicants] = React.useState<
+    SplitApplicantInput[]
+  >([{ name: "", email: "" }]);
   const [linkOpen, setLinkOpen] = React.useState(false);
   const [targetApplicationId, setTargetApplicationId] = React.useState("");
   const [linkProposal, setLinkProposal] =
@@ -241,7 +260,9 @@ function InboxItemDetailDialog({
       setCorrectIntentOpen(false);
       onCorrected();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Lỗi khi sửa hướng định tuyến");
+      toast.error(
+        err instanceof ApiError ? err.message : "Lỗi khi sửa hướng định tuyến"
+      );
     } finally {
       setLoading(false);
     }
@@ -254,7 +275,9 @@ function InboxItemDetailDialog({
       toast.success("Đã bỏ qua mục này");
       onDismissed();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Lỗi khi bỏ qua");
+      toast.error(
+        err instanceof ApiError ? err.message : "Lỗi khi bỏ qua"
+      );
     } finally {
       setLoading(false);
     }
@@ -265,7 +288,9 @@ function InboxItemDetailDialog({
       .filter((applicant) => applicant.name.trim())
       .map((applicant) => ({
         name: applicant.name.trim(),
-        ...(applicant.email?.trim() ? { email: applicant.email.trim() } : {}),
+        ...(applicant.email?.trim()
+          ? { email: applicant.email.trim() }
+          : {}),
         ...(applicant.job_opening_id?.trim()
           ? { job_opening_id: applicant.job_opening_id.trim() }
           : {}),
@@ -273,12 +298,17 @@ function InboxItemDetailDialog({
     if (applicants.length === 0) return;
     setLoading(true);
     try {
-      const result = await splitInboxItem(item.id, { source: splitSource, applicants });
+      const result = await splitInboxItem(item.id, {
+        source: splitSource,
+        applicants,
+      });
       setCreatedApplications(result.applications);
       toast.success(`Đã tạo ${applicants.length} Job Application`);
       setSplitOpen(false);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Lỗi khi tách ứng viên");
+      toast.error(
+        err instanceof ApiError ? err.message : "Lỗi khi tách ứng viên"
+      );
     } finally {
       setLoading(false);
     }
@@ -288,26 +318,41 @@ function InboxItemDetailDialog({
     if (!targetApplicationId.trim()) return;
     setLoading(true);
     try {
-      const proposal = await proposeInboxLink(item.id, targetApplicationId.trim());
+      const proposal = await proposeInboxLink(
+        item.id,
+        targetApplicationId.trim()
+      );
       setLinkProposal(proposal);
       toast.success("Đã tạo đề xuất liên kết; chưa thay đổi Job Application");
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Lỗi khi đề xuất liên kết");
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : "Lỗi khi đề xuất liên kết"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResolveLink = async (decision: "confirmed" | "rejected") => {
+  const handleResolveLink = async (
+    decision: "confirmed" | "rejected"
+  ) => {
     if (!linkProposal) return;
     setLoading(true);
     try {
       await resolveInboxLinkProposal(linkProposal.id, decision);
-      toast.success(decision === "confirmed" ? "Đã xác nhận liên kết" : "Đã từ chối liên kết");
+      toast.success(
+        decision === "confirmed"
+          ? "Đã xác nhận liên kết"
+          : "Đã từ chối liên kết"
+      );
       setLinkOpen(false);
       onCorrected();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Lỗi khi xử lý liên kết");
+      toast.error(
+        err instanceof ApiError ? err.message : "Lỗi khi xử lý liên kết"
+      );
     } finally {
       setLoading(false);
     }
@@ -317,36 +362,52 @@ function InboxItemDetailDialog({
     <Dialog open={true} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{item.subject || "(Không có tiêu đề)"}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <MailQuestion className="h-4 w-4 text-muted-foreground" />
+            {item.subject || "(Không có tiêu đề)"}
+          </DialogTitle>
           <DialogDescription>
             Chi tiết phân loại và lịch sử xử lý
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
           {/* Basic Info */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-4 text-sm">
             <div>
-              <span className="text-muted-foreground">Người gửi:</span>{" "}
-              {item.sender_name || item.sender_email}
+              <span className="text-xs text-muted-foreground block">
+                Người gửi
+              </span>
+              <span className="font-medium">
+                {item.sender_name || item.sender_email}
+              </span>
             </div>
             <div>
-              <span className="text-muted-foreground">Email:</span>{" "}
-              {item.sender_email}
+              <span className="text-xs text-muted-foreground block">
+                Email
+              </span>
+              <span className="font-medium text-xs">{item.sender_email}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Thread:</span>{" "}
+              <span className="text-xs text-muted-foreground block">
+                Thread ID
+              </span>
               <code className="text-xs">{item.gmail_thread_id.slice(0, 20)}...</code>
             </div>
             <div>
-              <span className="text-muted-foreground">Tin nhắn:</span>{" "}
+              <span className="text-xs text-muted-foreground block">
+                Message ID
+              </span>
               <code className="text-xs">{item.gmail_message_id.slice(0, 20)}...</code>
             </div>
           </div>
 
           {/* Classification Result */}
           <div className="rounded-lg border p-4 space-y-2">
-            <h4 className="font-medium text-sm">Kết quả phân loại AI</h4>
+            <h4 className="flex items-center gap-1.5 text-sm font-semibold">
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              Kết quả phân loại AI
+            </h4>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
                 <span className="text-muted-foreground">Dự đoán:</span>{" "}
@@ -359,7 +420,9 @@ function InboxItemDetailDialog({
                   : "N/A"}
               </div>
               <div>
-                <span className="text-muted-foreground">Độ tin cậy đã hiệu chỉnh:</span>{" "}
+                <span className="text-muted-foreground">
+                  Độ tin cậy đã hiệu chỉnh:
+                </span>{" "}
                 {item.confidence_calibrated != null
                   ? `${Math.round(item.confidence_calibrated * 100)}%`
                   : "N/A"}
@@ -376,11 +439,11 @@ function InboxItemDetailDialog({
           {/* Evidence */}
           {item.evidence && item.evidence.length > 0 && (
             <div className="rounded-lg border p-4 space-y-2">
-              <h4 className="font-medium text-sm">Bằng chứng</h4>
+              <h4 className="text-sm font-semibold">Bằng chứng</h4>
               <ul className="text-sm space-y-1">
                 {item.evidence.map((ev, i) => (
-                  <li key={i} className="flex items-center gap-2">
-                    <span className="text-muted-foreground">•</span>
+                  <li key={i} className="flex items-start gap-2 text-muted-foreground">
+                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/40" />
                     {ev.signal}
                   </li>
                 ))}
@@ -391,11 +454,11 @@ function InboxItemDetailDialog({
           {/* Source Hints */}
           {item.source_hints && item.source_hints.length > 0 && (
             <div className="rounded-lg border p-4 space-y-2">
-              <h4 className="font-medium text-sm">Nguồn gốc</h4>
+              <h4 className="text-sm font-semibold">Nguồn gốc</h4>
               <ul className="text-sm space-y-1">
                 {item.source_hints.map((hint, i) => (
-                  <li key={i} className="flex items-center gap-2">
-                    <span className="text-muted-foreground">•</span>
+                  <li key={i} className="flex items-start gap-2 text-muted-foreground">
+                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-secondary/40" />
                     {hint.key}: {hint.value}
                   </li>
                 ))}
@@ -403,72 +466,92 @@ function InboxItemDetailDialog({
             </div>
           )}
 
-              {/* Attachment Metadata */}
-              {item.has_attachments && (
-                <div className="rounded-lg border p-4 space-y-2">
-                  <h4 className="font-medium text-sm">Tệp đính kèm</h4>
-                  {item.attachments_metadata && item.attachments_metadata.length > 0 ? (
-                    <ul className="text-sm space-y-1">
-                      {item.attachments_metadata.map((att, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                          <span className="text-muted-foreground">\u2022</span>
-                          {att.name && <span className="font-medium">{att.name}</span>}
-                          {att.type && (
-                            <span className="text-muted-foreground text-xs">
-                              ({att.type})
-                            </span>
-                          )}
-                          {att.size != null && (
-                            <span className="text-muted-foreground text-xs">
-                              {att.size > 1024 * 1024
-                                ? `${(att.size / (1024 * 1024)).toFixed(1)} MB`
-                                : att.size > 1024
-                                  ? `${(att.size / 1024).toFixed(0)} KB`
-                                  : `${att.size} B`}
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Email này có tệp đính kèm
-                    </p>
-                  )}
-                </div>
-              )}
-
-          {/* Correction History */}
-          {item.correction_history && item.correction_history.length > 0 && (
+          {/* Attachment Metadata */}
+          {item.has_attachments && (
             <div className="rounded-lg border p-4 space-y-2">
-              <h4 className="font-medium text-sm">Lịch sử sửa đổi</h4>
-              <div className="space-y-2">
-                {item.correction_history.map((entry, i) => (
-                  <div key={i} className="text-sm p-2 bg-muted rounded">
-                    <div className="flex justify-between">
-                      <span>
-                        {entry.previous_intent || "N/A"} → {entry.corrected_intent}
-                      </span>
-                      <span className="text-muted-foreground text-xs">
-                        {new Date(entry.corrected_at).toLocaleString("vi-VN")}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <h4 className="text-sm font-semibold">Tệp đính kèm</h4>
+              {item.attachments_metadata &&
+              item.attachments_metadata.length > 0 ? (
+                <ul className="text-sm space-y-1">
+                  {item.attachments_metadata.map((att, i) => (
+                    <li key={i} className="flex items-center gap-2 text-muted-foreground">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent/40" />
+                      {att.name && (
+                        <span className="font-medium text-foreground">
+                          {att.name}
+                        </span>
+                      )}
+                      {att.type && (
+                        <span className="text-xs">({att.type})</span>
+                      )}
+                      {att.size != null && (
+                        <span className="text-xs">
+                          {att.size > 1024 * 1024
+                            ? `${(att.size / (1024 * 1024)).toFixed(1)} MB`
+                            : att.size > 1024
+                              ? `${(att.size / 1024).toFixed(0)} KB`
+                              : `${att.size} B`}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Email này có tệp đính kèm
+                </p>
+              )}
             </div>
           )}
 
+          {/* Correction History */}
+          {item.correction_history &&
+            item.correction_history.length > 0 && (
+              <div className="rounded-lg border p-4 space-y-2">
+                <h4 className="text-sm font-semibold">
+                  Lịch sử sửa đổi
+                </h4>
+                <div className="space-y-2">
+                  {item.correction_history.map((entry, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between rounded bg-muted/50 px-3 py-2 text-sm"
+                    >
+                      <span>
+                        <span className="text-muted-foreground line-through">
+                          {entry.previous_intent || "N/A"}
+                        </span>{" "}
+                        →{" "}
+                        <span className="font-medium">
+                          {entry.corrected_intent}
+                        </span>
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(entry.corrected_at).toLocaleString(
+                          "vi-VN"
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
           {/* Dismissal Info */}
           {item.dismissed && (
-            <div className="rounded-lg border border-destructive/50 p-4 space-y-1">
-              <h4 className="font-medium text-sm text-destructive">Đã bỏ qua</h4>
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 space-y-1">
+              <h4 className="flex items-center gap-1.5 text-sm font-semibold text-destructive">
+                <X className="h-3.5 w-3.5" />
+                Đã bỏ qua
+              </h4>
               <p className="text-sm text-muted-foreground">
-                Mục này đã bị HR bỏ qua và sẽ không bị tạo lại bởi worker retry.
+                Mục này đã bị HR bỏ qua và sẽ không bị tạo lại bởi worker
+                retry.
               </p>
               {item.dismissed_at && (
                 <p className="text-xs text-muted-foreground">
-                  Lúc: {new Date(item.dismissed_at).toLocaleString("vi-VN")}
+                  Lúc:{" "}
+                  {new Date(item.dismissed_at).toLocaleString("vi-VN")}
                 </p>
               )}
             </div>
@@ -480,38 +563,55 @@ function InboxItemDetailDialog({
 
           {/* Processing Error */}
           {item.processing_error && (
-            <div className="rounded-lg border border-destructive/50 p-4 space-y-1">
-              <h4 className="font-medium text-sm text-destructive">Lỗi xử lý</h4>
-              <p className="text-sm text-muted-foreground">{item.processing_error}</p>
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 space-y-1">
+              <h4 className="flex items-center gap-1.5 text-sm font-semibold text-destructive">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Lỗi xử lý
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                {item.processing_error}
+              </p>
             </div>
           )}
         </div>
 
-        <DialogFooter className="flex gap-2">
+        <DialogFooter className="flex flex-wrap gap-2">
           {!item.dismissed && (
             <>
-              <Button variant="outline" onClick={() => setSplitOpen(true)} disabled={loading}>
-                <Scissors className="h-4 w-4 mr-2" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSplitOpen(true)}
+                disabled={loading}
+              >
+                <Scissors className="h-3.5 w-3.5 mr-1.5" />
                 Tách ứng viên
               </Button>
-              <Button variant="outline" onClick={() => setLinkOpen(true)} disabled={loading}>
-                <Link2 className="h-4 w-4 mr-2" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLinkOpen(true)}
+                disabled={loading}
+              >
+                <Link2 className="h-3.5 w-3.5 mr-1.5" />
                 Liên kết email
               </Button>
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => setCorrectIntentOpen(true)}
                 disabled={loading}
               >
-                <ThumbsUp className="h-4 w-4 mr-2" />
-                Sửa hướng định tuyến
+                <ThumbsUp className="h-3.5 w-3.5 mr-1.5" />
+                Sửa hướng
               </Button>
               <Button
                 variant="destructive"
+                size="sm"
                 onClick={handleDismiss}
                 disabled={loading}
               >
-                <X className="h-4 w-4 mr-2" />
+                <X className="h-3.5 w-3.5 mr-1.5" />
                 Bỏ qua
               </Button>
             </>
@@ -525,7 +625,8 @@ function InboxItemDetailDialog({
           <DialogHeader>
             <DialogTitle>Sửa hướng định tuyến</DialogTitle>
             <DialogDescription>
-              Nhập hướng định tuyến đúng cho email này (ví dụ: other, partner, event, internal)
+              Nhập hướng định tuyến đúng cho email này (ví dụ: other, partner,
+              event, internal)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
@@ -539,41 +640,62 @@ function InboxItemDetailDialog({
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCorrectIntentOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setCorrectIntentOpen(false)}
+            >
               Hủy
             </Button>
-            <Button onClick={handleCorrect} disabled={loading || !correctedIntent.trim()}>
-              {loading ? <RotateCw className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4 mr-2" />}
+            <Button
+              onClick={handleCorrect}
+              disabled={loading || !correctedIntent.trim()}
+            >
+              {loading ? (
+                <RotateCw className="h-4 w-4 animate-spin mr-1.5" />
+              ) : (
+                <ThumbsUp className="h-4 w-4 mr-1.5" />
+              )}
               Xác nhận
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Split Dialog */}
       <Dialog open={splitOpen} onOpenChange={setSplitOpen}>
         <DialogContent className="sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle>Tách ứng viên</DialogTitle>
             <DialogDescription>
-              Mỗi người sẽ trở thành một Job Application dùng chung email nguồn.
+              Mỗi người sẽ trở thành một Job Application dùng chung email
+              nguồn.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label htmlFor="application-source">Nguồn ứng tuyển</Label>
               <select
                 id="application-source"
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                className="w-full rounded-lg border bg-background px-3 py-2 text-sm shadow-sm"
                 value={splitSource}
-                onChange={(event) => setSplitSource(event.target.value as ApplicationSource)}
+                onChange={(event) =>
+                  setSplitSource(
+                    event.target.value as ApplicationSource
+                  )
+                }
               >
                 <option value="direct">Trực tiếp</option>
-                <option value="employee_referral">Nhân viên giới thiệu</option>
+                <option value="employee_referral">
+                  Nhân viên giới thiệu
+                </option>
                 <option value="agency">Agency</option>
               </select>
             </div>
             {splitApplicants.map((applicant, index) => (
-              <div key={index} className="grid grid-cols-2 gap-2 rounded-md border p-3">
+              <div
+                key={index}
+                className="grid grid-cols-2 gap-2 rounded-lg border bg-muted/20 p-3"
+              >
                 <Input
                   aria-label={`Tên ứng viên ${index + 1}`}
                   placeholder="Tên ứng viên"
@@ -581,8 +703,10 @@ function InboxItemDetailDialog({
                   onChange={(event) =>
                     setSplitApplicants((current) =>
                       current.map((value, itemIndex) =>
-                        itemIndex === index ? { ...value, name: event.target.value } : value,
-                      ),
+                        itemIndex === index
+                          ? { ...value, name: event.target.value }
+                          : value
+                      )
                     )
                   }
                 />
@@ -594,8 +718,10 @@ function InboxItemDetailDialog({
                   onChange={(event) =>
                     setSplitApplicants((current) =>
                       current.map((value, itemIndex) =>
-                        itemIndex === index ? { ...value, email: event.target.value } : value,
-                      ),
+                        itemIndex === index
+                          ? { ...value, email: event.target.value }
+                          : value
+                      )
                     )
                   }
                 />
@@ -608,9 +734,13 @@ function InboxItemDetailDialog({
                     setSplitApplicants((current) =>
                       current.map((value, itemIndex) =>
                         itemIndex === index
-                          ? { ...value, job_opening_id: event.target.value || undefined }
-                          : value,
-                      ),
+                          ? {
+                              ...value,
+                              job_opening_id:
+                                event.target.value || undefined,
+                            }
+                          : value
+                      )
                     )
                   }
                 />
@@ -619,19 +749,31 @@ function InboxItemDetailDialog({
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() =>
-                setSplitApplicants((current) => [...current, { name: "", email: "" }])
+                setSplitApplicants((current) => [
+                  ...current,
+                  { name: "", email: "" },
+                ])
               }
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
               Thêm ứng viên
             </Button>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSplitOpen(false)}>Hủy</Button>
+            <Button
+              variant="outline"
+              onClick={() => setSplitOpen(false)}
+            >
+              Hủy
+            </Button>
             <Button
               onClick={handleSplit}
-              disabled={loading || !splitApplicants.some((applicant) => applicant.name.trim())}
+              disabled={
+                loading ||
+                !splitApplicants.some((a) => a.name.trim())
+              }
             >
               Xác nhận tách
             </Button>
@@ -639,26 +781,35 @@ function InboxItemDetailDialog({
         </DialogContent>
       </Dialog>
 
+      {/* Link Dialog */}
       <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
         <DialogContent className="sm:max-w-[460px]">
           <DialogHeader>
             <DialogTitle>Liên kết email ngoài thread</DialogTitle>
             <DialogDescription>
-              Hệ thống chỉ tạo đề xuất. Job Application không đổi cho tới khi HR xác nhận.
+              Hệ thống chỉ tạo đề xuất. Job Application không đổi cho tới
+              khi HR xác nhận.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <Label htmlFor="target-job-application">Job Application đích</Label>
+            <Label htmlFor="target-job-application">
+              Job Application đích
+            </Label>
             <Input
               id="target-job-application"
               placeholder="Mã Job Application"
               value={targetApplicationId}
-              onChange={(event) => setTargetApplicationId(event.target.value)}
+              onChange={(event) =>
+                setTargetApplicationId(event.target.value)
+              }
               disabled={Boolean(linkProposal)}
             />
             {linkProposal && (
-              <p className="rounded-md border p-3 text-sm">
-                Đề xuất đang chờ xác nhận: {linkProposal.id}
+              <p className="rounded-lg border bg-muted/30 p-3 text-sm">
+                Đề xuất đang chờ xác nhận:{" "}
+                <code className="text-xs font-mono">
+                  {linkProposal.id}
+                </code>
               </p>
             )}
           </div>
@@ -672,10 +823,15 @@ function InboxItemDetailDialog({
               </Button>
             ) : (
               <>
-                <Button variant="outline" onClick={() => handleResolveLink("rejected")}>
+                <Button
+                  variant="outline"
+                  onClick={() => handleResolveLink("rejected")}
+                >
                   Từ chối
                 </Button>
-                <Button onClick={() => handleResolveLink("confirmed")}>
+                <Button
+                  onClick={() => handleResolveLink("confirmed")}
+                >
                   Xác nhận liên kết
                 </Button>
               </>
@@ -696,14 +852,18 @@ export default function RecruitmentInboxPage() {
   const [total, setTotal] = React.useState(0);
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(DEFAULT_PAGE_SIZE);
-  const [statusFilter, setStatusFilter] = React.useState<"all" | InboxStatus>("all");
+  const [statusFilter, setStatusFilter] = React.useState<
+    "all" | InboxStatus
+  >("all");
   const [loading, setLoading] = React.useState(true);
-  const [selectedItem, setSelectedItem] = React.useState<InboxItem | null>(null);
+  const [selectedItem, setSelectedItem] =
+    React.useState<InboxItem | null>(null);
 
   const fetchList = React.useCallback(async () => {
     setLoading(true);
     try {
-      const inboxStatus = statusFilter === "all" ? undefined : statusFilter;
+      const inboxStatus =
+        statusFilter === "all" ? undefined : statusFilter;
       const result = await listInbox({
         inbox_status: inboxStatus,
         page,
@@ -712,7 +872,9 @@ export default function RecruitmentInboxPage() {
       setItems(result.items);
       setTotal(result.total);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Không thể tải inbox");
+      toast.error(
+        err instanceof ApiError ? err.message : "Không thể tải inbox"
+      );
       setItems([]);
       setTotal(0);
     } finally {
@@ -727,71 +889,91 @@ export default function RecruitmentInboxPage() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="space-y-6">
-          {/* Header */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-2xl font-bold tracking-tight">Hộp thư tuyển dụng</h1>
-              <p className="mt-1 text-muted-foreground">
-                Email tuyển dụng và Job Application cần xử lý
-              </p>
+    <div className="animate-page-enter space-y-6 max-w-[1200px] mx-auto overflow-x-hidden pb-10">
+      {/* ─── Header ──────────────────────────────────── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Inbox className="h-4 w-4" strokeWidth={1.5} />
             </div>
-            <Button className="w-full sm:w-auto" variant="outline" onClick={fetchList} disabled={loading}>
-              <RotateCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Làm mới
-            </Button>
+            <h1 className="font-heading text-2xl font-bold tracking-tight">
+              Hộp thư tuyển dụng
+            </h1>
           </div>
+          <p className="mt-1 text-sm text-muted-foreground ml-10">
+            Email tuyển dụng và Job Application cần xử lý
+          </p>
+        </div>
+        <Button
+          className="w-full sm:w-auto shrink-0"
+          variant="outline"
+          onClick={fetchList}
+          disabled={loading}
+        >
+          <RefreshCw
+            className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+          />
+          Làm mới
+        </Button>
+      </div>
 
-          {/* Filters */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-            <div className="w-full sm:w-64">
-              <Select
-                value={statusFilter}
-                onValueChange={(v) => {
-                  setStatusFilter(v as "all" | InboxStatus);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Bộ lọc trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="needs_classification">Cần phân loại</SelectItem>
-                  <SelectItem value="needs_information">Cần bổ sung thông tin</SelectItem>
-                  <SelectItem value="ready_for_review">Sẵn sàng xem xét</SelectItem>
-                  <SelectItem value="resolved">Đã xử lý</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      {/* ─── Filters Bar ─────────────────────────────── */}
+      <div className="flex flex-col gap-3 rounded-xl border border-border/30 bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:gap-4">
+        <div className="w-full sm:w-56">
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter(v as "all" | InboxStatus);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Bộ lọc trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả</SelectItem>
+              <SelectItem value="needs_classification">
+                Cần phân loại
+              </SelectItem>
+              <SelectItem value="needs_information">
+                Cần bổ sung thông tin
+              </SelectItem>
+              <SelectItem value="ready_for_review">
+                Sẵn sàng xem xét
+              </SelectItem>
+              <SelectItem value="resolved">Đã xử lý</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-            <div className="w-full sm:w-32">
-              <Select
-                value={String(pageSize)}
-                onValueChange={(v) => {
-                  setPageSize(Number(v));
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Số lượng" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAGE_SIZE_OPTIONS.map((n) => (
-                    <SelectItem key={n} value={String(n)}>
-                      {n} mục
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="w-full sm:w-28">
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => {
+              setPageSize(Number(v));
+              setPage(1);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Số lượng" />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  {n} mục
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <span className="text-sm text-muted-foreground">
-          Tổng số: {total} mục
+        <span className="text-sm tabular-nums text-muted-foreground">
+          Tổng số: <strong className="text-foreground">{total}</strong> mục
         </span>
       </div>
 
-      {/* Content */}
+      {/* ─── Content ─────────────────────────────────── */}
       {loading ? (
         <InboxSkeleton />
       ) : items.length === 0 ? (
@@ -808,32 +990,34 @@ export default function RecruitmentInboxPage() {
         </div>
       )}
 
-      {/* Pagination */}
+      {/* ─── Pagination ──────────────────────────────── */}
       {totalPages > 1 && !loading && (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-3">
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
+            className="h-8 w-8"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
-            Trang trước
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm tabular-nums text-muted-foreground">
             Trang {page}/{totalPages}
           </span>
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
+            className="h-8 w-8"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
-            Trang sau
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       )}
 
-      {/* Detail Dialog */}
+      {/* ─── Detail Dialog ───────────────────────────── */}
       {selectedItem && (
         <InboxItemDetailDialog
           item={selectedItem}

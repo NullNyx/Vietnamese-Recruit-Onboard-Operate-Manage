@@ -1,7 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import {
+  CheckCircle,
+  AlertCircle,
+  RefreshCw,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -42,16 +49,16 @@ const DEFAULT_PAGE_SIZE = 20;
 
 function ReviewSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {Array.from({ length: 4 }).map((_, i) => (
         <div
           key={i}
-          className="rounded-lg border bg-card p-4 space-y-3"
+          className="rounded-xl border border-border/30 bg-card p-5 space-y-3 shadow-sm"
         >
           <div className="flex items-center gap-3">
             <Skeleton className="h-5 w-32" />
             <Skeleton className="h-4 w-48" />
-            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-5 w-20 ml-auto" />
             <Skeleton className="h-4 w-16" />
             <Skeleton className="h-4 w-24" />
           </div>
@@ -68,9 +75,14 @@ function ReviewSkeleton() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
-      <p className="text-lg font-medium text-muted-foreground">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-green-50 to-green-100/50 ring-1 ring-green-200/30 dark:from-green-950/30 dark:to-green-900/20 dark:ring-green-800/30">
+        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" strokeWidth={1.5} />
+      </div>
+      <p className="text-sm font-medium text-muted-foreground">
         Không có CV nào cần xem xét
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground/60">
+        Tất cả CV đã được xử lý hoặc đang chờ dữ liệu mới
       </p>
     </div>
   );
@@ -82,12 +94,14 @@ function EmptyState() {
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-      <p className="text-lg font-medium text-muted-foreground mb-4">
+    <div className="flex flex-col items-center justify-center py-14 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 ring-1 ring-destructive/20">
+        <AlertCircle className="h-6 w-6 text-destructive" strokeWidth={1.5} />
+      </div>
+      <p className="text-sm font-medium text-muted-foreground mb-4">
         Không thể tải danh sách
       </p>
-      <Button variant="outline" onClick={onRetry}>
+      <Button variant="outline" size="sm" onClick={onRetry}>
         <RefreshCw className="h-4 w-4 mr-2" />
         Thử lại
       </Button>
@@ -137,24 +151,26 @@ function Pagination({
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm tabular-nums text-muted-foreground">
           Trang {page} / {totalPages}
         </span>
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
+          className="h-8 w-8"
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
-          Trước
+          <ChevronLeft className="h-4 w-4" />
         </Button>
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
+          className="h-8 w-8"
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
         >
-          Sau
+          <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
     </div>
@@ -173,7 +189,6 @@ export default function CVReviewPage() {
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(DEFAULT_PAGE_SIZE);
 
-  // --- Fetch review queue ---
   const fetchData = React.useCallback(async () => {
     setLoading(true);
     setError(false);
@@ -192,8 +207,6 @@ export default function CVReviewPage() {
     fetchData();
   }, [fetchData]);
 
-  // --- Handlers ---
-
   const handlePageChange = React.useCallback((newPage: number) => {
     setPage(newPage);
   }, []);
@@ -208,7 +221,6 @@ export default function CVReviewPage() {
       try {
         await submitCorrection(cvDocumentId, correctionData);
         toast.success("Đã cập nhật CV thành công");
-        // Remove item from list
         setItems((prev) => prev.filter((item) => item.id !== cvDocumentId));
       } catch (err) {
         if (err instanceof ApiError) {
@@ -220,7 +232,6 @@ export default function CVReviewPage() {
             return;
           }
           if (err.statusCode === 422) {
-            // Re-throw so ReviewItem can capture validation errors
             throw err;
           }
           toast.error(err.message || "Đã xảy ra lỗi. Vui lòng thử lại.");
@@ -237,9 +248,10 @@ export default function CVReviewPage() {
     async (cvDocumentId: string) => {
       try {
         const updatedItem = await retryParse(cvDocumentId);
-        // Refresh item data in the list
         setItems((prev) =>
-          prev.map((item) => (item.id === cvDocumentId ? updatedItem : item))
+          prev.map((item) =>
+            item.id === cvDocumentId ? updatedItem : item
+          )
         );
         toast.success("Đã phân tích lại CV thành công");
       } catch (err) {
@@ -260,38 +272,44 @@ export default function CVReviewPage() {
     []
   );
 
-  const handleDismiss = React.useCallback(async (cvDocumentId: string) => {
-    try {
-      await dismissReview(cvDocumentId);
-      // Remove item from list on 204 success
-      setItems((prev) => prev.filter((item) => item.id !== cvDocumentId));
-      toast.success("Đã bỏ qua CV");
-    } catch (err) {
-      if (err instanceof ApiError && err.statusCode === 404) {
-        toast.error("CV không tồn tại hoặc đã bị xóa");
+  const handleDismiss = React.useCallback(
+    async (cvDocumentId: string) => {
+      try {
+        await dismissReview(cvDocumentId);
         setItems((prev) =>
           prev.filter((item) => item.id !== cvDocumentId)
         );
-        return;
+        toast.success("Đã bỏ qua CV");
+      } catch (err) {
+        if (err instanceof ApiError && err.statusCode === 404) {
+          toast.error("CV không tồn tại hoặc đã bị xóa");
+          setItems((prev) =>
+            prev.filter((item) => item.id !== cvDocumentId)
+          );
+          return;
+        }
+        toast.error(
+          err instanceof ApiError
+            ? err.message
+            : "Đã xảy ra lỗi. Vui lòng thử lại."
+        );
       }
-      toast.error(
-        err instanceof ApiError
-          ? err.message
-          : "Đã xảy ra lỗi. Vui lòng thử lại."
-      );
-    }
-  }, []);
+    },
+    []
+  );
 
   const handleViewOriginal = React.useCallback(
     async (cvDocumentId: string) => {
-      // Find the item to get candidate_id
       const item = items.find((i) => i.id === cvDocumentId);
       if (!item || !item.candidate_id) {
         toast.error("Không thể mở CV gốc. Thiếu thông tin ứng viên.");
         return;
       }
       try {
-        const response = await getCVPresignedUrl(item.candidate_id, cvDocumentId);
+        const response = await getCVPresignedUrl(
+          item.candidate_id,
+          cvDocumentId
+        );
         window.open(response.presigned_url, "_blank");
       } catch {
         toast.error("Không thể tải tài liệu. Vui lòng thử lại.");
@@ -300,21 +318,24 @@ export default function CVReviewPage() {
     [items]
   );
 
-  // --- Render ---
-
   const total = data?.total ?? 0;
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Page header */}
+    <div className="animate-page-enter space-y-6 max-w-[1200px] mx-auto overflow-x-hidden pb-10">
+      {/* ─── Page header ──────────────────────────────── */}
       <div>
-        <h1 className="font-heading text-2xl font-bold">Xem xét CV</h1>
-        <p className="text-sm text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+            <Sparkles className="h-4 w-4" strokeWidth={1.5} />
+          </div>
+          <h1 className="font-heading text-2xl font-bold">Xem xét CV</h1>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground ml-10">
           Xem xét và chỉnh sửa CV được phân tích tự động
         </p>
       </div>
 
-      {/* Content */}
+      {/* ─── Content ──────────────────────────────────── */}
       {loading ? (
         <ReviewSkeleton />
       ) : error ? (
@@ -323,6 +344,14 @@ export default function CVReviewPage() {
         <EmptyState />
       ) : (
         <>
+          {/* Summary bar */}
+          <div className="animate-fade-in flex items-center gap-4 rounded-xl border border-border/30 bg-card px-5 py-3 shadow-sm">
+            <Sparkles className="h-3.5 w-3.5 text-muted-foreground/60" strokeWidth={1.5} />
+            <span className="text-sm text-muted-foreground">
+              Có <strong className="text-foreground tabular-nums">{total}</strong> CV cần xem xét
+            </span>
+          </div>
+
           {/* Review items list */}
           <div className="space-y-4" aria-live="polite">
             {items.map((item) => (

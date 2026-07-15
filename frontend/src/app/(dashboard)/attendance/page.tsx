@@ -245,33 +245,41 @@ export default function AttendanceListPage() {
       return <Badge variant="secondary">—</Badge>;
     }
     if (!record.check_out_at) {
-      return <Badge className="bg-green-600">Đã check-in</Badge>;
+      return <Badge className="bg-primary/85 text-primary-foreground hover:bg-primary/75">Đã check-in</Badge>;
     }
-    return <Badge className="bg-blue-600">Hoàn thành</Badge>;
+    return <Badge className="bg-secondary text-secondary-foreground hover:bg-secondary/80">Hoàn thành</Badge>;
   }
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-[24px] font-semibold tracking-[-0.3px]">
-          Quản lý chấm công
-        </h1>
-        <p className="text-[14px] text-muted-foreground">
-          Xem và quản lý bản ghi chấm công của nhân viên
-        </p>
+    <div className="animate-fade-in space-y-6">
+      {/* ── Page Header ── */}
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Search className="h-5 w-5" aria-hidden="true" strokeWidth={1.5} />
+        </div>
+        <div>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground">
+            Quản lý chấm công
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Xem và quản lý bản ghi chấm công của nhân viên
+          </p>
+        </div>
       </div>
 
-      {/* Filters */}
-      <Card>
+      {/* ── Filters ── */}
+      <Card className="card-hover shadow-warm">
         <CardHeader>
-          <CardTitle className="text-lg">Bộ lọc</CardTitle>
+          <CardTitle className="text-base font-semibold">Bộ lọc</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="start-date">Từ ngày</Label>
+              <Label htmlFor="start-date" className="text-xs font-medium text-muted-foreground">
+                Từ ngày
+              </Label>
               <Input
                 id="start-date"
                 type="date"
@@ -280,7 +288,9 @@ export default function AttendanceListPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="end-date">Đến ngày</Label>
+              <Label htmlFor="end-date" className="text-xs font-medium text-muted-foreground">
+                Đến ngày
+              </Label>
               <Input
                 id="end-date"
                 type="date"
@@ -289,7 +299,7 @@ export default function AttendanceListPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Nhân viên</Label>
+              <Label className="text-xs font-medium text-muted-foreground">Nhân viên</Label>
               <Select value={employeeId} onValueChange={setEmployeeId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Tất cả" />
@@ -305,7 +315,7 @@ export default function AttendanceListPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Trạng thái</Label>
+              <Label className="text-xs font-medium text-muted-foreground">Trạng thái</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Tất cả" />
@@ -319,80 +329,85 @@ export default function AttendanceListPage() {
             </div>
           </div>
           <div className="mt-4">
-            <Button onClick={() => setPage(1)}>
-              <Search className="h-4 w-4 mr-2" />
+            <Button onClick={() => setPage(1)} className="shadow-warm">
+              <Search className="mr-2 h-4 w-4" />
               Tìm kiếm
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Results */}
-      <Card>
+      {/* ── Results ── */}
+      <Card className="shadow-warm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
-            <CardTitle className="text-lg">Kết quả</CardTitle>
+            <CardTitle className="text-base font-semibold">Kết quả</CardTitle>
             <CardDescription>{total} bản ghi</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : records.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">
-              Không có bản ghi chấm công phù hợp.
-            </p>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <p className="text-sm text-muted-foreground">
+                Không có bản ghi chấm công phù hợp.
+              </p>
+            </div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Mã NV</TableHead>
-                      <TableHead>Họ tên</TableHead>
-                      <TableHead>Ngày</TableHead>
-                      <TableHead>Check-in</TableHead>
-                      <TableHead>Check-out</TableHead>
-                      <TableHead>Nguồn</TableHead>
-                      <TableHead>Trạng thái</TableHead>
-                      <TableHead>Đã sửa</TableHead>
-                      <TableHead className="text-right">Thao tác</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mã NV</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Họ tên</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ngày</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Check-in</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Check-out</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nguồn</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Trạng thái</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Đã sửa</TableHead>
+                      <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Thao tác</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {records.map((record) => (
-                      <TableRow key={record.id}>
-                        <TableCell className="font-mono">
+                      <TableRow key={record.id} className="animate-fade-in hover:bg-muted/50">
+                        <TableCell className="font-mono text-xs">
                           {record.employee_code || "—"}
                         </TableCell>
-                        <TableCell>{record.employee_name || "—"}</TableCell>
-                        <TableCell className="font-mono">
+                        <TableCell className="text-sm font-medium">
+                          {record.employee_name || "—"}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
                           {formatDate(record.work_date)}
                         </TableCell>
-                        <TableCell className="font-mono">
+                        <TableCell className="font-mono text-xs">
                           {formatTime(record.check_in_at)}
                         </TableCell>
-                        <TableCell className="font-mono">
+                        <TableCell className="font-mono text-xs">
                           {formatTime(record.check_out_at)}
                         </TableCell>
-                        <TableCell className="capitalize">{record.source}</TableCell>
+                        <TableCell className="text-xs capitalize">{record.source}</TableCell>
                         <TableCell>{getStatusBadge(record)}</TableCell>
                         <TableCell>
                           {record.corrected_at ? (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-xs text-muted-foreground">
                               Đã sửa
                             </Badge>
                           ) : (
-                            "—"
+                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
                             onClick={() => handleOpenCorrection(record)}
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -405,16 +420,17 @@ export default function AttendanceListPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex justify-center gap-2 mt-4">
+                <div className="mt-4 flex items-center justify-center gap-3">
                   <Button
                     variant="outline"
                     size="sm"
                     disabled={page === 1}
                     onClick={() => setPage(page - 1)}
+                    className="h-8"
                   >
                     Trước
                   </Button>
-                  <span className="flex items-center px-3 text-sm text-muted-foreground">
+                  <span className="text-sm text-muted-foreground">
                     Trang {page} / {totalPages}
                   </span>
                   <Button
@@ -422,6 +438,7 @@ export default function AttendanceListPage() {
                     size="sm"
                     disabled={page === totalPages}
                     onClick={() => setPage(page + 1)}
+                    className="h-8"
                   >
                     Sau
                   </Button>
@@ -432,11 +449,11 @@ export default function AttendanceListPage() {
         </CardContent>
       </Card>
 
-      {/* Correction Modal */}
+      {/* ── Correction Modal ── */}
       <Dialog open={correctionModalOpen} onOpenChange={setCorrectionModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Sửa bản ghi chấm công</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">Sửa bản ghi chấm công</DialogTitle>
             <DialogDescription>
               {selectedRecord && (
                 <>
@@ -451,15 +468,15 @@ export default function AttendanceListPage() {
           <div className="space-y-4">
             {/* Current values (read-only) */}
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Giờ check-in hiện tại</Label>
-                <p className="text-sm font-mono">
+              <div className="space-y-1 rounded-lg bg-muted/50 p-3">
+                <Label className="text-xs text-muted-foreground">Giờ check-in hiện tại</Label>
+                <p className="text-sm font-mono text-foreground">
                   {selectedRecord ? formatTime(selectedRecord.check_in_at) : "—"}
                 </p>
               </div>
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Giờ check-out hiện tại</Label>
-                <p className="text-sm font-mono">
+              <div className="space-y-1 rounded-lg bg-muted/50 p-3">
+                <Label className="text-xs text-muted-foreground">Giờ check-out hiện tại</Label>
+                <p className="text-sm font-mono text-foreground">
                   {selectedRecord ? formatTime(selectedRecord.check_out_at) : "—"}
                 </p>
               </div>
@@ -468,7 +485,9 @@ export default function AttendanceListPage() {
             {/* New values (editable) */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="new-checkin">Giờ check-in mới</Label>
+                <Label htmlFor="new-checkin" className="text-xs font-medium text-muted-foreground">
+                  Giờ check-in mới
+                </Label>
                 <Input
                   id="new-checkin"
                   type="datetime-local"
@@ -477,7 +496,9 @@ export default function AttendanceListPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-checkout">Giờ check-out mới</Label>
+                <Label htmlFor="new-checkout" className="text-xs font-medium text-muted-foreground">
+                  Giờ check-out mới
+                </Label>
                 <Input
                   id="new-checkout"
                   type="datetime-local"
@@ -489,7 +510,9 @@ export default function AttendanceListPage() {
 
             {/* Correction reason */}
             <div className="space-y-2">
-              <Label htmlFor="reason">Lý do sửa *</Label>
+              <Label htmlFor="reason" className="text-xs font-medium text-muted-foreground">
+                Lý do sửa <span className="text-destructive">*</span>
+              </Label>
               <Textarea
                 id="reason"
                 placeholder="Nhập lý do sửa bản ghi..."
@@ -511,9 +534,10 @@ export default function AttendanceListPage() {
             <Button
               onClick={handleSubmitCorrection}
               disabled={submitting || !correctionReason.trim()}
+              className="shadow-warm"
             >
               {submitting ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               Xác nhận sửa
             </Button>

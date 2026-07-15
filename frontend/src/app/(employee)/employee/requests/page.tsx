@@ -103,128 +103,128 @@ function formatTime(timeStr: string | null): string {
 // Skeleton row
 // ---------------------------------------------------------------------------
 
-function RequestSkeleton() {
-  return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-3 flex-1">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-5 w-20 rounded-full" />
-            <Skeleton className="h-5 w-16 rounded-full" />
-          </div>
-          <Skeleton className="h-4 w-3/4" />
-          <div className="flex gap-4">
-            <Skeleton className="h-3 w-28" />
-            <Skeleton className="h-3 w-24" />
+    function RequestSkeleton() {
+      return (
+        <div className="rounded-xl border border-border/40 bg-card p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-3 flex-1">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-4 w-3/4" />
+              <div className="flex gap-4">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-16 rounded-md" />
           </div>
         </div>
-        <Skeleton className="h-8 w-16 rounded-md" />
-      </div>
-    </div>
-  );
-}
+      );
+    }
 
 // ---------------------------------------------------------------------------
 // Request card
 // ---------------------------------------------------------------------------
 
-function RequestCard({
-  request,
-  onCancel,
-}: {
-  request: EmployeeRequestListItem;
-  onCancel: (r: EmployeeRequestListItem) => void;
-}) {
-  const isOvertime = request.request_type === "overtime";
-
-  return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 transition-colors hover:bg-white/[0.04]">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2 min-w-0 flex-1">
-          {/* Badge row */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge
-              variant={typeBadgeVariant(request.request_type)}
-              className="pointer-events-none"
-            >
-              {REQUEST_TYPE_LABELS[request.request_type] ?? request.request_type}
-            </Badge>
-            <span
-              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusBadgeColor(request.status)}`}
-            >
-              {STATUS_LABELS[request.status] ?? request.status}
-            </span>
-          </div>
-
-          {/* Reason preview */}
-          {request.reason && (
-            <p className="text-[13px] text-[#f7f8f8] leading-relaxed line-clamp-2">
-              {request.reason}
-            </p>
-          )}
-
-          {/* Review reason (for approved/rejected requests) */}
-          {request.review_reason && (request.status === "approved" || request.status === "rejected") && (
-            <p className="text-[12px] text-[#8a8f98] italic">
-              {request.status === "approved" ? "Lý do duyệt: " : "Lý do từ chối: "}
-              {request.review_reason}
-            </p>
-          )}
-
-          {/* Detail row */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[#8a8f98]">
-            {isOvertime ? (
-              <>
-                <span className="flex items-center gap-1">
-                  <CalendarDays className="h-3 w-3" />
-                  {formatDate(request.work_date)}
+    function RequestCard({
+      request,
+      onCancel,
+    }: {
+      request: EmployeeRequestListItem;
+      onCancel: (r: EmployeeRequestListItem) => void;
+    }) {
+      const isOvertime = request.request_type === "overtime";
+    
+      return (
+        <div className="rounded-xl border border-border/40 bg-card p-5 card-hover transition-colors hover:bg-accent/50">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-2 min-w-0 flex-1">
+              {/* Badge row */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  variant={typeBadgeVariant(request.request_type)}
+                  className="pointer-events-none"
+                >
+                  {REQUEST_TYPE_LABELS[request.request_type] ?? request.request_type}
+                </Badge>
+                <span
+                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusBadgeColor(request.status)}`}
+                >
+                  {STATUS_LABELS[request.status] ?? request.status}
                 </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {formatTime(request.start_time)} → {formatTime(request.end_time)}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="flex items-center gap-1">
-                  <CalendarDays className="h-3 w-3" />
-                  {formatDateRange(request.start_date, request.end_date)}
-                </span>
-                {request.leave_type && (
-                  <span className="capitalize">
-                    {request.leave_type === "annual"
-                      ? "Nghỉ phép năm"
-                      : request.leave_type === "sick"
-                        ? "Nghỉ bệnh"
-                        : request.leave_type === "unpaid"
-                          ? "Nghỉ không lương"
-                          : "Khác"}
-                  </span>
+              </div>
+    
+              {/* Reason preview */}
+              {request.reason && (
+                <p className="text-[13px] text-foreground leading-relaxed line-clamp-2">
+                  {request.reason}
+                </p>
+              )}
+    
+              {/* Review reason (for approved/rejected requests) */}
+              {request.review_reason && (request.status === "approved" || request.status === "rejected") && (
+                <p className="text-[12px] text-muted-foreground italic">
+                  {request.status === "approved" ? "Lý do duyệt: " : "Lý do từ chối: "}
+                  {request.review_reason}
+                </p>
+              )}
+    
+              {/* Detail row */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-muted-foreground">
+                {isOvertime ? (
+                  <>
+                    <span className="flex items-center gap-1">
+                      <CalendarDays className="h-3 w-3" />
+                      {formatDate(request.work_date)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {formatTime(request.start_time)} → {formatTime(request.end_time)}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex items-center gap-1">
+                      <CalendarDays className="h-3 w-3" />
+                      {formatDateRange(request.start_date, request.end_date)}
+                    </span>
+                    {request.leave_type && (
+                      <span className="capitalize">
+                        {request.leave_type === "annual"
+                          ? "Nghỉ phép năm"
+                          : request.leave_type === "sick"
+                            ? "Nghỉ bệnh"
+                            : request.leave_type === "unpaid"
+                              ? "Nghỉ không lương"
+                              : "Khác"}
+                      </span>
+                    )}
+                  </>
                 )}
-              </>
-            )}
-            {request.duration_minutes != null && isOvertime && (
-              <span>{Math.round(request.duration_minutes / 60)}h</span>
+                {request.duration_minutes != null && isOvertime && (
+                  <span>{Math.round(request.duration_minutes / 60)}h</span>
+                )}
+              </div>
+            </div>
+    
+            {/* Cancel button — only for own submitted requests */}
+            {request.status === "submitted" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onCancel(request)}
+                className="shrink-0 text-[12px] text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <XCircle className="mr-1 h-3.5 w-3.5" />
+                Huỷ
+              </Button>
             )}
           </div>
         </div>
-
-        {/* Cancel button — only for own submitted requests */}
-        {request.status === "submitted" && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onCancel(request)}
-            className="shrink-0 text-[12px] text-red-400 hover:text-red-300 hover:bg-red-500/10"
-          >
-            <XCircle className="mr-1 h-3.5 w-3.5" />
-            Huỷ
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
+      );
+    }
 
 // ---------------------------------------------------------------------------
 // Cancel dialog
@@ -264,7 +264,7 @@ function CancelDialog({
         </AlertDialogHeader>
 
         <div className="space-y-2">
-          <label className="text-[13px] font-medium text-[#f7f8f8]">
+              <label className="text-[13px] font-medium text-foreground">
             Lý do huỷ
           </label>
           <textarea
@@ -372,88 +372,90 @@ export default function EmployeeRequestsPage() {
         ? "Chưa có đơn nghỉ phép nào."
         : "Chưa có đơn tăng ca nào.";
 
-  return (
-    <div className="space-y-6 max-w-[900px]">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-[24px] font-semibold tracking-[-0.3px] text-[#f7f8f8]">
-            Yêu cầu của tôi
-          </h1>
-          <p className="text-[14px] text-[#8a8f98]">
-            Đơn nghỉ phép, tăng ca và các yêu cầu khác
-          </p>
+      return (
+        <div className="animate-fade-in space-y-6 max-w-[900px]">
+          {/* Header */}
+          <div className="fade-in-section flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <h1 className="text-[24px] font-semibold tracking-[-0.3px] text-foreground">
+                Yêu cầu của tôi
+              </h1>
+              <p className="text-[14px] text-muted-foreground">
+                Đơn nghỉ phép, tăng ca và các yêu cầu khác
+              </p>
+            </div>
+            <CreateRequestDialog />
+          </div>
+
+          {/* Filter tabs */}
+          <div className="fade-in-section">
+            <Tabs value={filter} onValueChange={setFilter}>
+              <TabsList>
+                <TabsTrigger value="all">Tất cả</TabsTrigger>
+                <TabsTrigger value="leave">Nghỉ phép</TabsTrigger>
+                <TabsTrigger value="overtime">Tăng ca</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Loading */}
+          {isLoading && (
+            <div className="fade-in-section space-y-3">
+              <RequestSkeleton />
+              <RequestSkeleton />
+              <RequestSkeleton />
+            </div>
+          )}
+
+          {/* Error */}
+          {isError && !isLoading && (
+            <div className="fade-in-section rounded-xl border border-destructive/20 bg-destructive/10 p-12 text-center">
+              <Loader2 className="mx-auto h-10 w-10 text-destructive" />
+              <h3 className="mt-4 text-[14px] font-medium text-foreground">
+                Không thể tải dữ liệu
+              </h3>
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                {error instanceof Error ? error.message : "Đã có lỗi xảy ra. Vui lòng thử lại sau."}
+              </p>
+            </div>
+          )}
+
+          {/* Empty */}
+          {!isLoading && !isError && filtered.length === 0 && (
+            <div className="fade-in-section rounded-xl border border-border/40 bg-card p-12 text-center">
+              <FileEdit className="mx-auto h-10 w-10 text-muted-foreground" />
+              <h3 className="mt-4 text-[14px] font-medium text-foreground">
+                {emptyMessage}
+              </h3>
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                Các yêu cầu của bạn sẽ xuất hiện ở đây sau khi được gửi.
+              </p>
+            </div>
+          )}
+
+          {/* List */}
+          {!isLoading && !isError && filtered.length > 0 && (
+            <div className="fade-in-section space-y-3 stagger-children">
+              {filtered.map((request) => (
+                <RequestCard
+                  key={request.id}
+                  request={request}
+                  onCancel={setCancellingRequest}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Cancel dialog */}
+          <CancelDialog
+            request={cancellingRequest}
+            open={cancelDialogOpen}
+            onOpenChange={(v) => {
+              if (!v) setCancellingRequest(null);
+            }}
+            onConfirm={handleCancelConfirm}
+            isPending={cancelMutation.isPending}
+          />
         </div>
-        <CreateRequestDialog />
-      </div>
-
-      {/* Filter tabs */}
-      <Tabs value={filter} onValueChange={setFilter}>
-        <TabsList>
-          <TabsTrigger value="all">Tất cả</TabsTrigger>
-          <TabsTrigger value="leave">Nghỉ phép</TabsTrigger>
-          <TabsTrigger value="overtime">Tăng ca</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      {/* Loading */}
-      {isLoading && (
-        <div className="space-y-3">
-          <RequestSkeleton />
-          <RequestSkeleton />
-          <RequestSkeleton />
-        </div>
-      )}
-
-      {/* Error */}
-      {isError && !isLoading && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-12 text-center">
-          <Loader2 className="mx-auto h-10 w-10 text-red-400" />
-          <h3 className="mt-4 text-[14px] font-medium text-[#f7f8f8]">
-            Không thể tải dữ liệu
-          </h3>
-          <p className="mt-1 text-[12px] text-[#8a8f98]">
-            {error instanceof Error ? error.message : "Đã có lỗi xảy ra. Vui lòng thử lại sau."}
-          </p>
-        </div>
-      )}
-
-      {/* Empty */}
-      {!isLoading && !isError && filtered.length === 0 && (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-12 text-center">
-          <FileEdit className="mx-auto h-10 w-10 text-[#8a8f98]" />
-          <h3 className="mt-4 text-[14px] font-medium text-[#f7f8f8]">
-            {emptyMessage}
-          </h3>
-          <p className="mt-1 text-[12px] text-[#8a8f98]">
-            Các yêu cầu của bạn sẽ xuất hiện ở đây sau khi được gửi.
-          </p>
-        </div>
-      )}
-
-      {/* List */}
-      {!isLoading && !isError && filtered.length > 0 && (
-        <div className="space-y-3">
-          {filtered.map((request) => (
-            <RequestCard
-              key={request.id}
-              request={request}
-              onCancel={setCancellingRequest}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Cancel dialog */}
-      <CancelDialog
-        request={cancellingRequest}
-        open={cancelDialogOpen}
-        onOpenChange={(v) => {
-          if (!v) setCancellingRequest(null);
-        }}
-        onConfirm={handleCancelConfirm}
-        isPending={cancelMutation.isPending}
-      />
-    </div>
   );
 }

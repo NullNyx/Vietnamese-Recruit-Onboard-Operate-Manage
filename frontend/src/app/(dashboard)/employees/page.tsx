@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { UserPlus, FileSpreadsheet } from "lucide-react";
+import { Users, UserPlus, FileSpreadsheet } from "lucide-react";
 
 import { DataTable, type ColumnDef } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
@@ -105,28 +105,37 @@ export default function EmployeesPage() {
   const toolbar = (
     <>
       <Link href="/employees/import">
-        <Button variant="outline" size="sm">
-          <FileSpreadsheet className="mr-2 h-4 w-4" aria-hidden="true" />
-          Import Excel
-        </Button>
-      </Link>
-      <Link href="/employees/new">
-        <Button size="sm">
-          <UserPlus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Thêm nhân viên
-        </Button>
-      </Link>
+            <Button variant="outline" size="sm" className="card-hover">
+              <FileSpreadsheet className="mr-2 h-4 w-4" aria-hidden="true" />
+              Import Excel
+            </Button>
+          </Link>
+          <Link href="/employees/new">
+            <Button size="sm" className="shadow-warm">
+              <UserPlus className="mr-2 h-4 w-4" aria-hidden="true" />
+              Thêm nhân viên
+            </Button>
+          </Link>
     </>
   );
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="font-heading text-2xl font-bold">Nhân viên</h1>
-        <p className="text-sm text-muted-foreground">
-          Quản lý danh sách nhân viên trong tổ chức
-        </p>
+    <div className="animate-fade-in space-y-6 p-6">
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Users className="h-5 w-5" aria-hidden="true" strokeWidth={1.5} />
+        </div>
+        <div>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground">
+            Nhân viên
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Quản lý danh sách nhân viên trong tổ chức
+          </p>
+        </div>
       </div>
+
+      <div className="animate-slide-up">
 
       <DataTable<EmployeeRow>
         columns={columns}
@@ -147,6 +156,7 @@ export default function EmployeesPage() {
         onRowClick={handleRowClick}
         toolbar={toolbar}
       />
-    </div>
+          </div>
+        </div>
   );
 }
