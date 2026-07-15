@@ -2238,6 +2238,43 @@ class CandidateService:
             except Exception:
                 return None
 
+    async def list_interviews_for_candidate(self, candidate_id: UUID) -> list[dict[str, object]]:
+        """List all interviews for a candidate as structured dicts.
+
+        Read-only projection for the HR Assistant Read-Tool
+        ``list_interviews_for_candidate``. Returns interviews ordered by
+        ``start_at`` descending (most recent first). Each dict contains
+        ``scheduled_time``, ``status``, ``location``, and ``notes``.
+
+        Args:
+            candidate_id: The candidate whose interviews to list.
+
+        Returns:
+            A list of interview dicts, empty list if none found.
+        """
+        stmt = (
+            select(Interview)
+            .where(Interview.candidate_id == candidate_id)
+            .order_by(Interview.start_at.desc())
+        )
+        res = await self._session.execute(stmt)
+        interviews = res.scalars().all()
+
+        return [
+            {
+                "id": str(iv.id),
+                "scheduled_time": iv.start_at.isoformat(),
+                "end_time": iv.end_at.isoformat(),
+                "status": iv.status,
+                "round_name": iv.round_name,
+                "location": iv.meeting_link or iv.remote_location or None,
+                "meeting_mode": iv.meeting_mode,
+                "notes": None,  # not yet modelled on Interview entity
+                "timezone": iv.timezone,
+            }
+            for iv in interviews
+        ]
+
     async def _get_scheduled_interview(self, candidate_id: UUID) -> Interview | None:
         """Return the first scheduled Interview for a candidate, or None."""
         stmt = (

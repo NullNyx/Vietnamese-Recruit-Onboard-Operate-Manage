@@ -44,7 +44,7 @@ export const adminNavSection: AdminNavSection = {
     { href: '/admin/oauth', label: 'OAuth', icon: KeyRound },
     { href: '/admin/users', label: 'Người dùng', icon: UserCog },
     { href: '/admin/audit-logs', label: 'Nhật ký', icon: ScrollText },
-    { href: '/admin/assistant', label: 'AI Assistant', icon: Bot },
-    { href: '/admin/assistant-tools', label: 'AI Tools Config', icon: Bot },
+    { href: '/admin/assistant', label: 'Trợ lý AI', icon: Bot },
+    { href: '/admin/assistant-tools', label: 'Cấu hình AI Tools', icon: Bot },
   ],
 };

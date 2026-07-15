@@ -1,0 +1,7 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - banner [ref=f2e3]
+    - main [ref=f2e6]:
+      - paragraph [ref=f2e13]: Đang kiểm tra quyền truy cập...
+  - region "Notifications alt+T"
+  - alert [ref=f2e14]

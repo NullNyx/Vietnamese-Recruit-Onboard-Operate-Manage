@@ -12,6 +12,17 @@ const TIMEOUT_MS = 60_000; // LLM calls can be slow
 // Types
 // ---------------------------------------------------------------------------
 
+
+export interface AssistantFeedbackRequest {
+  /** Client-generated session identifier */
+  session_id: string;
+  /** Index of the message this feedback is for */
+  message_index: number;
+  /** Thumbs up or thumbs down */
+  feedback_type: "up" | "down";
+  /** Optional free-text explanation */
+  optional_text?: string;
+}
 export interface ChatMessage {
   role: "user" | "assistant" | "tool";
   content: string | null;
@@ -37,6 +48,10 @@ export interface DraftAction {
 export interface ChatResponse {
   messages: ChatMessage[];
   draft_action: DraftAction | null;
+}
+
+export interface SessionStartResponse {
+  session_id: string;
 }
 
 interface ChatRequestMessage {
@@ -69,6 +84,7 @@ async function fetchWithTimeout(
  */
 export async function sendChatMessage(
   messages: ChatMessage[],
+  sessionId?: string,
 ): Promise<ChatResponse> {
   // Filter out tool messages and assistant-only tool-call placeholders.
   // Backend accepts only user/assistant text history (ADR-0006).
@@ -89,10 +105,15 @@ export async function sendChatMessage(
     return [{ role: message.role, content }];
   });
 
+  const body: Record<string, unknown> = { messages: sanitized };
+  if (sessionId) {
+    body.session_id = sessionId;
+  }
+
   const res = await fetchWithTimeout(`${BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages: sanitized }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -145,8 +166,65 @@ export async function recordDraftDecision(
     }),
   });
 
+    if (!res.ok) {
+        throw new Error(`Assistant audit API ${res.status}`);
+      }
+    }
+
+    /**
+     * Send feedback (thumbs up/down) for an assistant message.
+     *
+     * @param feedback - Feedback details including session_id, message_index, feedback_type, and optional text.
+     */
+    export async function sendFeedback(
+      feedback: AssistantFeedbackRequest,
+    ): Promise<void> {
+      const res = await fetchWithTimeout(`${BASE}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(feedback),
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "Unknown error");
+        throw new Error(`Feedback API ${res.status}: ${text}`);
+      }
+    }
+
+/**
+ * Start an AI Assistant chat session.
+ * Called when ChatInterface mounts.
+ */
+export async function startSession(
+  assistantType: "hr" | "employee",
+): Promise<SessionStartResponse> {
+  const res = await fetchWithTimeout(`${BASE}/session/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assistant_type: assistantType }),
+  });
+
   if (!res.ok) {
-    throw new Error(`Assistant audit API ${res.status}`);
+    const text = await res.text().catch(() => "Unknown error");
+    throw new Error(`Session API ${res.status}: ${text}`);
   }
+
+  return res.json() as Promise<SessionStartResponse>;
 }
 
+/**
+ * End an AI Assistant chat session.
+ * Called when ChatInterface unmounts.
+ */
+export async function endSession(sessionId: string): Promise<void> {
+  const res = await fetchWithTimeout(`${BASE}/session/end`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "Unknown error");
+    throw new Error(`Session API ${res.status}: ${text}`);
+  }
+}

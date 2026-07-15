@@ -65,6 +65,10 @@ class ChatRequest(BaseModel):
         min_length=1,
         description="Conversation history. Last message must be from user.",
     )
+    session_id: str | None = Field(
+        default=None,
+        description="Optional session UUID for latency tracking",
+    )
 
 
 class DraftActionSchema(BaseModel):
@@ -109,6 +113,71 @@ class DraftDecisionRequest(BaseModel):
         if not v.startswith("/api/"):
             raise ValueError("confirm_endpoint must start with /api/")
         return v
+
+
+class AssistantFeedbackRequest(BaseModel):
+    """Request body for assistant message feedback.
+
+    Sent when a user clicks thumbs-up or thumbs-down on an assistant response.
+    """
+
+    session_id: str = Field(
+        ...,
+        description="A client-generated session identifier for the conversation"
+    )
+    message_index: int = Field(
+        ...,
+        ge=0,
+        description="Index of the message the feedback is for, within the session"
+    )
+    feedback_type: Literal["up", "down"] = Field(
+        ...,
+        description="Thumbs up or thumbs down"
+    )
+    optional_text: str | None = Field(
+        default=None,
+        max_length=1000,
+        description="Optional free-text feedback explanation"
+    )
+
+
+class SessionStartRequest(BaseModel):
+    """Request body to start an AI Assistant chat session.
+
+    Attributes:
+        assistant_type: 'hr' for HR Assistant, 'employee' for Employee Assistant.
+    """
+
+    assistant_type: Literal["hr", "employee"] = Field(
+        ...,
+        description="Type of assistant: hr or employee",
+    )
+
+
+class SessionStartResponse(BaseModel):
+    """Response body after starting a session.
+
+    Attributes:
+        session_id: UUID string of the created session.
+    """
+
+    session_id: str = Field(
+        ...,
+        description="UUID of the created session",
+    )
+
+
+class SessionEndRequest(BaseModel):
+    """Request body to end a chat session.
+
+    Attributes:
+        session_id: UUID of the session to end.
+    """
+
+    session_id: str = Field(
+        ...,
+        description="UUID of the session to end",
+    )
 
 
 class ChatResponseSchema(BaseModel):

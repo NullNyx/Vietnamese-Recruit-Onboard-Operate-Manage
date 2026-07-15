@@ -1,0 +1,120 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e18]:
+    - banner [ref=e19]:
+      - navigation "Điều hướng chính" [ref=e20]:
+        - link "V Vroom" [ref=e21] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e22]: V
+          - generic [ref=e23]: Vroom
+        - generic [ref=e24]:
+          - button "Nhân sự" [ref=e27] [cursor=pointer]
+          - button "Tuyển dụng" [ref=e31] [cursor=pointer]
+          - button "Chấm công" [ref=e35] [cursor=pointer]
+          - button "Lương" [ref=e39] [cursor=pointer]
+          - button "Hệ thống" [ref=e43] [cursor=pointer]
+        - generic [ref=e45]:
+          - button "Tìm kiếm (Ctrl+K)" [ref=e46] [cursor=pointer]:
+            - generic:
+              - generic: ⌘
+              - text: K
+          - button "Thông báo" [ref=e47] [cursor=pointer]
+          - button "Tài khoản" [ref=e48] [cursor=pointer]:
+            - generic [ref=e49]: HQ
+    - main [ref=e51]:
+      - generic [ref=e54]:
+        - generic [ref=e55]:
+          - heading "Chào buổi chiều, hr.qa" [level=1] [ref=e56]
+          - paragraph [ref=e57]: Thứ Tư, 15 tháng 7, 2026
+        - generic [ref=e58]:
+          - heading "Tổng quan" [level=2] [ref=e59]
+          - generic [ref=e60]:
+            - generic [ref=e63]:
+              - paragraph [ref=e64]: Nhân viên
+              - paragraph [ref=e65]: "2"
+            - generic [ref=e74]:
+              - paragraph [ref=e75]: Phòng ban
+              - paragraph [ref=e76]: "2"
+            - generic [ref=e84]:
+              - paragraph [ref=e85]: Chức vụ
+              - paragraph [ref=e86]: "2"
+        - region [ref=e91]:
+          - generic [ref=e92]:
+            - generic [ref=e93]:
+              - heading "Backbone Flow runtime" [level=2] [ref=e97]
+              - paragraph [ref=e98]: Redis, PostgreSQL, MinIO, Gmail Worker, Onboarding Worker
+            - generic [ref=e99]:
+              - generic [ref=e100]: "Tổng thể: Ổn định"
+              - button "Làm mới trạng thái runtime" [ref=e104] [cursor=pointer]:
+                - generic [ref=e105]: Làm mới
+          - list [ref=e107]:
+            - listitem [ref=e108]:
+              - generic [ref=e114]:
+                - paragraph [ref=e115]: Redis
+                - paragraph [ref=e116]: 0.9 ms
+              - generic [ref=e117]: Ổn định
+            - listitem [ref=e122]:
+              - generic [ref=e128]:
+                - paragraph [ref=e129]: PostgreSQL
+                - paragraph [ref=e130]: 0.5 ms
+              - generic [ref=e131]: Ổn định
+            - listitem [ref=e136]:
+              - generic [ref=e142]:
+                - paragraph [ref=e143]: MinIO
+                - paragraph [ref=e144]: 16.5 ms
+              - generic [ref=e145]: Ổn định
+            - listitem [ref=e150]:
+              - generic [ref=e156]:
+                - paragraph [ref=e157]: Gmail Worker
+                - paragraph [ref=e158]: "last beat: 1784102280.4543235"
+              - generic [ref=e159]: Ổn định
+            - listitem [ref=e164]:
+              - generic [ref=e170]:
+                - paragraph [ref=e171]: Onboarding Worker
+                - paragraph [ref=e172]: "last beat: 1784102100.1673832"
+              - generic [ref=e173]: Ổn định
+        - generic [ref=e178]:
+          - heading "Thao tác nhanh" [level=2] [ref=e179]
+          - generic [ref=e180]:
+            - link [ref=e181] [cursor=pointer]:
+              - /url: /employees/new
+              - generic [ref=e186]:
+                - heading "Thêm nhân viên" [level=3] [ref=e187]
+                - paragraph [ref=e188]: Nhập thông tin nhân viên mới
+            - link [ref=e192] [cursor=pointer]:
+              - /url: /employees/import
+              - generic [ref=e197]:
+                - heading "Import Excel" [level=3] [ref=e198]
+                - paragraph [ref=e199]: Nhập hàng loạt từ file
+            - link [ref=e203] [cursor=pointer]:
+              - /url: /recruitment
+              - generic [ref=e209]:
+                - heading "Tuyển dụng" [level=3] [ref=e210]
+                - paragraph [ref=e211]: Quản lý ứng viên và phỏng vấn
+            - link [ref=e215] [cursor=pointer]:
+              - /url: /settings/departments
+              - generic [ref=e221]:
+                - heading "Phòng ban" [level=3] [ref=e222]
+                - paragraph [ref=e223]: Cơ cấu tổ chức
+            - link [ref=e227] [cursor=pointer]:
+              - /url: /settings/positions
+              - generic [ref=e232]:
+                - heading "Chức vụ" [level=3] [ref=e233]
+                - paragraph [ref=e234]: Danh sách vị trí
+            - link [ref=e238] [cursor=pointer]:
+              - /url: /gmail
+              - generic [ref=e243]:
+                - heading "Gmail" [level=3] [ref=e244]
+                - paragraph [ref=e245]: Hộp thư kết nối
+        - generic [ref=e249]:
+          - generic [ref=e250]:
+            - heading "Hoạt động gần đây" [level=3] [ref=e251]
+            - generic [ref=e252]:
+              - paragraph [ref=e257]: Chưa có dữ liệu
+              - paragraph [ref=e258]: Dữ liệu sẽ hiển thị khi có hoạt động mới
+          - generic [ref=e259]:
+            - heading "Nhân viên mới tháng này" [level=3] [ref=e260]
+            - generic [ref=e261]:
+              - paragraph [ref=e267]: Chưa có dữ liệu
+              - paragraph [ref=e268]: Dữ liệu sẽ hiển thị khi có hoạt động mới
+  - region "Notifications alt+T"
+  - alert [ref=e5]

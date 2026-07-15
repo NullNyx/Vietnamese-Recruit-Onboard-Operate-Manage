@@ -2,12 +2,23 @@
 
 import { Bot, User, Loader2 } from "lucide-react";
 import type { ChatMessage } from "@/lib/api/assistant";
+import { FeedbackButtons } from "./feedback-buttons";
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  /** Index of this message in the conversation (used for feedback) */
+  messageIndex?: number;
+  /** Client-generated session identifier (used for feedback) */
+  sessionId?: string;
+  /** Callback when user submits feedback */
+  onFeedback?: (
+    messageIndex: number,
+    feedbackType: "up" | "down",
+    optionalText?: string,
+  ) => Promise<void>;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, messageIndex, sessionId, onFeedback }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const isTool = message.role === "tool";
 
@@ -40,6 +51,15 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             <Loader2 className="h-3 w-3 animate-spin" />
             <span>Đang truy vấn dữ liệu...</span>
           </div>
+        )}
+
+        {/* Feedback buttons for assistant messages with content */}
+        {!isUser && message.content && messageIndex !== undefined && sessionId && onFeedback && (
+          <FeedbackButtons
+            messageIndex={messageIndex}
+            sessionId={sessionId}
+            onFeedback={onFeedback}
+          />
         )}
       </div>
 

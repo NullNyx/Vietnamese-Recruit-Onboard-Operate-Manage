@@ -41,12 +41,16 @@ class TestToolBoundary:
             )
 
     def test_known_tool_names(self) -> None:
-        """Verify exactly the 6 expected tools exist."""
+        """Verify exactly the 10 expected tools exist."""
         expected_names = {
             "count_candidates_by_status",
             "list_in_progress_onboarding",
             "search_candidates",
             "get_candidate_parsed_cv",
+            "list_job_openings",
+            "get_department_info",
+            "list_interviews_for_candidate",
+            "get_onboarding_task_details",
             "draft_interview_invitation",
             "draft_congratulations_email",
         }
@@ -59,7 +63,7 @@ class TestToolBoundary:
     def test_openai_tools_format_has_no_write(self) -> None:
         """The OpenAI-format tool definitions must not contain write operations."""
         openai_tools = get_openai_tools()
-        assert len(openai_tools) == 6
+        assert len(openai_tools) == 10
 
         for tool in openai_tools:
             assert tool["type"] == "function"
@@ -89,15 +93,19 @@ class TestToolBoundary:
         assert names == {"draft_interview_invitation", "draft_congratulations_email"}
 
     def test_read_tool_count(self) -> None:
-        """There should be exactly 4 Read-Tools."""
+        """There should be exactly 8 Read-Tools."""
         read_tools = [t for t in TOOL_DEFINITIONS if t.kind == ToolKind.READ]
-        assert len(read_tools) == 4
+        assert len(read_tools) == 8
         read_names = {t.name for t in read_tools}
         assert read_names == {
             "count_candidates_by_status",
             "list_in_progress_onboarding",
             "search_candidates",
             "get_candidate_parsed_cv",
+            "list_job_openings",
+            "get_department_info",
+            "list_interviews_for_candidate",
+            "get_onboarding_task_details",
         }
 
 

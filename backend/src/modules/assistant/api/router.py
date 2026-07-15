@@ -9,18 +9,34 @@ held in frontend memory; backend processes each turn statelessly.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
+
+import uuid
+
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.assistant.api.schemas import (
+    AssistantFeedbackRequest,
     ChatRequest,
     ChatResponseSchema,
     DraftActionSchema,
     DraftDecisionRequest,
     OutgoingMessageSchema,
+    SessionEndRequest,
+    SessionStartRequest,
+    SessionStartResponse,
 )
+
+    from src.modules.assistant.infrastructure.quality_models import (
+        AssistantChatSession,
+        AssistantFeedbackEvent,
+        AssistantToolCallEvent,
+    )
 from src.modules.assistant.application.assistant_service import (
     AssistantService,
     ChatMessage,
@@ -89,8 +105,10 @@ async def chat(
 
     # Run the assistant with filtered tools
     response = await assistant_service.chat(
-        domain_messages,
-        enabled_tool_names=enabled_tool_names,
+    domain_messages,
+    enabled_tool_names=enabled_tool_names,
+    session=session,
+    session_id=uuid.UUID(body.session_id) if body.session_id else None,
     )
 
     # Convert back to schema
@@ -125,6 +143,40 @@ async def chat(
     )
 
 
+    @router.post("/feedback", status_code=204)
+    async def assistant_feedback(
+        body: AssistantFeedbackRequest,
+        _user: AdminUserDep,
+        audit_service: AuditServiceDep,
+        session: AsyncSession = Depends(get_db_session),
+    ) -> None:
+        """Record user feedback (thumbs up/down) for an assistant response."""
+        await audit_service.log_action(
+            admin=_user,
+            action_type=AuditActionType.ASSISTANT_CHAT,
+            details={
+                "event": "message_feedback",
+                "session_id": body.session_id,
+                "message_index": body.message_index,
+                "feedback_type": body.feedback_type,
+                "optional_text": body.optional_text,
+            },
+        )
+        from src.modules.assistant.infrastructure.quality_models import (
+            AssistantFeedbackEvent,
+            FeedbackType,
+        )
+
+        feedback_event = AssistantFeedbackEvent(
+            session_id=uuid.UUID(body.session_id),
+            message_index=body.message_index,
+            feedback_type=FeedbackType(body.feedback_type),
+            optional_text=body.optional_text,
+        )
+        session.add(feedback_event)
+        await session.commit()
+
+
 @router.post("/draft-decision", status_code=204)
 async def record_draft_decision(
     body: DraftDecisionRequest,
@@ -147,3 +199,49 @@ async def record_draft_decision(
             "parameters": {"candidate_id": body.provenance.get("candidate_id")},
         },
     )
+
+
+@router.post("/session/start", response_model=SessionStartResponse)
+async def start_assistant_session(
+    body: SessionStartRequest,
+    _user: AdminUserDep,
+    session: AsyncSession = Depends(get_db_session),
+) -> SessionStartResponse:
+    """Start an AI Assistant chat session.
+
+    Creates a record in assistant_chat_sessions.
+    Called when the frontend ChatInterface mounts.
+    """
+    chat_session = AssistantChatSession(
+        user_id=uuid.UUID(str(_user.id)),
+        assistant_type=body.assistant_type,
+    )
+    session.add(chat_session)
+    await session.commit()
+    await session.refresh(chat_session)
+    return SessionStartResponse(session_id=str(chat_session.id))
+
+
+@router.post("/session/end", status_code=204)
+async def end_assistant_session(
+    body: SessionEndRequest,
+    _user: AdminUserDep,
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """End an AI Assistant chat session.
+
+    Updates end_at timestamp and message_count.
+    Called when the frontend ChatInterface unmounts.
+    """
+    from sqlmodel import select
+
+    result = await session.execute(
+        select(AssistantChatSession).where(
+            AssistantChatSession.id == uuid.UUID(body.session_id),
+        )
+    )
+    chat_session = result.scalar_one_or_none()
+    if chat_session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    chat_session.end_at = datetime.now(UTC)
+    await session.commit()

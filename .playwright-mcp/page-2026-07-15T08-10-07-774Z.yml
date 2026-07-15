@@ -1,0 +1,41 @@
+- generic [active] [ref=f10e1]:
+  - generic [ref=f10e2]:
+    - banner [ref=f10e3]:
+      - navigation "Điều hướng chính" [ref=f10e15]:
+        - link "V Vroom" [ref=f10e16] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f10e17]: V
+          - generic [ref=f10e18]: Vroom
+        - generic [ref=f10e19]:
+          - button "Nhân sự" [ref=f10e22] [cursor=pointer]
+          - button "Tuyển dụng" [ref=f10e26] [cursor=pointer]
+          - button "Chấm công" [ref=f10e30] [cursor=pointer]
+          - button "Lương" [ref=f10e34] [cursor=pointer]
+          - button "Hệ thống" [ref=f10e38] [cursor=pointer]
+        - generic [ref=f10e40]:
+          - button "Tìm kiếm (Ctrl+K)" [ref=f10e41] [cursor=pointer]:
+            - generic:
+              - generic: ⌘
+              - text: K
+          - button "Thông báo" [ref=f10e42] [cursor=pointer]
+          - button "Tài khoản" [ref=f10e43] [cursor=pointer]:
+            - generic [ref=f10e44]: HQ
+    - main [ref=f10e6]:
+      - generic [ref=f10e46]:
+        - generic [ref=f10e47]:
+          - heading "AI Assistant" [level=1] [ref=f10e48]
+          - paragraph [ref=f10e49]: Hỏi đáp về dữ liệu tuyển dụng, onboarding, và soạn email
+        - generic [ref=f10e50]:
+          - generic [ref=f10e54]:
+            - paragraph [ref=f10e71]: Có bao nhiêu candidate đang reviewing?
+            - generic [ref=f10e81]:
+              - paragraph [ref=f10e82]: Hiện tại **không có** candidate nào đang ở trạng thái **reviewing**. Kết quả trả về là 0. Bạn có muốn kiểm tra số lượng candidate theo trạng thái khác không?
+              - generic [ref=f10e84]:
+                - button "Thumbs up" [disabled] [ref=f10e85]
+                - button "Thumbs down" [disabled] [ref=f10e88]
+                - generic [ref=f10e91]: Đã đánh giá
+          - generic [ref=f10e66]:
+            - textbox "Nhập tin nhắn..." [ref=f10e67]
+            - button [disabled]
+  - region "Notifications alt+T"
+  - alert [ref=f10e14]

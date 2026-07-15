@@ -96,6 +96,47 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
         },
     ),
     ToolDefinition(
+        name="list_interviews_for_candidate",
+        kind=ToolKind.READ,
+        description=(
+            "List interviews for a candidate. Returns a list of interviews with "
+            "scheduled_time, status (scheduled/completed/cancelled), location, "
+            "and notes. Use when the user asks about a candidate's interview "
+            "schedule, upcoming interviews, or interview history."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "candidate_id": {
+                    "type": "string",
+                    "description": "UUID of the candidate whose interviews to list.",
+                },
+            },
+            "required": ["candidate_id"],
+        },
+    ),
+    ToolDefinition(
+        name="get_onboarding_task_details",
+        kind=ToolKind.READ,
+        description=(
+            "Get task details for an onboarding process. Returns a list of tasks "
+            "with name, status (pending/done), due_date (if available), "
+            "is_overdue (boolean), and assigned_to (if available). "
+            "Use when the user asks about onboarding progress, task checklist, "
+            "or what remains to be done for a specific onboarding process."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "onboarding_process_id": {
+                    "type": "string",
+                    "description": "UUID of the onboarding process whose tasks to retrieve.",
+                },
+            },
+            "required": ["onboarding_process_id"],
+        },
+    ),
+    ToolDefinition(
         name="list_in_progress_onboarding",
         kind=ToolKind.READ,
         description=(
@@ -182,10 +223,56 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
             },
             "required": ["candidate_id", "interview_date", "interview_time", "location"],
         },
-    ),
-    ToolDefinition(
-        name="draft_congratulations_email",
-        kind=ToolKind.DRAFT,
+        ),
+        ToolDefinition(
+            name="list_job_openings",
+            kind=ToolKind.READ,
+            description=(
+                "List job openings in the recruitment pipeline, optionally filtered "
+                "by status. Returns a list of job openings with id, title, department, "
+                "position, headcount_target, headcount_filled, and status. "
+                "Use when the user asks about job openings, hiring plans, "
+                "or headcount status."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "description": (
+                            "Optional status filter. One of: draft, open, closed, cancelled. "
+                            "Defaults to 'open' if omitted."
+                        ),
+                    },
+                },
+            },
+        ),
+        ToolDefinition(
+            name="get_department_info",
+            kind=ToolKind.READ,
+            description=(
+                "Get department information. Returns department name, description, "
+                "list of positions (title, employee count), and manager info. "
+                "If department_id is omitted, returns info for ALL departments. "
+                "Use when the user asks about a department's structure, "
+                "positions, or management."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "department_id": {
+                        "type": "string",
+                        "description": (
+                            "Optional UUID of the department. If omitted, "
+                            "returns info for all departments."
+                        ),
+                    },
+                },
+            },
+        ),
+        ToolDefinition(
+            name="draft_congratulations_email",
+            kind=ToolKind.DRAFT,
         description=(
             "Draft a congratulations / offer email for a candidate. Returns a Draft Action "
             "with the email content for HR to review and confirm. "

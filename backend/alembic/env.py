@@ -23,6 +23,11 @@ from sqlmodel import SQLModel  # noqa: E402
 from src.modules.assistant.domain.entities import (  # noqa: E402, F401
     AssistantToolConfig,
 )
+from src.modules.assistant.infrastructure.quality_models import (  # noqa: E402, F401
+    AssistantChatSession,
+    AssistantFeedbackEvent,
+    AssistantToolCallEvent,
+)
 from src.modules.employee.domain.entities import (  # noqa: E402, F401
     Department,
     Employee,

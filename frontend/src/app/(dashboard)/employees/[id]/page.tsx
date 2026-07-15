@@ -431,11 +431,11 @@ export default function EmployeeDetailPage() {
                 onChange={(e) => setUploadType(e.target.value)}
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                <option value="contract">Contract</option>
-                <option value="id_card">ID Card</option>
-                <option value="cv">CV / Resume</option>
-                <option value="certificate">Certificate</option>
-                <option value="other">Other</option>
+                    <option value="contract">Hợp đồng</option>
+                    <option value="id_card">Căn cước công dân</option>
+                    <option value="cv">CV / Sơ yếu lý lịch</option>
+                    <option value="certificate">Chứng chỉ</option>
+                    <option value="other">Khác</option>
               </select>
             </div>
             <div>
@@ -443,14 +443,14 @@ export default function EmployeeDetailPage() {
                 htmlFor="doc_desc"
                 className="mb-1 block text-xs font-medium text-muted-foreground"
               >
-                Description (optional)
+                    Mô tả (không bắt buộc)
               </label>
               <input
                 id="doc_desc"
                 type="text"
                 value={uploadDescription}
                 onChange={(e) => setUploadDescription(e.target.value)}
-                placeholder="Brief description"
+                    placeholder="Mô tả ngắn"
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -458,7 +458,7 @@ export default function EmployeeDetailPage() {
           <div className="mt-3">
             <Button type="submit" size="sm" disabled={!uploadFile || uploading}>
               <Upload className="mr-2 h-3 w-3" />
-              {uploading ? "Uploading..." : "Upload"}
+                  {uploading ? "Đang tải lên..." : "Tải lên"}
             </Button>
           </div>
         </form>

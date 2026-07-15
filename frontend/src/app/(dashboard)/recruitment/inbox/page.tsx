@@ -651,7 +651,7 @@ function InboxItemDetailDialog({
             <Label htmlFor="target-job-application">Job Application đích</Label>
             <Input
               id="target-job-application"
-              placeholder="Job Application ID"
+              placeholder="Mã Job Application"
               value={targetApplicationId}
               onChange={(event) => setTargetApplicationId(event.target.value)}
               disabled={Boolean(linkProposal)}

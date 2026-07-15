@@ -13,8 +13,8 @@ class TestToolDefinitions:
     """Test tool definition structure and correctness."""
 
     def test_tool_definitions_count(self) -> None:
-        """There must be exactly 6 tools."""
-        assert len(TOOL_DEFINITIONS) == 6
+        """There must be exactly 10 tools."""
+        assert len(TOOL_DEFINITIONS) == 10
 
     def test_all_tools_have_names(self) -> None:
         """Every tool must have a non-empty name."""
@@ -49,6 +49,15 @@ class TestToolDefinitions:
         assert names == {"draft_interview_invitation", "draft_congratulations_email"}
 
 
+    def test_read_tools_include_new_tools(self) -> None:
+        """Read-Tools include the 4 new tools."""
+        read_tools = [t for t in TOOL_DEFINITIONS if t.kind == ToolKind.READ]
+        names = {t.name for t in read_tools}
+        assert "list_job_openings" in names
+        assert "get_department_info" in names
+        assert "list_interviews_for_candidate" in names
+        assert "get_onboarding_task_details" in names
+
 class TestOpenAIFormat:
     """Test OpenAI function-calling format conversion."""
 
@@ -58,9 +67,9 @@ class TestOpenAIFormat:
         assert isinstance(result, list)
 
     def test_get_openai_tools_count(self) -> None:
-        """Returns all 6 tools."""
+        """Returns all 10 tools."""
         result = get_openai_tools()
-        assert len(result) == 6
+        assert len(result) == 10
 
     def test_openai_tool_structure(self) -> None:
         """Each tool has correct OpenAI function-calling structure."""
@@ -111,9 +120,9 @@ class TestToolFiltering:
         """Filter with all tool names returns all tools."""
         all_names = {t.name for t in TOOL_DEFINITIONS}
         result = get_openai_tools(enabled_names=all_names)
-        assert len(result) == 6
+        assert len(result) == 10
 
     def test_none_filter_returns_all(self) -> None:
         """None filter (backwards compatible) returns all tools."""
         result = get_openai_tools(enabled_names=None)
-        assert len(result) == 6
+        assert len(result) == 10

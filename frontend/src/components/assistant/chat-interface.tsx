@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import { Send, Loader2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,9 @@ import { MessageBubble } from "./message-bubble";
 import { DraftActionCard } from "./draft-action-card";
 import {
   sendChatMessage,
+  startSession,
+  endSession,
+  sendFeedback,
   type ChatMessage,
   type DraftAction,
   type ChatResponse,
@@ -18,6 +21,7 @@ import {
 export interface ChatInterfaceProps {
   sendMessage?: (
     messages: ChatMessage[],
+    sessionId?: string,
   ) => Promise<ChatResponse>;
   confirmAction?: (draft: DraftAction) => Promise<unknown>;
   title?: string;
@@ -29,6 +33,12 @@ export interface ChatInterfaceProps {
     leave?: Record<string, string>;
     overtime?: Record<string, string>;
   }) => void | Promise<void>;
+  /** Type of assistant for session tracking: 'hr' or 'employee' */
+  assistantType?: "hr" | "employee";
+  /** Custom session start handler (e.g. for employee assistant) */
+  onSessionStart?: (assistantType: "hr" | "employee") => Promise<{ session_id: string }>;
+  /** Custom session end handler */
+  onSessionEnd?: (sessionId: string) => Promise<void>;
 }
 
 export function ChatInterface({
@@ -39,6 +49,9 @@ export function ChatInterface({
   suggestions,
   icon,
   onOpenRequestDialog,
+  assistantType = "hr",
+  onSessionStart,
+  onSessionEnd,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -51,6 +64,35 @@ export function ChatInterface({
   } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
+
+  // Start session on mount, end on unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    const startSess = onSessionStart ?? startSession;
+    const endSess = onSessionEnd ?? endSession;
+
+    startSess(assistantType)
+      .then((res) => {
+        if (mountedRef.current) {
+          sessionIdRef.current = res.session_id;
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to start assistant session:", err);
+      });
+
+    return () => {
+      mountedRef.current = false;
+      const sid = sessionIdRef.current;
+      if (sid) {
+        endSess(sid).catch((err) => {
+          console.warn("Failed to end assistant session:", err);
+        });
+      }
+    };
+  }, [assistantType, onSessionStart, onSessionEnd]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -85,10 +127,9 @@ export function ChatInterface({
     setLoading(true);
 
     try {
-      const response = await sendMessage(updatedMessages);
+      const response = await sendMessage(updatedMessages, sessionIdRef.current ?? undefined);
 
       // Filter out tool-call only messages (content=null, role=assistant)
-      // that would render as empty bubbles or stuck loaders in the UI.
       const displayMessages = response.messages.filter(
         (m) => !(m.role === "assistant" && m.content === null && m.tool_calls),
       );
@@ -115,12 +156,33 @@ export function ChatInterface({
     }
   };
 
+  const handleFeedback = useCallback(
+    async (messageIndex: number, feedbackType: "up" | "down", optionalText?: string) => {
+      const sid = sessionIdRef.current;
+      if (!sid) {
+        toast.error("Không thể gửi đánh giá: chưa có session");
+        return;
+      }
+      try {
+        await sendFeedback({
+          session_id: sid,
+          message_index: messageIndex,
+          feedback_type: feedbackType,
+          optional_text: optionalText,
+        });
+      } catch (err) {
+        console.warn("Failed to send feedback:", err);
+        toast.error("Không thể gửi đánh giá");
+      }
+    },
+    [],
+  );
+
   const handleDraftConfirm = () => {
     if (!draftAction) {
       return;
     }
 
-    // Translate draft action to prefill values
     if (draftAction.action_type === "submit_leave_request") {
       setPrefillValues({
         leave: {
@@ -189,7 +251,13 @@ export function ChatInterface({
           )}
 
           {messages.map((msg, i) => (
-            <MessageBubble key={i} message={msg} />
+            <MessageBubble
+              key={i}
+              message={msg}
+              messageIndex={i}
+              sessionId={sessionIdRef.current ?? undefined}
+              onFeedback={handleFeedback}
+            />
           ))}
 
           {loading && (
@@ -212,7 +280,7 @@ export function ChatInterface({
           <DraftActionCard
             draft={draftAction}
             confirmAction={confirmAction}
-          confirmLabel={onOpenRequestDialog ? "Mở form" : "Xác nhận"}
+            confirmLabel={onOpenRequestDialog ? "Mở form" : "Xác nhận"}
             onConfirmed={onOpenRequestDialog ? handleDraftConfirm : undefined}
             onDismissed={() => setDraftAction(null)}
           />
