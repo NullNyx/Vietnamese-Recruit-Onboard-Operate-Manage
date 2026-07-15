@@ -99,10 +99,10 @@ async def chat(
 
     # Run the assistant with filtered tools
     response = await assistant_service.chat(
-    domain_messages,
-    enabled_tool_names=enabled_tool_names,
-    session=session,
-    session_id=uuid.UUID(body.session_id) if body.session_id else None,
+        domain_messages,
+        enabled_tool_names=enabled_tool_names,
+        session=session,
+        session_id=uuid.UUID(body.session_id) if body.session_id else None,
     )
 
     # Convert back to schema
@@ -135,7 +135,6 @@ async def chat(
         messages=new_messages,
         draft_action=draft_action,
     )
-
 
     @router.post("/feedback", status_code=204)
     async def assistant_feedback(

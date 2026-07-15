@@ -43,9 +43,7 @@ class AssistantChatSession(SQLModel, table=True):
     assistant_type: AssistantType = Field(
         sa_column=Column(String(10), nullable=False),
     )
-    employee_id: UUID | None = Field(
-        default=None, foreign_key="employees.id", index=True
-    )
+    employee_id: UUID | None = Field(default=None, foreign_key="employees.id", index=True)
     start_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

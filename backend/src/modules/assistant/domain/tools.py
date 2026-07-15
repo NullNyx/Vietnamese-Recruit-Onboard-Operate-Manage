@@ -151,50 +151,50 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
             "properties": {},
         },
     ),
-        ToolDefinition(
-            name="search_candidates",
-            kind=ToolKind.READ,
-            description=(
-                "Search for candidates by name or email. Returns matching "
-                "candidates with id, name, email, and status. "
-                "Use when the user mentions a specific candidate by name "
-                "or email, or before drafting an email to a candidate."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "Search term — matches against candidate name or email.",
-                    },
-                },
-                "required": ["query"],
-            },
+    ToolDefinition(
+        name="search_candidates",
+        kind=ToolKind.READ,
+        description=(
+            "Search for candidates by name or email. Returns matching "
+            "candidates with id, name, email, and status. "
+            "Use when the user mentions a specific candidate by name "
+            "or email, or before drafting an email to a candidate."
         ),
-        ToolDefinition(
-            name="get_candidate_parsed_cv",
-            kind=ToolKind.READ,
-            description=(
-                "Get the parsed CV data for a candidate. Returns structured data "
-                "including skills, experience, education, summary, and the full "
-                "parsed CV JSON from the AI Automation pipeline. "
-                "Use when the user asks about a candidate's CV content, skills, "
-                "experience, or background — or before drafting an email to "
-                "personalize it with CV details."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "candidate_id": {
-                        "type": "string",
-                        "description": "UUID of the candidate whose CV to read.",
-                    },
+        parameters={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Search term — matches against candidate name or email.",
                 },
-                "required": ["candidate_id"],
             },
+            "required": ["query"],
+        },
+    ),
+    ToolDefinition(
+        name="get_candidate_parsed_cv",
+        kind=ToolKind.READ,
+        description=(
+            "Get the parsed CV data for a candidate. Returns structured data "
+            "including skills, experience, education, summary, and the full "
+            "parsed CV JSON from the AI Automation pipeline. "
+            "Use when the user asks about a candidate's CV content, skills, "
+            "experience, or background — or before drafting an email to "
+            "personalize it with CV details."
         ),
-        ToolDefinition(
-            name="draft_interview_invitation",
+        parameters={
+            "type": "object",
+            "properties": {
+                "candidate_id": {
+                    "type": "string",
+                    "description": "UUID of the candidate whose CV to read.",
+                },
+            },
+            "required": ["candidate_id"],
+        },
+    ),
+    ToolDefinition(
+        name="draft_interview_invitation",
         kind=ToolKind.DRAFT,
         description=(
             "Draft an interview invitation email for a candidate. Returns a Draft Action "
@@ -223,56 +223,56 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
             },
             "required": ["candidate_id", "interview_date", "interview_time", "location"],
         },
+    ),
+    ToolDefinition(
+        name="list_job_openings",
+        kind=ToolKind.READ,
+        description=(
+            "List job openings in the recruitment pipeline, optionally filtered "
+            "by status. Returns a list of job openings with id, title, department, "
+            "position, headcount_target, headcount_filled, and status. "
+            "Use when the user asks about job openings, hiring plans, "
+            "or headcount status."
         ),
-        ToolDefinition(
-            name="list_job_openings",
-            kind=ToolKind.READ,
-            description=(
-                "List job openings in the recruitment pipeline, optionally filtered "
-                "by status. Returns a list of job openings with id, title, department, "
-                "position, headcount_target, headcount_filled, and status. "
-                "Use when the user asks about job openings, hiring plans, "
-                "or headcount status."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "status": {
-                        "type": "string",
-                        "description": (
-                            "Optional status filter. One of: draft, open, closed, cancelled. "
-                            "Defaults to 'open' if omitted."
-                        ),
-                    },
+        parameters={
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "description": (
+                        "Optional status filter. One of: draft, open, closed, cancelled. "
+                        "Defaults to 'open' if omitted."
+                    ),
                 },
             },
+        },
+    ),
+    ToolDefinition(
+        name="get_department_info",
+        kind=ToolKind.READ,
+        description=(
+            "Get department information. Returns department name, description, "
+            "list of positions (title, employee count), and manager info. "
+            "If department_id is omitted, returns info for ALL departments. "
+            "Use when the user asks about a department's structure, "
+            "positions, or management."
         ),
-        ToolDefinition(
-            name="get_department_info",
-            kind=ToolKind.READ,
-            description=(
-                "Get department information. Returns department name, description, "
-                "list of positions (title, employee count), and manager info. "
-                "If department_id is omitted, returns info for ALL departments. "
-                "Use when the user asks about a department's structure, "
-                "positions, or management."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "department_id": {
-                        "type": "string",
-                        "description": (
-                            "Optional UUID of the department. If omitted, "
-                            "returns info for all departments."
-                        ),
-                    },
+        parameters={
+            "type": "object",
+            "properties": {
+                "department_id": {
+                    "type": "string",
+                    "description": (
+                        "Optional UUID of the department. If omitted, "
+                        "returns info for all departments."
+                    ),
                 },
             },
-        ),
-        ToolDefinition(
-            name="draft_congratulations_email",
-            kind=ToolKind.DRAFT,
+        },
+    ),
+    ToolDefinition(
+        name="draft_congratulations_email",
+        kind=ToolKind.DRAFT,
         description=(
             "Draft a congratulations / offer email for a candidate. Returns a Draft Action "
             "with the email content for HR to review and confirm. "

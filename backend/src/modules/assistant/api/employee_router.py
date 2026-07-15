@@ -161,7 +161,7 @@ async def employee_chat(
         domain_messages,
         session=session,
         session_id=uuid.UUID(body.session_id) if body.session_id else None,
-        )
+    )
 
     new_messages = [
         OutgoingMessageSchema(
@@ -182,7 +182,6 @@ async def employee_chat(
         messages=new_messages,
         draft_action=draft_action,
     )
-
 
     @employee_assistant_router.post("/feedback", status_code=204)
     async def employee_assistant_feedback(

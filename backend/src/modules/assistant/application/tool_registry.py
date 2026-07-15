@@ -347,7 +347,6 @@ class ToolRegistry:
             }
         }
 
-
     async def _list_job_openings(self, args: dict[str, Any]) -> dict[str, typing.Any]:
         """Read-Tool: list job openings, optionally filtered by status."""
         if self._session is None:
@@ -451,31 +450,36 @@ class ToolRegistry:
         result_items = []
         for dept in departments:
             # Get positions in this department
-            pos_stmt = sqlmodel_select(Position).where(
-                Position.department_id == dept.id
-            ).order_by(Position.name)
+            pos_stmt = (
+                sqlmodel_select(Position)
+                .where(Position.department_id == dept.id)
+                .order_by(Position.name)
+            )
             pos_result = await self._session.execute(pos_stmt)
             positions = list(pos_result.scalars().all())
 
             # Count employees per position
             position_info = []
             for pos in positions:
-                count_stmt = sqlmodel_select(func.count()).select_from(Employee).where(
-                    Employee.position_id == pos.id,
+                count_stmt = (
+                    sqlmodel_select(func.count())
+                    .select_from(Employee)
+                    .where(
+                        Employee.position_id == pos.id,
+                    )
                 )
                 count_result = await self._session.execute(count_stmt)
                 emp_count = count_result.scalar_one() or 0
-                position_info.append({
-                    "position_title": pos.name,
-                    "employee_count": emp_count,
-                })
+                position_info.append(
+                    {
+                        "position_title": pos.name,
+                        "employee_count": emp_count,
+                    }
+                )
 
             # Get manager info: employees in this department
-            mgr_stmt = (
-                sqlmodel_select(Employee)
-                .where(
-                    Employee.department_id == dept.id,
-                )
+            mgr_stmt = sqlmodel_select(Employee).where(
+                Employee.department_id == dept.id,
             )
             mgr_result = await self._session.execute(mgr_stmt)
             dept_employees = list(mgr_result.scalars().all())
@@ -483,31 +487,34 @@ class ToolRegistry:
             manager_ids = {e.manager_id for e in dept_employees if e.manager_id}
             managers = []
             if manager_ids:
-                mgr_lookup_stmt = sqlmodel_select(Employee).where(
-                    Employee.id.in_(manager_ids)
-                )
+                mgr_lookup_stmt = sqlmodel_select(Employee).where(Employee.id.in_(manager_ids))
                 mgr_lookup_result = await self._session.execute(mgr_lookup_stmt)
                 mgr_map = {e.id: e for e in mgr_lookup_result.scalars().all()}
                 for mgr_id in manager_ids:
                     mgr = mgr_map.get(mgr_id)
                     if mgr:
-                        managers.append({
-                            "id": str(mgr.id),
-                            "full_name": mgr.full_name,
-                            "email": mgr.email,
-                            "position_id": str(mgr.position_id) if mgr.position_id else None,
-                        })
+                        managers.append(
+                            {
+                                "id": str(mgr.id),
+                                "full_name": mgr.full_name,
+                                "email": mgr.email,
+                                "position_id": str(mgr.position_id) if mgr.position_id else None,
+                            }
+                        )
 
-            result_items.append({
-                "id": str(dept.id),
-                "name": dept.name,
-                "description": dept.description,
-                "positions": position_info,
-                "managers": managers,
-                "employee_count": len(dept_employees),
-            })
+            result_items.append(
+                {
+                    "id": str(dept.id),
+                    "name": dept.name,
+                    "description": dept.description,
+                    "positions": position_info,
+                    "managers": managers,
+                    "employee_count": len(dept_employees),
+                }
+            )
 
         return {"departments": result_items, "total": len(result_items)}
+
     async def _list_interviews_for_candidate(self, args: dict[str, Any]) -> dict[str, typing.Any]:
         """Read-Tool: list interviews for a candidate."""
         candidate_id_str = args.get("candidate_id")
@@ -550,17 +557,19 @@ class ToolRegistry:
 
         tasks = []
         for task in detail.tasks:
-            tasks.append({
-                "id": str(task.id),
-                "name": task.name,
-                "status": task.status,
-                "order_index": task.order_index,
-                "due_date": None,  # not yet modelled on OnboardingTask entity
-                "is_overdue": False,  # no due_date to compare against
-                "assigned_to": None,  # not yet modelled on OnboardingTask entity
-                "completed_at": task.completed_at,
-                "completed_by_name": task.completed_by_name,
-            })
+            tasks.append(
+                {
+                    "id": str(task.id),
+                    "name": task.name,
+                    "status": task.status,
+                    "order_index": task.order_index,
+                    "due_date": None,  # not yet modelled on OnboardingTask entity
+                    "is_overdue": False,  # no due_date to compare against
+                    "assigned_to": None,  # not yet modelled on OnboardingTask entity
+                    "completed_at": task.completed_at,
+                    "completed_by_name": task.completed_by_name,
+                }
+            )
 
         return {
             "process_id": str(detail.process_id),
@@ -569,5 +578,3 @@ class ToolRegistry:
             "total_count": detail.total_count,
             "tasks": tasks,
         }
-
-

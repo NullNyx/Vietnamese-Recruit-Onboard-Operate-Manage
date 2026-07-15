@@ -104,10 +104,7 @@ class OrganizationGoogleConnectionService:
         if self._sync_cursor_repo is not None:
             await self._sync_cursor_repo.clear_cursor()
 
-
-        mark_reauthorization = getattr(
-            self._connection_repo, "mark_reauthorization_required", None
-        )
+        mark_reauthorization = getattr(self._connection_repo, "mark_reauthorization_required", None)
         if callable(mark_reauthorization):
             await mark_reauthorization()
             return True
@@ -134,11 +131,7 @@ class OrganizationGoogleConnectionService:
                 status="disconnected",
                 selected_calendar_id=None,
             )
-        status = (
-            current.status
-            if current.status in VALID_CONNECTION_STATUSES
-            else "degraded"
-        )
+        status = current.status if current.status in VALID_CONNECTION_STATUSES else "degraded"
         return OrganizationGoogleConnectionResponse(
             status=status,
             email=current.email,
@@ -217,9 +210,8 @@ class OrganizationGoogleConnectionService:
             or payload.get("redirect_uri") is None
         ):
             raise InvalidStateError()
-        if (
-            current.oauth_state_expires_at is None
-            or current.oauth_state_expires_at < datetime.now(UTC)
+        if current.oauth_state_expires_at is None or current.oauth_state_expires_at < datetime.now(
+            UTC
         ):
             raise InvalidStateError()
 
@@ -295,14 +287,10 @@ class OrganizationGoogleConnectionService:
             raise DomainAccessDeniedError()
         domains = await self._org_settings_repo.get_allowed_domains()
         allowed_domains = {str(domain).lower().lstrip("@") for domain in domains}
-        if allowed_domains and (
-            not isinstance(hd, str) or hd.lower() not in allowed_domains
-        ):
+        if allowed_domains and (not isinstance(hd, str) or hd.lower() not in allowed_domains):
             raise DomainAccessDeniedError()
         email_domain = (
-            hd.lower()
-            if isinstance(hd, str) and hd
-            else email.rsplit("@", 1)[-1].lower()
+            hd.lower() if isinstance(hd, str) and hd else email.rsplit("@", 1)[-1].lower()
         )
         refresh_token = data.get("refresh_token")
         if not refresh_token and current.refresh_token_enc:

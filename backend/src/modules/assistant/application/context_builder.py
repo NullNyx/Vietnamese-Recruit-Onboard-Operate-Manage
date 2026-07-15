@@ -309,18 +309,16 @@ class ContextBuilder:
                 from src.modules.employee_request.domain.entities import (
                     RequestStatus,
                 )
-                pending_leave = sum(
-                    1 for r in leaves if r.status == RequestStatus.SUBMITTED
-                )
+
+                pending_leave = sum(1 for r in leaves if r.status == RequestStatus.SUBMITTED)
 
             if self._overtime_service:
                 overtimes = await self._overtime_service.list_my_overtime(employee_id)
                 from src.modules.employee_request.domain.entities import (
                     RequestStatus,
                 )
-                pending_overtime = sum(
-                    1 for r in overtimes if r.status == RequestStatus.SUBMITTED
-                )
+
+                pending_overtime = sum(1 for r in overtimes if r.status == RequestStatus.SUBMITTED)
 
             total = pending_leave + pending_overtime
             if total == 0:

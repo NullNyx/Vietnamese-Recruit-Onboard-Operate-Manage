@@ -190,7 +190,9 @@ class AssistantService:
                 tool_duration_ms = (time.monotonic() - tool_start) * 1000
                 logger.debug(
                     "Tool %s took %.0f ms (success=%s)",
-                    tool_name, tool_duration_ms, success,
+                    tool_name,
+                    tool_duration_ms,
+                    success,
                 )
 
                 # Record tool call event to DB if session is available

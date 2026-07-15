@@ -79,7 +79,6 @@ async def get_tool_registry(
     )
 
 
-
 async def get_configured_assistant_settings(
     session: AsyncSession = Depends(get_db_session),
 ) -> AssistantSettings:

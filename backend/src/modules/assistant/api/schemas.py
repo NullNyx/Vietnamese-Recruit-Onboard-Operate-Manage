@@ -122,22 +122,14 @@ class AssistantFeedbackRequest(BaseModel):
     """
 
     session_id: str = Field(
-        ...,
-        description="A client-generated session identifier for the conversation"
+        ..., description="A client-generated session identifier for the conversation"
     )
     message_index: int = Field(
-        ...,
-        ge=0,
-        description="Index of the message the feedback is for, within the session"
+        ..., ge=0, description="Index of the message the feedback is for, within the session"
     )
-    feedback_type: Literal["up", "down"] = Field(
-        ...,
-        description="Thumbs up or thumbs down"
-    )
+    feedback_type: Literal["up", "down"] = Field(..., description="Thumbs up or thumbs down")
     optional_text: str | None = Field(
-        default=None,
-        max_length=1000,
-        description="Optional free-text feedback explanation"
+        default=None, max_length=1000, description="Optional free-text feedback explanation"
     )
 
 

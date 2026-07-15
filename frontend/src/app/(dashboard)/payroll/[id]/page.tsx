@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { Loader2, Save, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
