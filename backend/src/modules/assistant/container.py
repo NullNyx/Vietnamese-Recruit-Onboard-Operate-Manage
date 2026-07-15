@@ -20,11 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.modules.assistant.application.assistant_service import AssistantService
 from src.modules.assistant.application.context_builder import ContextBuilder
 from src.modules.assistant.application.tool_registry import ToolRegistry
-from src.modules.employee.application.department_service import DepartmentService
-from src.modules.employee.container import get_department_service
-
 from src.modules.assistant.infrastructure.config import AssistantSettings
 from src.modules.assistant.infrastructure.llm_client import AssistantLLMClient
+from src.modules.employee.application.department_service import DepartmentService
+from src.modules.employee.container import get_department_service
 from src.modules.identity.application.organization_ai_config_service import (
     OrganizationAIConfigService,
     OrganizationAIConfigValidationError,
@@ -37,9 +36,6 @@ from src.modules.onboarding.application.onboarding_service import OnboardingServ
 from src.modules.onboarding.container import get_onboarding_service
 from src.modules.recruitment.application.candidate_service import CandidateService
 from src.modules.recruitment.container import get_candidate_service
-from src.modules.recruitment.infrastructure.org_settings_repository import (
-    OrganizationSettingsRepository,
-)
 from src.modules.recruitment.infrastructure.repositories import JobOpeningRepository
 
 # ---------------------------------------------------------------------------

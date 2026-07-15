@@ -287,7 +287,8 @@ class ContextBuilder:
         try:
             balance = await self._leave_service.get_my_leave_balance(employee_id)
             return (
-                f"Ngày phép năm: còn {balance['remaining_days']}/{balance['annual_entitlement_days']} ngày "
+                f"Ngày phép năm: còn {balance['remaining_days']}/"
+                f"{balance['annual_entitlement_days']} ngày "
                 f"(đã dùng {balance['approved_days_used']}, "
                 f"đang chờ duyệt {balance['pending_days']})"
             )

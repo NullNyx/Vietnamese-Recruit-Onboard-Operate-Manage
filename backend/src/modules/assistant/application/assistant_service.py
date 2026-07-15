@@ -13,10 +13,9 @@ tool_calls, or max iterations are reached (safety cap).
 
 from __future__ import annotations
 
-import time
-
 import json
 import logging
+import time
 import typing
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -30,7 +29,7 @@ from src.modules.assistant.infrastructure.llm_client import AssistantLLMClient
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
-    from src.modules.assistant.infrastructure.quality_models import AssistantToolCallEvent
+
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +188,10 @@ class AssistantService:
                     success = False
                     result_str = json.dumps({"error": f"Tool execution failed: {tool_name}"})
                 tool_duration_ms = (time.monotonic() - tool_start) * 1000
-                logger.debug("Tool %s took %.0f ms (success=%s)", tool_name, tool_duration_ms, success)
+                logger.debug(
+                    "Tool %s took %.0f ms (success=%s)",
+                    tool_name, tool_duration_ms, success,
+                )
 
                 # Record tool call event to DB if session is available
                 if session is not None and session_id is not None:
@@ -235,8 +237,9 @@ class AssistantService:
 
         # Increment message_count for this exchange
         if session is not None and session_id is not None:
-            from src.modules.assistant.infrastructure.quality_models import AssistantChatSession
             from sqlmodel import select
+
+            from src.modules.assistant.infrastructure.quality_models import AssistantChatSession
 
             result = await session.execute(
                 select(AssistantChatSession).where(

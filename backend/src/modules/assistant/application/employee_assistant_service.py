@@ -26,7 +26,7 @@ from src.modules.assistant.infrastructure.llm_client import AssistantLLMClient
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
-    from src.modules.assistant.infrastructure.quality_models import AssistantToolCallEvent
+
     from src.modules.attendance.infrastructure.attendance_record_repository import (
         AttendanceRecordRepository,
     )
@@ -228,8 +228,9 @@ class EmployeeAssistantService:
 
             # Increment message_count for this exchange
             if session is not None and session_id is not None:
-                from src.modules.assistant.infrastructure.quality_models import AssistantChatSession
                 from sqlmodel import select
+
+                from src.modules.assistant.infrastructure.quality_models import AssistantChatSession
 
                 result = await session.execute(
                     select(AssistantChatSession).where(

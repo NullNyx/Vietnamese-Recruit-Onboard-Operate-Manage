@@ -420,7 +420,8 @@ class ToolRegistry:
 
         import uuid as _uuid
 
-        from sqlmodel import func, select as sqlmodel_select
+        from sqlmodel import func
+        from sqlmodel import select as sqlmodel_select
 
         from src.modules.employee.domain.entities import Department, Employee, Position
 
