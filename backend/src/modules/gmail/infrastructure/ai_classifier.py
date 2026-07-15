@@ -119,19 +119,33 @@ class AIClassifier:
         settings: GmailSettings with LLM connection configuration.
     """
 
-    def __init__(self, settings: GmailSettings) -> None:
+    def __init__(
+        self,
+        settings: GmailSettings,
+        *,
+        base_url: str | None = None,
+        api_key: str | None = None,
+        model: str | None = None,
+    ) -> None:
         """Initialize the AI classifier with LLM client.
 
         Args:
             settings: Gmail module configuration with LLM settings.
+            base_url: Override the LLM base URL from settings.
+            api_key: Override the LLM API key from settings.
+            model: Override the LLM model name from settings.
         """
+        resolved_base_url = base_url or settings.classification_llm_base_url
+        resolved_api_key = api_key or settings.classification_llm_api_key
+        resolved_model = model or settings.classification_llm_model
+
         self._settings = settings
         self._client = AsyncOpenAI(
-            base_url=settings.classification_llm_base_url,
-            api_key=settings.classification_llm_api_key or "not-needed",
+            base_url=resolved_base_url,
+            api_key=resolved_api_key,
             timeout=settings.classification_llm_timeout_seconds,
         )
-        self._model = settings.classification_llm_model
+        self._model = resolved_model
 
     async def classify(
         self,
@@ -189,20 +203,14 @@ class AIClassifier:
                     timeout=self._settings.classification_llm_timeout_seconds,
                 )
 
-                # Handle reasoning models (e.g., MiMo) where the answer
-                # may be in content or reasoning_content
-                message = response.choices[0].message
-                raw_content = (message.content or "").strip().lower()
-
-                # If content is empty, try to extract category from reasoning_content
+                # Handle reasoning models and varied provider response shapes.
+                # Some providers return dict-like choices instead of lists,
+                # or nest the message differently.
+                raw_content = self._extract_content_from_response(response)
                 if not raw_content:
-                    reasoning = getattr(message, "reasoning_content", None) or ""
-                    logger.info(
-                        "AI content empty, extracting from reasoning (%d chars): %s",
-                        len(reasoning),
-                        reasoning[:200] if reasoning else "(empty)",
+                    raise AIClassificationError(
+                        "LLM returned empty content in response"
                     )
-                    raw_content = self._extract_category_from_reasoning(reasoning)
 
                 token_usage = self._extract_token_usage(response)
 
@@ -304,6 +312,124 @@ class AIClassifier:
             f"Đính kèm: {attachment_info}\n\n"
             f"Category:"
         )
+
+    def _extract_content_from_response(self, response: Any) -> str:
+        """Extract text content from an LLM response, handling varied provider shapes.
+
+        Tries multiple paths to get the content string:
+        1. Standard OpenAI: response.choices[0].message.content
+        2. Reasoning models: response.choices[0].message.reasoning_content
+        3. Dict-style choices (some providers): response.choices.message.content
+        4. Direct content: response.content or response.text
+
+        Args:
+            response: The raw chat completion response object.
+
+        Returns:
+            Extracted text content (lowercase, stripped), or empty string.
+        """
+        import json
+
+        # Log response structure for debugging unknown providers
+        try:
+            if hasattr(response, "model_dump"):
+                logger.debug("LLM response model: %s", getattr(response, "model", "unknown"))
+            else:
+                logger.debug("LLM response type: %s", type(response).__name__)
+        except Exception:
+            pass
+
+        content = self._try_extract_message_content(response)
+        if content:
+            return content.strip().lower()
+
+        # As a last resort, log the raw response for debugging
+        try:
+            raw = response.model_dump() if hasattr(response, "model_dump") else str(response)[:500]
+            logger.warning("Could not extract content from LLM response: %s", raw)
+        except Exception:
+            logger.warning("Could not extract content from LLM response (unable to serialize)")
+        return ""
+
+    def _try_extract_message_content(self, response: Any) -> str:
+        """Try all known paths to extract message content from a response."""
+        choices = getattr(response, "choices", None)
+        logger.debug("_try_extract: top choices=%s type=%s", choices, type(choices).__name__)
+        if not choices:
+            raw = self._safe_model_dump(response)
+            logger.debug("_try_extract: model_dump returned type=%s has_data=%s",
+                         type(raw).__name__ if raw else None,
+                         "data" in raw if raw else False)
+            if raw:
+                data = raw.get("data")
+                logger.debug("_try_extract: data type=%s", type(data).__name__)
+                if isinstance(data, dict):
+                    choices = data.get("choices")
+                    logger.debug("_try_extract: data.choices=%s", type(choices).__name__ if choices is not None else None)
+                elif data is not None and hasattr(data, "choices"):
+                    choices = data.choices
+                    logger.debug("_try_extract: data.choices (attr)=%s", type(choices).__name__ if choices is not None else None)
+        if not choices:
+            logger.debug("_try_extract: no choices found, returning empty")
+            return ""
+        logger.debug("_try_extract: choices is truthy, type=%s len=%s",
+                     type(choices).__name__, len(choices) if hasattr(choices, '__len__') else '?')
+
+        # Handle both list and dict-like choices
+        if isinstance(choices, (list, tuple)):
+            if not choices:
+                return ""
+            first = choices[0]
+        elif isinstance(choices, dict):
+            first = choices
+        else:
+            try:
+                first = next(iter(choices))  # type: ignore[arg-type]
+            except (TypeError, StopIteration):
+                return ""
+
+        # Normalise first item and message for consistent access.
+        # Some providers return plain dicts inside response.data.choices.
+        if isinstance(first, dict):
+            message = first.get("message", first)
+            content = message.get("content") if isinstance(message, dict) else getattr(message, "content", None)
+        else:
+            message = getattr(first, "message", None) or first
+            content = getattr(message, "content", None)
+
+        if content:
+            return str(content)
+
+        # Try reasoning content
+        if isinstance(message, dict):
+            reasoning = message.get("reasoning_content", "")
+        else:
+            reasoning = getattr(message, "reasoning_content", None) or ""
+        if reasoning:
+            return self._extract_category_from_reasoning(str(reasoning))
+
+        # Try other attributes
+        for attr in ("text", "response", "output", "answer"):
+            val = message.get(attr) if isinstance(message, dict) else getattr(message, attr, None)
+            if val:
+                return str(val)
+
+        return ""
+
+    @staticmethod
+    def _safe_model_dump(response: Any) -> dict | None:
+        """Safely dump a pydantic/object response to dict."""
+        try:
+            if hasattr(response, "model_dump"):
+                return response.model_dump()  # type: ignore[union-attr]
+        except Exception:
+            pass
+        try:
+            if hasattr(response, "dict"):
+                return response.dict()  # type: ignore[union-attr]
+        except Exception:
+            pass
+        return None
 
     def _parse_category(self, raw_response: str) -> EmailCategory:
         """Parse the LLM response into an EmailCategory enum value.

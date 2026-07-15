@@ -100,9 +100,9 @@ class GmailSettings(BaseSettings):
     )
 
     # Classification (AI)
-    classification_llm_base_url: str = Field(default="https://token-plan-sgp.xiaomimimo.com/v1")
+    classification_llm_base_url: str = Field(default="")
     classification_llm_api_key: str = Field(default="")
-    classification_llm_model: str = Field(default="mimo-v2.5")
+    classification_llm_model: str = Field(default="")
     classification_llm_timeout_seconds: int = Field(default=15, gt=0)
     classification_llm_max_retries: int = Field(default=3, ge=1)
     classification_confidence_threshold: float = Field(default=0.75, ge=0.0, le=1.0)

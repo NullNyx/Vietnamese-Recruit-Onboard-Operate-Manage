@@ -256,6 +256,13 @@ async def get_email_sync_service(
     auth_settings = get_auth_settings()
     gmail_adapter = await get_gmail_adapter()
 
+    from src.modules.identity.infrastructure.organization_ai_config_repository import (
+        OrganizationAIConfigRepository,
+    )
+
+    org_config = await OrganizationAIConfigRepository(email_repo.session).get()
+    ai_classifier = _build_ai_classifier(get_gmail_settings(), org_config)
+
     return EmailSyncService(
         gmail_adapter=gmail_adapter,
         email_repo=email_repo,
@@ -267,6 +274,7 @@ async def get_email_sync_service(
         redis_client=get_redis_client(),
         client_id=auth_settings.google_client_id,
         client_secret=auth_settings.google_client_secret,
+        ai_classifier=ai_classifier,
     )
 
 
@@ -322,6 +330,32 @@ async def get_attachment_service(
     )
 
 
+def _build_ai_classifier(
+    settings: GmailSettings,
+    org_config: object | None,
+) -> AIClassifier:
+    """Build an AIClassifier from Organization AI Configuration (DB only).
+
+    There is no env-var fallback — AI classification requires the
+    Organization AI Configuration to be set up in Admin → AI Settings.
+    """
+    from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
+
+    if org_config is None or not org_config.api_key_enc:
+        raise RuntimeError(
+            "AI classification is not configured. "
+            "Set up your AI provider in Admin → AI Settings first."
+        )
+    crypto = get_crypto_utils()
+    api_key = crypto.decrypt(org_config.api_key_enc)
+    return AIClassifier(
+        settings,
+        base_url=org_config.base_url,
+        api_key=api_key,
+        model=org_config.model,
+    )
+
+
 async def get_classification_service(
     email_repo: EmailRepository = Depends(get_email_repository),
     audit_logger: AuditLogger = Depends(get_audit_logger),
@@ -354,6 +388,11 @@ async def get_classification_service(
     rollout = None
     candidate_classifier = None
     organization_ai_config = await OrganizationAIConfigRepository(session).get()
+
+    # Resolve the AI classifier, preferring DB-stored credentials from the
+    # admin panel (Organization AI Config) over GMAIL_* env vars.
+    ai_classifier = _build_ai_classifier(settings, organization_ai_config)
+
     if (
         organization_ai_config is not None
         and organization_ai_config.candidate_classifier_version
@@ -379,10 +418,10 @@ async def get_classification_service(
             ),
             record=telemetry_repo.record,
         )
-        candidate_classifier = AIClassifier(settings)
+        candidate_classifier = _build_ai_classifier(settings, organization_ai_config)
     return ClassificationService(
         rules_classifier=RulesClassifier(),
-        ai_classifier=AIClassifier(settings),
+        ai_classifier=ai_classifier,
         email_repo=email_repo,
         audit_logger=audit_logger,
         settings=settings,

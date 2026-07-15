@@ -39,8 +39,25 @@ branch_labels: str | None = None
 depends_on: str | None = None
 
 
+def _has_legacy_candidate_columns(bind) -> bool:
+    """Return True if candidates still has the legacy calendar columns."""
+    result = bind.execute(
+        sa.text(
+            "SELECT EXISTS (SELECT 1 FROM information_schema.columns "
+            "WHERE table_name = 'candidates' AND column_name = 'calendar_event_id')"
+        )
+    ).scalar_one()
+    return bool(result)
+
+
 def upgrade() -> None:
     bind = op.get_bind()
+
+    if not _has_legacy_candidate_columns(bind):
+        # This deployment never had the legacy calendar columns on
+        # candidates (e.g. schema was created from current models).
+        # There is nothing to backfill or drop — migration is a no-op.
+        return
 
     # ------------------------------------------------------------------
     # Step 1 — backfill missing Interview rows for Candidates that have

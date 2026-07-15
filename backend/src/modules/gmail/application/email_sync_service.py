@@ -81,6 +81,7 @@ class EmailSyncService:
         client_id: str,
         client_secret: str,
         connection_repo: OrganizationGoogleConnectionRepository | None = None,
+        ai_classifier: object | None = None,
     ) -> None:
         """Initialize EmailSyncService with dependencies.
 
@@ -108,6 +109,7 @@ class EmailSyncService:
         self._client_id = client_id
         self._client_secret = client_secret
         self._connection_repo = connection_repo
+        self._ai_classifier = ai_classifier
 
     async def _handle_connection_token_refresh(
         self,
@@ -550,7 +552,7 @@ class EmailSyncService:
                 return
 
             rules_classifier = RulesClassifier()
-            ai_classifier = AIClassifier(self._settings)
+            ai_classifier = self._ai_classifier or AIClassifier(self._settings)
 
             classification_service = ClassificationService(
                 rules_classifier=rules_classifier,

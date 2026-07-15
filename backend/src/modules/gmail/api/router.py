@@ -1073,8 +1073,14 @@ async def _evaluate_rules(
         build_job_application_ingestion,
     )
 
+    from src.modules.gmail.container import _build_ai_classifier
+    from src.modules.identity.infrastructure.organization_ai_config_repository import (
+        OrganizationAIConfigRepository,
+    )
+
     rules_classifier = RulesClassifier()
-    ai_classifier = AIClassifier(settings)
+    org_config = await OrganizationAIConfigRepository(email_repo.session).get()
+    ai_classifier = _build_ai_classifier(settings, org_config)
     audit_logger = AuditLogger(email_repo.session, settings)
 
     classification_service = ClassificationService(
