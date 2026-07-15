@@ -15,9 +15,14 @@ const config: Config = {
           "system-ui",
           "sans-serif",
         ],
-        heading: ["var(--font-fraunces)", "Georgia", "Cambria", "serif"],
+        heading: [
+          "var(--font-public-sans)",
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
+        ],
         label: [
-          "var(--font-space-grotesk)",
+          "var(--font-public-sans)",
           "ui-sans-serif",
           "system-ui",
           "sans-serif",

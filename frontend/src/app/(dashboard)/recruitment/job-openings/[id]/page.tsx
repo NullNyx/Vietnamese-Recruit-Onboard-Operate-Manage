@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -142,11 +142,10 @@ export default function JobOpeningDetailPage() {
           Không tìm thấy vị trí tuyển dụng
         </p>
         <Link href="/recruitment/job-openings">
-          <Button variant="outline">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Quay lại danh sách
-          </Button>
-        </Link>
+              <Button variant="outline">
+                Quay lại danh sách
+              </Button>
+            </Link>
       </div>
     );
   }

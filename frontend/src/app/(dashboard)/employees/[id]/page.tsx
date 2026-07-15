@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft,
   Trash2,
   Download,
   FileText,
@@ -35,7 +34,6 @@ import { useBreadcrumbDisplayName } from "@/components/breadcrumbs";
 
 export default function EmployeeDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
   const setBreadcrumbDisplayName = useBreadcrumbDisplayName();
 
@@ -192,13 +190,7 @@ export default function EmployeeDetailPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push("/employees")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          
           <div>
             <h1 className="text-2xl font-bold text-foreground">
               {employee.full_name}

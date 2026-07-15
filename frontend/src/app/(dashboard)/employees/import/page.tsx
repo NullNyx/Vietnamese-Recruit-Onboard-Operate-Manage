@@ -8,7 +8,6 @@ import {
   FileSpreadsheet,
   CheckCircle,
   XCircle,
-  ArrowLeft,
 } from "lucide-react";
 import type { ImportResult } from "@/lib/api/types";
 import { importEmployees } from "@/lib/api/employees";
@@ -81,12 +80,7 @@ export default function ImportPage() {
     <div className="p-6">
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
-        <Link href="/employees">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-        </Link>
+        
         <div>
           <h1 className="text-2xl font-bold text-foreground">Import Employees</h1>
           <p className="text-sm text-muted-foreground">

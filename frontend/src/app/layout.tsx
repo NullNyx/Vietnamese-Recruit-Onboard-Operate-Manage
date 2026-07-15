@@ -1,27 +1,13 @@
 import type { Metadata } from "next";
-import { Fraunces, Public_Sans, Space_Grotesk } from "next/font/google";
+import { Public_Sans } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
-
-const fraunces = Fraunces({
-  subsets: ["latin", "vietnamese"],
-  variable: "--font-fraunces",
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
 
 const publicSans = Public_Sans({
   subsets: ["latin", "vietnamese"],
   variable: "--font-public-sans",
   weight: ["300", "400", "500", "600"],
-  display: "swap",
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin", "vietnamese"],
-  variable: "--font-space-grotesk",
-  weight: ["400", "500"],
   display: "swap",
 });
 
@@ -42,7 +28,7 @@ export default function RootLayout({
     <html
       lang="vi"
       suppressHydrationWarning
-      className={`${fraunces.variable} ${publicSans.variable} ${spaceGrotesk.variable}`}
+      className={`${publicSans.variable}`}
     >
       <body className="font-sans antialiased">
         <Providers>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Building2, RefreshCw } from "lucide-react";
+import { Building2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -371,11 +371,10 @@ export default function CandidateDetailPage() {
       <div className="flex flex-col items-center justify-center p-12 space-y-4">
         <p className="text-lg text-muted-foreground">Không tìm thấy ứng viên</p>
         <Link href="/recruitment">
-          <Button variant="outline">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Quay lại danh sách
-          </Button>
-        </Link>
+              <Button variant="outline">
+                Quay lại danh sách
+              </Button>
+            </Link>
       </div>
     );
   }

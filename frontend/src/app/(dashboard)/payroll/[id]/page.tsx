@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Save, Send, Trash2 } from "lucide-react";
+import { Loader2, Save, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -130,9 +130,7 @@ export default function PayslipDetailPage() {
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/payroll"><ArrowLeft className="h-5 w-5" /></Link>
-        </Button>
+        
         <div className="space-y-1 flex-1">
           <h1 className="text-2xl font-semibold tracking-tight">
             Phiếu lương {formatPeriod(payslip.period_month)}
