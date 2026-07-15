@@ -24,6 +24,7 @@ from src.modules.gmail.application.email_sync_service import EmailSyncService
 from src.modules.gmail.application.import_service import HistoricalImportService
 from src.modules.gmail.application.outbound_email_service import OutboundEmailService
 from src.modules.gmail.application.send_service import SendService
+from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
 from src.modules.gmail.infrastructure.audit_logger import AuditLogger
 from src.modules.gmail.infrastructure.config import GmailSettings
 from src.modules.gmail.infrastructure.email_repository import EmailRepository
@@ -339,8 +340,6 @@ def _build_ai_classifier(
     There is no env-var fallback — AI classification requires the
     Organization AI Configuration to be set up in Admin → AI Settings.
     """
-    from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
-
     if org_config is None or not org_config.api_key_enc:
         raise RuntimeError(
             "AI classification is not configured. "
@@ -369,7 +368,6 @@ async def get_classification_service(
         RolloutMode,
     )
     from src.modules.gmail.application.rules_classifier import RulesClassifier
-    from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
     from src.modules.gmail.infrastructure.classification_rollout_repository import (
         ClassificationRolloutRepository,
     )

@@ -1067,15 +1067,13 @@ async def _evaluate_rules(
         ClassificationService,
     )
     from src.modules.gmail.application.rules_classifier import RulesClassifier
-    from src.modules.gmail.infrastructure.ai_classifier import AIClassifier
-    from src.modules.gmail.infrastructure.audit_logger import AuditLogger
-    from src.modules.recruitment.application.job_application_service import (
-        build_job_application_ingestion,
-    )
-
     from src.modules.gmail.container import _build_ai_classifier
+    from src.modules.gmail.infrastructure.audit_logger import AuditLogger
     from src.modules.identity.infrastructure.organization_ai_config_repository import (
         OrganizationAIConfigRepository,
+    )
+    from src.modules.recruitment.application.job_application_service import (
+        build_job_application_ingestion,
     )
 
     rules_classifier = RulesClassifier()

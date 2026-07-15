@@ -328,7 +328,6 @@ class AIClassifier:
         Returns:
             Extracted text content (lowercase, stripped), or empty string.
         """
-        import json
 
         # Log response structure for debugging unknown providers
         try:
@@ -365,10 +364,16 @@ class AIClassifier:
                 logger.debug("_try_extract: data type=%s", type(data).__name__)
                 if isinstance(data, dict):
                     choices = data.get("choices")
-                    logger.debug("_try_extract: data.choices=%s", type(choices).__name__ if choices is not None else None)
+                    logger.debug(
+                        "_try_extract: data.choices=%s",
+                        type(choices).__name__ if choices is not None else None,
+                    )
                 elif data is not None and hasattr(data, "choices"):
                     choices = data.choices
-                    logger.debug("_try_extract: data.choices (attr)=%s", type(choices).__name__ if choices is not None else None)
+                    logger.debug(
+                        "_try_extract: data.choices (attr)=%s",
+                        type(choices).__name__ if choices is not None else None,
+                    )
         if not choices:
             logger.debug("_try_extract: no choices found, returning empty")
             return ""
@@ -392,7 +397,11 @@ class AIClassifier:
         # Some providers return plain dicts inside response.data.choices.
         if isinstance(first, dict):
             message = first.get("message", first)
-            content = message.get("content") if isinstance(message, dict) else getattr(message, "content", None)
+            content = (
+                message.get("content")
+                if isinstance(message, dict)
+                else getattr(message, "content", None)
+            )
         else:
             message = getattr(first, "message", None) or first
             content = getattr(message, "content", None)
