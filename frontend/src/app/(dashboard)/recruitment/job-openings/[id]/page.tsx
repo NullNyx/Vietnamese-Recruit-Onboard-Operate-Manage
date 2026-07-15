@@ -100,7 +100,7 @@ export default function JobOpeningDetailPage() {
         });
       }
     }
-  }, [id]);
+  }, [id, setBreadcrumbDisplayName]);
 
   useEffect(() => {
     fetchData();

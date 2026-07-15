@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
@@ -43,13 +43,15 @@ const BreadcrumbContext = createContext<BreadcrumbContextValue | null>(null);
 
 export function BreadcrumbProvider({ children }: { children: React.ReactNode }) {
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
+  const setDisplayName = useCallback((key: string, name: string) => {
+    setDisplayNames((current) => {
+      if (current[key] === name) return current;
+      return { ...current, [key]: name };
+    });
+  }, []);
   const value = useMemo(
-    () => ({
-      displayNames,
-      setDisplayName: (key: string, name: string) =>
-        setDisplayNames((current) => ({ ...current, [key]: name })),
-    }),
-    [displayNames],
+    () => ({ displayNames, setDisplayName }),
+    [displayNames, setDisplayName],
   );
 
   return (

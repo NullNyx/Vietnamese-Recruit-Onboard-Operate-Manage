@@ -83,7 +83,7 @@ export default function EmployeeDetailPage() {
       }
     }
     fetchData();
-  }, [id]);
+  }, [id, setBreadcrumbDisplayName]);
 
   const getDepartmentName = (deptId: string | null) => {
     if (!deptId) return "—";
