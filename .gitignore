@@ -53,3 +53,11 @@ Thumbs.db
 
 # ---- Whitelist (real emails must not be committed) ----
 backend/config/whitelist.txt
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# E2E auth storage (created fresh by CI)
