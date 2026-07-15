@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from src.modules.assistant.application.assistant_service import ChatMessage, ChatResponse
+from src.modules.assistant.application.context_builder import ContextBuilder
 from src.modules.assistant.application.employee_tool_registry import (
     EmployeeToolRegistry,
 )
@@ -88,6 +89,7 @@ class EmployeeAssistantService:
         overtime_service: OvertimeService,
         payslip_service: PayslipService,
         settings: AssistantSettings,
+        context_builder: ContextBuilder | None = None,
     ) -> None:
         self._llm_client = llm_client
         self._employee_id = employee_id
@@ -98,6 +100,7 @@ class EmployeeAssistantService:
         self._overtime_service = overtime_service
         self._payslip_service = payslip_service
         self._settings = settings
+        self._context_builder = context_builder
 
     async def chat(
         self,
@@ -121,7 +124,7 @@ class EmployeeAssistantService:
             payslip_service=self._payslip_service,
         )
 
-        openai_messages = self._build_messages(messages, tool_registry)
+        openai_messages = await self._build_messages(messages, tool_registry)
 
         draft_action: dict[str, Any] | None = None
         all_new_messages: list[ChatMessage] = []
@@ -196,12 +199,12 @@ class EmployeeAssistantService:
             draft_action=draft_action,
         )
 
-    def _build_messages(
+    async def _build_messages(
         self,
         messages: list[ChatMessage],
         tool_registry: EmployeeToolRegistry,
     ) -> list[dict[str, Any]]:
-        """Build OpenAI-format messages with employee system prompt."""
+        """Build OpenAI-format messages with employee system prompt + context."""
         tools = tool_registry.get_openai_tools()
         tools_str = "\n".join(
             f"{i + 1}. {t['function']['name']} — {t['function']['description']}"
@@ -213,6 +216,17 @@ class EmployeeAssistantService:
         )
 
         result: list[dict[str, Any]] = [{"role": "system", "content": system_content}]
+
+        # Inject dynamic context block as second system message (ticket #227)
+        if self._context_builder is not None:
+            try:
+                context_block = await self._context_builder.build_employee_context(
+                    self._employee_id
+                )
+                if context_block:
+                    result.append({"role": "system", "content": context_block})
+            except Exception:
+                logger.warning("Failed to build employee assistant context", exc_info=True)
 
         start_idx = max(0, len(messages) - self._settings.max_history)
         while start_idx > 0 and messages[start_idx].role != "user":

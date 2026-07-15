@@ -66,6 +66,7 @@ class ToolRegistry:
             "count_candidates_by_status": self._count_candidates_by_status,
             "list_in_progress_onboarding": self._list_in_progress_onboarding,
             "search_candidates": self._search_candidates,
+            "get_candidate_parsed_cv": self._get_candidate_parsed_cv,
             "draft_interview_invitation": self._draft_interview_invitation,
             "draft_congratulations_email": self._draft_congratulations_email,
         }
@@ -148,6 +149,40 @@ class ToolRegistry:
                 }
             )
         return {"candidates": candidates, "total": result.total_count}
+
+    async def _get_candidate_parsed_cv(self, args: dict[str, Any]) -> dict[str, typing.Any]:
+        """Read-Tool: get parsed CV data for a candidate."""
+        candidate_id_str = args.get("candidate_id")
+
+        if not candidate_id_str:
+            return {"error": "Missing required parameter: candidate_id."}
+
+        import uuid
+
+        try:
+            candidate_id = uuid.UUID(candidate_id_str)
+        except ValueError as e:
+            return {"error": f"Invalid candidate_id: {str(e)}"}
+
+        try:
+            detail = await self._candidate_service.get_candidate(candidate_id)
+            candidate = detail.candidate
+        except Exception as e:
+            return {"error": f"Không tìm thấy ứng viên: {str(e)}"}
+
+        return {
+            "candidate_id": str(candidate.id),
+            "name": candidate.name,
+            "email": candidate.email,
+            "phone": candidate.phone,
+            "skills": candidate.skills or [],
+            "experience": candidate.experience or [],
+            "education": candidate.education or [],
+            "summary": candidate.summary or "",
+            "parsed_cv_json": candidate.parsed_cv_json,
+            "confidence_score": candidate.confidence_score,
+            "status": candidate.status,
+        }
 
     async def _draft_interview_invitation(self, args: dict[str, Any]) -> dict[str, typing.Any]:
         """Draft-Tool: returns a Draft Action for interview invitation."""

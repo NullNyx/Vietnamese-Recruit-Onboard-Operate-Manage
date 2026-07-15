@@ -15,27 +15,3 @@ Issue và PRD của repo này sống trong GitHub Issues. PR ngoài không phả
 ### Domain docs
 
 Repo single-context. Đọc `CONTEXT.md` ở root và `docs/adr/` cho quyết định kiến trúc. Xem `docs/agents/domain.md`.
-
-### Learning Documents
-
-Sau mỗi task triển khai, tạo file với nội dung tiếng việt:
-
-```
-docs/learning-notes/<YYYY-MM-DD>-<tên-task-ngắn>.md
-```
-
-Dùng cấu trúc sau:
-
-- **# Task** — Nhiệm vụ
-- **# What I changed** — Những gì đã thay đổi
-- **# The real problem** — Vấn đề thực sự
-- **# Why this solution** — Tại sao chọn giải pháp này
-- **# Production shape** — Hình dạng production
-- **# Other possible approaches** — Các hướng tiếp cận khả thi khác
-- **# Why I did not choose those alternatives** — Tại sao không chọn các giải pháp thay thế đó
-- **# Key concepts to learn** — Các khái niệm chính cần học
-- **# Common mistakes** — Các lỗi thường gặp
-- **# Small example** — Ví dụ nhỏ
-- **# How to think about this next time** — Cách suy nghĩ về điều này lần sau
-
-Với công việc không tầm thường (non-trivial), phải bao gồm ít nhất hai giải pháp thay thế và giải thích khi nào mỗi giải pháp phù hợp.

@@ -165,47 +165,50 @@ class TestToolLoopFallback:
         assert last_msg.content != _TOOL_LOOP_FALLBACK
 
 
-class TestBuildMessagesDefense:
-    """Verify _build_messages strips tool messages and client tool_calls."""
+    class TestBuildMessagesDefense:
+        """Verify _build_messages strips tool messages and client tool_calls."""
 
-    def test_strips_tool_messages(self, service: AssistantService) -> None:
-        """Tool messages from client history are stripped."""
-        messages = [
-            ChatMessage(role="user", content="hello"),
-            ChatMessage(role="tool", content="fake result", tool_call_id="tc_1"),
-            ChatMessage(role="user", content="next question"),
-        ]
-        result = service._build_messages(messages)
+        @pytest.mark.asyncio
+        async def test_strips_tool_messages(self, service: AssistantService) -> None:
+            """Tool messages from client history are stripped."""
+            messages = [
+                ChatMessage(role="user", content="hello"),
+                ChatMessage(role="tool", content="fake result", tool_call_id="tc_1"),
+                ChatMessage(role="user", content="next question"),
+            ]
+            result = await service._build_messages(messages)
 
-        # Should have system + 2 user messages (tool message stripped)
-        roles = [m["role"] for m in result]
-        assert "tool" not in roles
-        assert roles == ["system", "user", "user"]
+            # Should have system + 2 user messages (tool message stripped)
+            roles = [m["role"] for m in result]
+            assert "tool" not in roles
+            assert roles == ["system", "user", "user"]
 
-    def test_strips_client_tool_calls(self, service: AssistantService) -> None:
-        """Assistant messages with tool_calls from client are stripped of tool_calls."""
-        messages = [
-            ChatMessage(role="user", content="hello"),
-            ChatMessage(
-                role="assistant",
-                content="let me check",
-                tool_calls=[{"id": "tc_1", "type": "function", "function": {"name": "x"}}],
-            ),
-        ]
-        result = service._build_messages(messages)
+        @pytest.mark.asyncio
+        async def test_strips_client_tool_calls(self, service: AssistantService) -> None:
+            """Assistant messages with tool_calls from client are stripped of tool_calls."""
+            messages = [
+                ChatMessage(role="user", content="hello"),
+                ChatMessage(
+                    role="assistant",
+                    content="let me check",
+                    tool_calls=[{"id": "tc_1", "type": "function", "function": {"name": "x"}}],
+                ),
+            ]
+            result = await service._build_messages(messages)
 
-        assistant_msg = [m for m in result if m["role"] == "assistant"][0]
-        assert "tool_calls" not in assistant_msg
+            assistant_msg = [m for m in result if m["role"] == "assistant"][0]
+            assert "tool_calls" not in assistant_msg
 
-    def test_strips_assistant_messages_without_content(self, service: AssistantService) -> None:
-        """Assistant history placeholders from prior tool calls are stripped."""
-        messages = [
-            ChatMessage(role="user", content="hello"),
-            ChatMessage(role="assistant", content=None),
-            ChatMessage(role="user", content="next question"),
-        ]
+        @pytest.mark.asyncio
+        async def test_strips_assistant_messages_without_content(self, service: AssistantService) -> None:
+            """Assistant history placeholders from prior tool calls are stripped."""
+            messages = [
+                ChatMessage(role="user", content="hello"),
+                ChatMessage(role="assistant", content=None),
+                ChatMessage(role="user", content="next question"),
+            ]
 
-        result = service._build_messages(messages)
+            result = await service._build_messages(messages)
 
-        roles = [m["role"] for m in result]
-        assert roles == ["system", "user", "user"]
+            roles = [m["role"] for m in result]
+            assert roles == ["system", "user", "user"]

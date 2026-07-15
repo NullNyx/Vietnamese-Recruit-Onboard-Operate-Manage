@@ -18,6 +18,7 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.assistant.application.assistant_service import AssistantService
+from src.modules.assistant.application.context_builder import ContextBuilder
 from src.modules.assistant.application.tool_registry import ToolRegistry
 from src.modules.assistant.infrastructure.config import AssistantSettings
 from src.modules.assistant.infrastructure.llm_client import AssistantLLMClient
@@ -33,6 +34,10 @@ from src.modules.onboarding.application.onboarding_service import OnboardingServ
 from src.modules.onboarding.container import get_onboarding_service
 from src.modules.recruitment.application.candidate_service import CandidateService
 from src.modules.recruitment.container import get_candidate_service
+from src.modules.recruitment.infrastructure.org_settings_repository import (
+    OrganizationSettingsRepository,
+)
+from src.modules.recruitment.infrastructure.repositories import JobOpeningRepository
 
 # ---------------------------------------------------------------------------
 # Settings & LLM Client (singletons)
@@ -101,14 +106,31 @@ async def get_configured_assistant_llm_client(
     return AssistantLLMClient(settings)
 
 
-async def get_assistant_service(
-    tool_registry: ToolRegistry = Depends(get_tool_registry),
-    llm_client: AssistantLLMClient = Depends(get_configured_assistant_llm_client),
-    settings: AssistantSettings = Depends(get_configured_assistant_settings),
-) -> AssistantService:
-    """Provide an AssistantService using the active Organization provider."""
-    return AssistantService(
-        llm_client=llm_client,
-        tool_registry=tool_registry,
-        settings=settings,
-    )
+    async def get_context_builder(
+        session: AsyncSession = Depends(get_db_session),
+        candidate_service: CandidateService = Depends(get_candidate_service),
+        onboarding_service: OnboardingService = Depends(get_onboarding_service),
+    ) -> ContextBuilder:
+        """Provide a ContextBuilder wired to recruitment + onboarding data."""
+        return ContextBuilder(
+            session=session,
+            candidate_service=candidate_service,
+            onboarding_service=onboarding_service,
+            job_opening_repo=JobOpeningRepository(session),
+        )
+
+
+    async def get_assistant_service(
+        tool_registry: ToolRegistry = Depends(get_tool_registry),
+        llm_client: AssistantLLMClient = Depends(get_configured_assistant_llm_client),
+        settings: AssistantSettings = Depends(get_configured_assistant_settings),
+        context_builder: ContextBuilder = Depends(get_context_builder),
+    ) -> AssistantService:
+        """Provide an AssistantService using the active Organization provider."""
+        return AssistantService(
+            llm_client=llm_client,
+            tool_registry=tool_registry,
+            settings=settings,
+            context_builder=context_builder,
+        )
+

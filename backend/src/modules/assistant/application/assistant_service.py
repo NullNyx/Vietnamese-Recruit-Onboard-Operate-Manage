@@ -19,6 +19,7 @@ import typing
 from dataclasses import dataclass
 from typing import Any
 
+from src.modules.assistant.application.context_builder import ContextBuilder
 from src.modules.assistant.application.tool_registry import ToolRegistry
 from src.modules.assistant.domain.tools import TOOL_DEFINITIONS, get_openai_tools
 from src.modules.assistant.infrastructure.config import AssistantSettings
@@ -97,10 +98,12 @@ class AssistantService:
         llm_client: AssistantLLMClient,
         tool_registry: ToolRegistry,
         settings: AssistantSettings,
+        context_builder: ContextBuilder | None = None,
     ) -> None:
         self._llm_client = llm_client
         self._tool_registry = tool_registry
         self._settings = settings
+        self._context_builder = context_builder
 
     async def chat(
         self,
@@ -116,8 +119,8 @@ class AssistantService:
         Returns:
             ChatResponse with updated messages and optional draft_action.
         """
-        # Build OpenAI-format messages with system prompt
-        openai_messages = self._build_messages(messages, enabled_tool_names)
+        # Build OpenAI-format messages with system prompt + context
+        openai_messages = await self._build_messages(messages, enabled_tool_names)
 
         draft_action: dict[str, typing.Any] | None = None
         all_new_messages: list[ChatMessage] = []
@@ -201,7 +204,7 @@ class AssistantService:
             draft_action=draft_action,
         )
 
-    def _build_messages(
+    async def _build_messages(
         self, messages: list[ChatMessage], enabled_tool_names: set[str] | None = None
     ) -> list[dict[str, Any]]:
         """Build OpenAI-format messages with system prompt and history trimming.
@@ -223,7 +226,16 @@ class AssistantService:
 
         result: list[dict[str, Any]] = [{"role": "system", "content": system_content}]
 
-        # Trim to max_history (excluding system message),
+        # Inject dynamic context block as second system message (ticket #227)
+        if self._context_builder is not None:
+            try:
+                context_block = await self._context_builder.build_hr_context()
+                if context_block:
+                    result.append({"role": "system", "content": context_block})
+            except Exception:
+                logger.warning("Failed to build HR assistant context", exc_info=True)
+
+        # Trim to max_history (excluding system messages),
         # ensuring we start at a user turn
         start_idx = max(0, len(messages) - self._settings.max_history)
         while start_idx > 0 and messages[start_idx].role != "user":

@@ -110,28 +110,50 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
             "properties": {},
         },
     ),
-    ToolDefinition(
-        name="search_candidates",
-        kind=ToolKind.READ,
-        description=(
-            "Search for candidates by name or email. Returns matching "
-            "candidates with id, name, email, and status. "
-            "Use when the user mentions a specific candidate by name "
-            "or email, or before drafting an email to a candidate."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Search term — matches against candidate name or email.",
+        ToolDefinition(
+            name="search_candidates",
+            kind=ToolKind.READ,
+            description=(
+                "Search for candidates by name or email. Returns matching "
+                "candidates with id, name, email, and status. "
+                "Use when the user mentions a specific candidate by name "
+                "or email, or before drafting an email to a candidate."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search term — matches against candidate name or email.",
+                    },
                 },
+                "required": ["query"],
             },
-            "required": ["query"],
-        },
-    ),
-    ToolDefinition(
-        name="draft_interview_invitation",
+        ),
+        ToolDefinition(
+            name="get_candidate_parsed_cv",
+            kind=ToolKind.READ,
+            description=(
+                "Get the parsed CV data for a candidate. Returns structured data "
+                "including skills, experience, education, summary, and the full "
+                "parsed CV JSON from the AI Automation pipeline. "
+                "Use when the user asks about a candidate's CV content, skills, "
+                "experience, or background — or before drafting an email to "
+                "personalize it with CV details."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "candidate_id": {
+                        "type": "string",
+                        "description": "UUID of the candidate whose CV to read.",
+                    },
+                },
+                "required": ["candidate_id"],
+            },
+        ),
+        ToolDefinition(
+            name="draft_interview_invitation",
         kind=ToolKind.DRAFT,
         description=(
             "Draft an interview invitation email for a candidate. Returns a Draft Action "

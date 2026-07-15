@@ -13,8 +13,8 @@ class TestToolDefinitions:
     """Test tool definition structure and correctness."""
 
     def test_tool_definitions_count(self) -> None:
-        """There must be exactly 5 tools."""
-        assert len(TOOL_DEFINITIONS) == 5
+        """There must be exactly 6 tools."""
+        assert len(TOOL_DEFINITIONS) == 6
 
     def test_all_tools_have_names(self) -> None:
         """Every tool must have a non-empty name."""
@@ -39,6 +39,7 @@ class TestToolDefinitions:
         assert "count_candidates_by_status" in names
         assert "list_in_progress_onboarding" in names
         assert "search_candidates" in names
+        assert "get_candidate_parsed_cv" in names
 
     def test_draft_tool_name(self) -> None:
         """Draft-Tools have correct names."""
@@ -57,9 +58,9 @@ class TestOpenAIFormat:
         assert isinstance(result, list)
 
     def test_get_openai_tools_count(self) -> None:
-        """Returns all 5 tools."""
+        """Returns all 6 tools."""
         result = get_openai_tools()
-        assert len(result) == 5
+        assert len(result) == 6
 
     def test_openai_tool_structure(self) -> None:
         """Each tool has correct OpenAI function-calling structure."""
@@ -110,9 +111,9 @@ class TestToolFiltering:
         """Filter with all tool names returns all tools."""
         all_names = {t.name for t in TOOL_DEFINITIONS}
         result = get_openai_tools(enabled_names=all_names)
-        assert len(result) == 5
+        assert len(result) == 6
 
     def test_none_filter_returns_all(self) -> None:
         """None filter (backwards compatible) returns all tools."""
         result = get_openai_tools(enabled_names=None)
-        assert len(result) == 5
+        assert len(result) == 6

@@ -252,3 +252,83 @@ class TestToolRegistryEdgeCases:
         )
         result = json.loads(result_str)
         assert "error" in result
+
+
+class TestGetCandidateParsedCV:
+    """Test the get_candidate_parsed_cv Read-Tool."""
+
+    @pytest.mark.asyncio
+    async def test_returns_parsed_cv_data(
+        self, registry: ToolRegistry, mock_candidate_service: AsyncMock
+    ) -> None:
+        """get_candidate_parsed_cv returns structured CV data."""
+        from unittest.mock import MagicMock
+
+        candidate_id = "00000000-0000-0000-0000-000000000001"
+
+        mock_candidate = MagicMock()
+        mock_candidate.id = candidate_id
+        mock_candidate.name = "Nguyen Van A"
+        mock_candidate.email = "a@example.com"
+        mock_candidate.phone = "0123456789"
+        mock_candidate.skills = ["Python", "FastAPI"]
+        mock_candidate.experience = [{"company": "FPT", "role": "Dev"}]
+        mock_candidate.education = [{"school": "Bach Khoa", "degree": "Ky su"}]
+        mock_candidate.summary = "5 nam kinh nghiem"
+        mock_candidate.parsed_cv_json = {"raw": "data"}
+        mock_candidate.confidence_score = 0.95
+        mock_candidate.status = "reviewing"
+
+        mock_detail = MagicMock()
+        mock_detail.candidate = mock_candidate
+        mock_candidate_service.get_candidate = AsyncMock(return_value=mock_detail)
+
+        result_str = await registry.execute(
+            "get_candidate_parsed_cv",
+            {"candidate_id": candidate_id},
+        )
+        result = json.loads(result_str)
+
+        assert "error" not in result
+        assert result["candidate_id"] == candidate_id
+        assert result["name"] == "Nguyen Van A"
+        assert result["email"] == "a@example.com"
+        assert result["skills"] == ["Python", "FastAPI"]
+        assert result["experience"] == [{"company": "FPT", "role": "Dev"}]
+        assert result["education"] == [{"school": "Bach Khoa", "degree": "Ky su"}]
+        assert result["summary"] == "5 nam kinh nghiem"
+        assert result["parsed_cv_json"] == {"raw": "data"}
+        assert result["confidence_score"] == 0.95
+        assert result["status"] == "reviewing"
+
+    @pytest.mark.asyncio
+    async def test_missing_candidate_id_returns_error(self, registry: ToolRegistry) -> None:
+        """get_candidate_parsed_cv without candidate_id returns error."""
+        result_str = await registry.execute("get_candidate_parsed_cv", {})
+        result = json.loads(result_str)
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_invalid_uuid_returns_error(self, registry: ToolRegistry) -> None:
+        """get_candidate_parsed_cv with invalid UUID returns error."""
+        result_str = await registry.execute(
+            "get_candidate_parsed_cv",
+            {"candidate_id": "not-a-uuid"},
+        )
+        result = json.loads(result_str)
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_nonexistent_candidate_returns_error(
+        self, registry: ToolRegistry, mock_candidate_service: AsyncMock
+    ) -> None:
+        """get_candidate_parsed_cv for missing candidate returns error."""
+        mock_candidate_service.get_candidate = AsyncMock(
+            side_effect=Exception("Candidate not found")
+        )
+        result_str = await registry.execute(
+            "get_candidate_parsed_cv",
+            {"candidate_id": "00000000-0000-0000-0000-000000000099"},
+        )
+        result = json.loads(result_str)
+        assert "error" in result
