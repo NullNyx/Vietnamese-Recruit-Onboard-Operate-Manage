@@ -208,9 +208,7 @@ class AIClassifier:
                 # or nest the message differently.
                 raw_content = self._extract_content_from_response(response)
                 if not raw_content:
-                    raise AIClassificationError(
-                        "LLM returned empty content in response"
-                    )
+                    raise AIClassificationError("LLM returned empty content in response")
 
                 token_usage = self._extract_token_usage(response)
 
@@ -356,9 +354,11 @@ class AIClassifier:
         logger.debug("_try_extract: top choices=%s type=%s", choices, type(choices).__name__)
         if not choices:
             raw = self._safe_model_dump(response)
-            logger.debug("_try_extract: model_dump returned type=%s has_data=%s",
-                         type(raw).__name__ if raw else None,
-                         "data" in raw if raw else False)
+            logger.debug(
+                "_try_extract: model_dump returned type=%s has_data=%s",
+                type(raw).__name__ if raw else None,
+                "data" in raw if raw else False,
+            )
             if raw:
                 data = raw.get("data")
                 logger.debug("_try_extract: data type=%s", type(data).__name__)
@@ -377,8 +377,11 @@ class AIClassifier:
         if not choices:
             logger.debug("_try_extract: no choices found, returning empty")
             return ""
-        logger.debug("_try_extract: choices is truthy, type=%s len=%s",
-                     type(choices).__name__, len(choices) if hasattr(choices, '__len__') else '?')
+        logger.debug(
+            "_try_extract: choices is truthy, type=%s len=%s",
+            type(choices).__name__,
+            len(choices) if hasattr(choices, "__len__") else "?",
+        )
 
         # Handle both list and dict-like choices
         if isinstance(choices, (list, tuple)):

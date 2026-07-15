@@ -1,0 +1,36 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - banner [ref=f2e3]:
+      - navigation "Điều hướng chính" [ref=f2e15]:
+        - link "V Vroom" [ref=f2e16] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f2e17]: V
+          - generic [ref=f2e18]: Vroom
+        - generic [ref=f2e19]:
+          - button "Nhân sự" [ref=f2e22] [cursor=pointer]
+          - button "Tuyển dụng" [ref=f2e26] [cursor=pointer]
+          - button "Chấm công" [ref=f2e30] [cursor=pointer]
+          - button "Lương" [ref=f2e34] [cursor=pointer]
+          - button "Hệ thống" [ref=f2e38] [cursor=pointer]
+        - generic [ref=f2e40]:
+          - button "Tìm kiếm (Ctrl+K)" [ref=f2e41] [cursor=pointer]:
+            - generic:
+              - generic: ⌘
+              - text: K
+          - button "Thông báo" [ref=f2e42] [cursor=pointer]
+          - button "Tài khoản" [ref=f2e43] [cursor=pointer]:
+            - generic [ref=f2e44]: HQ
+    - main [ref=f2e6]:
+      - generic [ref=f2e46]:
+        - generic [ref=f2e47]:
+          - heading "AI Assistant" [level=1] [ref=f2e48]
+          - paragraph [ref=f2e49]: Hỏi đáp về dữ liệu tuyển dụng, onboarding, và soạn email
+        - generic [ref=f2e50]:
+          - generic [ref=f2e54]:
+            - paragraph [ref=f2e71]: Có bao nhiêu candidate đang reviewing?
+            - paragraph [ref=f2e82]: Hiện tại không có candidate nào đang ở trạng thái **reviewing** trong pipeline tuyển dụng.
+          - generic [ref=f2e66]:
+            - textbox "Nhập tin nhắn..." [ref=f2e67]
+            - button [disabled]
+  - region "Notifications alt+T"
+  - alert [ref=f2e14]

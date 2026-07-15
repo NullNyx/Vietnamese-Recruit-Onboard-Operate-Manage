@@ -22,6 +22,8 @@ from src.modules.assistant.application.context_builder import ContextBuilder
 from src.modules.assistant.application.tool_registry import ToolRegistry
 from src.modules.assistant.infrastructure.config import AssistantSettings
 from src.modules.assistant.infrastructure.llm_client import AssistantLLMClient
+from src.modules.employee.application.department_service import DepartmentService
+from src.modules.employee.container import get_department_service
 from src.modules.identity.application.organization_ai_config_service import (
     OrganizationAIConfigService,
     OrganizationAIConfigValidationError,
@@ -34,9 +36,6 @@ from src.modules.onboarding.application.onboarding_service import OnboardingServ
 from src.modules.onboarding.container import get_onboarding_service
 from src.modules.recruitment.application.candidate_service import CandidateService
 from src.modules.recruitment.container import get_candidate_service
-from src.modules.recruitment.infrastructure.org_settings_repository import (
-    OrganizationSettingsRepository,
-)
 from src.modules.recruitment.infrastructure.repositories import JobOpeningRepository
 
 # ---------------------------------------------------------------------------
@@ -63,16 +62,20 @@ def get_assistant_llm_client() -> AssistantLLMClient:
 
 
 async def get_tool_registry(
+    session: AsyncSession = Depends(get_db_session),
     candidate_service: CandidateService = Depends(get_candidate_service),
     onboarding_service: OnboardingService = Depends(get_onboarding_service),
+    department_service: DepartmentService = Depends(get_department_service),
 ) -> ToolRegistry:
-    """Provide a ToolRegistry wired to recruitment + onboarding services.
+    """Provide a ToolRegistry wired to recruitment + onboarding + employee services.
 
     Read-only dependency on other modules' services (ADR-0004).
     """
     return ToolRegistry(
         candidate_service=candidate_service,
         onboarding_service=onboarding_service,
+        session=session,
+        department_service=department_service,
     )
 
 
@@ -106,31 +109,30 @@ async def get_configured_assistant_llm_client(
     return AssistantLLMClient(settings)
 
 
-    async def get_context_builder(
-        session: AsyncSession = Depends(get_db_session),
-        candidate_service: CandidateService = Depends(get_candidate_service),
-        onboarding_service: OnboardingService = Depends(get_onboarding_service),
-    ) -> ContextBuilder:
-        """Provide a ContextBuilder wired to recruitment + onboarding data."""
-        return ContextBuilder(
-            session=session,
-            candidate_service=candidate_service,
-            onboarding_service=onboarding_service,
-            job_opening_repo=JobOpeningRepository(session),
-        )
+async def get_context_builder(
+    session: AsyncSession = Depends(get_db_session),
+    candidate_service: CandidateService = Depends(get_candidate_service),
+    onboarding_service: OnboardingService = Depends(get_onboarding_service),
+) -> ContextBuilder:
+    """Provide a ContextBuilder wired to recruitment + onboarding data."""
+    return ContextBuilder(
+        session=session,
+        candidate_service=candidate_service,
+        onboarding_service=onboarding_service,
+        job_opening_repo=JobOpeningRepository(session),
+    )
 
 
-    async def get_assistant_service(
-        tool_registry: ToolRegistry = Depends(get_tool_registry),
-        llm_client: AssistantLLMClient = Depends(get_configured_assistant_llm_client),
-        settings: AssistantSettings = Depends(get_configured_assistant_settings),
-        context_builder: ContextBuilder = Depends(get_context_builder),
-    ) -> AssistantService:
-        """Provide an AssistantService using the active Organization provider."""
-        return AssistantService(
-            llm_client=llm_client,
-            tool_registry=tool_registry,
-            settings=settings,
-            context_builder=context_builder,
-        )
-
+async def get_assistant_service(
+    tool_registry: ToolRegistry = Depends(get_tool_registry),
+    llm_client: AssistantLLMClient = Depends(get_configured_assistant_llm_client),
+    settings: AssistantSettings = Depends(get_configured_assistant_settings),
+    context_builder: ContextBuilder = Depends(get_context_builder),
+) -> AssistantService:
+    """Provide an AssistantService using the active Organization provider."""
+    return AssistantService(
+        llm_client=llm_client,
+        tool_registry=tool_registry,
+        settings=settings,
+        context_builder=context_builder,
+    )

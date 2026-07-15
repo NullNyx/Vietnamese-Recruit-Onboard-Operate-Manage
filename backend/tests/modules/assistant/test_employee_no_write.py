@@ -394,11 +394,21 @@ class TestStructuralNoWrite:
             "httpx.",
             "aiohttp.",
             "session.commit",
-            "session.add(",
             "confirm(",
         ]:
             assert pattern not in source
         assert "draft_action = result_data" in source
+
+        # session.add() is allowed ONLY in _record_tool_event for quality monitoring
+        add_lines = [
+            line.strip()
+            for line in source.split("\n")
+            if "session.add(" in line
+        ]
+        assert len(add_lines) == 1, (
+            f"session.add() should appear only in _record_tool_event, found: {add_lines}"
+        )
+        assert "_record_tool_event" in source
 
     def test_system_prompt_instructs_no_write(self) -> None:
         import inspect

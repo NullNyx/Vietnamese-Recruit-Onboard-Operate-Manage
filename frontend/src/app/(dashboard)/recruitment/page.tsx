@@ -136,6 +136,9 @@ export default function RecruitmentPage() {
   // Computed
   const totalPages = Math.ceil(totalCount / pageSize);
 
+  // Check if any filter is active
+  const hasActiveFilters = Object.keys(filters).length > 0;
+
   return (
     <div className="space-y-6 p-6">
           {/* Page Header */}
@@ -183,12 +186,35 @@ export default function RecruitmentPage() {
       {/* Loading State */}
       {loading && <CandidateTableSkeleton />}
 
-      {/* Empty State */}
-      {!loading && !error && data.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-md border p-12 text-center">
-          <Users className="h-12 w-12 text-muted-foreground mb-4" aria-hidden="true" />
-          <p className="text-muted-foreground">Chưa có ứng viên nào</p>
-        </div>
+      {/* Empty State — no data */}
+      {!loading && !error && data.length === 0 && !hasActiveFilters && (
+      <div className="flex flex-col items-center justify-center rounded-md border p-12 text-center">
+        <Users className="h-12 w-12 text-muted-foreground mb-4" aria-hidden="true" />
+        <p className="text-muted-foreground">Chưa có ứng viên nào</p>
+      </div>
+      )}
+
+      {/* Empty State — filter returned no results */}
+      {!loading && !error && data.length === 0 && hasActiveFilters && (
+      <div className="flex flex-col items-center justify-center rounded-md border p-12 text-center">
+        <Users className="h-12 w-12 text-muted-foreground mb-4" aria-hidden="true" />
+        <p className="text-muted-foreground mb-1">
+          Không có ứng viên phù hợp với bộ lọc
+        </p>
+        <p className="text-xs text-muted-foreground/60 mb-4">
+          Thử điều chỉnh bộ lọc để tìm kết quả khác
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setFilters({});
+            setPage(1);
+          }}
+        >
+          Xóa bộ lọc
+        </Button>
+      </div>
       )}
 
       {/* Data Table (desktop) */}

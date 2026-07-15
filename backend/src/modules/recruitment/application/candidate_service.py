@@ -1184,7 +1184,8 @@ class CandidateService:
         5. Resolve the Organization timezone, compute ``end = start + duration``,
            build the attendee list, and assemble the (tz-aware) event spec —
            R2.2, R5, R6, R11.
-        6. Create the Calendar event via ``_with_org_token`` (401 → refresh → retry once) before committing — R2.1.
+        6. Create the Calendar event via ``_with_org_token``
+           (401 → refresh → retry once) before committing — R2.1.
         7. On success, persist the event reference, start, timezone, and status,
            then commit — R2.3, R4.1-R4.3.
         8. On Calendar failure, roll back, write a failure audit entry, and raise
@@ -1334,7 +1335,8 @@ class CandidateService:
            resolve interviewers, build attendees, and assemble the (tz-aware)
            patch spec with ``request_meet_link=False`` so the Meet link is
            preserved — R7.2, R11.1, R11.2.
-        5. Patch the EXACT existing event via ``_with_org_token`` (401 → refresh → retry once); a new event is never created — R7.1.
+        5. Patch the EXACT existing event via ``_with_org_token``
+           (401 → refresh → retry once); a new event is never created — R7.1.
         6. On success, update only the stored ``start`` and timezone, leaving the
            ``calendar_event_id`` unchanged, then commit — R7.1, R7.3.
         7. On patch failure, roll back any staged change, write a failure audit
@@ -1958,10 +1960,10 @@ class CandidateService:
             client_id = os.environ.get("AUTH_GOOGLE_CLIENT_ID", "")
             client_secret = os.environ.get("AUTH_GOOGLE_CLIENT_SECRET", "")
 
-        GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+        google_token_url = "https://oauth2.googleapis.com/token"
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                GOOGLE_TOKEN_URL,
+                google_token_url,
                 data={
                     "client_id": client_id,
                     "client_secret": client_secret,
@@ -2003,6 +2005,7 @@ class CandidateService:
 
         # Encrypt and store the new access token on the connection.
         from datetime import UTC, datetime, timedelta
+
         from src.modules.identity.domain.entities import OrganizationGoogleConnection
 
         if isinstance(connection, OrganizationGoogleConnection):
@@ -2237,6 +2240,43 @@ class CandidateService:
                 return scalars.first()
             except Exception:
                 return None
+
+    async def list_interviews_for_candidate(self, candidate_id: UUID) -> list[dict[str, object]]:
+        """List all interviews for a candidate as structured dicts.
+
+        Read-only projection for the HR Assistant Read-Tool
+        ``list_interviews_for_candidate``. Returns interviews ordered by
+        ``start_at`` descending (most recent first). Each dict contains
+        ``scheduled_time``, ``status``, ``location``, and ``notes``.
+
+        Args:
+            candidate_id: The candidate whose interviews to list.
+
+        Returns:
+            A list of interview dicts, empty list if none found.
+        """
+        stmt = (
+            select(Interview)
+            .where(Interview.candidate_id == candidate_id)
+            .order_by(Interview.start_at.desc())
+        )
+        res = await self._session.execute(stmt)
+        interviews = res.scalars().all()
+
+        return [
+            {
+                "id": str(iv.id),
+                "scheduled_time": iv.start_at.isoformat(),
+                "end_time": iv.end_at.isoformat(),
+                "status": iv.status,
+                "round_name": iv.round_name,
+                "location": iv.meeting_link or iv.remote_location or None,
+                "meeting_mode": iv.meeting_mode,
+                "notes": None,  # not yet modelled on Interview entity
+                "timezone": iv.timezone,
+            }
+            for iv in interviews
+        ]
 
     async def _get_scheduled_interview(self, candidate_id: UUID) -> Interview | None:
         """Return the first scheduled Interview for a candidate, or None."""
@@ -2784,9 +2824,6 @@ class CandidateService:
             logger.warning("Cannot capture conflict: Calendar port not configured")
             return
 
-        calendar_port = self._calendar_port
-
-        # Fetch the remote event snapshot.
         remote_event: CalendarEvent | None = None
         try:
             calendar_id = await self._resolve_org_calendar_id()
@@ -3068,7 +3105,10 @@ class CandidateService:
         if choice == "keep_google" and applied_fields:
             resolution_summary["applied_fields"] = applied_fields
 
-        change_text = f"Calendar conflict {conflict.id} resolved by {choice}: event {conflict.calendar_event_id}"
+        change_text = (
+            f"Calendar conflict {conflict.id} resolved by {choice}:"
+            f" event {conflict.calendar_event_id}"
+        )
         if choice == "keep_google" and applied_fields:
             change_text += f"; applied: {', '.join(applied_fields)}"
 

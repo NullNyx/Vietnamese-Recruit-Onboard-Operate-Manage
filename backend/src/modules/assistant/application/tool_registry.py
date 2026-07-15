@@ -21,6 +21,9 @@ from typing import TYPE_CHECKING, Any
 from src.modules.assistant.domain.tools import DraftAction, ToolKind
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from src.modules.employee.application.department_service import DepartmentService
     from src.modules.onboarding.application.onboarding_service import OnboardingService
     from src.modules.recruitment.application.candidate_service import CandidateService
 
@@ -28,6 +31,9 @@ logger = logging.getLogger(__name__)
 
 # CandidateStatus values from recruitment/domain/enums.py
 _VALID_STATUSES = {"new", "reviewing", "interview_scheduled", "accepted", "rejected", "archived"}
+
+# JobOpeningStatus values from recruitment/domain/enums.py
+_VALID_JOB_OPENING_STATUSES = {"draft", "open", "closed", "cancelled"}
 
 
 class ToolRegistry:
@@ -45,9 +51,13 @@ class ToolRegistry:
         self,
         candidate_service: CandidateService,
         onboarding_service: OnboardingService,
+        session: AsyncSession | None = None,
+        department_service: DepartmentService | None = None,
     ) -> None:
         self._candidate_service = candidate_service
         self._onboarding_service = onboarding_service
+        self._session = session
+        self._department_service = department_service
 
     async def execute(self, tool_name: str, arguments: dict[str, Any]) -> str:
         """Execute a tool by name and return the result as JSON string.
@@ -67,6 +77,10 @@ class ToolRegistry:
             "list_in_progress_onboarding": self._list_in_progress_onboarding,
             "search_candidates": self._search_candidates,
             "get_candidate_parsed_cv": self._get_candidate_parsed_cv,
+            "list_job_openings": self._list_job_openings,
+            "get_department_info": self._get_department_info,
+            "list_interviews_for_candidate": self._list_interviews_for_candidate,
+            "get_onboarding_task_details": self._get_onboarding_task_details,
             "draft_interview_invitation": self._draft_interview_invitation,
             "draft_congratulations_email": self._draft_congratulations_email,
         }
@@ -331,4 +345,236 @@ class ToolRegistry:
                 "confirm_method": draft.confirm_method,
                 "confirm_body": draft.confirm_body,
             }
+        }
+
+    async def _list_job_openings(self, args: dict[str, Any]) -> dict[str, typing.Any]:
+        """Read-Tool: list job openings, optionally filtered by status."""
+        if self._session is None:
+            return {"error": "Tool not available: no database session configured."}
+
+        status_filter = args.get("status", "open")
+
+        if status_filter not in _VALID_JOB_OPENING_STATUSES:
+            valid = sorted(_VALID_JOB_OPENING_STATUSES)
+            return {"error": f"Invalid status: {status_filter}. Valid: {valid}"}
+
+        import uuid
+
+        from src.modules.recruitment.infrastructure.repositories import (
+            JobOpeningRepository,
+        )
+
+        jo_repo = JobOpeningRepository(self._session)
+        job_openings, _total = await jo_repo.list_job_openings(
+            status=[status_filter], page=1, page_size=100
+        )
+
+        if not job_openings:
+            return {"job_openings": [], "total": 0, "status": status_filter}
+
+        # Resolve position -> department names
+        from sqlmodel import select as sqlmodel_select
+
+        from src.modules.employee.domain.entities import Department, Position
+
+        position_ids = {jo.position_id for jo in job_openings}
+        pos_stmt = sqlmodel_select(Position).where(Position.id.in_(position_ids))
+        pos_result = await self._session.execute(pos_stmt)
+        positions: dict[uuid.UUID, Position] = {p.id: p for p in pos_result.scalars().all()}
+
+        dept_ids = {p.department_id for p in positions.values() if p.department_id}
+        dept_map: dict[uuid.UUID, str] = {}
+        if dept_ids:
+            dept_stmt = sqlmodel_select(Department).where(Department.id.in_(dept_ids))
+            dept_result = await self._session.execute(dept_stmt)
+            dept_map = {d.id: d.name for d in dept_result.scalars().all()}
+
+        # Batch get accepted candidate counts
+        jo_ids = [jo.id for jo in job_openings]
+        accepted_counts: dict[uuid.UUID, int] = {}
+        for jo_id in jo_ids:
+            accepted_counts[jo_id] = await jo_repo.count_accepted_by_job_opening(jo_id)
+
+        items = []
+        for jo in job_openings:
+            pos = positions.get(jo.position_id)
+            dept_name = dept_map.get(pos.department_id) if pos and pos.department_id else None
+            items.append(
+                {
+                    "id": str(jo.id),
+                    "title": jo.title,
+                    "department": dept_name,
+                    "position": pos.name if pos else None,
+                    "headcount_target": jo.target_headcount,
+                    "headcount_filled": accepted_counts.get(jo.id, 0),
+                    "status": jo.status,
+                }
+            )
+        return {"job_openings": items, "total": len(items), "status": status_filter}
+
+    async def _get_department_info(self, args: dict[str, Any]) -> dict[str, typing.Any]:
+        """Read-Tool: get department info, optionally filtered by department_id."""
+        if self._session is None:
+            return {"error": "Tool not available: no database session configured."}
+
+        import uuid as _uuid
+
+        from sqlmodel import func
+        from sqlmodel import select as sqlmodel_select
+
+        from src.modules.employee.domain.entities import Department, Employee, Position
+
+        department_id_str = args.get("department_id")
+
+        if department_id_str:
+            try:
+                dept_id = _uuid.UUID(department_id_str)
+            except ValueError as e:
+                return {"error": f"Invalid department_id: {str(e)}"}
+
+            dept_stmt = sqlmodel_select(Department).where(Department.id == dept_id)
+            dept_result = await self._session.execute(dept_stmt)
+            dept = dept_result.scalars().first()
+            if dept is None:
+                return {"error": f"Department not found: {department_id_str}"}
+            departments = [dept]
+        else:
+            dept_stmt = sqlmodel_select(Department).order_by(Department.name)
+            dept_result = await self._session.execute(dept_stmt)
+            departments = list(dept_result.scalars().all())
+
+        if not departments:
+            return {"departments": [], "total": 0}
+
+        # Collect all departments data
+        result_items = []
+        for dept in departments:
+            # Get positions in this department
+            pos_stmt = (
+                sqlmodel_select(Position)
+                .where(Position.department_id == dept.id)
+                .order_by(Position.name)
+            )
+            pos_result = await self._session.execute(pos_stmt)
+            positions = list(pos_result.scalars().all())
+
+            # Count employees per position
+            position_info = []
+            for pos in positions:
+                count_stmt = (
+                    sqlmodel_select(func.count())
+                    .select_from(Employee)
+                    .where(
+                        Employee.position_id == pos.id,
+                    )
+                )
+                count_result = await self._session.execute(count_stmt)
+                emp_count = count_result.scalar_one() or 0
+                position_info.append(
+                    {
+                        "position_title": pos.name,
+                        "employee_count": emp_count,
+                    }
+                )
+
+            # Get manager info: employees in this department
+            mgr_stmt = sqlmodel_select(Employee).where(
+                Employee.department_id == dept.id,
+            )
+            mgr_result = await self._session.execute(mgr_stmt)
+            dept_employees = list(mgr_result.scalars().all())
+
+            manager_ids = {e.manager_id for e in dept_employees if e.manager_id}
+            managers = []
+            if manager_ids:
+                mgr_lookup_stmt = sqlmodel_select(Employee).where(Employee.id.in_(manager_ids))
+                mgr_lookup_result = await self._session.execute(mgr_lookup_stmt)
+                mgr_map = {e.id: e for e in mgr_lookup_result.scalars().all()}
+                for mgr_id in manager_ids:
+                    mgr = mgr_map.get(mgr_id)
+                    if mgr:
+                        managers.append(
+                            {
+                                "id": str(mgr.id),
+                                "full_name": mgr.full_name,
+                                "email": mgr.email,
+                                "position_id": str(mgr.position_id) if mgr.position_id else None,
+                            }
+                        )
+
+            result_items.append(
+                {
+                    "id": str(dept.id),
+                    "name": dept.name,
+                    "description": dept.description,
+                    "positions": position_info,
+                    "managers": managers,
+                    "employee_count": len(dept_employees),
+                }
+            )
+
+        return {"departments": result_items, "total": len(result_items)}
+
+    async def _list_interviews_for_candidate(self, args: dict[str, Any]) -> dict[str, typing.Any]:
+        """Read-Tool: list interviews for a candidate."""
+        candidate_id_str = args.get("candidate_id")
+
+        if not candidate_id_str:
+            return {"error": "Missing required parameter: candidate_id."}
+
+        import uuid
+
+        try:
+            candidate_id = uuid.UUID(candidate_id_str)
+        except ValueError as e:
+            return {"error": f"Invalid candidate_id: {str(e)}"}
+
+        try:
+            interviews = await self._candidate_service.list_interviews_for_candidate(candidate_id)
+        except Exception as e:
+            return {"error": f"Không tìm thấy ứng viên: {str(e)}"}
+
+        return {"interviews": interviews, "total": len(interviews)}
+
+    async def _get_onboarding_task_details(self, args: dict[str, Any]) -> dict[str, typing.Any]:
+        """Read-Tool: get task details for an onboarding process."""
+        process_id_str = args.get("onboarding_process_id")
+
+        if not process_id_str:
+            return {"error": "Missing required parameter: onboarding_process_id."}
+
+        import uuid
+
+        try:
+            process_id = uuid.UUID(process_id_str)
+        except ValueError as e:
+            return {"error": f"Invalid onboarding_process_id: {str(e)}"}
+
+        try:
+            detail = await self._onboarding_service.get_process(process_id)
+        except Exception as e:
+            return {"error": f"Không tìm thấy onboarding process: {str(e)}"}
+
+        tasks = []
+        for task in detail.tasks:
+            tasks.append(
+                {
+                    "id": str(task.id),
+                    "name": task.name,
+                    "status": task.status,
+                    "order_index": task.order_index,
+                    "due_date": None,  # not yet modelled on OnboardingTask entity
+                    "is_overdue": False,  # no due_date to compare against
+                    "assigned_to": None,  # not yet modelled on OnboardingTask entity
+                    "completed_at": task.completed_at,
+                    "completed_by_name": task.completed_by_name,
+                }
+            )
+
+        return {
+            "process_id": str(detail.process_id),
+            "status": detail.status,
+            "completed_count": detail.completed_count,
+            "total_count": detail.total_count,
+            "tasks": tasks,
         }

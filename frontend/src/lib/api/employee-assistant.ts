@@ -15,7 +15,7 @@ const TIMEOUT_MS = 60_000; // LLM calls can be slow
 // Types (re-exported from HR assistant for shared shape)
 // ---------------------------------------------------------------------------
 
-export type { ChatMessage, DraftAction, ChatResponse } from "./assistant";
+export type { ChatMessage, DraftAction, ChatResponse, SessionStartResponse } from "./assistant";
 
 // ---------------------------------------------------------------------------
 // API Functions
@@ -42,10 +42,12 @@ async function fetchWithTimeout(
  * Send a chat message to the Employee AI Assistant.
  *
  * @param messages - Full conversation history. Last message must be from user.
+ * @param sessionId - Optional session UUID for latency tracking.
  * @returns New messages from this turn + optional Draft Action.
  */
 export async function sendEmployeeChatMessage(
   messages: import("./assistant").ChatMessage[],
+  sessionId?: string,
 ): Promise<import("./assistant").ChatResponse> {
   // Client-side guard: last message must be from user
   const lastMsg = messages[messages.length - 1];
@@ -63,10 +65,15 @@ export async function sendEmployeeChatMessage(
       return [{ role: message.role, content }];
     });
 
+  const body: Record<string, unknown> = { messages: sanitized };
+  if (sessionId) {
+    body.session_id = sessionId;
+  }
+
   const res = await fetchWithTimeout(`${BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages: sanitized }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -106,4 +113,68 @@ export async function confirmEmployeeDraftAction(
   }
 
   return res.json();
+}
+
+/**
+ * Send employee feedback (thumbs up/down) for an assistant message.
+ */
+export async function sendEmployeeFeedback(
+  feedback: import("./assistant").AssistantFeedbackRequest,
+): Promise<void> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(`${BASE}/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(feedback),
+      signal: controller.signal,
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "Unknown error");
+      throw new Error(`Employee Feedback API ${res.status}: ${text}`);
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Start an Employee AI Assistant chat session.
+ * Called when ChatInterface mounts.
+ */
+export async function startEmployeeSession(
+  assistantType: "hr" | "employee",
+): Promise<import("./assistant").SessionStartResponse> {
+  const res = await fetchWithTimeout(`${BASE}/session/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assistant_type: assistantType }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "Unknown error");
+    throw new Error(`Employee Session API ${res.status}: ${text}`);
+  }
+
+  return res.json() as Promise<import("./assistant").SessionStartResponse>;
+}
+
+/**
+ * End an Employee AI Assistant chat session.
+ * Called when ChatInterface unmounts.
+ */
+export async function endEmployeeSession(sessionId: string): Promise<void> {
+  const res = await fetchWithTimeout(`${BASE}/session/end`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "Unknown error");
+    throw new Error(`Employee Session API ${res.status}: ${text}`);
+  }
 }

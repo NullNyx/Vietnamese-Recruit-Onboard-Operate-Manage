@@ -287,7 +287,8 @@ class ContextBuilder:
         try:
             balance = await self._leave_service.get_my_leave_balance(employee_id)
             return (
-                f"Ngày phép năm: còn {balance['remaining_days']}/{balance['annual_entitlement_days']} ngày "
+                f"Ngày phép năm: còn {balance['remaining_days']}/"
+                f"{balance['annual_entitlement_days']} ngày "
                 f"(đã dùng {balance['approved_days_used']}, "
                 f"đang chờ duyệt {balance['pending_days']})"
             )
@@ -308,18 +309,16 @@ class ContextBuilder:
                 from src.modules.employee_request.domain.entities import (
                     RequestStatus,
                 )
-                pending_leave = sum(
-                    1 for r in leaves if r.status == RequestStatus.SUBMITTED
-                )
+
+                pending_leave = sum(1 for r in leaves if r.status == RequestStatus.SUBMITTED)
 
             if self._overtime_service:
                 overtimes = await self._overtime_service.list_my_overtime(employee_id)
                 from src.modules.employee_request.domain.entities import (
                     RequestStatus,
                 )
-                pending_overtime = sum(
-                    1 for r in overtimes if r.status == RequestStatus.SUBMITTED
-                )
+
+                pending_overtime = sum(1 for r in overtimes if r.status == RequestStatus.SUBMITTED)
 
             total = pending_leave + pending_overtime
             if total == 0:

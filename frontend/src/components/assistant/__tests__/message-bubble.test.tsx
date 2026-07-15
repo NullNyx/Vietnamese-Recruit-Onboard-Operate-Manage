@@ -39,4 +39,44 @@ describe("MessageBubble", () => {
     
     expect(screen.getByText("Đang truy vấn dữ liệu...")).toBeInTheDocument();
   });
+
+  it("does not show feedback buttons when feedback props are missing", () => {
+    const message = { role: "assistant" as const, content: "Hello HR" };
+    render(<MessageBubble message={message as ChatMessage} />);
+    
+    expect(screen.queryByLabelText("Thumbs up")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Thumbs down")).not.toBeInTheDocument();
+  });
+
+  it("shows feedback buttons for assistant message with content when feedback props are provided", () => {
+    const message = { role: "assistant" as const, content: "Hello HR" };
+    const onFeedback = vi.fn();
+    render(
+      <MessageBubble
+        message={message as ChatMessage}
+        messageIndex={0}
+        sessionId="test-session"
+        onFeedback={onFeedback}
+      />,
+    );
+    
+    expect(screen.getByLabelText("Thumbs up")).toBeInTheDocument();
+    expect(screen.getByLabelText("Thumbs down")).toBeInTheDocument();
+  });
+
+  it("does not show feedback buttons for user messages even with props", () => {
+    const message = { role: "user" as const, content: "Hello" };
+    const onFeedback = vi.fn();
+    render(
+      <MessageBubble
+        message={message as ChatMessage}
+        messageIndex={0}
+        sessionId="test-session"
+        onFeedback={onFeedback}
+      />,
+    );
+    
+    expect(screen.queryByLabelText("Thumbs up")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Thumbs down")).not.toBeInTheDocument();
+  });
 });

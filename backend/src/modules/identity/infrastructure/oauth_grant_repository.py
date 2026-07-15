@@ -141,7 +141,6 @@ class OAuthGrantRepository:
             await self.session.flush()
         return [grant.user_id for grant in grants]
 
-
     async def mark_invalid(self, user_id: UUID) -> None:
         """Mark the user's OAuth grant as invalid.
 

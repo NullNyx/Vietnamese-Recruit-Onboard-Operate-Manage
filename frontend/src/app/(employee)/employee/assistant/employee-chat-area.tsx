@@ -5,6 +5,8 @@ import { ChatInterface } from "@/components/assistant/chat-interface";
 import {
   sendEmployeeChatMessage,
   confirmEmployeeDraftAction,
+  startEmployeeSession,
+  endEmployeeSession,
 } from "@/lib/api/employee-assistant";
 
 interface EmployeeChatAreaProps {
@@ -31,6 +33,9 @@ export function EmployeeChatArea({ onOpenRequestDialog }: EmployeeChatAreaProps)
       suggestions={EMPLOYEE_SUGGESTIONS}
       icon={<Bot className="h-8 w-8 text-primary" />}
       onOpenRequestDialog={onOpenRequestDialog}
+      assistantType="employee"
+      onSessionStart={startEmployeeSession}
+      onSessionEnd={endEmployeeSession}
     />
   );
 }

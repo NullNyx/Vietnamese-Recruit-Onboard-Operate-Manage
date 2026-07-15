@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -24,6 +25,8 @@ from src.modules.assistant.infrastructure.config import AssistantSettings
 from src.modules.assistant.infrastructure.llm_client import AssistantLLMClient
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
     from src.modules.attendance.infrastructure.attendance_record_repository import (
         AttendanceRecordRepository,
     )
@@ -105,15 +108,20 @@ class EmployeeAssistantService:
     async def chat(
         self,
         messages: list[ChatMessage],
+        session: AsyncSession | None = None,
+        session_id: UUID | None = None,
     ) -> ChatResponse:
         """Process a user message through the tool-calling loop.
 
         Args:
             messages: Full conversation history including the new user message.
+            session: Optional DB session for logging tool call events.
+            session_id: Optional session UUID to correlate tool call events.
 
         Returns:
             ChatResponse with updated messages and optional draft_action.
         """
+        round_trip_start = time.monotonic()
         tool_registry = EmployeeToolRegistry(
             employee_id=self._employee_id,
             employee_service=self._employee_service,
@@ -130,10 +138,13 @@ class EmployeeAssistantService:
         all_new_messages: list[ChatMessage] = []
 
         for _iteration in range(_MAX_TOOL_ITERATIONS):
+            llm_start = time.monotonic()
             response = await self._llm_client.chat(
                 messages=openai_messages,
                 tools=tool_registry.get_openai_tools(),
             )
+            llm_duration_ms = (time.monotonic() - llm_start) * 1000
+            logger.debug("Employee LLM response took %.0f ms", llm_duration_ms)
 
             if not response.tool_calls:
                 assistant_msg = ChatMessage(
@@ -164,7 +175,30 @@ class EmployeeAssistantService:
                 except json.JSONDecodeError:
                     tool_args = {}
 
-                result_str = await tool_registry.execute(tool_name, tool_args)
+                tool_start = time.monotonic()
+                success = True
+                try:
+                    result_str = await tool_registry.execute(tool_name, tool_args)
+                except Exception:
+                    success = False
+                    result_str = json.dumps({"error": f"Tool execution failed: {tool_name}"})
+                tool_duration_ms = (time.monotonic() - tool_start) * 1000
+                logger.debug(
+                    "Employee tool %s took %.0f ms (success=%s)",
+                    tool_name,
+                    tool_duration_ms,
+                    success,
+                )
+
+                # Record tool call event to DB if session is available
+                if session is not None and session_id is not None:
+                    await self._record_tool_event(
+                        session=session,
+                        session_id=session_id,
+                        tool_name=tool_name,
+                        duration_ms=tool_duration_ms,
+                        success=success,
+                    )
 
                 if tool_registry.is_draft_tool(tool_name):
                     try:
@@ -190,14 +224,37 @@ class EmployeeAssistantService:
                     }
                 )
 
-        has_text_response = any(m.role == "assistant" and m.content for m in all_new_messages)
-        if not has_text_response:
-            all_new_messages.append(ChatMessage(role="assistant", content=_TOOL_LOOP_FALLBACK))
+            has_text_response = any(m.role == "assistant" and m.content for m in all_new_messages)
+            if not has_text_response:
+                all_new_messages.append(ChatMessage(role="assistant", content=_TOOL_LOOP_FALLBACK))
 
-        return ChatResponse(
-            messages=all_new_messages,
-            draft_action=draft_action,
-        )
+            # Increment message_count for this exchange
+            if session is not None and session_id is not None:
+                from sqlmodel import select
+
+                from src.modules.assistant.infrastructure.quality_models import AssistantChatSession
+
+                result = await session.execute(
+                    select(AssistantChatSession).where(
+                        AssistantChatSession.id == session_id,
+                    )
+                )
+                chat_session = result.scalar_one_or_none()
+                if chat_session is not None:
+                    chat_session.message_count += 1
+
+            total_duration_ms = (time.monotonic() - round_trip_start) * 1000
+            logger.info(
+                "Employee assistant round-trip took %.0f ms (%d messages, %d new)",
+                total_duration_ms,
+                len(messages),
+                len(all_new_messages),
+            )
+
+            return ChatResponse(
+                messages=all_new_messages,
+                draft_action=draft_action,
+            )
 
     async def _build_messages(
         self,
@@ -256,3 +313,24 @@ class EmployeeAssistantService:
             result.append(entry)
 
         return result
+
+    async def _record_tool_event(
+        self,
+        session: AsyncSession,
+        session_id: UUID,
+        tool_name: str,
+        duration_ms: float,
+        success: bool,
+    ) -> None:
+        """Record a tool call event to assistant_tool_call_events table."""
+        from src.modules.assistant.infrastructure.quality_models import (
+            AssistantToolCallEvent,
+        )
+
+        event = AssistantToolCallEvent(
+            session_id=session_id,
+            tool_name=tool_name,
+            duration_ms=int(duration_ms),
+            success=success,
+        )
+        session.add(event)

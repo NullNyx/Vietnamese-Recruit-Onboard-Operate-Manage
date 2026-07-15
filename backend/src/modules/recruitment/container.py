@@ -192,7 +192,6 @@ async def get_candidate_service(
     connection_repo = OrganizationGoogleConnectionRepository(session)
     crypto = get_crypto_utils()
 
-
     return CandidateService(
         candidate_repo=candidate_repo,
         cv_document_repo=cv_document_repo,
@@ -204,7 +203,6 @@ async def get_candidate_service(
         org_settings_repo=org_settings_repo,
         connection_repo=connection_repo,
         crypto=crypto,
-
         job_opening_repo=job_opening_repo,
     )
 
@@ -425,7 +423,6 @@ async def arq_process_cv_from_email(ctx: dict[str, Any], email_message_id: UUID)
 
             access_token = crypto.decrypt(connection.access_token_enc)
 
-
             # Build Gmail adapter and AttachmentService to fetch binary data
             redis_client = ctx.get("redis_client")
             if redis_client is None:
@@ -572,9 +569,7 @@ async def get_calendar_sync_service(
     conn_repo = OrganizationGoogleConnectionRepository(session)
     connection = await conn_repo.get_singleton()
     if connection is None or connection.status != "connected":
-        raise CalendarGrantMissingError(
-            message="Organization Google Connection is not active"
-        )
+        raise CalendarGrantMissingError(message="Organization Google Connection is not active")
     calendar_id = connection.selected_calendar_id
     if not calendar_id:
         raise CalendarGrantMissingError(

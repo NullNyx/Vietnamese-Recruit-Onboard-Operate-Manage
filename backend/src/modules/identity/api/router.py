@@ -285,6 +285,7 @@ async def callback_google_connection(
 # Calendar list + selection (Issue 154)
 # ---------------------------------------------------------------------------
 
+
 class CalendarEntryResponse(BaseModel):
     """A single calendar list entry."""
 
@@ -296,16 +297,19 @@ class CalendarEntryResponse(BaseModel):
     primary: bool = False
     access_role: str = ""
 
+
 class CalendarListResponseSchema(BaseModel):
     """Response for the calendar list endpoint."""
 
     calendars: list[CalendarEntryResponse]
     selected_calendar_id: str | None = None
 
+
 class SelectCalendarRequest(BaseModel):
     """Request to select a calendar for interview scheduling."""
 
     calendar_id: str
+
 
 @router.get("/organization-google-connection/calendars")
 async def list_calendars_for_selection(
@@ -338,9 +342,8 @@ async def list_calendars_for_selection(
         )
         for cal in calendars
     ]
-    return CalendarListResponseSchema(
-        calendars=entries, selected_calendar_id=selected_calendar_id
-    )
+    return CalendarListResponseSchema(calendars=entries, selected_calendar_id=selected_calendar_id)
+
 
 @router.put("/organization-google-connection/selected-calendar", status_code=204)
 async def save_selected_calendar(
