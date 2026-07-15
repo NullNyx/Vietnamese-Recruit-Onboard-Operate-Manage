@@ -19,7 +19,6 @@ interface FeedbackButtonsProps {
 
 export function FeedbackButtons({
   messageIndex,
-  sessionId,
   onFeedback,
 }: FeedbackButtonsProps) {
   const [submittedFeedback, setSubmittedFeedback] =

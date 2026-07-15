@@ -9,12 +9,8 @@ held in frontend memory; backend processes each turn statelessly.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
-
 import uuid
-
-
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -31,17 +27,15 @@ from src.modules.assistant.api.schemas import (
     SessionStartRequest,
     SessionStartResponse,
 )
-
-    from src.modules.assistant.infrastructure.quality_models import (
-        AssistantChatSession,
-        AssistantFeedbackEvent,
-        AssistantToolCallEvent,
-    )
 from src.modules.assistant.application.assistant_service import (
     AssistantService,
     ChatMessage,
 )
 from src.modules.assistant.container import get_assistant_service
+from src.modules.assistant.infrastructure.quality_models import (
+    AssistantChatSession,
+    AssistantFeedbackEvent,
+)
 from src.modules.assistant.infrastructure.tool_config_repository import (
     ToolConfigRepository,
 )
@@ -163,7 +157,6 @@ async def chat(
             },
         )
         from src.modules.assistant.infrastructure.quality_models import (
-            AssistantFeedbackEvent,
             FeedbackType,
         )
 

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 const baseURL = process.env.E2E_BASE_URL;
 const hrState = process.env.E2E_HR_STORAGE_STATE;

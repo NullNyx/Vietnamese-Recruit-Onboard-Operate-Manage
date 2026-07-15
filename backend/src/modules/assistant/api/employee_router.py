@@ -10,17 +10,15 @@ is injected from the session, never from the LLM.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
-
 import uuid
-
+from datetime import UTC, datetime
 from typing import Annotated
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.assistant.api.employee_schemas import (
+    AssistantFeedbackRequest,
     ChatRequest,
     ChatResponseSchema,
     DraftActionSchema,
@@ -29,22 +27,21 @@ from src.modules.assistant.api.employee_schemas import (
     SessionStartRequest,
     SessionStartResponse,
 )
-    from src.modules.assistant.infrastructure.quality_models import (
-        AssistantChatSession,
-        AssistantFeedbackEvent,
-        AssistantToolCallEvent,
-    )
 from src.modules.assistant.application.assistant_service import ChatMessage
+from src.modules.assistant.application.context_builder import ContextBuilder
 from src.modules.assistant.application.employee_assistant_service import (
     EmployeeAssistantService,
 )
-from src.modules.assistant.application.context_builder import ContextBuilder
 from src.modules.assistant.container import (
     get_configured_assistant_llm_client,
     get_configured_assistant_settings,
 )
 from src.modules.assistant.infrastructure.config import AssistantSettings
 from src.modules.assistant.infrastructure.llm_client import AssistantLLMClient
+from src.modules.assistant.infrastructure.quality_models import (
+    AssistantChatSession,
+    AssistantFeedbackEvent,
+)
 from src.modules.attendance.container import (
     get_attendance_record_repository,
 )
@@ -56,10 +53,10 @@ from src.modules.employee.application.document_service import DocumentService
 from src.modules.employee.application.employee_service import EmployeeService
 from src.modules.employee.container import get_document_service, get_employee_service
 from src.modules.employee.domain.entities import Employee
-from src.modules.identity.container import get_db_session
 from src.modules.employee_request.application.leave_service import LeaveService
 from src.modules.employee_request.application.overtime_service import OvertimeService
 from src.modules.employee_request.container import get_leave_service, get_overtime_service
+from src.modules.identity.container import get_db_session
 from src.modules.payslip.application.payslip_service import PayslipService
 from src.modules.payslip.container import get_payslip_service
 
@@ -195,7 +192,6 @@ async def employee_chat(
     ) -> None:
         """Record employee feedback (thumbs up/down) for an assistant response."""
         from src.modules.assistant.infrastructure.quality_models import (
-            AssistantFeedbackEvent,
             FeedbackType,
         )
 
