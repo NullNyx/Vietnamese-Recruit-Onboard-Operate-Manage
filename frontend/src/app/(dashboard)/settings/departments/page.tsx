@@ -72,31 +72,33 @@ export default function DepartmentsPage() {
     },
   ];
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="font-heading text-2xl font-bold text-foreground">
-          Phòng ban
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Quản lý danh sách phòng ban trong tổ chức
-        </p>
-      </div>
+      return (
+        <div className="animate-fade-in space-y-6">
+          {/* Header */}
+          <div className="fade-in-section">
+            <h1 className="font-heading text-2xl font-bold text-foreground tracking-tight">
+              Phòng ban
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Quản lý danh sách phòng ban trong tổ chức
+            </p>
+          </div>
 
-      {/* DataTable */}
-      <DataTable
-        columns={columns}
-        data={rows}
-        loading={loading}
-        error={error?.message ?? null}
-        toolbar={
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-            Thêm mới
-          </Button>
-        }
-      />
-    </div>
+          {/* DataTable */}
+          <div className="fade-in-section">
+            <DataTable
+              columns={columns}
+              data={rows}
+              loading={loading}
+              error={error?.message ?? null}
+              toolbar={
+                <Button size="sm" className="shadow-sm">
+                  <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Thêm mới
+                </Button>
+              }
+            />
+          </div>
+        </div>
   );
 }

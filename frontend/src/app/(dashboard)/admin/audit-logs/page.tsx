@@ -69,26 +69,33 @@ export default function AuditLogsPage() {
     setPage(1);
   }
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold font-heading tracking-tight">
-        Nhật ký hoạt động
-      </h1>
+      return (
+        <div className="animate-fade-in space-y-6">
+          <div className="fade-in-section">
+            <h1 className="text-3xl font-bold font-heading tracking-tight">
+              Nhật ký hoạt động
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Theo dõi và kiểm tra lịch sử thao tác trong hệ thống
+            </p>
+          </div>
 
-      <AuditLogTable
-        logs={logs}
-        total={total}
-        page={page}
-        pageSize={PAGE_SIZE}
-        actionTypeFilter={actionTypeFilter}
-        startDate={startDate}
-        endDate={endDate}
-        loading={loading}
-        onPageChange={setPage}
-        onActionTypeChange={handleActionTypeChange}
-        onStartDateChange={handleStartDateChange}
-        onEndDateChange={handleEndDateChange}
-      />
-    </div>
+          <div className="fade-in-section">
+            <AuditLogTable
+              logs={logs}
+              total={total}
+              page={page}
+              pageSize={PAGE_SIZE}
+              actionTypeFilter={actionTypeFilter}
+              startDate={startDate}
+              endDate={endDate}
+              loading={loading}
+              onPageChange={setPage}
+              onActionTypeChange={handleActionTypeChange}
+              onStartDateChange={handleStartDateChange}
+              onEndDateChange={handleEndDateChange}
+            />
+          </div>
+        </div>
   );
 }

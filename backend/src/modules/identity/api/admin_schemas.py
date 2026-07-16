@@ -264,6 +264,7 @@ class AssistantToolConfigResponse(BaseModel):
     """
 
     tool_name: str
+    display_name: str
     description: str
     kind: str
     enabled: bool

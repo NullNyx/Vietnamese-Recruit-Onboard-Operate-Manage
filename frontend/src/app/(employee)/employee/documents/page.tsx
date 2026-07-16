@@ -108,83 +108,88 @@ export default function EmployeeDocumentsPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold tracking-tight">Tài liệu</h1>
-        <Card>
-          <CardContent className="p-6 space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Tài liệu</h1>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Kho tài liệu cá nhân
-          </CardTitle>
-          <CardDescription>
-            Các tài liệu đã được HR upload cho bạn. Liên hệ HR để bổ sung tài
-            liệu mới.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {documents.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">
-              Chưa có tài liệu nào.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tên file</TableHead>
-                  <TableHead>Loại</TableHead>
-                  <TableHead>Kích thước</TableHead>
-                  <TableHead>Ngày upload</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {documents.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-medium">
-                      {doc.file_name}
-                    </TableCell>
-                    <TableCell>{formatDocType(doc.document_type)}</TableCell>
-                    <TableCell>{formatFileSize(doc.file_size)}</TableCell>
-                    <TableCell>{formatDate(doc.uploaded_at)}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDownload(doc.id)}
-                        disabled={downloadingId === doc.id}
-                        aria-label={`Tải xuống ${doc.file_name}`}
-                      >
-                        {downloadingId === doc.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Download className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+      if (loading) {
+        return (
+          <div className="animate-fade-in space-y-6">
+            <h1 className="text-2xl font-bold tracking-tight">Tài liệu</h1>
+            <Card className="fade-in-section">
+              <CardContent className="p-6 space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
                 ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      }
+    
+      return (
+        <div className="animate-fade-in space-y-6">
+          <div className="fade-in-section">
+            <h1 className="text-2xl font-bold tracking-tight">Tài liệu</h1>
+            <p className="text-sm text-muted-foreground mt-1">Kho tài liệu cá nhân của bạn</p>
+          </div>
+    
+          <Card className="fade-in-section card-hover">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Kho tài liệu cá nhân
+              </CardTitle>
+              <CardDescription>
+                Các tài liệu đã được HR upload cho bạn. Liên hệ HR để bổ sung tài
+                liệu mới.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {documents.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-8 text-center rounded-lg border border-dashed border-border/50">
+                  Chưa có tài liệu nào.
+                </p>
+              ) : (
+                <div className="rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tên file</TableHead>
+                        <TableHead>Loại</TableHead>
+                        <TableHead>Kích thước</TableHead>
+                        <TableHead>Ngày upload</TableHead>
+                        <TableHead className="w-[80px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {documents.map((doc) => (
+                        <TableRow key={doc.id} className="card-hover">
+                          <TableCell className="font-medium">
+                            {doc.file_name}
+                          </TableCell>
+                          <TableCell>{formatDocType(doc.document_type)}</TableCell>
+                          <TableCell>{formatFileSize(doc.file_size)}</TableCell>
+                          <TableCell>{formatDate(doc.uploaded_at)}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDownload(doc.id)}
+                              disabled={downloadingId === doc.id}
+                              aria-label={`Tải xuống ${doc.file_name}`}
+                            >
+                              {downloadingId === doc.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Download className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
   );
 }

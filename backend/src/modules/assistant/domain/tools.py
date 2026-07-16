@@ -1,14 +1,19 @@
-"""Tool definitions for the AI Assistant.
+"""Định nghĩa các tool cho AI Assistant.
 
-Defines the 4 tools available to the LLM:
+Định nghĩa 10 tool có sẵn cho LLM:
 - Read-Tool: count_candidates_by_status
+- Read-Tool: list_interviews_for_candidate
+- Read-Tool: get_onboarding_task_details
 - Read-Tool: list_in_progress_onboarding
 - Read-Tool: search_candidates
+- Read-Tool: get_candidate_parsed_cv
+- Read-Tool: list_job_openings
+- Read-Tool: get_department_info
 - Draft-Tool: draft_interview_invitation
 - Draft-Tool: draft_congratulations_email
 
-The LLM is NEVER given a tool that writes to the database (ADR-0006).
-Backend executes tools directly — LLM only defines what to call.
+LLM KHÔNG BAO GIỜ được cấp tool ghi vào database (ADR-0006).
+Backend thực thi tool trực tiếp — LLM chỉ định nghĩa tool cần gọi.
 """
 
 from __future__ import annotations
@@ -27,16 +32,18 @@ class ToolKind(StrEnum):
 
 @dataclass(frozen=True)
 class ToolDefinition:
-    """A tool the LLM can invoke.
+    """Một tool mà LLM có thể gọi.
 
     Attributes:
-        name: Machine-readable tool name.
-        kind: Read-Tool or Draft-Tool.
-        description: Human-readable description for the LLM.
-        parameters: JSON Schema for the tool's parameters.
+        name: Tên tool (dạng máy đọc được).
+        display_name: Tên hiển thị thân thiện (tiếng Việt).
+        kind: Read-Tool hoặc Draft-Tool.
+        description: Mô tả cho LLM (ngôn ngữ tự nhiên).
+        parameters: JSON Schema cho các tham số của tool.
     """
 
     name: str
+    display_name: str
     kind: ToolKind
     description: str
     parameters: dict[str, Any]
@@ -49,13 +56,13 @@ class DraftAction:
     HR reviews it; on confirm, the frontend calls the real write endpoint
     directly — never the LLM. This is the human-in-the-loop mechanism.
 
-    Action attributes (from HR’s perspective):
-        action_type: What the action is (e.g. send_email).
-        parameters: Action parameters.
-        preview: Human-readable preview for HR to review.
-        confirm_endpoint: The real API endpoint to call on confirm.
-        confirm_method: HTTP method for the confirm endpoint.
-        confirm_body: The request body for the confirm endpoint.
+    Action attributes (from HR's perspective):
+        action_type: Loại action (ví dụ: send_email).
+        parameters: Tham số của action.
+        preview: Bản xem trước để HR review.
+        confirm_endpoint: Endpoint API thực tế sẽ gọi khi xác nhận.
+        confirm_method: HTTP method cho endpoint xác nhận.
+        confirm_body: Nội dung request body cho endpoint xác nhận.
     """
 
     action_type: str
@@ -74,12 +81,13 @@ class DraftAction:
 TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="count_candidates_by_status",
+        display_name="Đếm ứng viên theo trạng thái",
         kind=ToolKind.READ,
         description=(
-            "Count candidates in the recruitment pipeline, optionally filtered "
-            "by status. Returns a list of {status, count} objects. "
-            "Use when the user asks how many candidates exist, how many are in "
-            "a specific status, or wants a pipeline overview."
+            "Đếm số lượng candidate trong pipeline tuyển dụng, có thể lọc "
+            "theo trạng thái. Trả về danh sách các đối tượng {status, count}. "
+            "Sử dụng khi người dùng hỏi có bao nhiêu candidate, bao nhiêu "
+            "candidate đang ở một trạng thái cụ thể, hoặc muốn xem tổng quan pipeline."
         ),
         parameters={
             "type": "object",
@@ -87,9 +95,9 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
                 "status": {
                     "type": "string",
                     "description": (
-                        "Optional status filter. One of: new, reviewing, "
+                        "Lọc theo trạng thái (không bắt buộc). Giá trị: new, reviewing, "
                         "interview_scheduled, accepted, rejected, archived. "
-                        "If omitted, returns counts for ALL statuses."
+                        "Nếu bỏ qua, trả về số lượng cho TẤT CẢ trạng thái."
                     ),
                 },
             },
@@ -97,19 +105,21 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="list_interviews_for_candidate",
+        display_name="Danh sách phỏng vấn",
         kind=ToolKind.READ,
         description=(
-            "List interviews for a candidate. Returns a list of interviews with "
-            "scheduled_time, status (scheduled/completed/cancelled), location, "
-            "and notes. Use when the user asks about a candidate's interview "
-            "schedule, upcoming interviews, or interview history."
+            "Liệt kê lịch phỏng vấn của một candidate. Trả về danh sách các buổi phỏng vấn với "
+            "thời gian đã lên lịch, trạng thái (scheduled/completed/cancelled), địa điểm, "
+            "và ghi chú. "
+            "Sử dụng khi người dùng hỏi về lịch phỏng vấn của candidate, các buổi phỏng vấn "
+            "sắp tới, hoặc lịch sử phỏng vấn."
         ),
         parameters={
             "type": "object",
             "properties": {
                 "candidate_id": {
                     "type": "string",
-                    "description": "UUID of the candidate whose interviews to list.",
+                    "description": "UUID của candidate cần xem danh sách phỏng vấn.",
                 },
             },
             "required": ["candidate_id"],
@@ -117,20 +127,21 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="get_onboarding_task_details",
+        display_name="Chi tiết nhiệm vụ onboarding",
         kind=ToolKind.READ,
         description=(
-            "Get task details for an onboarding process. Returns a list of tasks "
-            "with name, status (pending/done), due_date (if available), "
-            "is_overdue (boolean), and assigned_to (if available). "
-            "Use when the user asks about onboarding progress, task checklist, "
-            "or what remains to be done for a specific onboarding process."
+            "Xem chi tiết công việc trong quy trình onboarding. Trả về danh sách tác vụ "
+            "với tên, trạng thái (pending/done), ngày đến hạn (nếu có), "
+            "is_overdue (boolean), và người được giao (nếu có). "
+            "Sử dụng khi người dùng hỏi về tiến độ onboarding, danh sách việc cần làm, "
+            "hoặc những gì còn phải hoàn thành cho một quy trình onboarding cụ thể."
         ),
         parameters={
             "type": "object",
             "properties": {
                 "onboarding_process_id": {
                     "type": "string",
-                    "description": "UUID of the onboarding process whose tasks to retrieve.",
+                    "description": "UUID của quy trình onboarding cần lấy danh sách công việc.",
                 },
             },
             "required": ["onboarding_process_id"],
@@ -138,13 +149,14 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="list_in_progress_onboarding",
+        display_name="Onboarding đang thực hiện",
         kind=ToolKind.READ,
         description=(
-            "List onboarding processes that are currently in progress. "
-            "Returns a list of processes with employee full name, email, progress "
-            "(completed/total tasks), and status. "
-            "Use when the user asks about onboarding status, who is "
-            "being onboarded, or onboarding progress."
+            "Liệt kê các quy trình onboarding đang diễn ra. "
+            "Trả về danh sách các quy trình với họ tên nhân viên, email, tiến độ "
+            "(số công việc đã hoàn thành/tổng số), và trạng thái. "
+            "Sử dụng khi người dùng hỏi về tình trạng onboarding, ai đang "
+            "được onboard, hoặc tiến độ onboarding."
         ),
         parameters={
             "type": "object",
@@ -153,19 +165,20 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="search_candidates",
+        display_name="Tìm kiếm ứng viên",
         kind=ToolKind.READ,
         description=(
-            "Search for candidates by name or email. Returns matching "
-            "candidates with id, name, email, and status. "
-            "Use when the user mentions a specific candidate by name "
-            "or email, or before drafting an email to a candidate."
+            "Tìm kiếm candidate theo tên hoặc email. Trả về danh sách các candidate "
+            "phù hợp với id, tên, email, và trạng thái. "
+            "Sử dụng khi người dùng nhắc đến một candidate cụ thể bằng tên "
+            "hoặc email, hoặc trước khi soạn thảo email cho candidate."
         ),
         parameters={
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Search term — matches against candidate name or email.",
+                    "description": "Từ khóa tìm kiếm — so khớp tên hoặc email candidate.",
                 },
             },
             "required": ["query"],
@@ -173,21 +186,22 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="get_candidate_parsed_cv",
+        display_name="Xem CV đã phân tích",
         kind=ToolKind.READ,
         description=(
-            "Get the parsed CV data for a candidate. Returns structured data "
-            "including skills, experience, education, summary, and the full "
-            "parsed CV JSON from the AI Automation pipeline. "
-            "Use when the user asks about a candidate's CV content, skills, "
-            "experience, or background — or before drafting an email to "
-            "personalize it with CV details."
+            "Lấy dữ liệu CV đã được parse của một candidate. Trả về dữ liệu có cấu trúc "
+            "bao gồm kỹ năng, kinh nghiệm, học vấn, tóm tắt, và toàn bộ "
+            "CV JSON đã parse từ pipeline AI Automation. "
+            "Sử dụng khi người dùng hỏi về nội dung CV, kỹ năng, kinh nghiệm, "
+            "hoặc background của candidate — hoặc trước khi soạn email để "
+            "cá nhân hóa dựa trên thông tin CV."
         ),
         parameters={
             "type": "object",
             "properties": {
                 "candidate_id": {
                     "type": "string",
-                    "description": "UUID of the candidate whose CV to read.",
+                    "description": "UUID của candidate cần đọc CV.",
                 },
             },
             "required": ["candidate_id"],
@@ -195,30 +209,31 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="draft_interview_invitation",
+        display_name="Soạn email mời phỏng vấn",
         kind=ToolKind.DRAFT,
         description=(
-            "Draft an interview invitation email for a candidate. Returns a Draft Action "
-            "with the email content for HR to review and confirm. "
-            "Use when the user asks to compose or send an interview invitation."
+            "Soạn thảo email mời phỏng vấn cho một candidate. Trả về một Draft Action "
+            "với nội dung email để HR xem xét và xác nhận. "
+            "Sử dụng khi người dùng muốn soạn hoặc gửi thư mời phỏng vấn."
         ),
         parameters={
             "type": "object",
             "properties": {
                 "candidate_id": {
                     "type": "string",
-                    "description": "UUID of the candidate.",
+                    "description": "UUID của candidate.",
                 },
                 "interview_date": {
                     "type": "string",
-                    "description": "Date of the interview (e.g. 15/06/2026 or YYYY-MM-DD).",
+                    "description": "Ngày phỏng vấn (ví dụ: 15/06/2026 hoặc YYYY-MM-DD).",
                 },
                 "interview_time": {
                     "type": "string",
-                    "description": "Time of the interview (e.g. 09:00 AM).",
+                    "description": "Giờ phỏng vấn (ví dụ: 09:00 AM).",
                 },
                 "location": {
                     "type": "string",
-                    "description": "Location or Google Meet link for the interview.",
+                    "description": "Địa điểm hoặc đường link Google Meet cho buổi phỏng vấn.",
                 },
             },
             "required": ["candidate_id", "interview_date", "interview_time", "location"],
@@ -226,13 +241,14 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="list_job_openings",
+        display_name="Danh sách vị trí đang tuyển",
         kind=ToolKind.READ,
         description=(
-            "List job openings in the recruitment pipeline, optionally filtered "
-            "by status. Returns a list of job openings with id, title, department, "
-            "position, headcount_target, headcount_filled, and status. "
-            "Use when the user asks about job openings, hiring plans, "
-            "or headcount status."
+            "Liệt kê các vị trí đang tuyển dụng trong pipeline, có thể lọc "
+            "theo trạng thái. Trả về danh sách các vị trí với id, tiêu đề, phòng ban, "
+            "chức vụ, chỉ tiêu tuyển dụng, số lượng đã tuyển, và trạng thái. "
+            "Sử dụng khi người dùng hỏi về các vị trí đang tuyển, kế hoạch tuyển dụng, "
+            "hoặc tình trạng chỉ tiêu."
         ),
         parameters={
             "type": "object",
@@ -240,8 +256,8 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
                 "status": {
                     "type": "string",
                     "description": (
-                        "Optional status filter. One of: draft, open, closed, cancelled. "
-                        "Defaults to 'open' if omitted."
+                        "Lọc theo trạng thái (tùy chọn): draft, open, closed, cancelled. "
+                        "Mặc định là 'open' nếu bỏ qua."
                     ),
                 },
             },
@@ -249,13 +265,14 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="get_department_info",
+        display_name="Thông tin phòng ban",
         kind=ToolKind.READ,
         description=(
-            "Get department information. Returns department name, description, "
-            "list of positions (title, employee count), and manager info. "
-            "If department_id is omitted, returns info for ALL departments. "
-            "Use when the user asks about a department's structure, "
-            "positions, or management."
+            "Xem thông tin phòng ban. Trả về tên phòng ban, mô tả, "
+            "danh sách chức vụ (tên, số lượng nhân viên), và thông tin quản lý. "
+            "Nếu bỏ qua department_id, trả về thông tin cho TẤT CẢ phòng ban. "
+            "Sử dụng khi người dùng hỏi về cơ cấu phòng ban, "
+            "chức vụ, hoặc quản lý."
         ),
         parameters={
             "type": "object",
@@ -263,8 +280,8 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
                 "department_id": {
                     "type": "string",
                     "description": (
-                        "Optional UUID of the department. If omitted, "
-                        "returns info for all departments."
+                        "UUID của phòng ban (không bắt buộc). Nếu bỏ qua, "
+                        "trả về thông tin cho tất cả phòng ban."
                     ),
                 },
             },
@@ -272,26 +289,27 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="draft_congratulations_email",
+        display_name="Soạn email chúc mừng",
         kind=ToolKind.DRAFT,
         description=(
-            "Draft a congratulations / offer email for a candidate. Returns a Draft Action "
-            "with the email content for HR to review and confirm. "
-            "Use when the user asks to send an offer or congratulations to a candidate."
+            "Soạn email chúc mừng/thông báo trúng tuyển cho candidate. Trả về Draft Action "
+            "với nội dung email để HR xem xét và xác nhận. "
+            "Sử dụng khi người dùng muốn gửi thư mời nhận việc/lời chúc mừng đến candidate."
         ),
         parameters={
             "type": "object",
             "properties": {
                 "candidate_id": {
                     "type": "string",
-                    "description": "UUID of the candidate.",
+                    "description": "UUID của candidate.",
                 },
                 "position": {
                     "type": "string",
-                    "description": "The job position being offered.",
+                    "description": "Chức vụ / vị trí đang được đề nghị.",
                 },
                 "start_date": {
                     "type": "string",
-                    "description": "The expected start date (e.g. 15/06/2026 or YYYY-MM-DD).",
+                    "description": "Ngày bắt đầu làm việc (VD: 15/06/2026 hay YYYY-MM-DD).",
                 },
             },
             "required": ["candidate_id", "position", "start_date"],
@@ -301,14 +319,14 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
 
 
 def get_openai_tools(enabled_names: set[str] | None = None) -> list[dict[str, Any]]:
-    """Convert TOOL_DEFINITIONS to OpenAI function-calling format.
+    """Chuyển đổi TOOL_DEFINITIONS sang định dạng OpenAI function-calling.
 
     Args:
-        enabled_names: If provided, only include tools whose name is in this set.
-            If None, all tools are included (backwards compatible).
+        enabled_names: Nếu được cung cấp, chỉ bao gồm tool có tên trong tập hợp này.
+            Nếu None, tất cả tool đều được bao gồm (tương thích ngược).
 
     Returns:
-        List of tool dicts in the format expected by the chat completions API.
+        Danh sách các dict tool theo định dạng chat completions API.
     """
     tools = TOOL_DEFINITIONS
     if enabled_names is not None:

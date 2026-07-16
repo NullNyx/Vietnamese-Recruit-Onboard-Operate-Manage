@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Public_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const publicSans = Public_Sans({
+const inter = Inter({
   subsets: ["latin", "vietnamese"],
-  variable: "--font-public-sans",
-  weight: ["300", "400", "500", "600"],
+  variable: "--font-inter",
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -28,7 +28,7 @@ export default function RootLayout({
     <html
       lang="vi"
       suppressHydrationWarning
-      className={`${publicSans.variable}`}
+      className={`${inter.variable}`}
     >
       <body className="font-sans antialiased">
         <Providers>

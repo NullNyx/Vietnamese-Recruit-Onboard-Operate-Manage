@@ -6,15 +6,17 @@ export const metadata = {
 };
 
 export default function AssistantPage() {
-  return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Trợ lý AI</h1>
-        <p className="text-muted-foreground">
-          Hỏi về thông tin cá nhân, chấm công, yêu cầu nghỉ phép / tăng ca
-        </p>
-      </div>
-      <EmployeeAssistantClient />
-    </div>
+      return (
+        <div className="animate-fade-in">
+          <div className="mb-6 fade-in-section">
+            <h1 className="text-2xl font-bold tracking-tight">Trợ lý AI</h1>
+            <p className="text-muted-foreground">
+              Hỏi về thông tin cá nhân, chấm công, yêu cầu nghỉ phép / tăng ca
+            </p>
+          </div>
+          <div className="fade-in-section">
+            <EmployeeAssistantClient />
+          </div>
+        </div>
   );
 }

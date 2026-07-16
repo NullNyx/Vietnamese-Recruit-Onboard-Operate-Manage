@@ -20,15 +20,15 @@ describe("FeedbackButtons", () => {
   it("renders thumbs up and thumbs down buttons", () => {
     render(<FeedbackButtons {...defaultProps} />);
 
-    expect(screen.getByLabelText("Thumbs up")).toBeInTheDocument();
-    expect(screen.getByLabelText("Thumbs down")).toBeInTheDocument();
+    expect(screen.getByLabelText("Thích")).toBeInTheDocument();
+    expect(screen.getByLabelText("Không thích")).toBeInTheDocument();
   });
 
   it("calls onFeedback with 'up' when thumbs up is clicked", async () => {
     const onFeedback = vi.fn().mockResolvedValue(undefined);
     render(<FeedbackButtons {...defaultProps} onFeedback={onFeedback} />);
 
-    fireEvent.click(screen.getByLabelText("Thumbs up"));
+    fireEvent.click(screen.getByLabelText("Thích"));
 
     await waitFor(() => {
       expect(onFeedback).toHaveBeenCalledWith(0, "up");
@@ -39,7 +39,7 @@ describe("FeedbackButtons", () => {
     const onFeedback = vi.fn().mockResolvedValue(undefined);
     render(<FeedbackButtons {...defaultProps} onFeedback={onFeedback} />);
 
-    fireEvent.click(screen.getByLabelText("Thumbs up"));
+    fireEvent.click(screen.getByLabelText("Thích"));
 
     await waitFor(() => {
       expect(screen.getByText("Đã đánh giá")).toBeInTheDocument();
@@ -50,18 +50,18 @@ describe("FeedbackButtons", () => {
     const onFeedback = vi.fn().mockResolvedValue(undefined);
     render(<FeedbackButtons {...defaultProps} onFeedback={onFeedback} />);
 
-    fireEvent.click(screen.getByLabelText("Thumbs up"));
+    fireEvent.click(screen.getByLabelText("Thích"));
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Thumbs up")).toBeDisabled();
-      expect(screen.getByLabelText("Thumbs down")).toBeDisabled();
+      expect(screen.getByLabelText("Thích")).toBeDisabled();
+      expect(screen.getByLabelText("Không thích")).toBeDisabled();
     });
   });
 
   it("shows text input when thumbs down is clicked", () => {
     render(<FeedbackButtons {...defaultProps} />);
 
-    fireEvent.click(screen.getByLabelText("Thumbs down"));
+    fireEvent.click(screen.getByLabelText("Không thích"));
 
     expect(
       screen.getByPlaceholderText("Phản hồi thêm (không bắt buộc)..."),
@@ -72,7 +72,7 @@ describe("FeedbackButtons", () => {
     const onFeedback = vi.fn().mockResolvedValue(undefined);
     render(<FeedbackButtons {...defaultProps} onFeedback={onFeedback} />);
 
-    fireEvent.click(screen.getByLabelText("Thumbs down"));
+    fireEvent.click(screen.getByLabelText("Không thích"));
     expect(
       screen.getByPlaceholderText("Phản hồi thêm (không bắt buộc)..."),
     ).toBeInTheDocument();
@@ -88,7 +88,7 @@ describe("FeedbackButtons", () => {
     const onFeedback = vi.fn().mockResolvedValue(undefined);
     render(<FeedbackButtons {...defaultProps} onFeedback={onFeedback} />);
 
-    fireEvent.click(screen.getByLabelText("Thumbs down"));
+    fireEvent.click(screen.getByLabelText("Không thích"));
 
     const textarea = screen.getByPlaceholderText(
       "Phản hồi thêm (không bắt buộc)...",

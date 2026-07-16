@@ -1,6 +1,5 @@
 "use client";
 
-import { Bot } from "lucide-react";
 import { ChatInterface } from "@/components/assistant/chat-interface";
 import {
   sendEmployeeChatMessage,
@@ -31,7 +30,6 @@ export function EmployeeChatArea({ onOpenRequestDialog }: EmployeeChatAreaProps)
       title="Trợ lý AI Nhân viên"
       description="Hỏi tôi về thông tin cá nhân, chấm công, yêu cầu nghỉ phép và tăng ca."
       suggestions={EMPLOYEE_SUGGESTIONS}
-      icon={<Bot className="h-8 w-8 text-primary" />}
       onOpenRequestDialog={onOpenRequestDialog}
       assistantType="employee"
       onSessionStart={startEmployeeSession}

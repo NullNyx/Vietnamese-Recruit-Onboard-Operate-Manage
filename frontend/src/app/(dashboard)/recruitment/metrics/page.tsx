@@ -1,7 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { Clock, CheckCircle, XCircle, Layers, RefreshCw, Loader2, AlertCircle } from "lucide-react";
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  Layers,
+  RefreshCw,
+  Loader2,
+  AlertCircle,
+  Sparkles,
+} from "lucide-react";
 
 import { getMetrics } from "@/lib/api/recruitment";
 import type { MetricsResponse } from "@/lib/api/recruitment";
@@ -41,7 +50,7 @@ function MetricsSkeleton() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <Card key={i}>
+        <Card key={i} className="shadow-sm">
           <CardContent className="flex items-center gap-4 p-6">
             <Skeleton className="h-12 w-12 rounded-lg shrink-0" />
             <div className="space-y-2">
@@ -62,9 +71,13 @@ function MetricsSkeleton() {
 function MetricsError({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 gap-4">
-      <AlertCircle className="h-12 w-12 text-muted-foreground" />
-      <p className="text-muted-foreground text-sm">Không thể tải số liệu</p>
-      <Button variant="outline" onClick={onRetry}>
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 ring-1 ring-destructive/20">
+        <AlertCircle className="h-6 w-6 text-destructive" strokeWidth={1.5} />
+      </div>
+      <p className="text-sm font-medium text-muted-foreground">
+        Không thể tải số liệu
+      </p>
+      <Button variant="outline" size="sm" onClick={onRetry}>
         Thử lại
       </Button>
     </div>
@@ -81,7 +94,6 @@ export default function MetricsDashboardPage() {
   const [error, setError] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
 
-  // Fetch metrics data
   const fetchMetrics = React.useCallback(async () => {
     try {
       const data = await getMetrics();
@@ -92,7 +104,6 @@ export default function MetricsDashboardPage() {
     }
   }, []);
 
-  // Initial fetch on mount
   const loadMetrics = React.useCallback(async () => {
     setLoading(true);
     setError(false);
@@ -124,7 +135,6 @@ export default function MetricsDashboardPage() {
 
     function handleVisibilityChange() {
       if (document.visibilityState === "visible") {
-        // Fetch immediately when becoming visible, then restart interval
         fetchMetrics();
         startInterval();
       } else {
@@ -132,7 +142,6 @@ export default function MetricsDashboardPage() {
       }
     }
 
-    // Start interval if page is currently visible
     if (document.visibilityState === "visible") {
       startInterval();
     }
@@ -145,7 +154,6 @@ export default function MetricsDashboardPage() {
     };
   }, [fetchMetrics]);
 
-  // Manual refresh with 10s timeout
   const handleManualRefresh = React.useCallback(async () => {
     setRefreshing(true);
 
@@ -161,18 +169,24 @@ export default function MetricsDashboardPage() {
     }
   }, [fetchMetrics]);
 
-  // Retry after error (shows skeleton)
   const handleRetry = React.useCallback(() => {
     loadMetrics();
   }, [loadMetrics]);
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
+    <div className="animate-page-enter space-y-6 max-w-[1200px] mx-auto overflow-x-hidden pb-10">
+      {/* ─── Page Header ───────────────────────────────── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Số liệu Pipeline</h1>
-          <p className="text-muted-foreground text-sm">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Layers className="h-4 w-4" strokeWidth={1.5} />
+            </div>
+            <h1 className="font-heading text-2xl font-bold tracking-tight">
+              Số liệu Pipeline
+            </h1>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground ml-10">
             Thống kê xử lý CV trong 24 giờ qua
           </p>
         </div>
@@ -182,6 +196,7 @@ export default function MetricsDashboardPage() {
           onClick={handleManualRefresh}
           disabled={refreshing || loading}
           aria-label="Làm mới"
+          className="shrink-0"
         >
           {refreshing ? (
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -192,41 +207,63 @@ export default function MetricsDashboardPage() {
         </Button>
       </div>
 
-      {/* Content */}
+      {/* ─── Summary bar — when data is loaded ──────────── */}
+      {!loading && !error && metrics && (
+        <div className="animate-fade-in flex items-center gap-4 rounded-xl border border-border/30 bg-card px-5 py-3 shadow-sm">
+          <Sparkles className="h-3.5 w-3.5 text-muted-foreground/60" strokeWidth={1.5} />
+          <span className="text-sm text-muted-foreground">
+            Tự động làm mới mỗi 30 giây
+          </span>
+          <span className="hidden sm:inline text-xs text-muted-foreground/50">·</span>
+          <span className="hidden sm:inline text-xs text-muted-foreground/60">
+            Pipeline CV
+          </span>
+        </div>
+      )}
+
+      {/* ─── Content ────────────────────────────────────── */}
       {loading ? (
         <MetricsSkeleton />
       ) : error ? (
         <MetricsError onRetry={handleRetry} />
       ) : metrics ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <MetricCard
-            label="Thời gian xử lý TB"
-            value={formatProcessingTime(metrics.average_processing_time_ms)}
-            icon={Clock}
-            type="processing_time"
-            rawValue={metrics.average_processing_time_ms}
-          />
-          <MetricCard
-            label="Tỷ lệ thành công"
-            value={formatPercentage(metrics.success_rate)}
-            icon={CheckCircle}
-            type="success_rate"
-            rawValue={metrics.success_rate}
-          />
-          <MetricCard
-            label="Tỷ lệ thất bại"
-            value={formatPercentage(metrics.failure_rate)}
-            icon={XCircle}
-            type="failure_rate"
-            rawValue={metrics.failure_rate}
-          />
-          <MetricCard
-            label="Hàng đợi"
-            value={formatQueueDepth(metrics.queue_depth)}
-            icon={Layers}
-            type="queue_depth"
-            rawValue={metrics.queue_depth}
-          />
+        <div className="stagger-children grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="animate-fade-in">
+            <MetricCard
+              label="Thời gian xử lý TB"
+              value={formatProcessingTime(metrics.average_processing_time_ms)}
+              icon={Clock}
+              type="processing_time"
+              rawValue={metrics.average_processing_time_ms}
+            />
+          </div>
+          <div className="animate-fade-in">
+            <MetricCard
+              label="Tỷ lệ thành công"
+              value={formatPercentage(metrics.success_rate)}
+              icon={CheckCircle}
+              type="success_rate"
+              rawValue={metrics.success_rate}
+            />
+          </div>
+          <div className="animate-fade-in">
+            <MetricCard
+              label="Tỷ lệ thất bại"
+              value={formatPercentage(metrics.failure_rate)}
+              icon={XCircle}
+              type="failure_rate"
+              rawValue={metrics.failure_rate}
+            />
+          </div>
+          <div className="animate-fade-in">
+            <MetricCard
+              label="Hàng đợi"
+              value={formatQueueDepth(metrics.queue_depth)}
+              icon={Layers}
+              type="queue_depth"
+              rawValue={metrics.queue_depth}
+            />
+          </div>
         </div>
       ) : null}
     </div>

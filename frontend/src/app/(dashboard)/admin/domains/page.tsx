@@ -71,79 +71,90 @@ export default function DomainsPage() {
     [fetchDomains]
   );
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">
-            Quản lý domain đăng nhập
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Danh sách email domain được phép đăng nhập vào hệ thống
-          </p>
+      return (
+        <div className="animate-fade-in space-y-6">
+          {/* Header */}
+          <div className="fade-in-section flex items-center justify-between">
+            <div>
+              <h1 className="font-heading text-2xl font-bold text-foreground tracking-tight">
+                Quản lý domain đăng nhập
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Danh sách email domain được phép đăng nhập vào hệ thống
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchDomains}
+              disabled={loading}
+            >
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                aria-hidden="true"
+              />
+              Làm mới
+            </Button>
+          </div>
+
+          {/* Info */}
+          <div className="fade-in-section">
+            <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/30 card-hover">
+              <CardContent className="flex items-start gap-4 py-4">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/50">
+                  <Globe className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="text-sm text-blue-800 dark:text-blue-200">
+                  <p className="font-medium">Cách hoạt động</p>
+                  <p className="mt-1 text-blue-700 dark:text-blue-300">
+                    Khi danh sách trống, mọi email đều được phép đăng nhập. Khi có
+                    domain trong danh sách, chỉ email thuộc các domain được phép mới
+                    có thể đăng nhập.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Add Form */}
+          <div className="fade-in-section">
+            <Card className="card-hover">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">+</span>
+                  Thêm domain mới
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DomainAddForm onAdd={handleAdd} />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Table */}
+          <div className="fade-in-section">
+            <Card className="card-hover">
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Danh sách domain
+                  {!loading && (
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      ({domains.length} domain)
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div aria-live="polite" aria-atomic="true">
+                  <DomainTable
+                    domains={domains}
+                    loading={loading}
+                    onDelete={handleDelete}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchDomains}
-          disabled={loading}
-        >
-          <RefreshCw
-            className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
-            aria-hidden="true"
-          />
-          Làm mới
-        </Button>
-      </div>
-
-      {/* Info */}
-      <Card className="border-blue-200 bg-blue-50/50">
-        <CardContent className="flex items-start gap-3 py-4">
-          <Globe className="mt-0.5 h-4 w-4 text-blue-600 shrink-0" />
-          <div className="text-sm text-blue-800">
-            <p className="font-medium">Cách hoạt động</p>
-            <p className="mt-1 text-blue-700">
-              Khi danh sách trống, mọi email đều được phép đăng nhập. Khi có
-              domain trong danh sách, chỉ email thuộc các domain được phép mới
-              có thể đăng nhập.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Add Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Thêm domain mới</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DomainAddForm onAdd={handleAdd} />
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            Danh sách domain
-            {!loading && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                ({domains.length} domain)
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div aria-live="polite" aria-atomic="true">
-            <DomainTable
-              domains={domains}
-              loading={loading}
-              onDelete={handleDelete}
-            />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
   );
 }

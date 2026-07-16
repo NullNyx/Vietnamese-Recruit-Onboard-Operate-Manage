@@ -10,19 +10,19 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: [
-          "var(--font-public-sans)",
+          "var(--font-inter)",
           "ui-sans-serif",
           "system-ui",
           "sans-serif",
         ],
         heading: [
-          "var(--font-public-sans)",
+          "var(--font-inter)",
           "ui-sans-serif",
           "system-ui",
           "sans-serif",
         ],
         label: [
-          "var(--font-public-sans)",
+          "var(--font-inter)",
           "ui-sans-serif",
           "system-ui",
           "sans-serif",
@@ -97,6 +97,7 @@ const config: Config = {
         md: "0 2px 4px rgba(0, 0, 0, 0.08)",
         subtle: "0 1px 3px rgba(0, 0, 0, 0.06)",
         xl: "0 4px 8px rgba(0, 0, 0, 0.1)",
+        warm: "0 1px 3px rgba(198, 40, 40, 0.08)",
       },
       spacing: {
         "4.5": "18px",
@@ -126,6 +127,10 @@ const config: Config = {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        "pulse-soft": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.7" },
+        },
       },
       animation: {
         "fade-in": "fade-in 200ms ease-out forwards",
@@ -134,6 +139,7 @@ const config: Config = {
         "scale-in": "scale-in 150ms ease-out forwards",
         "page-enter": "page-enter 150ms ease-out forwards",
         shimmer: "shimmer 2s linear infinite",
+        "pulse-soft": "pulse-soft 2s ease-in-out infinite",
       },
     },
   },

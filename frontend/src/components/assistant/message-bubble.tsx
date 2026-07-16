@@ -29,22 +29,24 @@ export function MessageBubble({ message, messageIndex, sessionId, onFeedback }: 
   const hasToolCalls = message.tool_calls && message.tool_calls.length > 0;
 
   return (
-    <div className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"} fade-in-section`}>
       {!isUser && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
           <Bot className="h-4 w-4 text-primary" />
         </div>
       )}
 
       <div
-        className={`max-w-[80%] rounded-lg px-4 py-2 ${
+        className={`max-w-[80%] ${
           isUser
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted"
+            ? "rounded-2xl rounded-tr-md bg-gradient-to-br from-primary to-primary/90 px-4 py-2.5 shadow-sm"
+            : "rounded-2xl rounded-tl-md bg-card border border-border/40 px-4 py-2.5 shadow-sm"
         }`}
       >
         {message.content && (
-          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+          <p className={`text-sm whitespace-pre-wrap leading-relaxed ${
+            isUser ? "text-primary-foreground" : "text-foreground"
+          }`}>{message.content}</p>
         )}
         {hasToolCalls && !message.content && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -64,7 +66,7 @@ export function MessageBubble({ message, messageIndex, sessionId, onFeedback }: 
       </div>
 
       {isUser && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary shadow-sm">
           <User className="h-4 w-4 text-primary-foreground" />
         </div>
       )}

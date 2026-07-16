@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
+import { useScroll, useMotionValueEvent } from "motion/react";
 
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -17,6 +18,7 @@ import { NavItemTrigger } from "./nav-item-trigger";
 import { MegaMenuPanel } from "./mega-menu-panel";
 import { HeaderUtilities } from "./header-utilities";
 import { MobileMenuOverlay } from "./mobile-menu-overlay";
+import { HeaderBreadcrumbs } from "./header-breadcrumbs";
 
 interface HeaderNavigationProps {
   className?: string;
@@ -29,7 +31,6 @@ function readE2EUserOverride() {
   }).__VROOM_HR_E2E_CURRENT_USER__ ?? null;
 }
 
-
 export function HeaderNavigation({ className }: HeaderNavigationProps) {
   const { user, loading, error } = useCurrentUser();
   const e2eUser = readE2EUserOverride();
@@ -38,6 +39,14 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
   const activeError = error;
   const pathname = usePathname();
   const router = useRouter();
+
+  // Scroll shadow detection
+  const { scrollY } = useScroll();
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    setIsScrolled(latest > 0);
+  });
 
   // Determine if role is valid
   const isValidRole = activeUser?.role === "admin" || activeUser?.role === "user";
@@ -65,12 +74,6 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
   const handleToggle = useCallback((groupId: string) => {
     setOpenMenuId((prev) => (prev === groupId ? null : groupId));
   }, []);
-
-  // Hover intent: open the hovered group's menu
-  const handleHoverIntent = useCallback((groupId: string) => {
-    setOpenMenuId(groupId);
-  }, []);
-
   // Link click: close menu and navigate
   const handleLinkClick = useCallback(
     (href: string) => {
@@ -208,7 +211,7 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
     [config.groups],
   );
 
-  // Loading state
+  // Loading state — full skeleton shimmer
   if (activeLoading) {
     return (
       <header
@@ -217,8 +220,25 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
           className,
         )}
       >
-        <div className="flex h-full items-center px-4">
-          <div className="h-5 w-24 animate-pulse rounded bg-muted" />
+        <div className="flex h-full items-center px-6 gap-4 animate-pulse">
+          {/* Logo skeleton */}
+          <div className="h-7 w-7 rounded-md bg-muted" />
+          <div className="hidden sm:block h-4 w-20 rounded bg-muted" />
+          {/* Nav items skeleton */}
+          <div className="hidden md:flex md:items-center md:gap-3 ml-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-4 w-16 rounded bg-muted" />
+            ))}
+          </div>
+          {/* Spacer */}
+          <div className="flex-1" />
+          {/* Utilities skeleton */}
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-24 rounded-lg bg-muted" />
+            <div className="h-8 w-8 rounded-md bg-muted" />
+            <div className="h-8 w-8 rounded-md bg-muted" />
+            <div className="h-8 w-8 rounded-full bg-muted" />
+          </div>
         </div>
       </header>
     );
@@ -233,7 +253,7 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
           className,
         )}
       >
-        <div className="flex h-full items-center px-4">
+        <div className="flex h-full items-center px-6">
           <p className="text-sm text-destructive">
             Không thể tải thông tin người dùng
           </p>
@@ -258,26 +278,31 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
     <>
       <header
         className={cn(
-          "fixed top-0 left-0 right-0 z-40 h-14 border-b bg-background",
+          "fixed top-0 left-0 right-0 z-40 h-14 transition-shadow duration-200",
+          "border-b bg-background/85 backdrop-blur-md",
+          isScrolled && "shadow-sm",
           className,
         )}
       >
         <nav
           ref={navContainerRef}
-          className="flex h-full items-center px-4"
+          className="flex h-full items-center px-6 gap-3"
           role="navigation"
           aria-label="Điều hướng chính"
         >
           {/* Logo */}
           <Link
             href={config.logo.href}
-            className="mr-6 flex items-center gap-2 text-sm font-bold tracking-tight"
+            className="flex items-center gap-2 text-sm font-bold tracking-tight shrink-0"
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-xs font-bold shadow-sm">
               V
             </span>
             <span className="hidden sm:inline">{config.logo.label}</span>
           </Link>
+
+          {/* Breadcrumbs (desktop/tablet only) */}
+          <HeaderBreadcrumbs />
 
           {/* Desktop navigation items — hidden on mobile */}
           <div className="hidden md:flex md:items-center md:gap-1">
@@ -301,7 +326,6 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
                     isActive={activeGroupId === group.id}
                     isOpen={openMenuId === group.id}
                     onToggle={() => handleToggle(group.id)}
-                    onHoverIntent={() => handleHoverIntent(group.id)}
                   />
                 </div>
                 <MegaMenuPanel
@@ -336,12 +360,14 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
         </nav>
       </header>
 
-      {/* Mobile menu overlay */}
+      {/* Mobile menu overlay — slide-in drawer */}
       <MobileMenuOverlay
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
         navGroups={config.groups}
         currentPath={pathname}
+        role={activeUser?.role}
+        userName={activeUser?.name}
       />
 
       {/* Command bar */}

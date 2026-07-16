@@ -55,32 +55,32 @@ function formatPeriodMonth(periodMonth: string | null | undefined): string {
 // Detail row component
 // ---------------------------------------------------------------------------
 
-function DetailRow({
-  label,
-  value,
-  highlight,
-}: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between py-2">
-      <span className="text-[13px] text-[#8a8f98]">{label}</span>
-      <span
-        className={`text-[14px] font-medium ${
-          highlight ? "text-[#e4f222]" : "text-[#f7f8f8]"
-        }`}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function Divider() {
-  return <div className="border-t border-white/[0.06]" />;
-}
+    function DetailRow({
+      label,
+      value,
+      highlight,
+    }: {
+      label: string;
+      value: string;
+      highlight?: boolean;
+    }) {
+      return (
+        <div className="flex items-center justify-between py-2">
+          <span className="text-[13px] text-muted-foreground">{label}</span>
+          <span
+            className={`text-[14px] font-medium ${
+              highlight ? "text-primary" : "text-foreground"
+            }`}
+          >
+            {value}
+          </span>
+        </div>
+      );
+    }
+    
+    function Divider() {
+      return <div className="border-t border-border" />;
+    }
 
 // ---------------------------------------------------------------------------
 // Page
@@ -127,121 +127,123 @@ export default function EmployeePayslipDetailPage() {
     router.push("/employee/payslips");
   }
 
-  return (
-    <div className="space-y-6 max-w-[700px]">
-      {/* Back button */}
-      <Button variant="ghost" size="sm" onClick={handleBack} className="text-[#8a8f98]">
-        <ArrowLeft className="mr-1 h-4 w-4" />
-        Quay lại
-      </Button>
-
-      {/* Loading */}
-      {loading && (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 space-y-4">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-36" />
-          <Divider />
-          <Skeleton className="h-5 w-full" />
-          <Skeleton className="h-5 w-full" />
-          <Skeleton className="h-5 w-full" />
-          <Skeleton className="h-5 w-3/4" />
-          <Divider />
-          <Skeleton className="h-5 w-32" />
-        </div>
-      )}
-
-      {/* Error */}
-      {!loading && error && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-12 text-center">
-          <Loader2 className="mx-auto h-10 w-10 text-red-400" />
-          <h3 className="mt-4 text-[14px] font-medium text-[#f7f8f8]">
-            Không thể tải phiếu lương
-          </h3>
-          <p className="mt-1 text-[12px] text-[#8a8f98]">{error}</p>
-        </div>
-      )}
-
-      {/* NotFound fallback */}
-      {!loading && !error && !payslip && (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-12 text-center">
-          <DollarSign className="mx-auto h-10 w-10 text-[#8a8f98]" />
-          <h3 className="mt-4 text-[14px] font-medium text-[#f7f8f8]">
-            Không tìm thấy phiếu lương
-          </h3>
-          <p className="mt-1 text-[12px] text-[#8a8f98]">
-            Phiếu lương không tồn tại hoặc chưa được phát hành.
-          </p>
-        </div>
-      )}
-
-      {/* Detail */}
-      {!loading && !error && payslip && (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6">
-          {/* Header */}
-          <div className="space-y-1 pb-4">
-            <h2 className="text-[18px] font-semibold text-[#f7f8f8]">
-              Phiếu lương
-            </h2>
-            <p className="text-[13px] text-[#8a8f98]">
-              {formatPeriodMonth(payslip.period_month)}
-            </p>
+      return (
+        <div className="animate-fade-in space-y-6 max-w-[700px]">
+          {/* Back button */}
+          <div className="fade-in-section">
+            <Button variant="ghost" size="sm" onClick={handleBack} className="text-muted-foreground">
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              Quay lại
+            </Button>
           </div>
 
-          <Divider />
-
-          {/* Gross & Deductions */}
-          <div className="py-2 space-y-0">
-            <DetailRow
-              label="Lương gộp"
-              value={formatCurrency(payslip.gross_salary)}
-            />
-            <DetailRow
-              label="BHXH + BHYT + BHTN (người lao động)"
-              value={formatCurrency(payslip.insurance_employee)}
-            />
-            <DetailRow
-              label="Các khoản khấu trừ"
-              value={formatCurrency(payslip.deductions)}
-            />
-            <Divider />
-            <DetailRow
-              label="Thu nhập chịu thuế"
-              value={formatCurrency(payslip.taxable_income)}
-            />
-            <DetailRow
-              label="Thuế TNCN"
-              value={formatCurrency(payslip.pit_amount)}
-            />
-            <Divider />
-            <DetailRow
-              label="Lương thực nhận"
-              value={formatCurrency(payslip.net_salary)}
-              highlight
-            />
-          </div>
-
-          <Divider />
-
-          {/* PDF link */}
-          {payslip.pdf_url && (
-            <div className="pt-4">
-              <Link
-                href={payslip.pdf_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[13px] text-[#e4f222] hover:underline"
-              >
-                Tải PDF
-              </Link>
+          {/* Loading */}
+          {loading && (
+            <div className="fade-in-section rounded-xl border border-border/40 bg-card p-6 space-y-4">
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-36" />
+              <Divider />
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-3/4" />
+              <Divider />
+              <Skeleton className="h-5 w-32" />
             </div>
           )}
 
-          {/* Footer - metadata */}
-          <div className="pt-4 flex items-center justify-between text-[11px] text-[#585c63]">
-            <span>Ngày phát hành: {formatDate(payslip.published_at)}</span>
-          </div>
+          {/* Error */}
+          {!loading && error && (
+            <div className="fade-in-section rounded-xl border border-destructive/20 bg-destructive/10 p-12 text-center">
+              <Loader2 className="mx-auto h-10 w-10 text-destructive" />
+              <h3 className="mt-4 text-[14px] font-medium text-foreground">
+                Không thể tải phiếu lương
+              </h3>
+              <p className="mt-1 text-[12px] text-muted-foreground">{error}</p>
+            </div>
+          )}
+
+          {/* NotFound fallback */}
+          {!loading && !error && !payslip && (
+            <div className="fade-in-section rounded-xl border border-border/40 bg-card p-12 text-center">
+              <DollarSign className="mx-auto h-10 w-10 text-muted-foreground" />
+              <h3 className="mt-4 text-[14px] font-medium text-foreground">
+                Không tìm thấy phiếu lương
+              </h3>
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                Phiếu lương không tồn tại hoặc chưa được phát hành.
+              </p>
+            </div>
+          )}
+
+          {/* Detail */}
+          {!loading && !error && payslip && (
+            <div className="fade-in-section rounded-xl border border-border/40 bg-card p-6 card-hover">
+              {/* Header */}
+              <div className="space-y-1 pb-4">
+                <h2 className="text-[18px] font-semibold text-foreground">
+                  Phiếu lương
+                </h2>
+                <p className="text-[13px] text-muted-foreground">
+                  {formatPeriodMonth(payslip.period_month)}
+                </p>
+              </div>
+
+              <Divider />
+
+              {/* Gross & Deductions */}
+              <div className="py-2 space-y-0">
+                <DetailRow
+                  label="Lương gộp"
+                  value={formatCurrency(payslip.gross_salary)}
+                />
+                <DetailRow
+                  label="BHXH + BHYT + BHTN (người lao động)"
+                  value={formatCurrency(payslip.insurance_employee)}
+                />
+                <DetailRow
+                  label="Các khoản khấu trừ"
+                  value={formatCurrency(payslip.deductions)}
+                />
+                <Divider />
+                <DetailRow
+                  label="Thu nhập chịu thuế"
+                  value={formatCurrency(payslip.taxable_income)}
+                />
+                <DetailRow
+                  label="Thuế TNCN"
+                  value={formatCurrency(payslip.pit_amount)}
+                />
+                <Divider />
+                <DetailRow
+                  label="Lương thực nhận"
+                  value={formatCurrency(payslip.net_salary)}
+                  highlight
+                />
+              </div>
+
+              <Divider />
+
+              {/* PDF link */}
+              {payslip.pdf_url && (
+                <div className="pt-4">
+                  <Link
+                    href={payslip.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[13px] text-primary hover:underline"
+                  >
+                    Tải PDF
+                  </Link>
+                </div>
+              )}
+
+              {/* Footer - metadata */}
+              <div className="pt-4 flex items-center justify-between text-[11px] text-muted-foreground/70">
+                <span>Ngày phát hành: {formatDate(payslip.published_at)}</span>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
   );
 }

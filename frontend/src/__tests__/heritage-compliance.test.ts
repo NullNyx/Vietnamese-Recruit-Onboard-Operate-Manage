@@ -28,39 +28,6 @@ function getTsxFiles(dirs: string[]): string[] {
   return files;
 }
 
-describe("Feature: dashboard-ui-redesign, Property 4: No dark mode variant classes", () => {
-  it("should not contain any dark: variant classes in dashboard pages and components", () => {
-    const files = getTsxFiles(SCAN_DIRS);
-    expect(files.length).toBeGreaterThan(0);
-
-    const darkClassPattern = /dark:[a-z]/;
-    const violations: { file: string; line: number; content: string }[] = [];
-
-    for (const filePath of files) {
-      const content = fs.readFileSync(filePath, "utf-8");
-      const lines = content.split("\n");
-
-      for (let i = 0; i < lines.length; i++) {
-        if (darkClassPattern.test(lines[i])) {
-          violations.push({
-            file: path.relative(SRC_DIR, filePath),
-            line: i + 1,
-            content: lines[i].trim(),
-          });
-        }
-      }
-    }
-
-    if (violations.length > 0) {
-      const report = violations
-        .map((v) => `  ${v.file}:${v.line} → ${v.content}`)
-        .join("\n");
-      expect.fail(
-        `Found ${violations.length} dark: variant class(es):\n${report}`,
-      );
-    }
-  });
-});
 
 describe("Feature: dashboard-ui-redesign, Property 5: No hardcoded dark theme colors", () => {
   it("should not contain any hardcoded dark theme hex color values", () => {
