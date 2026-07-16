@@ -79,238 +79,238 @@ class DraftAction:
 # ---------------------------------------------------------------------------
 
 TOOL_DEFINITIONS: list[ToolDefinition] = [
-ToolDefinition(
-            name="count_candidates_by_status",
-            display_name="Đếm ứng viên theo trạng thái",
-            kind=ToolKind.READ,
-            description=(
-                "Đếm số lượng candidate trong pipeline tuyển dụng, có thể lọc "
-                "theo trạng thái. Trả về danh sách các đối tượng {status, count}. "
-                "Sử dụng khi người dùng hỏi có bao nhiêu candidate, bao nhiêu "
-                "candidate đang ở một trạng thái cụ thể, hoặc muốn xem tổng quan pipeline."
-            ),
+    ToolDefinition(
+        name="count_candidates_by_status",
+        display_name="Đếm ứng viên theo trạng thái",
+        kind=ToolKind.READ,
+        description=(
+            "Đếm số lượng candidate trong pipeline tuyển dụng, có thể lọc "
+            "theo trạng thái. Trả về danh sách các đối tượng {status, count}. "
+            "Sử dụng khi người dùng hỏi có bao nhiêu candidate, bao nhiêu "
+            "candidate đang ở một trạng thái cụ thể, hoặc muốn xem tổng quan pipeline."
+        ),
         parameters={
             "type": "object",
             "properties": {
                 "status": {
                     "type": "string",
-                        "description": (
-                            "Lọc theo trạng thái (không bắt buộc). Giá trị: new, reviewing, "
-                            "interview_scheduled, accepted, rejected, archived. "
-                            "Nếu bỏ qua, trả về số lượng cho TẤT CẢ trạng thái."
-                        ),
+                    "description": (
+                        "Lọc theo trạng thái (không bắt buộc). Giá trị: new, reviewing, "
+                        "interview_scheduled, accepted, rejected, archived. "
+                        "Nếu bỏ qua, trả về số lượng cho TẤT CẢ trạng thái."
+                    ),
                 },
             },
         },
     ),
-ToolDefinition(
-            name="list_interviews_for_candidate",
-            display_name="Danh sách phỏng vấn",
-            kind=ToolKind.READ,
-            description=(
-                "Liệt kê lịch phỏng vấn của một candidate. Trả về danh sách các buổi phỏng vấn với "
-                "thời gian đã lên lịch, trạng thái (scheduled/completed/cancelled), địa điểm, "
-                "và ghi chú. "
-                "Sử dụng khi người dùng hỏi về lịch phỏng vấn của candidate, các buổi phỏng vấn "
-                "sắp tới, hoặc lịch sử phỏng vấn."
-            ),
+    ToolDefinition(
+        name="list_interviews_for_candidate",
+        display_name="Danh sách phỏng vấn",
+        kind=ToolKind.READ,
+        description=(
+            "Liệt kê lịch phỏng vấn của một candidate. Trả về danh sách các buổi phỏng vấn với "
+            "thời gian đã lên lịch, trạng thái (scheduled/completed/cancelled), địa điểm, "
+            "và ghi chú. "
+            "Sử dụng khi người dùng hỏi về lịch phỏng vấn của candidate, các buổi phỏng vấn "
+            "sắp tới, hoặc lịch sử phỏng vấn."
+        ),
         parameters={
             "type": "object",
             "properties": {
                 "candidate_id": {
                     "type": "string",
-                        "description": "UUID của candidate cần xem danh sách phỏng vấn.",
+                    "description": "UUID của candidate cần xem danh sách phỏng vấn.",
                 },
             },
             "required": ["candidate_id"],
         },
     ),
-ToolDefinition(
-            name="get_onboarding_task_details",
-            display_name="Chi tiết nhiệm vụ onboarding",
-            kind=ToolKind.READ,
-            description=(
-                "Xem chi tiết công việc trong quy trình onboarding. Trả về danh sách tác vụ "
-                "với tên, trạng thái (pending/done), ngày đến hạn (nếu có), "
-                "is_overdue (boolean), và người được giao (nếu có). "
-                "Sử dụng khi người dùng hỏi về tiến độ onboarding, danh sách việc cần làm, "
-                "hoặc những gì còn phải hoàn thành cho một quy trình onboarding cụ thể."
-            ),
+    ToolDefinition(
+        name="get_onboarding_task_details",
+        display_name="Chi tiết nhiệm vụ onboarding",
+        kind=ToolKind.READ,
+        description=(
+            "Xem chi tiết công việc trong quy trình onboarding. Trả về danh sách tác vụ "
+            "với tên, trạng thái (pending/done), ngày đến hạn (nếu có), "
+            "is_overdue (boolean), và người được giao (nếu có). "
+            "Sử dụng khi người dùng hỏi về tiến độ onboarding, danh sách việc cần làm, "
+            "hoặc những gì còn phải hoàn thành cho một quy trình onboarding cụ thể."
+        ),
         parameters={
             "type": "object",
             "properties": {
                 "onboarding_process_id": {
                     "type": "string",
-                        "description": "UUID của quy trình onboarding cần lấy danh sách công việc.",
+                    "description": "UUID của quy trình onboarding cần lấy danh sách công việc.",
                 },
             },
             "required": ["onboarding_process_id"],
         },
     ),
-ToolDefinition(
-            name="list_in_progress_onboarding",
-            display_name="Onboarding đang thực hiện",
-            kind=ToolKind.READ,
-            description=(
-                "Liệt kê các quy trình onboarding đang diễn ra. "
-                "Trả về danh sách các quy trình với họ tên nhân viên, email, tiến độ "
-                "(số công việc đã hoàn thành/tổng số), và trạng thái. "
-                "Sử dụng khi người dùng hỏi về tình trạng onboarding, ai đang "
-                "được onboard, hoặc tiến độ onboarding."
-            ),
+    ToolDefinition(
+        name="list_in_progress_onboarding",
+        display_name="Onboarding đang thực hiện",
+        kind=ToolKind.READ,
+        description=(
+            "Liệt kê các quy trình onboarding đang diễn ra. "
+            "Trả về danh sách các quy trình với họ tên nhân viên, email, tiến độ "
+            "(số công việc đã hoàn thành/tổng số), và trạng thái. "
+            "Sử dụng khi người dùng hỏi về tình trạng onboarding, ai đang "
+            "được onboard, hoặc tiến độ onboarding."
+        ),
         parameters={
             "type": "object",
             "properties": {},
         },
     ),
-ToolDefinition(
-            name="search_candidates",
-            display_name="Tìm kiếm ứng viên",
-            kind=ToolKind.READ,
-            description=(
-                "Tìm kiếm candidate theo tên hoặc email. Trả về danh sách các candidate "
-                "phù hợp với id, tên, email, và trạng thái. "
-                "Sử dụng khi người dùng nhắc đến một candidate cụ thể bằng tên "
-                "hoặc email, hoặc trước khi soạn thảo email cho candidate."
-            ),
+    ToolDefinition(
+        name="search_candidates",
+        display_name="Tìm kiếm ứng viên",
+        kind=ToolKind.READ,
+        description=(
+            "Tìm kiếm candidate theo tên hoặc email. Trả về danh sách các candidate "
+            "phù hợp với id, tên, email, và trạng thái. "
+            "Sử dụng khi người dùng nhắc đến một candidate cụ thể bằng tên "
+            "hoặc email, hoặc trước khi soạn thảo email cho candidate."
+        ),
         parameters={
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                        "description": "Từ khóa tìm kiếm — so khớp tên hoặc email candidate.",
+                    "description": "Từ khóa tìm kiếm — so khớp tên hoặc email candidate.",
                 },
             },
             "required": ["query"],
         },
     ),
-ToolDefinition(
-            name="get_candidate_parsed_cv",
-            display_name="Xem CV đã phân tích",
-            kind=ToolKind.READ,
-            description=(
-                "Lấy dữ liệu CV đã được parse của một candidate. Trả về dữ liệu có cấu trúc "
-                "bao gồm kỹ năng, kinh nghiệm, học vấn, tóm tắt, và toàn bộ "
-                "CV JSON đã parse từ pipeline AI Automation. "
-                "Sử dụng khi người dùng hỏi về nội dung CV, kỹ năng, kinh nghiệm, "
-                "hoặc background của candidate — hoặc trước khi soạn email để "
-                "cá nhân hóa dựa trên thông tin CV."
-            ),
+    ToolDefinition(
+        name="get_candidate_parsed_cv",
+        display_name="Xem CV đã phân tích",
+        kind=ToolKind.READ,
+        description=(
+            "Lấy dữ liệu CV đã được parse của một candidate. Trả về dữ liệu có cấu trúc "
+            "bao gồm kỹ năng, kinh nghiệm, học vấn, tóm tắt, và toàn bộ "
+            "CV JSON đã parse từ pipeline AI Automation. "
+            "Sử dụng khi người dùng hỏi về nội dung CV, kỹ năng, kinh nghiệm, "
+            "hoặc background của candidate — hoặc trước khi soạn email để "
+            "cá nhân hóa dựa trên thông tin CV."
+        ),
         parameters={
             "type": "object",
             "properties": {
                 "candidate_id": {
                     "type": "string",
-                        "description": "UUID của candidate cần đọc CV.",
+                    "description": "UUID của candidate cần đọc CV.",
                 },
             },
             "required": ["candidate_id"],
         },
     ),
-ToolDefinition(
-            name="draft_interview_invitation",
-            display_name="Soạn email mời phỏng vấn",
-            kind=ToolKind.DRAFT,
-            description=(
-                "Soạn thảo email mời phỏng vấn cho một candidate. Trả về một Draft Action "
-                "với nội dung email để HR xem xét và xác nhận. "
-                "Sử dụng khi người dùng muốn soạn hoặc gửi thư mời phỏng vấn."
-            ),
+    ToolDefinition(
+        name="draft_interview_invitation",
+        display_name="Soạn email mời phỏng vấn",
+        kind=ToolKind.DRAFT,
+        description=(
+            "Soạn thảo email mời phỏng vấn cho một candidate. Trả về một Draft Action "
+            "với nội dung email để HR xem xét và xác nhận. "
+            "Sử dụng khi người dùng muốn soạn hoặc gửi thư mời phỏng vấn."
+        ),
         parameters={
             "type": "object",
             "properties": {
                 "candidate_id": {
                     "type": "string",
-                                            "description": "UUID của candidate.",
+                    "description": "UUID của candidate.",
                 },
                 "interview_date": {
                     "type": "string",
-                        "description": "Ngày phỏng vấn (ví dụ: 15/06/2026 hoặc YYYY-MM-DD).",
+                    "description": "Ngày phỏng vấn (ví dụ: 15/06/2026 hoặc YYYY-MM-DD).",
                 },
                 "interview_time": {
                     "type": "string",
-                        "description": "Giờ phỏng vấn (ví dụ: 09:00 AM).",
+                    "description": "Giờ phỏng vấn (ví dụ: 09:00 AM).",
                 },
                 "location": {
                     "type": "string",
-                        "description": "Địa điểm hoặc đường link Google Meet cho buổi phỏng vấn.",
+                    "description": "Địa điểm hoặc đường link Google Meet cho buổi phỏng vấn.",
                 },
             },
             "required": ["candidate_id", "interview_date", "interview_time", "location"],
         },
     ),
-ToolDefinition(
-            name="list_job_openings",
-            display_name="Danh sách vị trí đang tuyển",
-            kind=ToolKind.READ,
-            description=(
-                "Liệt kê các vị trí đang tuyển dụng trong pipeline, có thể lọc "
-                "theo trạng thái. Trả về danh sách các vị trí với id, tiêu đề, phòng ban, "
-                "chức vụ, chỉ tiêu tuyển dụng, số lượng đã tuyển, và trạng thái. "
-                "Sử dụng khi người dùng hỏi về các vị trí đang tuyển, kế hoạch tuyển dụng, "
-                "hoặc tình trạng chỉ tiêu."
-            ),
+    ToolDefinition(
+        name="list_job_openings",
+        display_name="Danh sách vị trí đang tuyển",
+        kind=ToolKind.READ,
+        description=(
+            "Liệt kê các vị trí đang tuyển dụng trong pipeline, có thể lọc "
+            "theo trạng thái. Trả về danh sách các vị trí với id, tiêu đề, phòng ban, "
+            "chức vụ, chỉ tiêu tuyển dụng, số lượng đã tuyển, và trạng thái. "
+            "Sử dụng khi người dùng hỏi về các vị trí đang tuyển, kế hoạch tuyển dụng, "
+            "hoặc tình trạng chỉ tiêu."
+        ),
         parameters={
             "type": "object",
             "properties": {
                 "status": {
                     "type": "string",
-                        "description": (
-                            "Lọc theo trạng thái (tùy chọn): draft, open, closed, cancelled. "
-                            "Mặc định là 'open' nếu bỏ qua."
-                        ),
+                    "description": (
+                        "Lọc theo trạng thái (tùy chọn): draft, open, closed, cancelled. "
+                        "Mặc định là 'open' nếu bỏ qua."
+                    ),
                 },
             },
         },
     ),
-ToolDefinition(
-            name="get_department_info",
-            display_name="Thông tin phòng ban",
-            kind=ToolKind.READ,
-            description=(
-                "Xem thông tin phòng ban. Trả về tên phòng ban, mô tả, "
-                "danh sách chức vụ (tên, số lượng nhân viên), và thông tin quản lý. "
-                "Nếu bỏ qua department_id, trả về thông tin cho TẤT CẢ phòng ban. "
-                "Sử dụng khi người dùng hỏi về cơ cấu phòng ban, "
-                "chức vụ, hoặc quản lý."
-            ),
+    ToolDefinition(
+        name="get_department_info",
+        display_name="Thông tin phòng ban",
+        kind=ToolKind.READ,
+        description=(
+            "Xem thông tin phòng ban. Trả về tên phòng ban, mô tả, "
+            "danh sách chức vụ (tên, số lượng nhân viên), và thông tin quản lý. "
+            "Nếu bỏ qua department_id, trả về thông tin cho TẤT CẢ phòng ban. "
+            "Sử dụng khi người dùng hỏi về cơ cấu phòng ban, "
+            "chức vụ, hoặc quản lý."
+        ),
         parameters={
             "type": "object",
             "properties": {
                 "department_id": {
                     "type": "string",
-                        "description": (
-                            "UUID của phòng ban (không bắt buộc). Nếu bỏ qua, "
-                            "trả về thông tin cho tất cả phòng ban."
-                        ),
+                    "description": (
+                        "UUID của phòng ban (không bắt buộc). Nếu bỏ qua, "
+                        "trả về thông tin cho tất cả phòng ban."
+                    ),
                 },
             },
         },
     ),
-ToolDefinition(
-            name="draft_congratulations_email",
-            display_name="Soạn email chúc mừng",
-            kind=ToolKind.DRAFT,
-            description=(
-                "Soạn email chúc mừng/thông báo trúng tuyển cho candidate. Trả về Draft Action "
-                "với nội dung email để HR xem xét và xác nhận. "
-                "Sử dụng khi người dùng muốn gửi thư mời nhận việc/lời chúc mừng đến candidate."
-            ),
+    ToolDefinition(
+        name="draft_congratulations_email",
+        display_name="Soạn email chúc mừng",
+        kind=ToolKind.DRAFT,
+        description=(
+            "Soạn email chúc mừng/thông báo trúng tuyển cho candidate. Trả về Draft Action "
+            "với nội dung email để HR xem xét và xác nhận. "
+            "Sử dụng khi người dùng muốn gửi thư mời nhận việc/lời chúc mừng đến candidate."
+        ),
         parameters={
             "type": "object",
             "properties": {
-                    "candidate_id": {
-                        "type": "string",
-                        "description": "UUID của candidate.",
-                    },
-                    "position": {
-                        "type": "string",
-                        "description": "Chức vụ / vị trí đang được đề nghị.",
-                    },
-                    "start_date": {
-                        "type": "string",
-                        "description": "Ngày bắt đầu làm việc (VD: 15/06/2026 hay YYYY-MM-DD).",
-                    },
+                "candidate_id": {
+                    "type": "string",
+                    "description": "UUID của candidate.",
+                },
+                "position": {
+                    "type": "string",
+                    "description": "Chức vụ / vị trí đang được đề nghị.",
+                },
+                "start_date": {
+                    "type": "string",
+                    "description": "Ngày bắt đầu làm việc (VD: 15/06/2026 hay YYYY-MM-DD).",
+                },
             },
             "required": ["candidate_id", "position", "start_date"],
         },
