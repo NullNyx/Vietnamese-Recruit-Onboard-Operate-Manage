@@ -60,8 +60,8 @@ describe("MessageBubble", () => {
       />,
     );
     
-    expect(screen.getByLabelText("Thumbs up")).toBeInTheDocument();
-    expect(screen.getByLabelText("Thumbs down")).toBeInTheDocument();
+    expect(screen.getByLabelText("Thích")).toBeInTheDocument();
+    expect(screen.getByLabelText("Không thích")).toBeInTheDocument();
   });
 
   it("does not show feedback buttons for user messages even with props", () => {
