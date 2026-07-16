@@ -569,13 +569,14 @@ export async function removeDomain(domain: string): Promise<DomainRemoveResponse
 // Assistant Tool Config Endpoints
 // ---------------------------------------------------------------------------
 
-export interface AssistantToolConfig {
-  tool_name: string;
-  description: string;
-  kind: string;
-  enabled: boolean;
-  updated_at: string | null;
-}
+    export interface AssistantToolConfig {
+      tool_name: string;
+      display_name: string;
+      description: string;
+      kind: string;
+      enabled: boolean;
+      updated_at: string | null;
+    }
 
 export interface AssistantToolConfigListResponse {
   tools: AssistantToolConfig[];

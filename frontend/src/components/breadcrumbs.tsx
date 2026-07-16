@@ -32,6 +32,8 @@ interface BreadcrumbItem {
 interface BreadcrumbsProps {
   /** Optional display names for dynamic route segments, keyed by segment or href. */
   displayNames?: Record<string, string>;
+  /** When false, the home breadcrumb ("Trang chủ") is not rendered. */
+  showHome?: boolean;
 }
 
 interface BreadcrumbContextValue {
@@ -73,12 +75,12 @@ function isInternalIdentifier(segment: string): boolean {
   return uuidPattern.test(segment) || /^[0-9a-f]{24,}$/i.test(segment);
 }
 
-export function Breadcrumbs({ displayNames = {} }: BreadcrumbsProps) {
+export function Breadcrumbs({ displayNames = {}, showHome = true }: BreadcrumbsProps) {
   const pathname = usePathname();
   const context = useContext(BreadcrumbContext);
   const resolvedDisplayNames = { ...context?.displayNames, ...displayNames };
   const segments = pathname.split("/").filter(Boolean);
-  const items: BreadcrumbItem[] = [{ label: "Trang chủ", href: "/" }];
+  const items: BreadcrumbItem[] = showHome ? [{ label: "Trang chủ", href: "/" }] : [];
 
   segments.forEach((segment, index) => {
     const href = "/" + segments.slice(0, index + 1).join("/");
@@ -111,13 +113,17 @@ export function Breadcrumbs({ displayNames = {} }: BreadcrumbsProps) {
               >
                 {item.label}
               </span>
-            ) : (
+            ) : index === 0 ? (
               <Link
                 href={item.href}
                 className="text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {item.label}
               </Link>
+            ) : (
+              <span className="text-muted-foreground">
+                {item.label}
+              </span>
             )}
           </span>
         );

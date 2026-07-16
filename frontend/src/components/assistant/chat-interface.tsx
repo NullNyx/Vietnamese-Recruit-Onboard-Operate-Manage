@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Loader2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,7 +27,6 @@ export interface ChatInterfaceProps {
   title?: string;
   description?: string;
   suggestions?: string[];
-  icon?: ReactNode;
   /** Called when draft action should open request form with prefill */
   onOpenRequestDialog?: (values: {
     leave?: Record<string, string>;
@@ -47,7 +46,6 @@ export function ChatInterface({
   title = "Trợ lý AI Vroom HR",
   description = "Hỏi tôi về dữ liệu nhân sự của bạn.",
   suggestions,
-  icon,
   onOpenRequestDialog,
   assistantType = "hr",
   onSessionStart,
@@ -214,122 +212,127 @@ export function ChatInterface({
     "Soạn email chúc mừng cho Nguyễn Văn A",
   ];
 
-  const defaultIcon = icon || (
-    <MessageSquare className="h-8 w-8 text-primary" />
-  );
+      return (
+        <div className="flex h-[calc(100vh-8rem)] flex-col rounded-xl border border-border/40 bg-card shadow-sm overflow-hidden">
+          <ScrollArea className="flex-1 px-4">
+            <div ref={scrollRef} className="space-y-4 py-4 stagger-children">
+              {messages.length === 0 && (
+                <div className="fade-in-section flex flex-col items-center justify-center py-16 text-center">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 mb-5 ring-1 ring-primary/10">
+                    <MessageSquare className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
+                  <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+                    {description}
+                  </p>
+                  <div className="mt-8 flex flex-wrap justify-center gap-2">
+                    {defaultSuggestions.map((suggestion) => (
+                      <Button
+                        key={suggestion}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs rounded-lg border-border/60 hover:border-primary/30 hover:bg-primary/5 transition-colors"
+                        onClick={() => {
+                          setInput(suggestion);
+                          textareaRef.current?.focus();
+                        }}
+                      >
+                        {suggestion}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-  return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col">
-      <ScrollArea className="flex-1 px-4">
-        <div ref={scrollRef} className="space-y-4 py-4">
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4">
-                {defaultIcon}
-              </div>
-              <h3 className="text-lg font-medium mb-2">{title}</h3>
-              <p className="text-sm text-muted-foreground max-w-md">
-                {description}
-              </p>
-              <div className="mt-6 flex flex-wrap justify-center gap-2">
-                {defaultSuggestions.map((suggestion) => (
-                  <Button
-                    key={suggestion}
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => {
-                      setInput(suggestion);
-                      textareaRef.current?.focus();
-                    }}
-                  >
-                    {suggestion}
-                  </Button>
-                ))}
-              </div>
+              {messages.map((msg, i) => (
+                <MessageBubble
+                  key={i}
+                  message={msg}
+                  messageIndex={i}
+                  sessionId={sessionIdRef.current ?? undefined}
+                  onFeedback={handleFeedback}
+                />
+              ))}
+
+              {loading && (
+                <div className="flex gap-3 justify-start fade-in-section">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                    <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                  </div>
+                  <div className="flex items-center gap-3 rounded-xl bg-card border border-border/40 px-4 py-3 shadow-sm">
+                    <div className="flex gap-1">
+                      <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      Đang suy nghĩ...
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          {draftAction && (
+            <div className="border-t border-border/40 px-4 py-3 bg-card">
+              <DraftActionCard
+                draft={draftAction}
+                confirmAction={confirmAction}
+                confirmLabel={onOpenRequestDialog ? "Mở form" : "Xác nhận"}
+                onConfirmed={onOpenRequestDialog ? handleDraftConfirm : undefined}
+                onDismissed={() => setDraftAction(null)}
+              />
             </div>
           )}
 
-          {messages.map((msg, i) => (
-            <MessageBubble
-              key={i}
-              message={msg}
-              messageIndex={i}
-              sessionId={sessionIdRef.current ?? undefined}
-              onFeedback={handleFeedback}
-            />
-          ))}
-
-          {loading && (
-            <div className="flex gap-3 justify-start">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                <Loader2 className="h-4 w-4 text-primary animate-spin" />
+          {lastError && (
+            <div className="flex items-center justify-between gap-3 border-t border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive/10 text-xs font-bold">!</span>
+                <span>{lastError}</span>
               </div>
-              <div className="flex items-center rounded-lg bg-muted px-4 py-2">
-                <span className="text-sm text-muted-foreground">
-                  Đang suy nghĩ...
-                </span>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                onClick={() => {
+                  setLastError(null);
+                  handleSend(true);
+                }}
+                disabled={loading}
+              >
+                Thử lại
+              </Button>
             </div>
           )}
-        </div>
-      </ScrollArea>
 
-      {draftAction && (
-        <div className="border-t px-4 py-3">
-          <DraftActionCard
-            draft={draftAction}
-            confirmAction={confirmAction}
-            confirmLabel={onOpenRequestDialog ? "Mở form" : "Xác nhận"}
-            onConfirmed={onOpenRequestDialog ? handleDraftConfirm : undefined}
-            onDismissed={() => setDraftAction(null)}
-          />
+          <div className="border-t border-border/40 bg-card/50 px-4 py-3">
+            <div className="flex gap-2">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Nhập tin nhắn..."
+                rows={1}
+                className="min-h-[44px] resize-none rounded-xl border-border/60 bg-background focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
+                disabled={loading}
+              />
+              <Button
+                onClick={() => handleSend()}
+                disabled={!input.trim() || loading}
+                size="icon"
+                className="shrink-0 rounded-xl bg-primary hover:bg-primary/90 shadow-sm transition-all disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
-      )}
-
-      {lastError && (
-        <div className="flex items-center justify-between gap-3 border-t px-4 py-2 text-sm text-destructive">
-          <span>Không thể kết nối trợ lý: {lastError}</span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setLastError(null);
-              handleSend(true);
-            }}
-            disabled={loading}
-          >
-            Thử lại
-          </Button>
-        </div>
-      )}
-
-      <div className="border-t px-4 py-3">
-        <div className="flex gap-2">
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Nhập tin nhắn..."
-            rows={1}
-            className="min-h-[44px] resize-none"
-            disabled={loading}
-          />
-          <Button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || loading}
-            size="icon"
-            className="shrink-0"
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
+      );
 }

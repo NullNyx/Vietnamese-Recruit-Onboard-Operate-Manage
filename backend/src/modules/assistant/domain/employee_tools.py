@@ -1,20 +1,21 @@
-"""Tool definitions for the Employee Assistant.
+"""Định nghĩa tool cho Employee Assistant.
 
-Employee Assistant tools are scoped to the authenticated Employee's own data
-only. Every Read-Tool filters by the employee_id from the session — the LLM
-cannot ask for another employee's data because employee_id is never exposed
-as a parameter.
+Employee Assistant tools chỉ giới hạn trong dữ liệu của chính nhân viên đã xác thực.
+Mọi Read-Tool đều lọc theo employee_id từ session — LLM
+không thể yêu cầu dữ liệu của nhân viên khác vì employee_id không bao giờ được
+exposed dưới dạng tham số.
 
-Draft-Tools return a Draft Action — they never write to the database.
-The employee reviews the draft; on confirm, the frontend calls the real
-write endpoint directly (human-in-the-loop, ADR-0006).
+Draft-Tool trả về Draft Action — chúng không bao giờ ghi vào database.
+Nhân viên xem xét bản nháp; khi xác nhận, frontend gọi endpoint write thực tế
+trực tiếp (human-in-the-loop, ADR-0006).
 
-Tool set:
+Danh sách tool:
 - Read-Tool:    get_my_profile
 - Read-Tool:    list_my_documents
 - Read-Tool:    get_today_attendance
 - Read-Tool:    list_my_attendance_records
 - Read-Tool:    list_my_employee_requests
+- Read-Tool:    get_my_leave_balance
 - Read-Tool:    list_my_payslips
 - Draft-Tool:   draft_leave_request
 - Draft-Tool:   draft_overtime_request
@@ -34,13 +35,14 @@ _REASON_MAX_LENGTH = 2000
 EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="get_my_profile",
+        display_name="Hồ sơ của tôi",
         kind=ToolKind.READ,
-        description=(
-            "Get the current employee's own profile information. "
-            "Returns full name, email, phone, date of birth, gender, address, "
-            "department, position, employee code, start date, and contract type. "
-            "Use when the employee asks about their own profile or personal details."
-        ),
+            description=(
+                "Xem thông tin hồ sơ của chính nhân viên hiện tại. "
+                "Trả về họ tên, email, số điện thoại, ngày sinh, giới tính, địa chỉ, "
+                "phòng ban, chức vụ, mã nhân viên, ngày bắt đầu làm việc, và loại hợp đồng. "
+                "Sử dụng khi nhân viên hỏi về hồ sơ hoặc thông tin cá nhân của chính họ."
+            ),
         parameters={
             "type": "object",
             "additionalProperties": False,
@@ -49,13 +51,14 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="list_my_documents",
+        display_name="Tài liệu của tôi",
         kind=ToolKind.READ,
-        description=(
-            "List the current employee's own uploaded documents in the document vault. "
-            "Returns file name, document type, file size, and upload date for each document. "
-            "Use when the employee asks about their documents, uploaded files, or what "
-            "files are in their document vault."
-        ),
+            description=(
+                "Liệt kê các tài liệu đã tải lên của chính nhân viên hiện tại trong kho tài liệu. "
+                "Trả về tên file, loại tài liệu, dung lượng, và ngày tải lên cho mỗi tài liệu. "
+                "Sử dụng khi nhân viên hỏi về tài liệu, file đã tải lên, hoặc các "
+                "file trong kho tài liệu của họ."
+            ),
         parameters={
             "type": "object",
             "additionalProperties": False,
@@ -64,13 +67,14 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="get_today_attendance",
+        display_name="Chấm công hôm nay",
         kind=ToolKind.READ,
-        description=(
-            "Get the current employee's attendance check-in and check-out for today. "
-            "Returns check-in time, check-out time, and status for today only. "
-            "Use when the employee asks about today's attendance, whether they checked in, "
-            "or want to see their check-in status for the current day."
-        ),
+            description=(
+                "Xem thông tin check-in và check-out chấm công hôm nay của nhân viên hiện tại. "
+                "Trả về giờ check-in, giờ check-out, và trạng thái cho hôm nay. "
+                "Sử dụng khi nhân viên hỏi về chấm công hôm nay, đã check-in chưa, "
+                "hoặc muốn xem trạng thái check-in của ngày hiện tại."
+            ),
         parameters={
             "type": "object",
             "additionalProperties": False,
@@ -79,27 +83,28 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="list_my_attendance_records",
+        display_name="Lịch sử chấm công",
         kind=ToolKind.READ,
-        description=(
-            "List the current employee's attendance records. "
-            "Optionally filter by month and year. "
-            "Returns check-in and check-out times for each work date. "
-            "Use when the employee asks about their attendance history, "
-            "check-in history, or working days."
-        ),
+            description=(
+                "Liệt kê lịch sử chấm công của nhân viên hiện tại. "
+                "Có thể lọc theo tháng và năm. "
+                "Trả về giờ check-in và check-out cho mỗi ngày làm việc. "
+                "Sử dụng khi nhân viên hỏi về lịch sử chấm công, "
+                "lịch sử check-in, hoặc các ngày đã làm việc."
+            ),
         parameters={
             "type": "object",
             "additionalProperties": False,
             "properties": {
                 "month": {
                     "type": "integer",
-                    "description": "Month (1-12). If omitted, returns recent records.",
+                        "description": "Tháng (1-12). Nếu bỏ qua, trả về các bản ghi gần đây.",
                     "minimum": 1,
                     "maximum": 12,
                 },
                 "year": {
                     "type": "integer",
-                    "description": "Year (e.g. 2026). If omitted, uses current year.",
+                        "description": "Năm (ví dụ: 2026). Nếu bỏ qua, sử dụng năm hiện tại.",
                     "minimum": 2020,
                     "maximum": 2099,
                 },
@@ -108,24 +113,25 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="list_my_employee_requests",
+        display_name="Yêu cầu của tôi",
         kind=ToolKind.READ,
-        description=(
-            "List the current employee's own requests (leave and overtime). "
-            "Optionally filter by request type (leave or overtime). "
-            "Returns status, dates, reason, and timestamps. "
-            "Use when the employee asks about their leave or overtime requests, "
-            "submission history, or request status."
-        ),
+            description=(
+                "Liệt kê các yêu cầu (đơn nghỉ phép và tăng ca) của chính nhân viên hiện tại. "
+                "Có thể lọc theo loại yêu cầu (leave hoặc overtime). "
+                "Trả về trạng thái, ngày tháng, lý do, và thời gian gửi. "
+                "Sử dụng khi nhân viên hỏi về đơn nghỉ phép hoặc tăng ca của họ, "
+                "lịch sử gửi đơn, hoặc trạng thái yêu cầu."
+            ),
         parameters={
             "type": "object",
             "additionalProperties": False,
             "properties": {
                 "request_type": {
                     "type": "string",
-                    "description": (
-                        "Optional filter by request type. "
-                        "One of: leave, overtime. If omitted, returns all."
-                    ),
+                        "description": (
+                            "Lọc theo loại yêu cầu (không bắt buộc). "
+                            "Một trong: leave, overtime. Nếu bỏ qua, trả về tất cả."
+                        ),
                     "enum": ["leave", "overtime"],
                 },
             },
@@ -133,12 +139,13 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="get_my_leave_balance",
+        display_name="Số dư nghỉ phép",
         kind=ToolKind.READ,
-        description=(
-            "Get the current employee's annual leave balance. "
-            "Returns the annual entitlement, approved days used, pending days, "
-            "and remaining days. This is only the current employee's balance."
-        ),
+            description=(
+                "Xem số dư ngày nghỉ phép năm của nhân viên hiện tại. "
+                "Trả về tổng số ngày phép được cấp, số ngày đã được duyệt, số ngày đang chờ xử lý, "
+                "và số ngày còn lại. Đây chỉ là số dư của nhân viên hiện tại."
+            ),
         parameters={
             "type": "object",
             "additionalProperties": False,
@@ -147,14 +154,15 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="list_my_payslips",
+        display_name="Bảng lương của tôi",
         kind=ToolKind.READ,
-        description=(
-            "List the current employee's own published payslips. "
-            "Returns period, gross salary, net salary, and breakdown "
-            "for each payslip. "
-            "Use when the employee asks about their payslips, salary history, "
-            "or payment records."
-        ),
+            description=(
+                "Liệt kê các bảng lương đã được phát hành của nhân viên hiện tại. "
+                "Trả về kỳ lương, lương gross, lương net, và chi tiết "
+                "cho từng bảng lương. "
+                "Sử dụng khi nhân viên hỏi về bảng lương, lịch sử lương, "
+                "hoặc các bản ghi thanh toán."
+            ),
         parameters={
             "type": "object",
             "additionalProperties": False,
@@ -163,40 +171,41 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="draft_leave_request",
+        display_name="Soạn đơn nghỉ phép",
         kind=ToolKind.DRAFT,
-        description=(
-            "Draft a leave request for the current employee. Returns a Draft Action "
-            "with a preview for the employee to review and confirm. "
-            "The employee confirms in the UI; only then is the leave request submitted. "
-            "Use when the employee asks to take leave, apply for leave, or submit "
-            "a leave request."
-        ),
+            description=(
+                "Soạn thảo đơn nghỉ phép cho nhân viên hiện tại. Trả về một Draft Action "
+                "có bản xem trước để nhân viên xem xét và xác nhận. "
+                "Nhân viên xác nhận trên UI; chỉ sau đó đơn nghỉ phép mới được gửi đi. "
+                "Sử dụng khi nhân viên muốn xin nghỉ phép, đăng ký nghỉ phép, hoặc gửi "
+                "đơn nghỉ phép."
+            ),
         parameters={
             "type": "object",
             "additionalProperties": False,
             "properties": {
                 "leave_type": {
                     "type": "string",
-                    "description": (
-                        "Type of leave. One of: annual (nghỉ phép năm), "
-                        "sick (nghỉ ốm), unpaid (nghỉ không lương), "
-                        "other (khác)."
-                    ),
+                        "description": (
+                            "Loại nghỉ phép. Một trong: annual (nghỉ phép năm), "
+                            "sick (nghỉ ốm), unpaid (nghỉ không lương), "
+                            "other (khác)."
+                        ),
                     "enum": ["annual", "sick", "unpaid", "other"],
                 },
                 "start_date": {
                     "type": "string",
-                    "description": "First day of leave. Format: YYYY-MM-DD.",
+                        "description": "Ngày bắt đầu nghỉ. Định dạng: YYYY-MM-DD.",
                     "pattern": _DATE_PATTERN,
                 },
                 "end_date": {
                     "type": "string",
-                    "description": "Last day of leave. Must be >= start_date. Format: YYYY-MM-DD.",
+                        "description": "Ngày kết thúc nghỉ. Phải >= start_date. Định dạng: YYYY-MM-DD.",
                     "pattern": _DATE_PATTERN,
                 },
                 "reason": {
                     "type": "string",
-                    "description": "Reason for the leave request (max 2000 chars).",
+                        "description": "Lý do xin nghỉ phép (tối đa 2000 ký tự).",
                     "maxLength": _REASON_MAX_LENGTH,
                 },
             },
@@ -205,41 +214,42 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="draft_overtime_request",
+        display_name="Soạn đơn tăng ca",
         kind=ToolKind.DRAFT,
-        description=(
-            "Draft an overtime request for the current employee. Returns a Draft Action "
-            "with a preview for the employee to review and confirm. "
-            "The employee confirms in the UI; only then is the overtime request submitted. "
-            "Use when the employee asks to register overtime, submit overtime, "
-            "or log extra hours."
-        ),
+            description=(
+                "Soạn thảo đơn tăng ca cho nhân viên hiện tại. Trả về một Draft Action "
+                "có bản xem trước để nhân viên xem xét và xác nhận. "
+                "Nhân viên xác nhận trên UI; chỉ sau đó đơn tăng ca mới được gửi đi. "
+                "Sử dụng khi nhân viên muốn đăng ký tăng ca, gửi đơn tăng ca, "
+                "hoặc khai báo giờ làm thêm."
+            ),
         parameters={
             "type": "object",
             "additionalProperties": False,
             "properties": {
                 "work_date": {
                     "type": "string",
-                    "description": "Date overtime is worked. Format: YYYY-MM-DD.",
+                        "description": "Ngày làm tăng ca. Định dạng: YYYY-MM-DD.",
                     "pattern": _DATE_PATTERN,
                 },
                 "start_time": {
                     "type": "string",
-                    "description": "Start time. Format: HH:MM (24-hour).",
+                        "description": "Giờ bắt đầu. Định dạng: HH:MM (24-hour).",
                     "pattern": _TIME_PATTERN,
                 },
                 "end_time": {
                     "type": "string",
-                    "description": "End time. Must be after start_time. Format: HH:MM (24-hour).",
+                        "description": "Giờ kết thúc. Phải sau start_time. Định dạng: HH:MM (24-hour).",
                     "pattern": _TIME_PATTERN,
                 },
                 "reason": {
                     "type": "string",
-                    "description": "Reason for the overtime (max 2000 chars).",
+                        "description": "Lý do tăng ca (tối đa 2000 ký tự).",
                     "maxLength": _REASON_MAX_LENGTH,
                 },
                 "project_or_task": {
                     "type": "string",
-                    "description": "Optional project or task name (max 255 chars).",
+                        "description": "Tên dự án hoặc công việc (không bắt buộc, tối đa 255 ký tự).",
                     "maxLength": 255,
                 },
             },

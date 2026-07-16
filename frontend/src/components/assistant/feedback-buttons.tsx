@@ -78,7 +78,7 @@ export function FeedbackButtons({
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
           } disabled:opacity-60 disabled:cursor-not-allowed`}
-          aria-label="Thumbs up"
+          aria-label="Thích"
         >
           <ThumbsUp className="h-3.5 w-3.5" />
         </button>
@@ -91,7 +91,7 @@ export function FeedbackButtons({
               ? "bg-destructive/10 text-destructive"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
           } disabled:opacity-60 disabled:cursor-not-allowed`}
-          aria-label="Thumbs down"
+          aria-label="Không thích"
         >
           <ThumbsDown className="h-3.5 w-3.5" />
         </button>

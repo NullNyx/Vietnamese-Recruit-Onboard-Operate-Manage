@@ -196,27 +196,30 @@ export default function DashboardPage() {
       );
     }
 
-    return (
-      <div className="stagger-children grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title="Nhân viên"
-          value={stats?.employees ?? 0}
-          icon={Users}
-          loading={loading}
-        />
-        <StatCard
-          title="Phòng ban"
-          value={stats?.departments ?? 0}
-          icon={Building2}
-          loading={loading}
-        />
-        <StatCard
-          title="Chức vụ"
-          value={stats?.positions ?? 0}
-          icon={Briefcase}
-          loading={loading}
-        />
-      </div>
+        return (
+          <div className="stagger-children grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <StatCard
+              title="Nhân viên"
+              value={stats?.employees ?? 0}
+              icon={Users}
+              loading={loading}
+              color="primary"
+            />
+            <StatCard
+              title="Phòng ban"
+              value={stats?.departments ?? 0}
+              icon={Building2}
+              loading={loading}
+              color="secondary"
+            />
+            <StatCard
+              title="Chức vụ"
+              value={stats?.positions ?? 0}
+              icon={Briefcase}
+              loading={loading}
+              color="accent"
+            />
+          </div>
     );
   };
 

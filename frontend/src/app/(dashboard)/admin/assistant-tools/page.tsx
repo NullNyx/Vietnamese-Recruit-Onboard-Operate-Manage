@@ -78,11 +78,12 @@ export default function AssistantToolsPage() {
     }
   };
 
-  const filteredTools = tools.filter(
-    (tool) =>
-      tool.tool_name.toLowerCase().includes(search.toLowerCase()) ||
-      tool.description.toLowerCase().includes(search.toLowerCase())
-  );
+      const filteredTools = tools.filter(
+        (tool) =>
+          tool.display_name.toLowerCase().includes(search.toLowerCase()) ||
+          tool.tool_name.toLowerCase().includes(search.toLowerCase()) ||
+          tool.description.toLowerCase().includes(search.toLowerCase())
+      );
 
   const hasPendingChanges = Object.keys(pendingChanges).length > 0;
 
@@ -160,9 +161,9 @@ export default function AssistantToolsPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{tool.tool_name}</span>
-                          <Badge variant={tool.kind === "read" ? "secondary" : "default"}>
-                            {tool.kind === "read" ? "Read-Tool" : "Draft-Tool"}
+                              <span className="font-medium">{tool.display_name}</span>
+                              <Badge variant={tool.kind === "read" ? "secondary" : "default"}>
+                                {tool.kind === "read" ? "Tool đọc" : "Tool soạn thảo"}
                           </Badge>
                           {isChanged && (
                             <Badge variant="outline" className="text-accent border-accent/30">

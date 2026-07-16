@@ -31,7 +31,7 @@
     --muted-foreground: 40 5% 40%; /* #6B6760 */
 
     /* Accent — Amber/Gold */
-    --accent: 34 100% 50%;       /* #FF8F00 */
+    --accent: 40 10% 92%;         /* warm light gray, giống --muted */
     --accent-foreground: 0 0% 0%;
 
     /* Destructive */
@@ -76,15 +76,15 @@
     /* ===== DESIGN SYSTEM: Warm Professional — Dark ===== */
 
     /* Dark Foundation */
-    --background: 210 8% 11%;    /* #1A1C1E */
+    --background: 210 8% 18%;    /* #2A2D31 */
     --foreground: 40 10% 90%;    /* #E8E4DC */
 
     /* Cards & Surfaces */
-    --card: 210 8% 15%;          /* #23262B */
+    --card: 210 8% 24%;          /* #383C42 */
     --card-foreground: 40 10% 90%;
 
     /* Popover */
-    --popover: 210 8% 15%;
+    --popover: 210 8% 24%;    /* Sync with card */
     --popover-foreground: 40 10% 90%;
 
     /* Primary — slightly brighter for dark mode readability */
@@ -96,12 +96,12 @@
     --secondary-foreground: 0 0% 100%;
 
     /* Muted */
-    --muted: 210 8% 18%;
+    --muted: 210 8% 26%;    /* #3D4147 */
     --muted-foreground: 40 5% 55%;
 
     /* Accent */
-    --accent: 34 100% 45%;       /* #E68100 */
-    --accent-foreground: 0 0% 0%;
+    --accent: 210 5% 22%;         /* dark warm gray */
+    --accent-foreground: 0 0% 100%;
 
     /* Destructive */
     --destructive: 0 80% 50%;
@@ -116,14 +116,14 @@
     --warning-foreground: 0 0% 0%;
 
     /* Borders */
-    --border: 210 5% 25%;
-    --input: 210 5% 25%;
+    --border: 210 5% 32%;    /* #4A4F56 */
+    --input: 210 5% 32%;
     --ring: 0 69% 55%;           /* Matching dark primary */
 
     /* Sidebar — Dark */
-    --sidebar-background: 210 8% 13%;
+    --sidebar-background: 210 8% 21%;
     --sidebar-foreground: 40 5% 55%;
-    --sidebar-border: 210 5% 22%;
+    --sidebar-border: 210 5% 29%;
     --sidebar-accent: 0 69% 55%;
     --sidebar-accent-foreground: 0 0% 100%;
 

@@ -22,27 +22,29 @@ import {
 } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { motion } from "motion/react";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
-function StateBadge({ state }: { state: string }) {
-  const colorMap: Record<string, string> = {
-    not_configured: "bg-gray-100 text-gray-700",
-    disabled: "bg-yellow-100 text-yellow-700",
-    ready: "bg-green-100 text-green-700",
-    unavailable: "bg-red-100 text-red-700",
-  };
-  const labelMap: Record<string, string> = {
-    not_configured: "Chưa cấu hình",
-    disabled: "Đã tắt",
-    ready: "Sẵn sàng",
-    unavailable: "Không khả dụng",
-  };
-  return (
-    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${colorMap[state] || "bg-gray-100 text-gray-700"}`}>
-      {labelMap[state] || state}
-    </span>
-  );
-}
+    function StateBadge({ state }: { state: string }) {
+      const colorMap: Record<string, string> = {
+        not_configured: "bg-muted text-muted-foreground",
+        disabled: "bg-warning/10 text-warning",
+        ready: "bg-success/10 text-success",
+        unavailable: "bg-destructive/10 text-destructive",
+      };
+      const labelMap: Record<string, string> = {
+        not_configured: "Chưa cấu hình",
+        disabled: "Đã tắt",
+        ready: "Sẵn sàng",
+        unavailable: "Không khả dụng",
+      };
+      return (
+        <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${colorMap[state] || "bg-muted text-muted-foreground"}`}>
+          {labelMap[state] || state}
+        </span>
+      );
+    }
 
 
 export function OrganizationAIConfigForm({
@@ -321,9 +323,14 @@ export function OrganizationAIConfigForm({
   const hasDeploymentKey = config.deployment_key_available;
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Credential source selection */}
-      <section className="rounded-lg border bg-card p-6 space-y-4">
+
+      <motion.section
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="rounded-xl border border-border/30 bg-card p-6 shadow-sm space-y-4 border-l-4 border-primary">
         <h2 className="font-heading text-lg font-semibold">Credential source</h2>
         <p className="text-sm text-muted-foreground">
           Chọn nguồn credential cho Organization AI. Deployment key được cung cấp bởi deployment
@@ -368,48 +375,59 @@ export function OrganizationAIConfigForm({
             Deployment key chưa được cấu hình. Đặt biến môi trường AI_DEPLOYMENT_KEY để bật.
           </p>
         )}
-      </section>
+      </motion.section>
 
       {/* Provider configuration */}
-      <section className="rounded-lg border bg-card p-6 space-y-4">
+      <motion.section
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="rounded-xl border border-border/30 bg-card p-6 shadow-sm space-y-4 border-l-4 border-primary">
         <h2 className="font-heading text-lg font-semibold">Provider & Model</h2>
         <div className="grid gap-2">
-          <Label htmlFor="ai-provider">Provider</Label>
-          <Input
-            id="ai-provider"
-            value={provider}
-            onChange={(e) => setProvider(e.target.value)}
-            required
+          <Label htmlFor="ai-provider" className="font-label">Provider</Label>
+              <Input
+                id="ai-provider"
+                value={provider}
+                onChange={(e) => setProvider(e.target.value)}
+                className="rounded-lg focus-visible:ring-primary/20"
+                required
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="ai-base-url">OpenAI-compatible Base URL</Label>
-          <Input
-            id="ai-base-url"
-            type="url"
-            value={baseUrl}
-            onChange={(e) => setBaseUrl(e.target.value)}
-            required
+          <Label htmlFor="ai-base-url" className="font-label">OpenAI-compatible Base URL</Label>
+              <Input
+                id="ai-base-url"
+                type="url"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                className="rounded-lg focus-visible:ring-primary/20"
+                required
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="ai-model">Model</Label>
-          <Input
-            id="ai-model"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder="gpt-4o-mini hoặc custom-model"
-            required
+          <Label htmlFor="ai-model" className="font-label">Model</Label>
+              <Input
+                id="ai-model"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                className="rounded-lg focus-visible:ring-primary/20"
+                placeholder="gpt-4o-mini hoặc custom-model"
+                required
           />
         </div>
         <Button type="button" variant="outline" onClick={handleSaveProvider} disabled={busy}>
           {busy ? "Đang lưu..." : "Lưu cấu hình provider"}
         </Button>
-      </section>
+      </motion.section>
 
       {/* Organization API key section */}
       {isOrgKeySource && (
-        <section className="rounded-lg border bg-card p-6 space-y-4">
+        <motion.section
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="rounded-xl border border-border/30 bg-card p-6 shadow-sm space-y-4">
           <h2 className="font-heading text-lg font-semibold">Organization API key</h2>
 
           {hasOrgApiKey && (
@@ -419,15 +437,16 @@ export function OrganizationAIConfigForm({
           )}
 
           <div className="grid gap-2">
-            <Label htmlFor="ai-api-key">
+                        <Label htmlFor="ai-api-key" className="font-label">
               {hasOrgApiKey ? "API key mới (để rotate)" : "Organization API key"}
             </Label>
-            <Input
-              id="ai-api-key"
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder={hasOrgApiKey ? "Nhập key mới để thay đổi" : "Nhập API key"}
+                <Input
+                  id="ai-api-key"
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="rounded-lg focus-visible:ring-primary/20"
+                  placeholder={hasOrgApiKey ? "Nhập key mới để thay đổi" : "Nhập API key"}
             />
           </div>
 
@@ -453,17 +472,21 @@ export function OrganizationAIConfigForm({
           {testResult && (
             <p
               role="status"
-              className={testResult.success ? "text-sm text-green-600" : "text-sm text-destructive"}
+              className={testResult.success ? "text-sm text-success" : "text-sm text-destructive"}
             >
               {testResult.success ? "✓ Test kết nối thành công. Nhấn 'Kích hoạt' để lưu." : `✗ ${testResult.message}`}
             </p>
           )}
-        </section>
+        </motion.section>
       )}
 
       {/* Revoke section */}
       {hasOrgApiKey && (
-        <section className="rounded-lg border border-destructive/20 bg-card p-6 space-y-4">
+        <motion.section
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="rounded-xl border border-border/30 bg-card p-6 shadow-sm space-y-4 border-l-4 border-destructive/30">
           <h2 className="font-heading text-lg font-semibold text-destructive">Revoke API key</h2>
           <p className="text-sm text-muted-foreground">
             Thu hồi Organization API key hiện tại. Provider và model sẽ được giữ nguyên.
@@ -493,13 +516,17 @@ export function OrganizationAIConfigForm({
               </Button>
             </div>
           )}
-        </section>
+        </motion.section>
       )}
 
 
           {/* Job Application classification rollout */}
           {config.configured && (
-            <section className="rounded-lg border bg-card p-6 space-y-4">
+            <motion.section
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.25, ease: "easeOut" }}
+                            className="rounded-xl border border-border/30 bg-card p-6 shadow-sm space-y-4">
               <h2 className="font-heading text-lg font-semibold">Job Application classification</h2>
               <p className="text-sm text-muted-foreground">
                 Organization chọn policy nghiệp vụ; confidence threshold do hệ thống quản lý.
@@ -510,19 +537,21 @@ export function OrganizationAIConfigForm({
                 <p><strong>Rollout:</strong> {config.rollout_mode}{config.rollout_mode === "canary" ? ` (${config.canary_percentage}%)` : ""}</p>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="classifier-version">Candidate classifier version</Label>
-                <Input
-                  id="classifier-version"
-                  value={classifierVersion}
-                  onChange={(event) => setClassifierVersion(event.target.value)}
+                <Label htmlFor="classifier-version" className="font-label">Candidate classifier version</Label>
+                    <Input
+                      id="classifier-version"
+                      value={classifierVersion}
+                      onChange={(event) => setClassifierVersion(event.target.value)}
+                      className="rounded-lg focus-visible:ring-primary/20"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="classification-policy-version">Policy version</Label>
-                <Input
-                  id="classification-policy-version"
-                  value={classificationPolicyVersion}
-                  onChange={(event) => setClassificationPolicyVersion(event.target.value)}
+                <Label htmlFor="classification-policy-version" className="font-label">Policy version</Label>
+                    <Input
+                      id="classification-policy-version"
+                      value={classificationPolicyVersion}
+                      onChange={(event) => setClassificationPolicyVersion(event.target.value)}
+                      className="rounded-lg focus-visible:ring-primary/20"
                 />
               </div>
               <div className="flex flex-wrap gap-2">
@@ -541,13 +570,17 @@ export function OrganizationAIConfigForm({
               <p className="text-xs text-muted-foreground">
                 Full rollout chỉ mở qua operational release gate sau khi có báo cáo no-CV riêng.
               </p>
-            </section>
+            </motion.section>
           )}
 
 
           {/* Data Policy & Consent */}
           {config.configured && (
-            <section className="rounded-lg border bg-card p-6 space-y-4">
+            <motion.section
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.25, ease: "easeOut" }}
+                            className="rounded-xl border border-border/30 bg-card p-6 shadow-sm space-y-4">
               <h2 className="font-heading text-lg font-semibold">Data Policy & Consent</h2>
               <p className="text-sm text-muted-foreground">
                 Trước khi bật AI, bạn cần xem và chấp nhận data policy mô tả loại dữ liệu
@@ -581,7 +614,7 @@ export function OrganizationAIConfigForm({
                   )}
 
                   {config.data_policy_accepted && (
-                    <p className="text-sm text-green-600">
+                    <p className="text-sm text-success">
                       ✓ Data policy đã được chấp nhận
                       {config.data_policy_accepted_at && ` (${new Date(config.data_policy_accepted_at).toLocaleString()})`}
                       {config.data_policy_version && ` — phiên bản ${config.data_policy_version}`}
@@ -589,66 +622,62 @@ export function OrganizationAIConfigForm({
                   )}
                 </div>
               )}
-            </section>
+            </motion.section>
           )}
 
           {/* Capability Toggles */}
           {config.configured && (
-            <section className="rounded-lg border bg-card p-6 space-y-4">
+            <motion.section
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.25, ease: "easeOut" }}
+                            className="rounded-xl border border-border/30 bg-card p-6 shadow-sm space-y-4 border-l-4 border-primary">
               <h2 className="font-heading text-lg font-semibold">AI Capabilities</h2>
               <p className="text-sm text-muted-foreground">
                 Bật/tắt độc lập AI Automation và AI Assistant. Cả hai dùng chung provider/model.
               </p>
 
-              {/* AI Automation toggle */}
-              <div className="flex items-center justify-between rounded border p-4">
-                <div>
-                  <p className="font-medium">AI Automation</p>
-                  <p className="text-xs text-muted-foreground">
-                    Phân loại email và parse CV tự động
-                  </p>
-                  <StateBadge state={config.automation_state} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant={config.automation_enabled ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleToggleAutomation(!config.automation_enabled)}
-                    disabled={busy || (!config.automation_enabled && !config.data_policy_accepted)}
-                  >
-                    {config.automation_enabled ? "Đang bật" : "Đang tắt"}
-                  </Button>
-                </div>
-              </div>
+                  {/* AI Automation toggle */}
+                  <div className="flex items-center justify-between rounded-lg border border-border/30 p-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm">AI Automation</p>
+                        <StateBadge state={config.automation_state} />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Phân loại email và parse CV tự động
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.automation_enabled}
+                      onCheckedChange={handleToggleAutomation}
+                      disabled={busy || (!config.automation_enabled && !config.data_policy_accepted)}
+                    />
+                  </div>
 
-              {/* AI Assistant toggle */}
-              <div className="flex items-center justify-between rounded border p-4">
-                <div>
-                  <p className="font-medium">AI Assistant</p>
-                  <p className="text-xs text-muted-foreground">
-                    Trợ lý hội thoại cho HR
-                  </p>
-                  <StateBadge state={config.assistant_state} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant={config.assistant_enabled ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleToggleAssistant(!config.assistant_enabled)}
-                    disabled={busy || (!config.assistant_enabled && !config.data_policy_accepted)}
-                  >
-                    {config.assistant_enabled ? "Đang bật" : "Đang tắt"}
-                  </Button>
-                </div>
-              </div>
-            </section>
+                  {/* AI Assistant toggle */}
+                  <div className="flex items-center justify-between rounded-lg border border-border/30 p-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm">AI Assistant</p>
+                        <StateBadge state={config.assistant_state} />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Trợ lý hội thoại cho HR
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.assistant_enabled}
+                      onCheckedChange={handleToggleAssistant}
+                      disabled={busy || (!config.assistant_enabled && !config.data_policy_accepted)}
+                    />
+                  </div>
+            </motion.section>
           )}
 
       {/* Global message */}
       {message && (
-        <p role="status" className={success ? "text-sm text-green-600" : "text-sm text-destructive"}>
+        <p role="status" className={success ? "text-sm text-success" : "text-sm text-destructive"}>
           {message}
         </p>
       )}

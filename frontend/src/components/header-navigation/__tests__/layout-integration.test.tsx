@@ -131,8 +131,10 @@ describe("Layout Integration: HeaderNavigation", () => {
 
       render(React.createElement(HeaderNavigation));
 
-      expect(screen.getByRole("navigation")).toBeInTheDocument();
-    });
+          // The main nav plus breadcrumb nav — use getAllByRole
+          const navs = screen.getAllByRole("navigation");
+          expect(navs.length).toBeGreaterThanOrEqual(1);
+        });
   });
 
   describe("Employee layout renders HeaderNavigation without EmployeeSidebar", () => {

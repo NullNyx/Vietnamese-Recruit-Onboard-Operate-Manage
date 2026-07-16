@@ -1252,6 +1252,7 @@ async def list_assistant_tools(
         tools.append(
             AssistantToolConfigResponse(
                 tool_name=t.name,
+                display_name=t.display_name,
                 description=t.description,
                 kind=t.kind.value,
                 enabled=db_config.enabled if db_config else True,
