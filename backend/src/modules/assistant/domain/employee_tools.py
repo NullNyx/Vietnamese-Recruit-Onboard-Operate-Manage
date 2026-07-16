@@ -200,7 +200,7 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
                 },
                 "end_date": {
                     "type": "string",
-                        "description": "Ngày kết thúc nghỉ. Phải >= start_date. Định dạng: YYYY-MM-DD.",
+                        "description": "Ngày kết thúc nghỉ (>= start_date, YYYY-MM-DD).",
                     "pattern": _DATE_PATTERN,
                 },
                 "reason": {
@@ -239,7 +239,7 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
                 },
                 "end_time": {
                     "type": "string",
-                        "description": "Giờ kết thúc. Phải sau start_time. Định dạng: HH:MM (24-hour).",
+                        "description": "Giờ kết thúc, sau start_time, định dạng HH:MM (24h).",
                     "pattern": _TIME_PATTERN,
                 },
                 "reason": {
@@ -249,7 +249,7 @@ EMPLOYEE_TOOL_DEFINITIONS: list[ToolDefinition] = [
                 },
                 "project_or_task": {
                     "type": "string",
-                        "description": "Tên dự án hoặc công việc (không bắt buộc, tối đa 255 ký tự).",
+                        "description": "Tên dự án/công việc (không bắt buộc, <= 255 ký tự).",
                     "maxLength": 255,
                 },
             },

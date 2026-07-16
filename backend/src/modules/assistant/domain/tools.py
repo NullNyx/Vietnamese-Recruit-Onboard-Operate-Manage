@@ -52,7 +52,7 @@ class ToolDefinition:
 @dataclass(frozen=True)
 class DraftAction:
     """Structured proposal returned by a Draft-Tool (CONTEXT.md).
-    
+
     HR reviews it; on confirm, the frontend calls the real write endpoint
     directly — never the LLM. This is the human-in-the-loop mechanism.
 
@@ -95,7 +95,7 @@ ToolDefinition(
                 "status": {
                     "type": "string",
                         "description": (
-                            "Lọc theo trạng thái (không bắt buộc). Một trong các giá trị: new, reviewing, "
+                            "Lọc theo trạng thái (không bắt buộc). Giá trị: new, reviewing, "
                             "interview_scheduled, accepted, rejected, archived. "
                             "Nếu bỏ qua, trả về số lượng cho TẤT CẢ trạng thái."
                         ),
@@ -130,7 +130,7 @@ ToolDefinition(
             display_name="Chi tiết nhiệm vụ onboarding",
             kind=ToolKind.READ,
             description=(
-                "Xem chi tiết các công việc trong quy trình onboarding. Trả về danh sách các tác vụ "
+                "Xem chi tiết công việc trong quy trình onboarding. Trả về danh sách tác vụ "
                 "với tên, trạng thái (pending/done), ngày đến hạn (nếu có), "
                 "is_overdue (boolean), và người được giao (nếu có). "
                 "Sử dụng khi người dùng hỏi về tiến độ onboarding, danh sách việc cần làm, "
@@ -178,7 +178,7 @@ ToolDefinition(
             "properties": {
                 "query": {
                     "type": "string",
-                        "description": "Từ khóa tìm kiếm — so khớp với tên hoặc email của candidate.",
+                        "description": "Từ khóa tìm kiếm — so khớp tên hoặc email candidate.",
                 },
             },
             "required": ["query"],
@@ -246,7 +246,7 @@ ToolDefinition(
             description=(
                 "Liệt kê các vị trí đang tuyển dụng trong pipeline, có thể lọc "
                 "theo trạng thái. Trả về danh sách các vị trí với id, tiêu đề, phòng ban, "
-                "chức vụ, chỉ tiêu tuyển dụng (headcount_target), số lượng đã tuyển (headcount_filled), và trạng thái. "
+                "chức vụ, chỉ tiêu tuyển dụng, số lượng đã tuyển, và trạng thái. "
                 "Sử dụng khi người dùng hỏi về các vị trí đang tuyển, kế hoạch tuyển dụng, "
                 "hoặc tình trạng chỉ tiêu."
             ),
@@ -256,7 +256,7 @@ ToolDefinition(
                 "status": {
                     "type": "string",
                         "description": (
-                            "Lọc theo trạng thái (không bắt buộc). Một trong các giá trị: draft, open, closed, cancelled. "
+                            "Lọc theo trạng thái (tùy chọn): draft, open, closed, cancelled. "
                             "Mặc định là 'open' nếu bỏ qua."
                         ),
                 },
@@ -292,9 +292,9 @@ ToolDefinition(
             display_name="Soạn email chúc mừng",
             kind=ToolKind.DRAFT,
             description=(
-                "Soạn thảo email chúc mừng / thông báo trúng tuyển cho một candidate. Trả về một Draft Action "
+                "Soạn email chúc mừng/thông báo trúng tuyển cho candidate. Trả về Draft Action "
                 "với nội dung email để HR xem xét và xác nhận. "
-                "Sử dụng khi người dùng muốn gửi thư mời nhận việc hoặc lời chúc mừng đến candidate."
+                "Sử dụng khi người dùng muốn gửi thư mời nhận việc/lời chúc mừng đến candidate."
             ),
         parameters={
             "type": "object",
@@ -309,7 +309,7 @@ ToolDefinition(
                     },
                     "start_date": {
                         "type": "string",
-                        "description": "Ngày dự kiến bắt đầu làm việc (ví dụ: 15/06/2026 hoặc YYYY-MM-DD).",
+                        "description": "Ngày bắt đầu làm việc (VD: 15/06/2026 hay YYYY-MM-DD).",
                     },
             },
             "required": ["candidate_id", "position", "start_date"],

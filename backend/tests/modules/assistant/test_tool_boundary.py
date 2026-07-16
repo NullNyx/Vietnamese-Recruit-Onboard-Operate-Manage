@@ -83,7 +83,7 @@ class TestToolBoundary:
         """The draft tools must be Draft-Tool, not execute any write."""
         draft_tools = [t for t in TOOL_DEFINITIONS if t.kind == ToolKind.DRAFT]
         for t in draft_tools:
-            assert "use when" in t.description.lower()
+            assert "sử dụng khi" in t.description.lower()
 
     def test_draft_tool_count(self) -> None:
         """There should be exactly 2 Draft-Tools."""
