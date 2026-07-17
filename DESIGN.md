@@ -50,8 +50,8 @@ components:
 
 ## Overview
 
-Hệ thống thiết kế **AI Studio** là design system đang dùng cho `vroom-hr/` —
-frontend chính của Vroom HR. Đây là hệ thống được quyết bởi AI Studio khi tái xây
+Hệ thống thiết kế **AI Studio** là design system đang dùng cho `frontend/` —
+frontend chính của Vroom HR (package `vroom-hr`). Đây là hệ thống được quyết bởi AI Studio khi tái xây
 dây frontend xoay quanh domain model (xem
 [`docs/adr/0006-ai-studio-design-system.md`](./docs/adr/0006-ai-studio-design-system.md)).
 
@@ -61,10 +61,10 @@ audit. Card bo góc lớn (`rounded-2xl`), shadow mềm, negative space vừa ph
 đọc được, không trang trí.
 
 > **Lưu ý legacy:** hệ thống *Heritage* trước đây (warm limestone `#F7F5F2`,
-> accent terracotta `#B8422E`, font Fraunces/Public Sans/Space Grotesk) thuộc về
-> `frontend/` cũ (Next.js 14, Tailwind 3). `frontend/` giờ là backup legacy và
-> **không còn là design system nguồn sự thật**. Khi thêm UI mới, tuân theo AI
-> Studio ở tài liệu này, không theo Heritage.
+> accent terracotta `#B8422E`, font Fraunces/Public Sans/Space Grotesk) là
+> design system cũ (Next.js 14, Tailwind 3), đã được backup và **không còn là
+> nguồn sự thật**. Khi thêm UI mới, tuân theo AI Studio ở tài liệu này, không
+> theo Heritage.
 
 ## Colors
 
@@ -78,8 +78,8 @@ Palette xoay quanh slate (neutrals) và một accent indigo.
 - **Page (`#f8fafc`, slate-50):** nền trang.
 
 Quy ước: nền trang `bg-slate-50/50`, body text `text-slate-800` (xem
-`vroom-hr/app/layout.tsx`). Icon nhấn dùng `text-indigo-600`, tiêu đề
-`text-slate-900`, subtitle `text-slate-500` (xem `vroom-hr/components/operate.tsx`).
+`frontend/app/layout.tsx`). Icon nhấn dùng `text-indigo-600`, tiêu đề
+`text-slate-900`, subtitle `text-slate-500` (xem `frontend/components/operate.tsx`).
 
 ## Typography
 
@@ -88,7 +88,7 @@ Quy ước: nền trang `bg-slate-50/50`, body text `text-slate-800` (xem
 - **label / caption:** Inter 0.875rem (text-sm), weight 500.
 - **mono:** JetBrains Mono 0.875rem — cho `code`, mã NV, audit id, qua `--font-mono`.
 
-Cả hai font tải qua `next/font/google` trong `vroom-hr/app/layout.tsx` và gắn vào
+Cả hai font tải qua `next/font/google` trong `frontend/app/layout.tsx` và gắn vào
 CSS variable `--font-sans` / `--font-mono`; body dùng `font-sans`.
 
 ## Do's and Don'ts
@@ -96,5 +96,5 @@ CSS variable `--font-sans` / `--font-mono`; body dùng `font-sans`.
 - **Do** dùng indigo làm accent duy nhất cho action/icon — không trộn accent thứ hai.
 - **Do** dùng `rounded-2xl` cho card, shadow mềm — giữ cảm giác sản phẩm dụng cụ.
 - **Do** ưu tiên tiếng Việt trong nhãn giao diện (deployment cho doanh nghiệp VN).
-- **Don't** mang accent terracotta hay font Fraunces của Heritage sang `vroom-hr/`.
-- **Don't** dùng gradient — hệ thống này phẳng có chủ đích.
+- **Don't** mang accent terracotta hay font Fraunces của Heritage sang `frontend/`.
+- **Don't** dùng gradient trang trí hoặc làm nền — hệ thống này phẳng có chủ đích. **Ngoại lệ:** gradient accent `from-indigo-600 to-indigo-500` được phép trên CTA đặc biệt (vd: nút "Trợ lý AI") để tạo điểm nhấn.
