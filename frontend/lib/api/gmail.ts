@@ -43,6 +43,18 @@ function authInit(init?: RequestInit): RequestInit {
   return { ...init, credentials: "include" };
 }
 
+/** Wrapper cho fetch: bắt lỗi mạng và timeout, ném ApiError với mã tiếng Việt. */
+async function safeFetch(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new ApiError(0, "TIMEOUT", "Yêu cầu đã hết thời gian chờ");
+    }
+    throw new ApiError(0, "NETWORK_ERROR", "Lỗi kết nối mạng");
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Organization Google Connection (identity router)
 // ---------------------------------------------------------------------------
@@ -51,7 +63,7 @@ function authInit(init?: RequestInit): RequestInit {
  * Get the current Google Workspace connection status for the organization.
  */
 export async function getConnectionStatus(): Promise<OrganizationGoogleConnectionResponse> {
-  const res = await fetch(`${AUTH_BASE}/organization-google-connection`, authInit());
+  const res = await safeFetch(`${AUTH_BASE}/organization-google-connection`, authInit());
   return handleResponse<OrganizationGoogleConnectionResponse>(res);
 }
 
@@ -60,7 +72,7 @@ export async function getConnectionStatus(): Promise<OrganizationGoogleConnectio
  * Redirect the user to the returned redirect_url.
  */
 export async function getAuthorizeUrl(): Promise<OrganizationGoogleConnectionResponse> {
-  const res = await fetch(
+  const res = await safeFetch(
     `${AUTH_BASE}/organization-google-connection/authorize-url`,
     authInit(),
   );
@@ -71,7 +83,7 @@ export async function getAuthorizeUrl(): Promise<OrganizationGoogleConnectionRes
  * Reconnect (re-authorize) the Google Workspace connection.
  */
 export async function reconnectConnection(): Promise<OrganizationGoogleConnectionResponse> {
-  const res = await fetch(
+  const res = await safeFetch(
     `${AUTH_BASE}/organization-google-connection/reconnect`,
     authInit({ method: "POST" }),
   );
@@ -82,7 +94,7 @@ export async function reconnectConnection(): Promise<OrganizationGoogleConnectio
  * Disconnect the organization Google Workspace connection.
  */
 export async function disconnectConnection(): Promise<OrganizationGoogleConnectionResponse> {
-  const res = await fetch(`${AUTH_BASE}/organization-google-connection`, authInit({ method: "DELETE" }));
+  const res = await safeFetch(`${AUTH_BASE}/organization-google-connection`, authInit({ method: "DELETE" }));
   return handleResponse<OrganizationGoogleConnectionResponse>(res);
 }
 
@@ -104,12 +116,12 @@ export interface CalendarListResponse {
 }
 
 export async function getCalendars(): Promise<CalendarListResponse> {
-  const res = await fetch(`${AUTH_BASE}/organization-google-connection/calendars`, authInit());
+  const res = await safeFetch(`${AUTH_BASE}/organization-google-connection/calendars`, authInit());
   return handleResponse<CalendarListResponse>(res);
 }
 
 export async function selectCalendar(calendarId: string): Promise<void> {
-  const res = await fetch(`${AUTH_BASE}/organization-google-connection/selected-calendar`, authInit({
+  const res = await safeFetch(`${AUTH_BASE}/organization-google-connection/selected-calendar`, authInit({
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ calendar_id: calendarId }),
@@ -159,22 +171,22 @@ export interface MessagesListResponse {
 /** List synced Gmail messages (optionally filtered by category). */
 export async function listMessages(category?: string): Promise<MessagesListResponse> {
   const qs = category ? `?category=${encodeURIComponent(category)}` : "";
-  const res = await fetch(`${BASE}/messages${qs}`, authInit());
+  const res = await safeFetch(`${BASE}/messages${qs}`, authInit());
   return handleResponse<MessagesListResponse>(res);
 }
 
 export async function syncEmails(): Promise<SyncResponse> {
-  const res = await fetch(`${BASE}/sync`, authInit({ method: "POST" }));
+  const res = await safeFetch(`${BASE}/sync`, authInit({ method: "POST" }));
   return handleResponse<SyncResponse>(res);
 }
 
 export async function getMessageBody(messageId: string): Promise<MessageBodyResponse> {
-  const res = await fetch(`${BASE}/messages/${messageId}/body`, authInit());
+  const res = await safeFetch(`${BASE}/messages/${messageId}/body`, authInit());
   return handleResponse<MessageBodyResponse>(res);
 }
 
 export async function removeLabel(messageId: string, labelName: string): Promise<void> {
-  const res = await fetch(`${BASE}/messages/${messageId}/labels/remove`, authInit({
+  const res = await safeFetch(`${BASE}/messages/${messageId}/labels/remove`, authInit({
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ label_name: labelName }),
@@ -186,7 +198,7 @@ export async function removeLabel(messageId: string, labelName: string): Promise
 }
 
 export async function sendEmail(data: SendEmailRequest): Promise<SendEmailResponse> {
-  const res = await fetch(`${BASE}/send`, authInit({
+  const res = await safeFetch(`${BASE}/send`, authInit({
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -195,7 +207,7 @@ export async function sendEmail(data: SendEmailRequest): Promise<SendEmailRespon
 }
 
 export async function getAttachments(messageId: string): Promise<AttachmentsResponse> {
-  const res = await fetch(`${BASE}/messages/${messageId}/attachments`, authInit({ method: "POST" }));
+  const res = await safeFetch(`${BASE}/messages/${messageId}/attachments`, authInit({ method: "POST" }));
   return handleResponse<AttachmentsResponse>(res);
 }
 
@@ -210,7 +222,7 @@ export interface ClassifyResponse {
 
 /** Classify a small batch of emails (default 5). */
 export async function classifyBatch(limit: number = 5): Promise<ClassifyResponse> {
-  const res = await fetch(`${BASE}/classify?limit=${limit}`, authInit({ method: "POST" }));
+  const res = await safeFetch(`${BASE}/classify?limit=${limit}`, authInit({ method: "POST" }));
   return handleResponse<ClassifyResponse>(res);
 }
 
@@ -221,13 +233,13 @@ export interface ReviewEmailsResponse {
 
 /** List emails that need human review (needs_review status). */
 export async function listEmailsNeedingReview(limit: number = 50, offset: number = 0): Promise<ReviewEmailsResponse> {
-  const res = await fetch(`${BASE}/review/emails?limit=${limit}&offset=${offset}`, authInit());
+  const res = await safeFetch(`${BASE}/review/emails?limit=${limit}&offset=${offset}`, authInit());
   return handleResponse<ReviewEmailsResponse>(res);
 }
 
 /** Reclassify a needs_review email. */
 export async function reclassifyEmail(messageId: string): Promise<EmailMessage> {
-  const res = await fetch(`${BASE}/review/emails/${messageId}/reclassify`, authInit({ method: "POST" }));
+  const res = await safeFetch(`${BASE}/review/emails/${messageId}/reclassify`, authInit({ method: "POST" }));
   return handleResponse<EmailMessage>(res);
 }
 
@@ -244,7 +256,7 @@ export interface ProcessAttachmentsResponse {
 
 /** Fetch attachments and trigger CV processing pipeline for an email. */
 export async function processAttachments(messageId: string): Promise<ProcessAttachmentsResponse> {
-  const res = await fetch(`${BASE}/messages/${encodeURIComponent(messageId)}/process-attachments`, authInit({ method: "POST" }));
+  const res = await safeFetch(`${BASE}/messages/${encodeURIComponent(messageId)}/process-attachments`, authInit({ method: "POST" }));
   return handleResponse<ProcessAttachmentsResponse>(res);
 }
 
@@ -287,7 +299,7 @@ export interface ImportCancelResponse {
 
 /** Preview the number of importable emails in a time window. */
 export async function previewImport(days: number): Promise<ImportPreviewResponse> {
-  const res = await fetch(`${BASE}/import/preview`, authInit({
+  const res = await safeFetch(`${BASE}/import/preview`, authInit({
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ days }),
@@ -297,7 +309,7 @@ export async function previewImport(days: number): Promise<ImportPreviewResponse
 
 /** Start a historical email import job. */
 export async function startImport(days: number): Promise<ImportStartResponse> {
-  const res = await fetch(`${BASE}/import/start`, authInit({
+  const res = await safeFetch(`${BASE}/import/start`, authInit({
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ days }),
@@ -307,13 +319,13 @@ export async function startImport(days: number): Promise<ImportStartResponse> {
 
 /** Get the status of the current or last historical import job. */
 export async function getImportStatus(): Promise<ImportStatusResponse> {
-  const res = await fetch(`${BASE}/import/status`, authInit());
+  const res = await safeFetch(`${BASE}/import/status`, authInit());
   return handleResponse<ImportStatusResponse>(res);
 }
 
 /** Cancel a running historical import job. */
 export async function cancelImport(): Promise<ImportCancelResponse> {
-  const res = await fetch(`${BASE}/import/cancel`, authInit({ method: "POST" }));
+  const res = await safeFetch(`${BASE}/import/cancel`, authInit({ method: "POST" }));
   return handleResponse<ImportCancelResponse>(res);
 }
 
@@ -344,19 +356,19 @@ export interface OutboundEmailListResponse {
 
 /** List outbound emails (drafts pending send + sent history). */
 export async function listOutboundEmails(): Promise<OutboundEmailListResponse> {
-  const res = await fetch(`${OUTBOUND_BASE}`, authInit());
+  const res = await safeFetch(`${OUTBOUND_BASE}`, authInit());
   return handleResponse<OutboundEmailListResponse>(res);
 }
 
 /** Get a single outbound email by id. */
 export async function getOutboundEmail(id: string): Promise<OutboundEmail> {
-  const res = await fetch(`${OUTBOUND_BASE}/${id}`, authInit());
+  const res = await safeFetch(`${OUTBOUND_BASE}/${id}`, authInit());
   return handleResponse<OutboundEmail>(res);
 }
 
 /** Create an outbound email in pending status (HR reviews before actual send). */
 export async function createOutboundEmail(data: SendEmailRequest): Promise<OutboundEmail> {
-  const res = await fetch(`${OUTBOUND_BASE}`, authInit({
+  const res = await safeFetch(`${OUTBOUND_BASE}`, authInit({
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -369,13 +381,13 @@ export async function createOutboundEmail(data: SendEmailRequest): Promise<Outbo
  * The real send only happens after this HR confirmation (human-in-the-loop).
  */
 export async function sendOutboundEmail(id: string): Promise<OutboundEmail> {
-  const res = await fetch(`${OUTBOUND_BASE}/${id}/send`, authInit({ method: "POST" }));
+  const res = await safeFetch(`${OUTBOUND_BASE}/${id}/send`, authInit({ method: "POST" }));
   return handleResponse<OutboundEmail>(res);
 }
 
 /** Delete a draft outbound email (only allowed while pending). */
 export async function deleteOutboundEmail(id: string): Promise<void> {
-  const res = await fetch(`${OUTBOUND_BASE}/${id}`, authInit({ method: "DELETE" }));
+  const res = await safeFetch(`${OUTBOUND_BASE}/${id}`, authInit({ method: "DELETE" }));
   if (!res.ok && res.status !== 204) {
     const body = await res.json().catch(() => ({ detail: res.statusText }));
     throw new ApiError(res.status, body?.error_code || "UNKNOWN_ERROR", body?.detail || "Xóa email thất bại", body);

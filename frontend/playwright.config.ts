@@ -1,81 +1,66 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-const hrState = process.env.E2E_HR_STORAGE_STATE;
-const employeeState = process.env.E2E_EMPLOYEE_STORAGE_STATE;
+/**
+ * Vroom HR E2E config.
+ *
+ * The browser talks to a single same-origin host http://localhost:3000 — the
+ * Node reverse proxy in `e2e/proxy.mjs` — so the backend's
+ * `Secure; SameSite=Lax` HttpOnly auth cookie is carried and no cross-origin
+ * CORS preflight is required (the FastAPI backend has no CORSMiddleware).
+ *
+ *   http://localhost:3000/api/* -> real FastAPI backend on :8000
+ *   http://localhost:3000/*     -> `next dev` for vroom-hr on :3001
+ *
+ * `webServer.command` = e2e/start-servers.sh starts Next on :3001 then execs
+ * the proxy on :3000 (Playwright supervises that single process).
+ * Playwright 1.61 takes EITHER `port` OR `url` (not both); we use `port`.
+ *
+ * Storage state is produced from the REAL backend auth flow:
+ *   - First-Run Setup UI wizard writes e2e/.auth/hr.json (real BE session)
+ *   - HR provisions an Employee Account; the ESS login (+ change-password)
+ *     flow writes e2e/.auth/employee.json
+ * No hardcoded fake cookies.
+ */
 
 const isCI = !!process.env.CI;
+const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./e2e",
-
-  /* Only 1 worker locally to avoid overwhelming the Next.js dev server.
-     CI can use the default (CPU-count-based) worker pool. */
-  workers: isCI ? undefined : 1,
-
-  /* Run tests within a project serially; projects may still run in parallel
-     up to the worker limit. Set --fully-parallel on CLI for full parallelism. */
+  // Single worker, NOT fully parallel — tests share on-disk state files
+  // (e2e/.auth/{hr,employee}.json) produced earlier in the same run, so they
+  // must execute in declaration order.
+  workers: 1,
   fullyParallel: false,
-
-  /* Retry on CI to handle flakes; retry locally once to reduce flake noise. */
-  retries: isCI ? 2 : 1,
-
-  /* Global timeout per test (including hooks, retries have their own budget). */
-  timeout: 60000,
-
-  /* Reporter for output. */
-  reporter: isCI ? "html" : "list",
-
-  /* Expect assertion timeout. */
-  expect: {
-    timeout: 15000,
-  },
-
-  /* Auto-start the Next.js dev server when running tests.
-     Reuse an already-running server if one exists on port 3000. */
-  webServer: {
-    command: "npm run dev",
-    port: 3000,
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  retries: 0,
+  timeout: 90_000,
+  expect: { timeout: 20_000 },
+  reporter: [["list"], ["html", { open: "never" }]],
 
   use: {
     baseURL,
-    /* Each project provides its own storageState via env vars. */
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
 
+  webServer: {
+    command: isCI ? "bash e2e/start-servers-ci.sh" : "bash e2e/start-servers.sh",
+    port: 3000,
+    timeout: 150_000,
+    reuseExistingServer: !isCI,
+    env: {
+      // Inlined into the Next client bundle: browser fetches same-origin
+      // /api/* which the proxy forwards to the backend on :8000.
+      NEXT_PUBLIC_API_URL: "http://localhost:3000",
+      DISABLE_HMR: "true",
+    },
+  },
+
   projects: [
     {
-      name: "hr-desktop",
-      use: { ...devices["Desktop Chrome"], storageState: hrState },
-      grep: /@hr/,
-    },
-    {
-      name: "hr-mobile",
-      use: {
-        ...devices["iPhone 12"],
-        browserName: "chromium",
-        storageState: hrState,
-      },
-      grep: /@hr/,
-    },
-    {
-      name: "employee-desktop",
-      use: { ...devices["Desktop Chrome"], storageState: employeeState },
-      grep: /@employee/,
-    },
-    {
-      name: "employee-mobile",
-      use: {
-        ...devices["iPhone 12"],
-        browserName: "chromium",
-        storageState: employeeState,
-      },
-      grep: /@employee/,
+      name: "vroom-hr-smoke",
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
 });

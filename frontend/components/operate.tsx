@@ -78,8 +78,9 @@ export function ErrorAlert({ error, title = 'Đã xảy ra lỗi' }: { error: un
   if (error instanceof ApiError) {
     code = error.errorCode;
     message = getErrorMessage(error.errorCode);
-    // If the registry fell back to the raw code, prefer the BE message instead.
-    if (message === `Lỗi: ${error.errorCode}` && error.message) {
+    // Nếu registry không có mapping (fallback về "Lỗi hệ thống (CODE)"),
+    // ưu tiên dùng message gốc từ BE.
+    if (message === `Lỗi hệ thống (${error.errorCode})` && error.message) {
       message = error.message;
     }
   } else if (error instanceof Error) {

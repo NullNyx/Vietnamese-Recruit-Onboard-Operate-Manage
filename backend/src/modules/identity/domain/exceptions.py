@@ -20,7 +20,7 @@ class AuthError(Exception):
 
     status_code: int = 500
     error_code: str = "AUTH_ERROR"
-    message: str = "An authentication error occurred"
+    message: str = "Lỗi xác thực hệ thống"
 
     def __init__(self, message: str | None = None) -> None:
         """Initialize AuthError.
@@ -43,7 +43,7 @@ class InvalidStateError(AuthError):
 
     status_code = 400
     error_code = "AUTH_INVALID_STATE"
-    message = "Invalid authentication state"
+    message = "Trạng thái xác thực không hợp lệ"
 
 
 class GoogleAuthError(AuthError):
@@ -55,7 +55,7 @@ class GoogleAuthError(AuthError):
 
     status_code = 502
     error_code = "AUTH_GOOGLE_ERROR"
-    message = "Failed to authenticate with Google"
+    message = "Xác thực Google thất bại"
 
 
 class AccessDeniedError(AuthError):
@@ -67,7 +67,7 @@ class AccessDeniedError(AuthError):
 
     status_code = 403
     error_code = "AUTH_ACCESS_DENIED"
-    message = "Access denied. Contact administrator."
+    message = "Truy cập bị từ chối. Vui lòng liên hệ quản trị viên."
 
 
 class SetupAlreadyCompletedError(AuthError):
@@ -75,7 +75,7 @@ class SetupAlreadyCompletedError(AuthError):
 
     status_code = 409
     error_code = "AUTH_SETUP_ALREADY_COMPLETED"
-    message = "First-run setup already completed"
+    message = "Hệ thống đã được thiết lập trước đó"
 
 
 class DomainAccessDeniedError(AuthError):
@@ -88,7 +88,7 @@ class DomainAccessDeniedError(AuthError):
 
     status_code = 403
     error_code = "DOMAIN_NOT_ALLOWED"
-    message = "Email domain is not authorized for this Organization."
+    message = "Tên miền email không được phép truy cập tổ chức này."
 
 
 class InsufficientScopeError(AuthError):
@@ -100,7 +100,19 @@ class InsufficientScopeError(AuthError):
 
     status_code = 400
     error_code = "AUTH_INSUFFICIENT_SCOPE"
-    message = "Please grant all requested permissions"
+    message = "Vui lòng cấp tất cả quyền được yêu cầu"
+
+
+class InvalidCredentialsError(AuthError):
+    """Email or password is incorrect.
+
+    Raised when a user attempts local login with an email that does
+    not exist, has no password set, or provides the wrong password.
+    """
+
+    status_code = 401
+    error_code = "AUTH_INVALID_CREDENTIALS"
+    message = "Email hoặc mật khẩu không đúng"
 
 
 class InvalidTokenError(AuthError):
@@ -112,7 +124,7 @@ class InvalidTokenError(AuthError):
 
     status_code = 401
     error_code = "AUTH_INVALID_TOKEN"
-    message = "Invalid or expired token"
+    message = "Phiên đăng nhập không hợp lệ hoặc đã hết hạn"
 
 
 class RateLimitExceededError(AuthError):
@@ -124,4 +136,4 @@ class RateLimitExceededError(AuthError):
 
     status_code = 429
     error_code = "AUTH_RATE_LIMITED"
-    message = "Too many login attempts. Please try again later."
+    message = "Quá nhiều lần đăng nhập. Vui lòng thử lại sau."

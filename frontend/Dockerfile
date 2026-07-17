@@ -4,24 +4,21 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
+# Build dependencies for native modules (sharp, protobufjs, @google/genai, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy dependency files
-COPY frontend/package.json frontend/pnpm-lock.yaml* frontend/.npmrc* ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Install dependencies
+# Install dependencies (allowBuilds in pnpm-workspace.yaml controls native builds)
 RUN pnpm install --frozen-lockfile
 
 # Copy application code
-COPY frontend/src/ ./src/
-COPY frontend/public/ ./public/
-COPY frontend/next.config.js ./
-COPY frontend/next-env.d.ts ./
-COPY frontend/tsconfig.json ./
-COPY frontend/postcss.config.js ./
-COPY frontend/tailwind.config.ts ./
-COPY frontend/components.json ./
-COPY frontend/.eslintrc.json ./
+COPY . .
 
 # Build for production
 RUN pnpm build

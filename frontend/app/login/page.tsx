@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { LogIn, AlertTriangle, Eye, EyeOff } from 'lucide-react';
-import { login, type CurrentUser } from '@/lib/api/auth';
+import { login, AuthApiError, type CurrentUser } from '@/lib/api/auth';
 import { useSession, useAuthGuard } from '@/lib/auth/session';
 import { getErrorMessage } from '@/lib/api/error-codes';
 import type { ApiError } from '@/lib/api/types';
@@ -54,9 +54,9 @@ export default function LoginPage() {
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
-        const apiErr = err as ApiError;
-        const msg = getErrorMessage(apiErr.errorCode) || apiErr.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
-        setError(msg);
+            const code = (err as AuthApiError).code || (err as ApiError).errorCode;
+            const msg = getErrorMessage(code) || err.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
+            setError(msg);
       } else {
         setError('Đăng nhập thất bại. Vui lòng thử lại.');
       }

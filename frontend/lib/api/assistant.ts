@@ -5,7 +5,8 @@
  * Each request sends the full history; backend processes statelessly.
  */
 
-import { API_BASE_URL } from "./client";
+    import { API_BASE_URL } from "./client";
+    import { ApiError } from "./types";
 
 const BASE = `${API_BASE_URL}/api/assistant`;
 const TIMEOUT_MS = 60_000; // LLM calls can be slow
@@ -65,18 +66,23 @@ interface ChatRequestMessage {
 // API Functions
 // ---------------------------------------------------------------------------
 
-async function fetchWithTimeout(
-  url: string,
-  init?: RequestInit,
-): Promise<Response> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal, credentials: "include" });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
+    async function fetchWithTimeout(
+      url: string,
+      init?: RequestInit,
+    ): Promise<Response> {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+      try {
+        return await fetch(url, { ...init, signal: controller.signal, credentials: "include" });
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          throw new ApiError(0, "TIMEOUT", "Yêu cầu đã hết thời gian chờ");
+        }
+        throw new ApiError(0, "NETWORK_ERROR", "Lỗi kết nối mạng");
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
 
 /**
  * Send a chat message to the AI Assistant.

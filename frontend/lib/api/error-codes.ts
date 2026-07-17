@@ -7,15 +7,21 @@
  */
 
 export const ERROR_CODE_MESSAGES: Record<string, string> = {
+  // ── Network / Client Errors ──
+  NETWORK_ERROR: "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.",
+  TIMEOUT: "Yêu cầu đã hết thời gian chờ. Vui lòng thử lại.",
+  UNKNOWN_ERROR: "Đã xảy ra lỗi không xác định. Vui lòng thử lại.",
+
   // ── Identity Module ──
-  AUTH_ERROR: "Lỗi xác thực hệ thống",
-  AUTH_INVALID_STATE: "Trạng thái xác thực không hợp lệ",
-  AUTH_GOOGLE_ERROR: "Xác thực Google thất bại",
-  AUTH_ACCESS_DENIED: "Truy cập bị từ chối. Vui lòng liên hệ quản trị viên.",
-  AUTH_INSUFFICIENT_SCOPE: "Vui lòng cấp tất cả quyền được yêu cầu",
-  AUTH_INVALID_TOKEN: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn",
-  AUTH_RATE_LIMITED: "Quá nhiều lần đăng nhập, vui lòng thử lại sau",
-  AUTH_SETUP_ALREADY_COMPLETED: "Hệ thống đã được thiết lập trước đó",
+AUTH_ERROR: "Lỗi xác thực hệ thống",
+AUTH_INVALID_CREDENTIALS: "Email hoặc mật khẩu không đúng",
+AUTH_INVALID_STATE: "Trạng thái xác thực không hợp lệ",
+AUTH_GOOGLE_ERROR: "Xác thực Google thất bại",
+AUTH_ACCESS_DENIED: "Truy cập bị từ chối. Vui lòng liên hệ quản trị viên.",
+AUTH_INSUFFICIENT_SCOPE: "Vui lòng cấp tất cả quyền được yêu cầu",
+AUTH_INVALID_TOKEN: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn",
+AUTH_RATE_LIMITED: "Quá nhiều lần đăng nhập, vui lòng thử lại sau",
+AUTH_SETUP_ALREADY_COMPLETED: "Hệ thống đã được thiết lập trước đó",
 
   // ── Employee Module ──
   EMPLOYEE_ERROR: "Lỗi module nhân viên",

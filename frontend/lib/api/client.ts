@@ -40,14 +40,22 @@ export async function apiFetch<T>(
   const url = `${API_BASE_URL}${path}`;
   const bodyIsForm = isFormData(options.body);
 
-  const res = await fetch(url, {
-    credentials: "include",
-    ...options,
-    headers: {
-      ...(bodyIsForm ? {} : { "Content-Type": "application/json" }),
-      ...(options.headers || {}),
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      credentials: "include",
+      ...options,
+      headers: {
+        ...(bodyIsForm ? {} : { "Content-Type": "application/json" }),
+        ...(options.headers || {}),
+      },
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new ApiError(0, "TIMEOUT", "Yêu cầu đã hết thời gian chờ");
+    }
+    throw new ApiError(0, "NETWORK_ERROR", "Lỗi kết nối mạng");
+  }
 
   if (!res.ok) {
     const payload = await res.json().catch(() => null);
@@ -80,6 +88,7 @@ export async function apiFetch<T>(
   return res.json() as Promise<T>;
 }
 
+
 /**
  * Binary download variant: parses error bodies like apiFetch but returns a Blob
  * (plus response headers) instead of JSON. Used for MinIO presigned document
@@ -91,13 +100,21 @@ export async function apiFetchBlob(
 ): Promise<Blob> {
   const url = `${API_BASE_URL}${path}`;
 
-  const res = await fetch(url, {
-    credentials: "include",
-    ...options,
-    headers: {
-      ...(options.headers || {}),
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      credentials: "include",
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+      },
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new ApiError(0, "TIMEOUT", "Yêu cầu đã hết thời gian chờ");
+    }
+    throw new ApiError(0, "NETWORK_ERROR", "Lỗi kết nối mạng");
+  }
 
   if (!res.ok) {
     // Same error parsing as apiFetch

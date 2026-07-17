@@ -186,14 +186,21 @@ async function adminFetch(
   url: string,
   init: RequestInit = {},
 ): Promise<Response> {
-  return fetch(url, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init.headers || {}),
-    },
-    credentials: "include",
-  });
+  try {
+    return await fetch(url, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init.headers || {}),
+      },
+      credentials: "include",
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new ApiError(0, "TIMEOUT", "Yêu cầu đã hết thời gian chờ");
+    }
+    throw new ApiError(0, "NETWORK_ERROR", "Lỗi kết nối mạng");
+  }
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
