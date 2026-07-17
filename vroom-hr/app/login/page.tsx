@@ -55,7 +55,7 @@ export default function LoginPage() {
     } catch (err: unknown) {
       if (err instanceof Error) {
         const apiErr = err as ApiError;
-        const msg = getErrorMessage(apiErr.errorCode) || apiErr.message;
+        const msg = getErrorMessage(apiErr.errorCode) || apiErr.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
         setError(msg);
       } else {
         setError('Đăng nhập thất bại. Vui lòng thử lại.');

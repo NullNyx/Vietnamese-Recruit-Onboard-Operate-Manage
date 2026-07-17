@@ -75,7 +75,7 @@ export default function ChangePasswordPage() {
     } catch (err: unknown) {
       if (err instanceof Error) {
         const apiErr = err as ApiError;
-        const msg = getErrorMessage(apiErr.errorCode) || apiErr.message;
+        const msg = getErrorMessage(apiErr.errorCode) || apiErr.message || 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
         setError(msg);
       } else {
         setError('Đổi mật khẩu thất bại. Vui lòng thử lại.');

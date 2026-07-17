@@ -85,6 +85,7 @@ export const ERROR_CODE_MESSAGES: Record<string, string> = {
  * Get human-readable message for an error_code.
  * Falls back to the raw error code if not mapped.
  */
-export function getErrorMessage(errorCode: string): string {
-  return ERROR_CODE_MESSAGES[errorCode] ?? `Lỗi: ${errorCode}`;
+export function getErrorMessage(errorCode?: string): string {
+  if (!errorCode) return '';
+  return ERROR_CODE_MESSAGES[errorCode] ?? `Lỗi hệ thống (${errorCode})`;
 }
