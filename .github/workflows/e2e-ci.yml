@@ -123,6 +123,29 @@ jobs:
         working-directory: vroom-hr
         run: pnpm build
 
+      - name: Pre-flight smoke check (verify stack)
+        working-directory: vroom-hr
+        run: |
+          # Start servers manually for verification
+          echo "==> Starting Next.js production server..."
+          pnpm start --port 3001 &
+          NEXT_PID=$!
+          sleep 3
+          echo "==> Starting reverse proxy..."
+          node e2e/proxy.mjs &
+          PROXY_PID=$!
+          sleep 2
+          echo "==> Checking backend via proxy..."
+          curl -sf http://localhost:3000/api/auth/setup-status && echo "" || echo "FAIL: backend unreachable"
+          echo "==> Checking frontend via proxy..."
+          curl -sf -o /dev/null -w "%{http_code}" http://localhost:3000/ && echo "" || echo "FAIL: frontend unreachable"
+          echo "==> Checking setup page..."
+          curl -sf -o /dev/null -w "%{http_code}" http://localhost:3000/setup && echo "" || echo "FAIL: setup page unreachable"
+          # Cleanup
+          kill $NEXT_PID $PROXY_PID 2>/dev/null || true
+          wait 2>/dev/null || true
+          echo "==> Pre-flight complete"
+
       - name: Run Playwright E2E smoke tests
         working-directory: vroom-hr
         run: pnpm test:e2e
