@@ -20,7 +20,7 @@ Repo single-context. Đọc `CONTEXT.md` ở root và `docs/adr/` cho quyết đ
 
 Orchestrator (pi, workspace user) là **điều phối viên**, không phải worker:
 - Nhận task từ human, phân tích, chia nhỏ
-- Dispatch cho sub-agent (pi model rẻ, workspace background)
+- Dispatch cho sub-agent (pi model, workspace background)
 - Theo dõi tiến độ, xử lý blocked, tổng hợp kết quả
 - Báo cáo cho human review
 - **Không** tự làm task (không code, không fix bug, không viết test). Mọi implementation do sub-agent đảm nhận.
@@ -31,7 +31,7 @@ Orchestrator (pi, workspace user) là **điều phối viên**, không phải wo
 ```bash
 herdr pane split --pane <worker-pane> --direction right --no-focus
 herdr pane rename <id> "task-label"
-herdr pane run <id> "pi --provider opencode-go --model deepseek-v4-flash --thinking low"
+herdr pane run <id> "pi --provider opencode-go --model deepseek-v4-pro --thinking low"
 herdr wait agent-status <id> --status idle --timeout 30000
 herdr pane run <id> "<task>"
 ```
