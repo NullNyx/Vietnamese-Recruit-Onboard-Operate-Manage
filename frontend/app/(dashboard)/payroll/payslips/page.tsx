@@ -17,7 +17,7 @@ import { useAuthGuard } from '@/lib/auth/session';
 import {
   PageHeader, Card, SectionTitle, Field, TextInput, Select, ButtonPrimary, ButtonGhost, ButtonDanger,
   Badge, ErrorAlert, EmptyState, LoadingRows, Modal, formatVND, formatDateTime,
-} from '@/components/operate';
+} from '@/components/shared-ui';
 
 type StatusFilter = '' | 'draft' | 'published';
 
@@ -188,7 +188,7 @@ export default function PayslipsPage() {
         <SectionTitle icon={FileSpreadsheet}>Danh sách</SectionTitle>
         {error ? <ErrorAlert error={error} title="Không tải được payslips" />
           : isLoading && !data ? <LoadingRows count={6} />
-          : !data?.payslips?.length ? <EmptyState hasFilters={Boolean(submitted.employeeId || submitted.status || submitted.periodMonth)} />
+          : !data?.payslips?.length ? <EmptyState filtered={Boolean(submitted.employeeId || submitted.status || submitted.periodMonth)} />
           : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

@@ -11,7 +11,7 @@ import {
 import { listPositions } from '@/lib/api/positions';
 import type { Position } from '@/lib/api/types';
 import { useAuthGuard } from '@/lib/auth/session';
-import { ErrorBanner, Loading, EmptyState, StatusPill, JOB_STATUS_META } from '@/lib/dashboard-ui';
+import { ErrorBanner, Loading, EmptyState, StatusPill, JOB_STATUS_META } from '@/components/shared-ui';
 
 type StatusFilter = 'all' | 'draft' | 'open' | 'closed' | 'cancelled';
 
@@ -22,7 +22,7 @@ export default function JobOpeningsPage() {
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [actionError, setActionError] = useState('');
+  const [actionError, setActionError] = useState<unknown>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['recruitment-job-openings'] });
@@ -44,16 +44,16 @@ export default function JobOpeningsPage() {
 
   const createM = useMutation({
     mutationFn: (d: JobOpeningCreateInput) => createJobOpening(d),
-    onSuccess: () => { invalidate(); setCreateOpen(false); setActionError(''); },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi tạo vị trí'),
+    onSuccess: () => { invalidate(); setCreateOpen(false);  setActionError(null); },
+    onError: (e: unknown) => setActionError(e),
   });
-  const openM = useMutation({ mutationFn: openJobOpening, onSuccess: () => { invalidate(); setActionError(''); }, onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi mở') });
-  const closeM = useMutation({ mutationFn: closeJobOpening, onSuccess: () => { invalidate(); setActionError(''); }, onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi đóng') });
-  const cancelM = useMutation({ mutationFn: cancelJobOpening, onSuccess: () => { invalidate(); setActionError(''); }, onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi hủy') });
+  const openM = useMutation({ mutationFn: openJobOpening, onSuccess: () => { invalidate(); setActionError(''); }, onError: (e: unknown) => setActionError(e) });
+  const closeM = useMutation({ mutationFn: closeJobOpening, onSuccess: () => { invalidate(); setActionError(''); }, onError: (e: unknown) => setActionError(e) });
+  const cancelM = useMutation({ mutationFn: cancelJobOpening, onSuccess: () => { invalidate(); setActionError(''); }, onError: (e: unknown) => setActionError(e) });
   const updateM = useMutation({
     mutationFn: ({ id, data }: { id: string; data: JobOpeningUpdateInput }) => updateJobOpening(id, data),
     onSuccess: () => { invalidate(); setEditingId(null); setActionError(''); },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi cập nhật'),
+    onError: (e: unknown) => setActionError(e),
   });
 
   const jobs = data?.job_openings ?? [];
@@ -94,7 +94,7 @@ export default function JobOpeningsPage() {
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm vị trí..." className="ml-auto px-3 py-1 text-xs bg-white border border-slate-200 rounded-lg w-48" />
       </div>
 
-      {actionError && <ErrorBanner error={new Error(actionError)} />}
+      {actionError && <ErrorBanner error={actionError} />}
 
       {createOpen && (
         <JobForm

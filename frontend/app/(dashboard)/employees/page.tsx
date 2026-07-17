@@ -12,7 +12,7 @@ import { useAuthGuard } from '@/lib/auth/session';
 import {
   PageHeader, Card, LoadingRows, EmptyState, ErrorAlert, Badge, statusTone,
   ButtonPrimary, ButtonGhost, Field, TextInput, Select,
-} from '@/components/operate';
+} from '@/components/shared-ui';
 
 export default function EmployeesListPage() {
   useAuthGuard({ requireAuth: true, requireAdmin: true });
@@ -137,7 +137,7 @@ export default function EmployeesListPage() {
         ) : isLoading && !data ? (
           <LoadingRows count={6} />
         ) : !data?.items?.length ? (
-          <EmptyState hasFilters={hasFilters} />
+          <EmptyState filtered={hasFilters} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

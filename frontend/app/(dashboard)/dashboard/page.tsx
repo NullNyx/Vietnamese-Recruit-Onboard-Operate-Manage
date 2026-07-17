@@ -11,7 +11,7 @@ import type { MetricsResponse } from '@/lib/api/recruitment';
 import { getRuntimeHealth, getAuditLogs } from '@/lib/api/admin';
 import type { RuntimeHealthResponse, PaginatedAuditLogs, AuditLogQueryParams } from '@/lib/api/admin';
 import { useAuthGuard } from '@/lib/auth/session';
-import { AUDIT_ACTION_LABELS, formatAuditDetails, SERVICE_LABELS, formatRuntimeDetail, formatLatency } from '@/lib/dashboard-ui';
+import { AUDIT_ACTION_LABELS, formatAuditDetails, SERVICE_LABELS, formatRuntimeDetail, formatLatency } from '@/components/shared-ui';
 
 export default function DashboardPage() {
   useAuthGuard({ requireAuth: true, requireAdmin: true });

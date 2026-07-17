@@ -20,7 +20,7 @@ import { useAuthGuard } from '@/lib/auth/session';
 import {
   ErrorBanner, Loading, StatusPill,
   CANDIDATE_STATUS_META, confidencePct,
-} from '@/lib/dashboard-ui';
+} from '@/components/shared-ui';
 
 export default function CandidateDetailPage() {
   useAuthGuard({ requireAuth: true, requireAdmin: true });
@@ -30,7 +30,7 @@ export default function CandidateDetailPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectOpen, setRejectOpen] = useState(false);
   const [assJob, setAssJob] = useState('');
-  const [actionError, setActionError] = useState('');
+  const [actionError, setActionError] = useState<unknown>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [interviewOpen, setInterviewOpen] = useState(false);
 
@@ -55,9 +55,9 @@ export default function CandidateDetailPage() {
     qc.invalidateQueries({ queryKey: ['recruitment-interviews'] });
     qc.invalidateQueries({ queryKey: ['onboarding'] });
   };
-  const wrapErr = (label: string) => (e: unknown) => setActionError(e instanceof Error ? e.message : label);
+  const wrapErr = (_label: string) => (e: unknown) => setActionError(e);
 
-  const acceptM = useMutation({ mutationFn: () => acceptCandidate(params.id), onSuccess: () => { invalidate(); setActionError(''); }, onError: wrapErr('Lỗi accept') });
+  const acceptM = useMutation({ mutationFn: () => acceptCandidate(params.id), onSuccess: () => { invalidate();  setActionError(null); }, onError: wrapErr('Lỗi accept') });
   const rejectM = useMutation({ mutationFn: (reason: string) => rejectCandidate(params.id, { reason }), onSuccess: () => { invalidate(); setRejectOpen(false); setActionError(''); }, onError: wrapErr('Lỗi reject') });
   const archiveM = useMutation({ mutationFn: () => archiveCandidate(params.id), onSuccess: () => { invalidate(); setActionError(''); }, onError: wrapErr('Lỗi archive') });
   const assignM = useMutation({
@@ -148,7 +148,7 @@ export default function CandidateDetailPage() {
         </div>
       </div>
 
-      {actionError && <ErrorBanner error={new Error(actionError)} />}
+      {actionError && <ErrorBanner error={actionError} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left: CV + parsed */}

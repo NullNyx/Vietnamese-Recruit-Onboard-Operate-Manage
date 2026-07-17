@@ -9,7 +9,7 @@ import { useAuthGuard, useSession } from '@/lib/auth/session';
 import {
   PageHeader, Card, SectionTitle, Field, TextInput, Select, ButtonPrimary, ButtonGhost,
   ErrorAlert, EmptyState, Modal, formatDate,
-} from '@/components/operate';
+} from '@/components/shared-ui';
 
 const DOC_TYPES = ['Hợp đồng', 'CMND/CCCD', 'Bằng cấp', 'Sổ bảo hiểm', 'Khác'];
 
@@ -78,7 +78,7 @@ export default function EmployeeDocumentsPage() {
         <SectionTitle icon={FolderOpen}>Danh sách tài liệu</SectionTitle>
         {error ? <ErrorAlert error={error} title="Không tải được tài liệu" />
           : isLoading && !documents ? <p className="text-sm text-slate-400">Đang tải…</p>
-          : !documents?.length ? <EmptyState hasFilters={false} emptyData="Chưa có tài liệu nào của bạn." />
+          : !documents?.length ? <EmptyState filtered={false} emptyData="Chưa có tài liệu nào của bạn." />
           : (
             <div className="space-y-2">
               {documents.map((doc) => (

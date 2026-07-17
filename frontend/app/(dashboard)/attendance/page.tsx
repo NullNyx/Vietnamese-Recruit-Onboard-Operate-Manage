@@ -19,7 +19,7 @@ import { useAuthGuard } from '@/lib/auth/session';
 import {
   PageHeader, Card, SectionTitle, Field, TextInput, Select, ButtonPrimary, ButtonGhost, ButtonDanger,
   Badge, ErrorAlert, EmptyState, LoadingRows, Modal, formatDateTime,
-} from '@/components/operate';
+} from '@/components/shared-ui';
 
 type Tab = 'records' | 'network';
 
@@ -184,7 +184,7 @@ function RecordsTab() {
         ) : isLoading && !data ? (
           <LoadingRows count={6} />
         ) : !data?.records?.length ? (
-          <EmptyState hasFilters={Boolean(submitted.employeeId || submitted.status)} />
+          <EmptyState filtered={Boolean(submitted.employeeId || submitted.status)} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -319,7 +319,7 @@ function NetworkTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
       {error ? <ErrorAlert error={error} title="Không tải được allowlist" />
         : isLoading && !data ? <LoadingRows count={3} />
         : !data?.networks?.length ? (
-          <EmptyState hasFilters={false} emptyData="Chưa có CIDR nào. Kiểm tra traffic đang đi qua IP nào trước khi thêm." />
+          <EmptyState filtered={false} emptyData="Chưa có CIDR nào. Kiểm tra traffic đang đi qua IP nào trước khi thêm." />
         ) : (
           <div className="space-y-2">
             {data.networks.map((cidr) => (

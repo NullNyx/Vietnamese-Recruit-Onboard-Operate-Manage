@@ -13,7 +13,7 @@ import { useAuthGuard } from '@/lib/auth/session';
 import {
   PageHeader, Card, SectionTitle, Field, TextInput, TextArea, Select, ButtonPrimary, ButtonGhost,
   Badge, ErrorAlert, EmptyState, Modal, formatDate, formatDateTime,
-} from '@/components/operate';
+} from '@/components/shared-ui';
 
 const LEAVE_TYPES: { value: CreateLeaveData['leave_type']; label: string }[] = [
   { value: 'annual', label: 'Nghỉ phép năm' },
@@ -129,7 +129,7 @@ export default function EmployeeRequestsPage() {
         <SectionTitle icon={FileText}>Yêu cầu của tôi</SectionTitle>
         {error ? <ErrorAlert error={error} title="Không tải được yêu cầu" />
           : isLoading && !data ? <p className="text-sm text-slate-400">Đang tải…</p>
-          : !data?.requests?.length ? <EmptyState hasFilters={false} emptyData="Bạn chưa gửi yêu cầu nào." />
+          : !data?.requests?.length ? <EmptyState filtered={false} emptyData="Bạn chưa gửi yêu cầu nào." />
           : (
             <div className="space-y-2">
               {data.requests.map((r) => (

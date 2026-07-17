@@ -8,7 +8,7 @@ import {
   type CVReviewItem, type ParsedCVInput, type ProcessingStatus,
 } from '@/lib/api/recruitment';
 import { useAuthGuard } from '@/lib/auth/session';
-import { ErrorBanner, Loading, EmptyState, StatusPill, confidencePct, MIME_TYPE_LABELS } from '@/lib/dashboard-ui';
+import { ErrorBanner, Loading, EmptyState, StatusPill, confidencePct, MIME_TYPE_LABELS } from '@/components/shared-ui';
 
 const PROC_STATUS_META: Record<ProcessingStatus, { label: string; tone: 'amber' | 'emerald' | 'rose' | 'indigo' | 'slate' }> = {
   pending: { label: 'Chờ', tone: 'slate' },
@@ -28,7 +28,7 @@ export default function ReviewPage() {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<string | null>(null);
-  const [actionError, setActionError] = useState('');
+  const [actionError, setActionError] = useState<unknown>(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['recruitment-review'] });
   const { data, isLoading, error } = useQuery({
@@ -39,11 +39,11 @@ export default function ReviewPage() {
 
   const submitM = useMutation({
     mutationFn: ({ id, data }: { id: string; data: ParsedCVInput }) => submitCorrection(id, data),
-    onSuccess: () => { invalidate(); setEditing(null); setActionError(''); },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi nộp correction'),
+    onSuccess: () => { invalidate(); setEditing(null);  setActionError(null); },
+    onError: (e: unknown) => setActionError(e),
   });
-  const retryM = useMutation({ mutationFn: retryParse, onSuccess: () => { invalidate(); setActionError(''); }, onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi retry') });
-  const dismissM = useMutation({ mutationFn: dismissReview, onSuccess: () => { invalidate(); setActionError(''); }, onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi bỏ qua') });
+  const retryM = useMutation({ mutationFn: retryParse, onSuccess: () => { invalidate(); setActionError(''); }, onError: (e: unknown) => setActionError(e) });
+  const dismissM = useMutation({ mutationFn: dismissReview, onSuccess: () => { invalidate(); setActionError(''); }, onError: (e: unknown) => setActionError(e) });
 
   const items = data?.items ?? [];
 
@@ -57,7 +57,7 @@ export default function ReviewPage() {
         Hàng đợi CV do AI Automation parse. Xem confidence/provenance, sửa dữ liệu (correction phục vụ evaluation, không phải online learning), retry parse hoặc dismiss.
       </p>
 
-      {actionError && <ErrorBanner error={new Error(actionError)} />}
+      {actionError && <ErrorBanner error={actionError} />}
 
       {isLoading ? (
         <Loading label="Đang tải review queue..." />

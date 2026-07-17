@@ -9,7 +9,7 @@ import {
   type OnboardingProcess, type OnboardingCounts, type OnboardingTaskStatus, type ProcessFilter,
 } from '@/lib/api/onboarding';
 import { useAuthGuard } from '@/lib/auth/session';
-import { ErrorBanner, Loading, EmptyState, StatusPill } from '@/lib/dashboard-ui';
+import { ErrorBanner, Loading, EmptyState, StatusPill } from '@/components/shared-ui';
 
 const FILTERS: { key: ProcessFilter; label: string }[] = [
   { key: 'all', label: 'Tất cả' },
@@ -22,7 +22,7 @@ export default function OnboardingPage() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState<ProcessFilter>('all');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [actionError, setActionError] = useState('');
+  const [actionError, setActionError] = useState<unknown>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['onboarding'] });
@@ -38,8 +38,8 @@ export default function OnboardingPage() {
 
   const tasksM = useMutation({
     mutationFn: ({ taskId, status }: { taskId: string; status: OnboardingTaskStatus }) => updateTaskStatus(taskId, status),
-    onSuccess: () => { invalidate(); setActionError(''); },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi cập nhật task'),
+    onSuccess: () => { invalidate(); setActionError(null); },
+    onError: (e: unknown) => setActionError(e),
   });
 
   const processes = data?.items ?? [];
@@ -72,7 +72,7 @@ export default function OnboardingPage() {
         ))}
       </div>
 
-      {actionError && <ErrorBanner error={new Error(actionError)} />}
+      {actionError && <ErrorBanner error={actionError} />}
 
       {isLoading ? (
         <Loading label="Đang tải onboarding..." />

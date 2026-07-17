@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BarChart3, TrendingUp, CheckCircle, XCircle, Clock, Gauge } from 'lucide-react';
 import { getMetrics, getJobOpeningMetrics, type MetricsResponse, type JobOpeningMetrics } from '@/lib/api/recruitment';
 import { useAuthGuard } from '@/lib/auth/session';
-import { ErrorBanner, Loading } from '@/lib/dashboard-ui';
+import { ErrorBanner, Loading } from '@/components/shared-ui';
 
 export default function MetricsPage() {
   useAuthGuard({ requireAuth: true, requireAdmin: true });

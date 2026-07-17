@@ -12,7 +12,7 @@ import { useAuthGuard } from '@/lib/auth/session';
 import {
   PageHeader, Card, SectionTitle, Field, TextInput, TextArea, Select,
   ButtonPrimary, ButtonGhost, ErrorAlert,
-} from '@/components/operate';
+} from '@/components/shared-ui';
 
 const empty: EmployeeCreateData = {
   full_name: '',

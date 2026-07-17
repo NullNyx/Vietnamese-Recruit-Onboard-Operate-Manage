@@ -15,7 +15,7 @@ import { useAuthGuard } from '@/lib/auth/session';
 import {
   PageHeader, Card, SectionTitle, Field, TextInput, Select, ButtonPrimary, ButtonGhost, ButtonDanger,
   Badge, ErrorAlert, EmptyState, LoadingRows, Modal, formatDate, formatDateTime,
-} from '@/components/operate';
+} from '@/components/shared-ui';
 
 export default function RequestsReviewPage() {
   useAuthGuard({ requireAuth: true, requireAdmin: true });
@@ -120,7 +120,7 @@ export default function RequestsReviewPage() {
         <SectionTitle icon={FileText}>Hàng đợi</SectionTitle>
         {error ? <ErrorAlert error={error} title="Không tải được hàng đợi" />
           : isLoading && !data ? <LoadingRows count={6} />
-          : !data?.requests?.length ? <EmptyState hasFilters={hasFilters} />
+          : !data?.requests?.length ? <EmptyState filtered={hasFilters} />
           : (
             <div className="space-y-2">
               {data.requests.map((r) => (

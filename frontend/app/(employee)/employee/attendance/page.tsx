@@ -10,7 +10,7 @@ import type { AttendanceRecord, HistoryResponse } from '@/lib/api/attendance';
 import { useAuthGuard } from '@/lib/auth/session';
 import {
   PageHeader, Card, SectionTitle, ButtonPrimary, ErrorAlert, EmptyState, Badge, formatDateTime,
-} from '@/components/operate';
+} from '@/components/shared-ui';
 
 export default function EmployeeAttendancePage() {
   useAuthGuard({ requireAuth: true, requireEmployee: true });
@@ -95,7 +95,7 @@ export default function EmployeeAttendancePage() {
       <Card>
         <SectionTitle icon={CalendarDays}>Lịch sử 30 ngày</SectionTitle>
         {!history || !history.records.length ? (
-          <EmptyState hasFilters={false} emptyData="Chưa có bản ghi chấm công nào." />
+          <EmptyState filtered={false} emptyData="Chưa có bản ghi chấm công nào." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -113,7 +113,7 @@ export default function EmployeeAttendancePage() {
                     <td className="py-2.5 px-2 text-xs text-slate-600">{r.work_date}</td>
                     <td className="py-2.5 px-2 text-xs text-slate-600">{formatDateTime(r.check_in_at)}</td>
                     <td className="py-2.5 px-2 text-xs text-slate-600">{formatDateTime(r.check_out_at)}</td>
-                    <td className="py-2.5 px-2"><Badge tone={r.check_out_at ? 'emerald' : 'amber'}>{r.check_out_at ? 'completed' : 'checked_in'}</Badge></td>
+                    <td className="py-2.5 px-2"><Badge tone={r.check_out_at ? 'emerald' : 'amber'}>{r.check_out_at ? 'Đã check-out' : 'Đã check-in'}</Badge></td>
                   </tr>
                 ))}
               </tbody>

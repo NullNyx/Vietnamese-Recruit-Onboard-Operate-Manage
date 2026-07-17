@@ -9,7 +9,7 @@ import type { ImportResult } from '@/lib/api/types';
 import { useAuthGuard } from '@/lib/auth/session';
 import {
   PageHeader, Card, SectionTitle, ButtonPrimary, ButtonGhost, ErrorAlert,
-} from '@/components/operate';
+} from '@/components/shared-ui';
 
 export default function ImportEmployeesPage() {
   useAuthGuard({ requireAuth: true, requireAdmin: true });

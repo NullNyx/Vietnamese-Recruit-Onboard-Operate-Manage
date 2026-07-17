@@ -14,13 +14,13 @@ import {
 import { getGoogleWorkspaceCalendars, selectGoogleWorkspaceCalendar } from '@/lib/api/admin';
 import type { CalendarListResponse } from '@/lib/api/admin';
 import { useAuthGuard } from '@/lib/auth/session';
-import { ErrorBanner, Loading, EmptyState, StatusPill, CONFLICT_STATUS_META, formatAuditDetails } from '@/lib/dashboard-ui';
+import { ErrorBanner, Loading, EmptyState, StatusPill, CONFLICT_STATUS_META, formatAuditDetails } from '@/components/shared-ui';
 
 export default function InterviewsPage() {
   useAuthGuard({ requireAuth: true, requireAdmin: true });
   const router = useRouter();
   const qc = useQueryClient();
-  const [actionError, setActionError] = useState('');
+  const [actionError, setActionError] = useState<unknown>(null);
   const [resolveTarget, setResolveTarget] = useState<string | null>(null);
   const [resolveChoice, setResolveChoice] = useState<'keep_google' | 'overwrite_vroom'>('keep_google');
 
@@ -51,13 +51,13 @@ export default function InterviewsPage() {
 
   const selectCalM = useMutation({
     mutationFn: (id: string) => selectGoogleWorkspaceCalendar(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['google-calendars'] }); setActionError(''); },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi chọn calendar'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['google-calendars'] });  setActionError(null); },
+    onError: (e: unknown) => setActionError(e),
   });
   const resolveM = useMutation({
     mutationFn: ({ id, choice }: { id: string; choice: 'keep_google' | 'overwrite_vroom' }) => resolveCalendarConflict(id, { choice }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['recruitment-conflicts'] }); setResolveTarget(null); setActionError(''); },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi giải quyết xung đột'),
+    onError: (e: unknown) => setActionError(e),
   });
 
   return (
@@ -72,7 +72,7 @@ export default function InterviewsPage() {
         Tạo Interview BẮT BUỘC chọn Calendar (GH #214). Lifecycle scheduled → completed/cancelled; reschedule giữ entity. Xung đột Calendar <code>410/412</code> cần HR chọn hướng giải quyết — KHÔNG last-write-wins.
       </p>
 
-      {actionError && <ErrorBanner error={new Error(actionError)} />}
+      {actionError && <ErrorBanner error={actionError} />}
 
       {/* Calendar preconditions */}
       <div className={`p-4 rounded-2xl border shadow-sm shadow-slate-100 ${selectedCalendarId ? 'bg-emerald-50/40 border-emerald-200' : 'bg-amber-50/60 border-amber-200'}`}>

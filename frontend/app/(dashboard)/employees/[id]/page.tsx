@@ -18,7 +18,7 @@ import { useAuthGuard } from '@/lib/auth/session';
 import {
   PageHeader, Card, SectionTitle, Field, TextInput, TextArea, Select,
   ButtonPrimary, ButtonGhost, ButtonDanger, Badge, ErrorAlert, Modal, formatDateTime, formatDate,
-} from '@/components/operate';
+} from '@/components/shared-ui';
 
 const DOC_TYPES = ['Hợp đồng', 'CMND/CCCD', 'Bằng cấp', 'Sổ bảo hiểm', 'Khác'];
 

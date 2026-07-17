@@ -18,7 +18,7 @@ import { useAuthGuard } from '@/lib/auth/session';
 import {
   ErrorBanner, Loading, EmptyState, StatusPill,
   INBOX_STATUS_META, confidencePct,
-} from '@/lib/dashboard-ui';
+} from '@/components/shared-ui';
 
 const INTENTS = ['job_application', 'partner', 'event', 'internal', 'other'] as const;
 const INTENT_LABELS: Record<string, string> = {
@@ -43,7 +43,7 @@ export default function InboxPage() {
   const [splitting, setSplitting] = useState<string | null>(null);
   const [linking, setLinking] = useState<string | null>(null);
   const [splitApps, setSplitApps] = useState<Record<string, JobApplicationInboxResult[]>>({});
-  const [actionError, setActionError] = useState<string>('');
+  const [actionError, setActionError] = useState<unknown>(null);
 
   const inboxKey = ['recruitment-inbox', activeGroup];
   const { data, isLoading, error } = useQuery({
@@ -69,13 +69,13 @@ export default function InboxPage() {
 
   const correctM = useMutation({
     mutationFn: ({ id, intent }: { id: string; intent: string }) => correctInboxIntent(id, intent),
-    onSuccess: () => { invalidate(); setActionError(''); },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi sửa phân loại'),
+    onSuccess: () => { invalidate();  setActionError(null); },
+    onError: (e: unknown) => setActionError(e),
   });
   const dismissM = useMutation({
     mutationFn: (id: string) => dismissInboxItem(id),
     onSuccess: () => { invalidate(); setActionError(''); },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi bỏ qua'),
+    onError: (e: unknown) => setActionError(e),
   });
   const splitM = useMutation({
     mutationFn: ({ id, source, applicants }: { id: string; source: ApplicationSource; applicants: SplitApplicantInput[] }) =>
@@ -85,7 +85,7 @@ export default function InboxPage() {
       invalidate();
       setActionError('');
     },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi tách inbox'),
+    onError: (e: unknown) => setActionError(e),
   });
   const promoteM = useMutation({
     mutationFn: ({ id, name, email, jobOpeningId }: { id: string; name: string; email: string; jobOpeningId?: string | null }) =>
@@ -94,12 +94,12 @@ export default function InboxPage() {
       invalidate();
       setActionError('');
     },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi promote Candidate'),
+    onError: (e: unknown) => setActionError(e),
   });
   const linkM = useMutation({
     mutationFn: ({ id, target }: { id: string; target: string }) => proposeInboxLink(id, target),
     onSuccess: () => { setActionError(''); invalidate(); setLinking(null); },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : 'Lỗi đề xuất link'),
+    onError: (e: unknown) => setActionError(e),
   });
 
   const counts = useMemo(() => {
@@ -143,7 +143,7 @@ export default function InboxPage() {
         })}
       </div>
 
-      {actionError && <ErrorBanner error={new Error(actionError)} />}
+      {actionError && <ErrorBanner error={actionError} />}
 
       {isLoading ? (
         <Loading label="Đang tải inbox..." />

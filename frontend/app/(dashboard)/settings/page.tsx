@@ -16,7 +16,7 @@ import type {
 import { useAuthGuard } from '@/lib/auth/session';
 import { ApiError } from '@/lib/api/types';
 import { getErrorMessage } from '@/lib/api/error-codes';
-import { AUDIT_ACTION_LABELS, formatAuditDetails } from '@/lib/dashboard-ui';
+import { AUDIT_ACTION_LABELS, formatAuditDetails } from '@/components/shared-ui';
 
 function apiErrorText(err: unknown): string {
   if (err instanceof ApiError) return getErrorMessage(err.errorCode);

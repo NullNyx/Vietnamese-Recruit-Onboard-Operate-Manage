@@ -8,7 +8,7 @@ import type { Payslip, PayslipListResponse } from '@/lib/api/payslips';
 import { useAuthGuard } from '@/lib/auth/session';
 import {
   PageHeader, Card, SectionTitle, ButtonPrimary, ErrorAlert, EmptyState, Badge, Modal, formatVND, formatDateTime,
-} from '@/components/operate';
+} from '@/components/shared-ui';
 
 export default function EmployeePayslipsPage() {
   useAuthGuard({ requireAuth: true, requireEmployee: true });
@@ -47,7 +47,7 @@ export default function EmployeePayslipsPage() {
         <SectionTitle icon={FileSpreadsheet}>Danh sách phiếu lương</SectionTitle>
         {error ? <ErrorAlert error={error} title="Không tải được phiếu lương" />
           : isLoading && !data ? <p className="text-sm text-slate-400">Đang tải…</p>
-          : !publishedPayslips.length ? <EmptyState hasFilters={false} emptyData="Chưa có phiếu lương nào được phát hành cho bạn." />
+          : !publishedPayslips.length ? <EmptyState filtered={false} emptyData="Chưa có phiếu lương nào được phát hành cho bạn." />
           : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

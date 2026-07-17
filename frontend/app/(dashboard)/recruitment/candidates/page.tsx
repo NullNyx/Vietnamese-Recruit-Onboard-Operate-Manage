@@ -11,7 +11,7 @@ import { useAuthGuard } from '@/lib/auth/session';
 import {
   ErrorBanner, Loading, EmptyState, StatusPill,
   CANDIDATE_STATUS_META, confidencePct,
-} from '@/lib/dashboard-ui';
+} from '@/components/shared-ui';
 
 const STATUSES: CandidateStatus[] = ['new', 'reviewing', 'interview_scheduled', 'accepted', 'rejected', 'archived'];
 const PAGE_SIZE = 12;

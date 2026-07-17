@@ -11,7 +11,7 @@ import { useAuthGuard, useSession } from '@/lib/auth/session';
 import {
   PageHeader, Card, SectionTitle, Field, TextInput, TextArea, Select,
   ButtonPrimary, ErrorAlert, Badge, formatDateTime,
-} from '@/components/operate';
+} from '@/components/shared-ui';
 
 export default function EmployeeProfilePage() {
   useAuthGuard({ requireAuth: true, requireEmployee: true });
