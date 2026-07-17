@@ -165,6 +165,20 @@ class AuthService:
         )
         return user, temp_password
 
+    async def delete_employee_account(
+        self,
+        employee: Any,
+    ) -> bool:
+        """Delete Employee Account. Idempotent: returns False if no account exists.
+
+        Args:
+            employee: The Employee domain entity with .id and .email fields.
+
+        Returns:
+            True if a user was deleted, False if no user was linked.
+        """
+        return await self._user_repository.delete_by_employee_id(employee.id)
+
     async def _issue_session(self, user: Any) -> LocalAuthResult:
         """Build JWT + refresh token pair for local auth."""
         employee_id = getattr(user, "employee_id", None)
