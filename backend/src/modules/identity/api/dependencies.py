@@ -4,7 +4,7 @@ Provides dependency injection functions for extracting and validating
 the current authenticated user from incoming requests.
 """
 
-from fastapi import HTTPException, Request
+from fastapi import Request
 
 from src.modules.identity.application.token_service import TokenService
 from src.modules.identity.domain.entities import User
@@ -35,29 +35,20 @@ async def get_current_user(
         The authenticated User entity.
 
     Raises:
-        HTTPException: 401 Unauthorized if the token is missing, invalid,
-            expired, or the user cannot be found.
+        InvalidTokenError: If the token is missing, invalid, expired, or
+            the user cannot be found.
     """
     token = request.cookies.get("access_token")
     if not token:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token",
-        )
+        raise InvalidTokenError()
 
     try:
         payload = token_service.verify_access_token(token)
     except InvalidTokenError:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token",
-        )
+        raise
 
     user = await user_repository.get_by_id(payload.sub)
     if user is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token",
-        )
+        raise InvalidTokenError()
 
     return user

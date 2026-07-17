@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from src.modules.identity.domain.entities import UserRole
 from src.modules.identity.domain.exceptions import (
     AccessDeniedError,
+    InvalidCredentialsError,
     InvalidTokenError,
     SetupAlreadyCompletedError,
 )
@@ -120,7 +121,7 @@ class AuthService:
             or not user.password_hash
             or not verify_password(password, user.password_hash)
         ):
-            raise InvalidTokenError()
+            raise InvalidCredentialsError()
         if not user.is_active:
             raise AccessDeniedError("Account is inactive")
         user.last_login = datetime.now(UTC)
@@ -137,7 +138,7 @@ class AuthService:
         """Update password for current user and issue fresh session."""
         current = user  # runtime type is User
         if not verify_password(current_password, current.password_hash):
-            raise InvalidTokenError()
+            raise InvalidCredentialsError()
         updated = await self._user_repository.update_password(
             current.id,
             hash_password(new_password),
