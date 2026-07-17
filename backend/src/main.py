@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
 from src.modules.assistant.api.employee_router import employee_assistant_router  # noqa: E402
 from src.modules.assistant.api.error_handler import (  # noqa: E402
@@ -43,6 +44,7 @@ from src.modules.identity.api.error_handler import (  # noqa: E402
     register_auth_error_handlers,
 )
 from src.modules.identity.api.router import router as auth_router  # noqa: E402
+from src.modules.identity.container import get_settings  # noqa: E402
 from src.modules.onboarding.api.error_handler import (  # noqa: E402
     register_onboarding_error_handlers,
 )
@@ -208,6 +210,16 @@ app = FastAPI(
     description="Vietnamese Recruit-Onboard-Operate-Manage platform",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+# Configure CORS for cross-origin frontend access (prod and local dev).
+_cors_settings = get_settings()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", _cors_settings.frontend_url],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Register module routers.

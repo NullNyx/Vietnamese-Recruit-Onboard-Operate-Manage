@@ -192,6 +192,18 @@ async def create_employee_account(
     )
 
 
+@employee_router.delete("/{employee_id}/account", status_code=204)
+async def delete_employee_account(
+    employee_id: UUID,
+    current_user: AdminUserDep,
+    employee_service: EmployeeServiceDep,
+    auth_service: AuthServiceDep,
+) -> None:
+    """Delete Employee Account. Idempotent: succeeds whether or not an account exists."""
+    employee = await employee_service.get_employee(employee_id)
+    await auth_service.delete_employee_account(employee)
+
+
 @employee_router.post("", response_model=EmployeeResponse, status_code=201)
 async def create_employee(
     body: EmployeeCreate,
