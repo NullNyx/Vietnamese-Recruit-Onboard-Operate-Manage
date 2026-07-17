@@ -14,8 +14,6 @@ load_dotenv()
 from fastapi import FastAPI  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
-from src.modules.identity.container import get_settings  # noqa: E402
-
 from src.modules.assistant.api.employee_router import employee_assistant_router  # noqa: E402
 from src.modules.assistant.api.error_handler import (  # noqa: E402
     register_assistant_error_handlers,
@@ -46,6 +44,7 @@ from src.modules.identity.api.error_handler import (  # noqa: E402
     register_auth_error_handlers,
 )
 from src.modules.identity.api.router import router as auth_router  # noqa: E402
+from src.modules.identity.container import get_settings  # noqa: E402
 from src.modules.onboarding.api.error_handler import (  # noqa: E402
     register_onboarding_error_handlers,
 )
