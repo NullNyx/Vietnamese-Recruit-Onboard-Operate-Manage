@@ -1,75 +1,100 @@
 ---
-version: alpha
-name: Heritage
-description: Architectural minimalism meets journalistic gravitas.
+version: stable
+name: AI Studio
+description: Sản phẩm HR dụng cụ, rõ ràng, tin cậy — slate/indigo trên nền sáng.
 colors:
-  primary: "#1A1C1E"
-  secondary: "#6C7278"
-  tertiary: "#B8422E"
-  neutral: "#F7F5F2"
-  surface: "#FFFFFF"
-  on-primary: "#FFFFFF"
+  ink: "#0f172a"
+  primary: "#4f46e5"
+  primary-soft: "#6366f1"
+  muted: "#64748b"
+  surface: "#ffffff"
+  page: "#f8fafc"
+  on-primary: "#ffffff"
 typography:
-  display:
-    fontFamily: Fraunces
-    fontSize: 4rem
-    fontWeight: 500
-    letterSpacing: "-0.02em"
-  h1:
-    fontFamily: Fraunces
-    fontSize: 2.5rem
-    fontWeight: 500
-  body:
-    fontFamily: Public Sans
+  sans:
+    fontFamily: Inter
     fontSize: 1rem
     lineHeight: 1.6
+  h1:
+    fontFamily: Inter
+    fontSize: 1.25rem
+    fontWeight: 700
   label:
-    fontFamily: Space Grotesk
-    fontSize: 0.75rem
-    letterSpacing: "0.08em"
+    fontFamily: Inter
+    fontSize: 0.875rem
+    fontWeight: 500
+  mono:
+    fontFamily: JetBrains Mono
+    fontSize: 0.875rem
 rounded:
-  sm: 2px
-  md: 4px
-  lg: 8px
+  card: 16px
+  pill: 9999px
 spacing:
   sm: 8px
   md: 16px
   lg: 32px
 components:
-  button-primary:
-    backgroundColor: "{colors.tertiary}"
-    textColor: "{colors.on-primary}"
-    rounded: "{rounded.md}"
-    padding: 12px 20px
+  page-header:
+    iconColor: "{colors.primary-soft}"
+    titleColor: "{colors.ink}"
+    subtitleColor: "{colors.muted}"
   card:
     backgroundColor: "{colors.surface}"
-    textColor: "{colors.primary}"
-    rounded: "{rounded.lg}"
-    padding: 24px
+    rounded: "{rounded.card}"
+    shadow: soft
+  primary-button:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.on-primary}"
+    rounded: "{rounded.pill}"
 ---
+
 ## Overview
 
-A warm, high-contrast palette rooted in broadsheet newspapers and matte galleries. Deep ink on warm limestone, one single accent for action.
+Hệ thống thiết kế **AI Studio** là design system đang dùng cho `vroom-hr/` —
+frontend chính của Vroom HR. Đây là hệ thống được quyết bởi AI Studio khi tái xây
+dây frontend xoay quanh domain model (xem
+[`docs/adr/0006-ai-studio-design-system.md`](./docs/adr/0006-ai-studio-design-system.md)).
+
+Đặc trưng: tông slate làm nền, một accent duy nhất **indigo** cho action và icon,
+font **Inter** cho mọi text hiển thị và **JetBrains Mono** cho code / mã nội bộ /
+audit. Card bo góc lớn (`rounded-2xl`), shadow mềm, negative space vừa phải —
+đọc được, không trang trí.
+
+> **Lưu ý legacy:** hệ thống *Heritage* trước đây (warm limestone `#F7F5F2`,
+> accent terracotta `#B8422E`, font Fraunces/Public Sans/Space Grotesk) thuộc về
+> `frontend/` cũ (Next.js 14, Tailwind 3). `frontend/` giờ là backup legacy và
+> **không còn là design system nguồn sự thật**. Khi thêm UI mới, tuân theo AI
+> Studio ở tài liệu này, không theo Heritage.
 
 ## Colors
 
-The palette is built around high-contrast neutrals and a single accent that drives interaction.
+Palette xoay quanh slate (neutrals) và một accent indigo.
 
-- **Primary (`#1A1C1E`):** Headlines and core text.
-- **Secondary (`#6C7278`):** Borders, captions, and metadata.
-- **Tertiary (`#B8422E`):** The sole driver for interaction. Reserve it.
-- **Neutral (`#F7F5F2`):** The page foundation.
+- **Ink (`#0f172a`, slate-900):** tiêu đề, text cốt lõi.
+- **Primary (`#4f46e5`, indigo-600):** accent duy nhất cho action chính.
+- **Primary-soft (`#6366f1`, indigo-500):** icon, focus ring, nhấn nhẹ.
+- **Muted (`#64748b`, slate-500):** subtitle, metadata, caption.
+- **Surface (`#ffffff`):** card, panel.
+- **Page (`#f8fafc`, slate-50):** nền trang.
+
+Quy ước: nền trang `bg-slate-50/50`, body text `text-slate-800` (xem
+`vroom-hr/app/layout.tsx`). Icon nhấn dùng `text-indigo-600`, tiêu đề
+`text-slate-900`, subtitle `text-slate-500` (xem `vroom-hr/components/operate.tsx`).
 
 ## Typography
 
-- **display:** Fraunces 4rem
-- **h1:** Fraunces 2.5rem
-- **body:** Public Sans 1rem
-- **label:** Space Grotesk 0.75rem
+- **sans / body:** Inter 1rem, lineHeight 1.6 — font mặc định qua `--font-sans`.
+- **h1:** Inter 1.25rem (text-xl), weight 700.
+- **label / caption:** Inter 0.875rem (text-sm), weight 500.
+- **mono:** JetBrains Mono 0.875rem — cho `code`, mã NV, audit id, qua `--font-mono`.
+
+Cả hai font tải qua `next/font/google` trong `vroom-hr/app/layout.tsx` và gắn vào
+CSS variable `--font-sans` / `--font-mono`; body dùng `font-sans`.
 
 ## Do's and Don'ts
 
-- **Do** use Tertiary for exactly one action per screen.
-- **Do** let Neutral carry the composition — negative space is a feature.
-- **Don't** introduce gradients. This system is flat on purpose.
-- **Don't** mix Tertiary with alternate accents; the single-accent rule is load-bearing.
+- **Do** dùng indigo làm accent duy nhất cho action/icon — không trộn accent thứ hai.
+- **Do** dùng `rounded-2xl` cho card, shadow mềm — giữ cảm giác sản phẩm dụng cụ.
+- **Do** ưu tiên tiếng Việt trong nhãn giao diện (deployment cho doanh nghiệp VN).
+- **Don't** mang accent terracotta hay font Fraunces của Heritage sang `vroom-hr/`.
+- **Don't** dùng gradient — hệ thống này phẳng có chủ đích.

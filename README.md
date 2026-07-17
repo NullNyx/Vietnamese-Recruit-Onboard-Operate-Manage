@@ -13,7 +13,8 @@ workflow, git/branch/commit/PR), see [`AGENTS.md`](./AGENTS.md).
 ## Tech Stack
 
 - **Backend**: FastAPI + SQLModel + PostgreSQL 15 + Redis 7
-- **Frontend**: Next.js 14 + TypeScript + Tailwind + shadcn/ui
+- **Frontend** (`vroom-hr/`, chính): Next.js 15 + React 19 + TypeScript + Tailwind v4 + TanStack Query + lucide-react
+- **Frontend legacy** (`frontend/`, backup): Next.js 14 + Tailwind 3 + shadcn/ui (Heritage theme) — không phát triển tính năng mới
 - **Auth**: Google OAuth2 + JWT (cookies)
 - **Storage**: MinIO
 - **AI**: OpenAI-compatible APIs (CV parsing)
@@ -36,11 +37,15 @@ uv sync
 uv run alembic upgrade head
 uvicorn src.main:app --reload --port 8000
 
-# Frontend
-cd ../frontend
-cp .env.example .env
+# Frontend (vroom-hr — chính)
+cd ../vroom-hr
+cp .env.example .env.local
+# Edit .env.local (NEXT_PUBLIC_API_URL, GEMINI_API_KEY, APP_URL)
 pnpm install
-pnpm dev
+pnpm dev   # http://localhost:3000
+#
+# (Legacy) frontend/ cũ — Next.js 14 / Tailwind 3, chỉ backup:
+#   cd ../frontend && pnpm install && pnpm dev
 ```
 
 ## Environment Variables
@@ -77,8 +82,14 @@ RECRUITMENT_LLM_MODEL=bg-digitalservices/Gemma-4-26B-A4B-it-NVFP4
 ### Frontend (.env.local)
 
 ```env
+# Backend API URL (FastAPI) — base cho mọi API call từ vroom-hr/lib/api/client.ts
 NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_NEXTAUTH_URL=http://localhost:3000
+
+# AI Studio / Gemini (legacy — Phase 3 thay bằng /api/assistant)
+GEMINI_API_KEY=""
+
+# URL hosting app
+APP_URL="http://localhost:3000"
 ```
 
 ## Modules
@@ -102,7 +113,7 @@ mypy src/
 pytest tests/
 
 # Frontend linting
-cd frontend
+cd vroom-hr
 pnpm lint
 pnpm build
 pnpm test
