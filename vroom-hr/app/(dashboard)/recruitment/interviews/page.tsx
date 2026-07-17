@@ -14,7 +14,7 @@ import {
 import { getGoogleWorkspaceCalendars, selectGoogleWorkspaceCalendar } from '@/lib/api/admin';
 import type { CalendarListResponse } from '@/lib/api/admin';
 import { useAuthGuard } from '@/lib/auth/session';
-import { ErrorBanner, Loading, EmptyState, StatusPill } from '@/lib/dashboard-ui';
+import { ErrorBanner, Loading, EmptyState, StatusPill, CONFLICT_STATUS_META, formatAuditDetails } from '@/lib/dashboard-ui';
 
 export default function InterviewsPage() {
   useAuthGuard({ requireAuth: true, requireAdmin: true });
@@ -120,11 +120,11 @@ export default function InterviewsPage() {
               <li key={c.id} className="p-3 bg-rose-50/40 border border-rose-200 rounded-xl">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs font-mono text-slate-500">Conflict <code className="text-slate-700">{c.id.slice(0, 8)}</code> · interview {c.interview_id.slice(0, 8)} · candidate {c.candidate_id.slice(0, 8)}</p>
+                    <p className="text-xs text-slate-500">Xung đột <span className="font-medium text-slate-700">#{c.id.slice(0, 8)}</span> · Phỏng vấn #{c.interview_id.slice(0, 8)} · Ứng viên #{c.candidate_id.slice(0, 8)}</p>
                     <div className="flex gap-1.5 mt-1">
-                      <StatusPill status={c.status} label={c.status} tone="rose" />
+                      {(() => { const meta = CONFLICT_STATUS_META[c.status] ?? { label: c.status, tone: "rose" as const }; return <StatusPill status={c.status} label={meta.label} tone={meta.tone} />; })()}
                       {c.conflict_details && typeof c.conflict_details === 'object' && (
-                        <span className="text-[10px] font-mono text-slate-400">{JSON.stringify(c.conflict_details).slice(0, 80)}…</span>
+                        <span className="text-[10px] text-slate-400">{formatAuditDetails(c.conflict_details).slice(0, 80)}</span>
                       )}
                     </div>
                   </div>

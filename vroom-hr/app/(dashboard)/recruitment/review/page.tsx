@@ -8,7 +8,7 @@ import {
   type CVReviewItem, type ParsedCVInput, type ProcessingStatus,
 } from '@/lib/api/recruitment';
 import { useAuthGuard } from '@/lib/auth/session';
-import { ErrorBanner, Loading, EmptyState, StatusPill, confidencePct } from '@/lib/dashboard-ui';
+import { ErrorBanner, Loading, EmptyState, StatusPill, confidencePct, MIME_TYPE_LABELS } from '@/lib/dashboard-ui';
 
 const PROC_STATUS_META: Record<ProcessingStatus, { label: string; tone: 'amber' | 'emerald' | 'rose' | 'indigo' | 'slate' }> = {
   pending: { label: 'Chờ', tone: 'slate' },
@@ -137,7 +137,7 @@ function ReviewCard({
             {item.retry_count > 0 && <span className="text-[10px] font-mono text-slate-400">retry {item.retry_count}</span>}
           </div>
           <p className="font-semibold text-sm text-slate-900 truncate">{item.original_filename}</p>
-          <p className="text-[11px] font-mono text-slate-400">{item.id.slice(0, 8)}… · {(item.size_bytes / 1024).toFixed(0)}KB · {item.mime_type}</p>
+          <p className="text-[11px] text-slate-400">#{item.id.slice(0, 8)} · {(item.size_bytes / 1024).toFixed(0)} KB · {MIME_TYPE_LABELS[item.mime_type] ?? item.mime_type}</p>
         </div>
       </div>
 

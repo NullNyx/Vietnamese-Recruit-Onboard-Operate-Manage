@@ -161,7 +161,7 @@ export default function SetupPage() {
           </div>
           <div>
             <span className="font-sans font-bold text-lg tracking-tight text-slate-900 block">Vroom HR</span>
-            <span className="text-xs text-slate-500 block font-mono">deployment_id: single-tenant-asia</span>
+            <span className="text-xs text-slate-500 block">Vroom HR · Triển khai nội bộ</span>
           </div>
         </div>
 

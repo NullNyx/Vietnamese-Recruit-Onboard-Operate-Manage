@@ -16,6 +16,7 @@ import type {
 import { useAuthGuard } from '@/lib/auth/session';
 import { ApiError } from '@/lib/api/types';
 import { getErrorMessage } from '@/lib/api/error-codes';
+import { AUDIT_ACTION_LABELS, formatAuditDetails } from '@/lib/dashboard-ui';
 
 function apiErrorText(err: unknown): string {
   if (err instanceof ApiError) return getErrorMessage(err.errorCode);
@@ -345,9 +346,9 @@ function AuditTab() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-semibold text-slate-700 truncate">{log.admin_email}</span>
-                  <span className="text-[10px] font-mono bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">{log.action_type}</span>
+                  <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">{AUDIT_ACTION_LABELS[log.action_type] ?? log.action_type}</span>
                 </div>
-                <p className="text-[11px] text-slate-500 break-words">{JSON.stringify(log.details)}</p>
+                <p className="text-[11px] text-slate-500 break-words">{formatAuditDetails(log.details)}</p>
               </div>
               <span className="text-[10px] font-mono text-slate-400 shrink-0">{new Date(log.created_at).toLocaleString('vi-VN')}</span>
             </div>

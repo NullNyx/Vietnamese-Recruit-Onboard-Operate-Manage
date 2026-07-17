@@ -127,6 +127,81 @@ export const JOB_STATUS_META: Record<
   closed: { label: 'Đã đóng', tone: 'indigo' },
   cancelled: { label: 'Đã hủy', tone: 'rose' },
 };
+    /** Conflict interview status → {label, tone} (Vietnamese). */
+    export const CONFLICT_STATUS_META: Record<
+      string,
+      { label: string; tone: 'amber' | 'emerald' | 'rose' | 'slate' }
+    > = {
+      pending: { label: 'Chờ xử lý', tone: 'amber' },
+      resolved: { label: 'Đã giải quyết', tone: 'emerald' },
+    };
+
+    /** Audit action type → Vietnamese label. */
+    export const AUDIT_ACTION_LABELS: Record<string, string> = {
+      role_change: 'Thay đổi quyền',
+      user_create: 'Tạo tài khoản',
+      user_update: 'Cập nhật tài khoản',
+      user_delete: 'Xóa tài khoản',
+      permission_grant: 'Cấp quyền',
+      permission_revoke: 'Thu hồi quyền',
+      login: 'Đăng nhập',
+      settings_update: 'Cập nhật cài đặt',
+      employee_create: 'Tạo nhân viên',
+      employee_update: 'Cập nhật nhân viên',
+      whitelist_add: 'Thêm whitelist',
+      whitelist_remove: 'Xóa whitelist',
+      oauth_update: 'Cập nhật OAuth',
+      org_domain_update: 'Cập nhật domain',
+      assistant_tool_config: 'Cấu hình tool assistant',
+      org_google_connect: 'Kết nối Google',
+      org_google_reconnect: 'Kết nối lại Google',
+      org_google_switch_account: 'Chuyển tài khoản Google',
+      org_google_disconnect: 'Ngắt kết nối Google',
+      org_ai_config_update: 'Cập nhật cấu hình AI',
+      org_ai_config_rotate: 'Xoay API key AI',
+      org_ai_config_revoke: 'Thu hồi cấu hình AI',
+      org_ai_config_source: 'Thay đổi nguồn credential AI',
+      org_ai_classification_rollout: 'Triển khai phân loại AI',
+    };
+
+    /** MIME type → human-readable label. */
+    export const MIME_TYPE_LABELS: Record<string, string> = {
+      'application/pdf': 'PDF',
+      'application/msword': 'Word',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word (DOCX)',
+      'text/plain': 'Văn bản',
+      'image/png': 'PNG',
+      'image/jpeg': 'JPEG',
+    };
+
+    /** Format audit details as a Vietnamese-readable string (never raw JSON). */
+    export function formatAuditDetails(details: unknown): string {
+      if (!details) return '—';
+      if (typeof details !== 'object' || details === null) return String(details);
+
+      const fieldMap: Record<string, string> = {
+        role: 'Quyền',
+        email: 'Email',
+        name: 'Tên',
+        employee_id: 'Mã NV',
+        permissions: 'Quyền hạn',
+      };
+
+      try {
+        const entries = Object.entries(details as Record<string, unknown>);
+        if (entries.length === 0) return '—';
+        return entries
+          .map(([key, value]) => {
+            const label = fieldMap[key] ?? key;
+            const val = typeof value === 'object' ? JSON.stringify(value) : String(value);
+            return `${label}: ${val}`;
+          })
+          .join(', ');
+      } catch {
+        return JSON.stringify(details);
+      }
+    }
+
 
 /** Confidence as percent. */
 export function confidencePct(c: number | null | undefined): string {
