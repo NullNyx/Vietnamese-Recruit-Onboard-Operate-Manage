@@ -11,7 +11,7 @@ import type { MetricsResponse } from '@/lib/api/recruitment';
 import { getRuntimeHealth, getAuditLogs } from '@/lib/api/admin';
 import type { RuntimeHealthResponse, PaginatedAuditLogs, AuditLogQueryParams } from '@/lib/api/admin';
 import { useAuthGuard } from '@/lib/auth/session';
-import { AUDIT_ACTION_LABELS, formatAuditDetails } from '@/lib/dashboard-ui';
+import { AUDIT_ACTION_LABELS, formatAuditDetails, SERVICE_LABELS, formatRuntimeDetail, formatLatency } from '@/lib/dashboard-ui';
 
 export default function DashboardPage() {
   useAuthGuard({ requireAuth: true, requireAdmin: true });
@@ -152,12 +152,12 @@ export default function DashboardPage() {
           <Activity className="w-5 h-5 text-indigo-600" />
           <h2 className="font-bold text-slate-900">Sức khỏe hệ thống (Runtime)</h2>
           {health?.status && (
-            <span className={`ml-auto text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+            <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full ${
               health.status === 'healthy' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
               : health.status === 'degraded' ? 'bg-amber-50 text-amber-700 border border-amber-200'
               : 'bg-rose-50 text-rose-700 border border-rose-200'
             }`}>
-              {health.status === 'healthy' ? 'KHỎE' : health.status === 'degraded' ? 'SUY GIẢM' : 'KHÔNG KHỎE'}
+              {health.status === 'healthy' ? 'Hoạt động tốt' : health.status === 'degraded' ? 'Cần chú ý' : 'Có lỗi'}
             </span>
           )}
         </div>
@@ -175,7 +175,7 @@ export default function DashboardPage() {
             {health.services.map((svc) => (
               <div key={svc.name} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-slate-700">{svc.name}</span>
+                  <span className="text-xs font-semibold text-slate-700">{SERVICE_LABELS[svc.name] ?? svc.name}</span>
                   {svc.status === 'healthy' ? (
                     <CheckCircle className="w-4 h-4 text-emerald-500" />
                   ) : svc.status === 'unhealthy' ? (
@@ -185,10 +185,10 @@ export default function DashboardPage() {
                   )}
                 </div>
                 {svc.latency_ms !== null && (
-                  <span className="text-[10px] font-mono text-slate-400">{svc.latency_ms}ms</span>
+                  <span className="text-[10px] text-slate-400">{formatLatency(svc.latency_ms)}</span>
                 )}
-                {svc.detail && (
-                  <p className="text-[10px] text-slate-400 truncate mt-0.5">{svc.detail}</p>
+                {formatRuntimeDetail(svc.detail) && (
+                  <p className="text-[10px] text-slate-400 truncate mt-0.5">{formatRuntimeDetail(svc.detail)}</p>
                 )}
               </div>
             ))}

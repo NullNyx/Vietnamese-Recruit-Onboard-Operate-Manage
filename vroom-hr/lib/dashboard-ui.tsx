@@ -174,6 +174,47 @@ export const JOB_STATUS_META: Record<
       'image/jpeg': 'JPEG',
     };
 
+/** Runtime service name → Vietnamese label (tech → business language). */
+export const SERVICE_LABELS: Record<string, string> = {
+  redis: 'Bộ nhớ đệm',
+  postgresql: 'Cơ sở dữ liệu',
+  minio: 'Lưu trữ tài liệu',
+  'gmail-worker': 'Đồng bộ email',
+  'onboarding-worker': 'Xử lý onboarding',
+};
+
+/**
+ * Format runtime detail string for HR users.
+ * - null/undefined → empty string
+ * - "last beat:" prefix → relative time in Vietnamese
+ * - heartbeat-related → "Không hoạt động"
+ * - fallback: return detail as-is
+ */
+export function formatRuntimeDetail(detail: string | null): string {
+  if (detail == null) return '';
+  if (detail.startsWith('last beat:')) {
+    const raw = detail.slice('last beat:'.length).trim();
+    const ts = parseFloat(raw);
+    if (Number.isNaN(ts)) return detail;
+    const now = Date.now() / 1000;
+    const diff = Math.max(0, now - ts);
+    if (diff < 60) return 'Vừa xong';
+    if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
+    return `${Math.floor(diff / 86400)} ngày trước`;
+  }
+  if (detail === 'no heartbeat' || detail.includes('heartbeat')) return 'Không hoạt động';
+  return detail;
+}
+
+/** Format latency in ms → Vietnamese qualitative label. */
+export function formatLatency(latencyMs: number | null): string {
+  if (latencyMs == null) return '';
+  if (latencyMs < 100) return 'Nhanh';
+  if (latencyMs < 500) return 'Bình thường';
+  return 'Chậm';
+}
+
     /** Format audit details as a Vietnamese-readable string (never raw JSON). */
     export function formatAuditDetails(details: unknown): string {
       if (!details) return '—';
