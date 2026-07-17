@@ -28,6 +28,7 @@ out/
 *.tsbuildinfo
 package-lock.json
 pnpm-workspace.yaml
+!vroom-hr/pnpm-workspace.yaml
 
 # ---- Logs ----
 *.log
