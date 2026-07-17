@@ -2,22 +2,31 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Shield, Building, User, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
-import { getSetupStatus, setupFirstRun } from '@/lib/api/auth';
+import { getSetupStatus, setupFirstRun, AuthApiError } from '@/lib/api/auth';
 import { getErrorMessage } from '@/lib/api/error-codes';
 import { useSession } from '@/lib/auth/session';
+import { setupSchema, type SetupFormData } from '@/lib/api/auth-schemas';
 
 export default function SetupPage() {
   const router = useRouter();
   const { isAuthenticated, setupComplete, isLoading: sessionLoading } = useSession();
 
+  const {
+    register,
+    handleSubmit,
+    trigger,
+    getValues,
+    setError,
+    formState: { errors },
+  } = useForm<SetupFormData>({
+    resolver: zodResolver(setupSchema),
+  });
+
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [orgName, setOrgName] = useState('');
-  const [hrName, setHrName] = useState('');
-  const [hrEmail, setHrEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [error, setError] = useState('');
+  const [serverError, setServerError] = useState('');
   const [backendStatus, setBackendStatus] = useState<'loading' | 'available' | 'unavailable'>('loading');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -52,39 +61,31 @@ export default function SetupPage() {
     }
   }, [sessionLoading, setupComplete, isAuthenticated, router]);
 
-  const handleNextStep1 = (e: React.FormEvent) => {
+  const handleNextStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    if (!orgName.trim()) {
-      setError('Vui lòng nhập tên Tổ chức / Công ty.');
-      return;
-    }
-    setStep(2);
+    setServerError('');
+    const valid = await trigger("organization_name");
+    if (valid) setStep(2);
   };
 
-  const handleNextStep2 = (e: React.FormEvent) => {
+  const handleNextStep2 = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    if (!hrName.trim() || !hrEmail.trim()) {
-      setError('Vui lòng điền đầy đủ Họ tên và Email.');
-      return;
-    }
-    if (password.length < 12) {
-      setError('Mật khẩu quản trị viên phải từ 12 ký tự trở lên.');
-      return;
-    }
-    if (password !== passwordConfirm) {
-      setError('Xác nhận mật khẩu không trùng khớp.');
-      return;
-    }
-    setStep(3);
+    setServerError('');
+    const valid = await trigger(["name", "email", "password", "password_confirmation"]);
+    if (valid) setStep(3);
   };
 
-  const handleSubmit = async () => {
-    setError('');
+  const onSubmit = async (data: SetupFormData) => {
+    setServerError('');
     setIsSubmitting(true);
     try {
-      await setupFirstRun(orgName.trim(), hrName.trim(), hrEmail.trim(), password, passwordConfirm);
+      await setupFirstRun(
+        data.organization_name.trim(),
+        data.name.trim(),
+        data.email.trim(),
+        data.password,
+        data.password_confirmation,
+      );
       // Success — session cookie is set by BE, redirect to dashboard
       setStep(4);
       // Redirect after a brief delay
@@ -92,17 +93,32 @@ export default function SetupPage() {
         router.replace('/dashboard');
       }, 1500);
     } catch (err: unknown) {
-      if (err instanceof Error) {
+      if (err instanceof AuthApiError) {
+        // Map BE field-level errors to form fields
+        if (Object.keys(err.fields).length > 0) {
+          for (const [field, msg] of Object.entries(err.fields)) {
+            setError(field as keyof SetupFormData, { message: msg });
+          }
+          setServerError('Vui lòng kiểm tra lại thông tin');
+        } else {
+          const msg = err.message;
+          if (msg.includes('AUTH_SETUP_ALREADY_COMPLETED') || msg.includes('setup already')) {
+            setServerError('Hệ thống đã được thiết lập trước đó. Đang chuyển hướng...');
+            setTimeout(() => router.replace('/login'), 1500);
+          } else {
+            setServerError(getErrorMessage(err.code) || msg);
+          }
+        }
+      } else if (err instanceof Error) {
         const msg = err.message;
-        // Check for AUTH_SETUP_ALREADY_COMPLETED
         if (msg.includes('AUTH_SETUP_ALREADY_COMPLETED') || msg.includes('setup already')) {
-          setError('Hệ thống đã được thiết lập trước đó. Đang chuyển hướng...');
+          setServerError('Hệ thống đã được thiết lập trước đó. Đang chuyển hướng...');
           setTimeout(() => router.replace('/login'), 1500);
         } else {
-          setError(msg);
+          setServerError(msg);
         }
       } else {
-        setError('Khởi tạo thất bại. Vui lòng thử lại.');
+        setServerError('Khởi tạo thất bại. Vui lòng thử lại.');
       }
     } finally {
       setIsSubmitting(false);
@@ -189,10 +205,10 @@ export default function SetupPage() {
           </div>
         )}
 
-        {error && (
+        {serverError && (
           <div id="setup-error-msg" className="p-3 mb-6 bg-rose-50 border border-rose-250 text-rose-600 rounded-xl text-sm flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>{error}</span>
+            <span>{serverError}</span>
           </div>
         )}
 
@@ -214,12 +230,13 @@ export default function SetupPage() {
               <input
                 id="setup-org-name-input"
                 type="text"
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
+                {...register("organization_name")}
                 placeholder="Ví dụ: Công ty TNHH ABC"
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                required
               />
+              {errors.organization_name && (
+                <p className="mt-1.5 text-xs text-rose-500">{errors.organization_name.message}</p>
+              )}
             </div>
 
             <div className="pt-2">
@@ -254,24 +271,26 @@ export default function SetupPage() {
                 <input
                   id="setup-hr-name-input"
                   type="text"
-                  value={hrName}
-                  onChange={(e) => setHrName(e.target.value)}
+                  {...register("name")}
                   placeholder="Ví dụ: HR Admin"
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
-                  required
                 />
+                {errors.name && (
+                  <p className="mt-1.5 text-xs text-rose-500">{errors.name.message}</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-mono uppercase text-slate-500 mb-1.5 font-semibold">Email quản trị</label>
                 <input
                   id="setup-hr-email-input"
                   type="email"
-                  value={hrEmail}
-                  onChange={(e) => setHrEmail(e.target.value)}
+                  {...register("email")}
                   placeholder="hr@tencongty.com"
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
-                  required
                 />
+                {errors.email && (
+                  <p className="mt-1.5 text-xs text-rose-500">{errors.email.message}</p>
+                )}
               </div>
             </div>
 
@@ -280,12 +299,13 @@ export default function SetupPage() {
               <input
                 id="setup-password-input"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                {...register("password")}
                 placeholder="Nhập mật khẩu an toàn..."
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
-                required
               />
+              {errors.password && (
+                <p className="mt-1.5 text-xs text-rose-500">{errors.password.message}</p>
+              )}
             </div>
 
             <div>
@@ -293,12 +313,13 @@ export default function SetupPage() {
               <input
                 id="setup-password-confirm-input"
                 type="password"
-                value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
+                {...register("password_confirmation")}
                 placeholder="Gõ lại mật khẩu..."
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
-                required
               />
+              {errors.password_confirmation && (
+                <p className="mt-1.5 text-xs text-rose-500">{errors.password_confirmation.message}</p>
+              )}
             </div>
 
             <div className="flex items-center gap-3 pt-3">
@@ -321,8 +342,10 @@ export default function SetupPage() {
         )}
 
         {/* Step 3: Review Page */}
-        {step === 3 && (
-          <div className="space-y-6">
+        {step === 3 && (() => {
+          const values = getValues();
+          return (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-2 text-indigo-600">
                 <Shield className="w-5 h-5" />
@@ -336,15 +359,15 @@ export default function SetupPage() {
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-250 space-y-3 font-mono text-sm">
               <div className="flex justify-between py-1 border-b border-slate-200">
                 <span className="text-slate-500">TỔ CHỨC:</span>
-                <span className="text-indigo-600 font-bold">{orgName}</span>
+                <span className="text-indigo-600 font-bold">{values.organization_name}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200">
                 <span className="text-slate-500">HỌ TÊN HR:</span>
-                <span className="text-slate-800">{hrName}</span>
+                <span className="text-slate-800">{values.name}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200">
                 <span className="text-slate-500">EMAIL QUẢN TRỊ:</span>
-                <span className="text-slate-800">{hrEmail}</span>
+                <span className="text-slate-800">{values.email}</span>
               </div>
               <div className="flex justify-between py-1">
                 <span className="text-slate-500">TIMEZONE MẶC ĐỊNH:</span>
@@ -362,25 +385,27 @@ export default function SetupPage() {
               </button>
               <button
                 id="setup-submit-button"
-                type="button"
-                onClick={handleSubmit}
+                type="submit"
                 disabled={isSubmitting}
                 className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 transition-all disabled:opacity-50"
               >
                 {isSubmitting ? 'Đang khởi tạo...' : 'Kích hoạt hệ thống'}
               </button>
             </div>
-          </div>
-        )}
+          </form>
+          );
+        })()}
 
         {/* Step 4: Success Screen */}
-        {step === 4 && (
+        {step === 4 && (() => {
+          const values = getValues();
+          return (
           <div className="text-center py-6 space-y-6">
             <CheckCircle className="w-20 h-20 mx-auto text-indigo-600 animate-bounce" />
             <div>
               <h2 className="text-2xl font-bold text-slate-900 mb-2">Khởi tạo Vroom HR thành công!</h2>
               <p className="text-slate-500 text-sm max-w-md mx-auto leading-relaxed">
-                Tổ chức <span className="text-indigo-600 font-semibold">{orgName}</span> đã được thiết lập. Hệ thống đã tự động cấp phiên đăng nhập cho bạn.
+                Tổ chức <span className="text-indigo-600 font-semibold">{values.organization_name}</span> đã được thiết lập. Hệ thống đã tự động cấp phiên đăng nhập cho bạn.
               </p>
             </div>
 
@@ -396,7 +421,8 @@ export default function SetupPage() {
               Mở Trang quản trị (Dashboard)
             </button>
           </div>
-        )}
+          );
+        })()}
 
       </div>
     </div>

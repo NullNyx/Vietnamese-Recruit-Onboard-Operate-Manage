@@ -3,20 +3,30 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { LogIn, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { login, AuthApiError, type CurrentUser } from '@/lib/api/auth';
-import { useSession, useAuthGuard } from '@/lib/auth/session';
+import { useSession } from '@/lib/auth/session';
 import { getErrorMessage } from '@/lib/api/error-codes';
 import type { ApiError } from '@/lib/api/types';
+import { loginSchema, type LoginFormData } from '@/lib/api/auth-schemas';
 
 export default function LoginPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const { isAuthenticated, isAdmin, isLoading } = useSession();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -27,17 +37,11 @@ export default function LoginPage() {
     }
   }, [isLoading, isAuthenticated, isAdmin, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    if (!email.trim() || !password) {
-      setError('Vui lòng nhập email và mật khẩu.');
-      return;
-    }
-
+  const onSubmit = async (data: LoginFormData) => {
+    setServerError('');
     setIsSubmitting(true);
     try {
-      const result = await login(email.trim(), password);
+      const result = await login(data.email.trim(), data.password);
       // BUG-10 fix: BE set HttpOnly auth cookie bằng login response, nhưng cookie
       // KHÔNG đọc được từ JS (HttpOnly). useSession() chỉ biết user qua GET /api/auth/me
       // — mà React Query cache ['session'] vãn giư giá trị STALE null từ lần /me 401
@@ -53,12 +57,24 @@ export default function LoginPage() {
         router.replace(result.user.role === 'admin' ? '/dashboard' : '/employee');
       }
     } catch (err: unknown) {
-      if (err instanceof Error) {
-            const code = (err as AuthApiError).code || (err as ApiError).errorCode;
-            const msg = getErrorMessage(code) || err.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
-            setError(msg);
+      if (err instanceof AuthApiError) {
+        // Map BE field-level errors to form fields
+        if (Object.keys(err.fields).length > 0) {
+          for (const [field, msg] of Object.entries(err.fields)) {
+            setError(field as keyof LoginFormData, { message: msg });
+          }
+          setServerError('Vui lòng kiểm tra lại thông tin');
+        } else {
+          const code = err.code;
+          const msg = getErrorMessage(code) || err.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
+          setServerError(msg);
+        }
+      } else if (err instanceof Error) {
+        const code = (err as ApiError).errorCode;
+        const msg = getErrorMessage(code) || err.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
+        setServerError(msg);
       } else {
-        setError('Đăng nhập thất bại. Vui lòng thử lại.');
+        setServerError('Đăng nhập thất bại. Vui lòng thử lại.');
       }
     } finally {
       setIsSubmitting(false);
@@ -90,26 +106,27 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {error && (
+        {serverError && (
           <div className="p-3 mb-6 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-sm flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>{error}</span>
+            <span>{serverError}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
             <label className="block text-xs font-mono uppercase text-slate-500 mb-2 font-semibold">Email</label>
             <input
               id="login-email-input"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register("email")}
               placeholder="hr@tencongty.com"
               className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              required
               autoComplete="email"
             />
+            {errors.email && (
+              <p className="mt-1.5 text-xs text-rose-500">{errors.email.message}</p>
+            )}
           </div>
 
           <div>
@@ -118,11 +135,9 @@ export default function LoginPage() {
               <input
                 id="login-password-input"
                 type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                {...register("password")}
                 placeholder="Nhập mật khẩu..."
                 className="w-full p-3 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                required
                 autoComplete="current-password"
               />
               <button
@@ -133,6 +148,9 @@ export default function LoginPage() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {errors.password && (
+              <p className="mt-1.5 text-xs text-rose-500">{errors.password.message}</p>
+            )}
           </div>
 
           <button

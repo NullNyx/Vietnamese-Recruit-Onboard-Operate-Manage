@@ -3,21 +3,30 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Shield, AlertTriangle, Eye, EyeOff, CheckCircle } from 'lucide-react';
-import { changePassword, type CurrentUser } from '@/lib/api/auth';
+import { changePassword, AuthApiError, type CurrentUser } from '@/lib/api/auth';
 import { useSession } from '@/lib/auth/session';
 import { getErrorMessage } from '@/lib/api/error-codes';
 import type { ApiError } from '@/lib/api/types';
+import { changePasswordSchema, type ChangePasswordFormData } from '@/lib/api/auth-schemas';
 
 export default function ChangePasswordPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const { isAuthenticated, mustChangePassword, isLoading } = useSession();
 
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<ChangePasswordFormData>({
+    resolver: zodResolver(changePasswordSchema),
+  });
+
+  const [serverError, setServerError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
@@ -30,31 +39,12 @@ export default function ChangePasswordPage() {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const onSubmit = async (data: ChangePasswordFormData) => {
+    setServerError('');
     setSuccess(false);
-
-    if (!currentPassword || !newPassword) {
-      setError('Vui lòng nhập đầy đủ thông tin.');
-      return;
-    }
-    if (newPassword.length < 12) {
-      setError('Mật khẩu mới phải từ 12 ký tự trở lên.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError('Xác nhận mật khẩu mới không trùng khớp.');
-      return;
-    }
-    if (newPassword === currentPassword) {
-      setError('Mật khẩu mới không được trùng với mật khẩu hiện tại.');
-      return;
-    }
-
     setIsSubmitting(true);
     try {
-      const result = await changePassword(currentPassword, newPassword);
+      const result = await changePassword(data.current_password, data.new_password);
       // BUG-10 fix: BE set HttpOnly cookie mới + đỗi mật khẩu, nhưng useSession() chỉ
       // biết user qua GET /api/auth/me — React Query cache ['session'] vãn giư giá
       // trị STALE (user củ với must_change_password=true, hoặc null từ khi /login mount
@@ -73,12 +63,23 @@ export default function ChangePasswordPage() {
       }, 2000);
 
     } catch (err: unknown) {
-      if (err instanceof Error) {
+      if (err instanceof AuthApiError) {
+        // Map BE field-level errors to form fields
+        if (Object.keys(err.fields).length > 0) {
+          for (const [field, msg] of Object.entries(err.fields)) {
+            setError(field as keyof ChangePasswordFormData, { message: msg });
+          }
+          setServerError('Vui lòng kiểm tra lại thông tin');
+        } else {
+          const msg = getErrorMessage(err.code) || err.message || 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
+          setServerError(msg);
+        }
+      } else if (err instanceof Error) {
         const apiErr = err as ApiError;
         const msg = getErrorMessage(apiErr.errorCode) || apiErr.message || 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
-        setError(msg);
+        setServerError(msg);
       } else {
-        setError('Đổi mật khẩu thất bại. Vui lòng thử lại.');
+        setServerError('Đổi mật khẩu thất bại. Vui lòng thử lại.');
       }
     } finally {
       setIsSubmitting(false);
@@ -117,10 +118,10 @@ export default function ChangePasswordPage() {
           </div>
         )}
 
-        {error && (
+        {serverError && (
           <div className="p-3 mb-6 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-sm flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>{error}</span>
+            <span>{serverError}</span>
           </div>
         )}
 
@@ -133,18 +134,16 @@ export default function ChangePasswordPage() {
         )}
 
         {!success && (
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
               <label className="block text-xs font-mono uppercase text-slate-500 mb-2 font-semibold">Mật khẩu hiện tại</label>
               <div className="relative">
                 <input
                   id="change-password-current-input"
                   type={showCurrent ? 'text' : 'password'}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  {...register("current_password")}
                   placeholder="Nhập mật khẩu hiện tại..."
                   className="w-full p-3 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                  required
                   autoComplete="current-password"
                 />
                 <button
@@ -155,6 +154,9 @@ export default function ChangePasswordPage() {
                   {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {errors.current_password && (
+                <p className="mt-1.5 text-xs text-rose-500">{errors.current_password.message}</p>
+              )}
             </div>
 
             <div>
@@ -163,11 +165,9 @@ export default function ChangePasswordPage() {
                 <input
                   id="change-password-new-input"
                   type={showNew ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  {...register("new_password")}
                   placeholder="Nhập mật khẩu mới..."
                   className="w-full p-3 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                  required
                   autoComplete="new-password"
                 />
                 <button
@@ -178,6 +178,9 @@ export default function ChangePasswordPage() {
                   {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {errors.new_password && (
+                <p className="mt-1.5 text-xs text-rose-500">{errors.new_password.message}</p>
+              )}
             </div>
 
             <div>
@@ -185,13 +188,14 @@ export default function ChangePasswordPage() {
               <input
                 id="change-password-confirm-input"
                 type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                {...register("confirm_password")}
                 placeholder="Gõ lại mật khẩu mới..."
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                required
                 autoComplete="new-password"
               />
+              {errors.confirm_password && (
+                <p className="mt-1.5 text-xs text-rose-500">{errors.confirm_password.message}</p>
+              )}
             </div>
 
             <button
