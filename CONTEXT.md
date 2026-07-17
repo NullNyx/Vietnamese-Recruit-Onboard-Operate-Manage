@@ -98,7 +98,8 @@ Workflow cốt lõi duy nhất của project: email đến → AI nhận diện 
 _Avoid_: Pipeline (Pipeline chỉ machine status của Candidate)
 
 **Onboarding**:
-Quy trình dựa trên checklist, biến Candidate accepted thành Employee active. Quy trình được kích hoạt bởi event Candidate “accepted”. Một OnboardingProcess chứa danh sách task (ví dụ ký hợp đồng, nộp hồ sơ, gán department/position, đặt start date); HR hoàn tất từng task, và chỉ khi mọi task bắt buộc hoàn tất cùng với thông tin department, position, manager và start date đầy đủ thì Employee mới trở thành active.
+Quy trình dựa trên checklist, biến Candidate accepted thành Employee active. Quy trình được kích hoạt bởi event Candidate "accepted". Một OnboardingProcess chứa danh sách task (ví dụ ký hợp đồng, nộp hồ sơ, gán department/position, đặt start date); HR hoàn tất từng task, và chỉ khi mọi task bắt buộc hoàn tất cùng với thông tin department, position, manager và start date đầy đủ thì Employee mới trở thành active.
+_Tình trạng triển khai (đã có):_ publisher `candidate_accepted` (ARQ) bên recruitment → worker consumer `onboarding/worker.py` (retry tối đa 3) → `OnboardingProcess` với checklist 4 task cố định → activation đặt `Employee.is_active = true` trong cùng transaction với task cuối. API `/api/onboarding/*` và UI `/onboarding` cho HR đã có. Onboarding không còn là "mắt xích còn thiếu" — nó đã được triển khai đầu cuối.
 _Avoid_: Promotion, Hiring
 
 **Onboarding Task**:
