@@ -1,0 +1,160 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { LogIn, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { login, type CurrentUser } from '@/lib/api/auth';
+import { useSession, useAuthGuard } from '@/lib/auth/session';
+import { getErrorMessage } from '@/lib/api/error-codes';
+import type { ApiError } from '@/lib/api/types';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const qc = useQueryClient();
+  const { isAuthenticated, isAdmin, isLoading } = useSession();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace(isAdmin ? '/dashboard' : '/employee');
+    }
+  }, [isLoading, isAuthenticated, isAdmin, router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!email.trim() || !password) {
+      setError('Vui lòng nhập email và mật khẩu.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await login(email.trim(), password);
+      // BUG-10 fix: BE set HttpOnly auth cookie bằng login response, nhưng cookie
+      // KHÔNG đọc được từ JS (HttpOnly). useSession() chỉ biết user qua GET /api/auth/me
+      // — mà React Query cache ['session'] vãn giư giá trị STALE null từ lần /me 401
+      // khi /login mới mount (chưa có cookie). Nếu không sync cache ngay, các trang
+      // protected (vd /change-password) thấy isAuthenticated=false (stale) → redirect
+      // /login nhầm → race chặn cascade ESS. Login response body đã chứa user đầy đủ,
+      // dụng nó cập nhật cache ngay.
+      qc.setQueryData<CurrentUser | null>(['session'], result.user);
+      // BE sets HttpOnly cookie; session data in response
+      if (result.must_change_password) {
+        router.replace('/change-password');
+      } else {
+        router.replace(result.user.role === 'admin' ? '/dashboard' : '/employee');
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        const apiErr = err as ApiError;
+        const msg = getErrorMessage(apiErr.errorCode) || apiErr.message;
+        setError(msg);
+      } else {
+        setError('Đăng nhập thất bại. Vui lòng thử lại.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="animate-spin w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-center min-h-screen p-4 bg-slate-50 text-slate-900 relative overflow-hidden">
+      <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-indigo-50/40 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full bg-indigo-100/30 blur-[120px] pointer-events-none" />
+
+      <div className="w-full max-w-md p-8 bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200/80 shadow-xl shadow-slate-100 relative z-10">
+        {/* Brand Banner */}
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-2 bg-gradient-to-tr from-indigo-600 to-indigo-500 rounded-lg text-white font-black tracking-tighter text-xl shadow-md shadow-indigo-100">
+            VR
+          </div>
+          <div>
+            <span className="font-sans font-bold text-lg tracking-tight text-slate-900 block">Vroom HR</span>
+            <span className="text-xs text-slate-500 block font-mono">Đăng nhập hệ thống</span>
+          </div>
+        </div>
+
+        {error && (
+          <div className="p-3 mb-6 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-sm flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-xs font-mono uppercase text-slate-500 mb-2 font-semibold">Email</label>
+            <input
+              id="login-email-input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ha.pham@vroomhr.vn"
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              required
+              autoComplete="email"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-mono uppercase text-slate-500 mb-2 font-semibold">Mật khẩu</label>
+            <div className="relative">
+              <input
+                id="login-password-input"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Nhập mật khẩu..."
+                className="w-full p-3 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                required
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <button
+            id="login-submit-button"
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 transition-all"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                Đang đăng nhập...
+              </>
+            ) : (
+              <>
+                <LogIn className="w-4 h-4" />
+                Đăng nhập
+              </>
+            )}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
