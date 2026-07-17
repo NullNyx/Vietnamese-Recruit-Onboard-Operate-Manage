@@ -134,6 +134,7 @@ class UserRepository:
         self.session.add(user)
         await self.session.flush()
         return user
+
     async def delete_by_employee_id(self, employee_id: UUID) -> bool:
         """Delete a user linked to an employee. Idempotent: returns False if no user found.
 
@@ -149,6 +150,3 @@ class UserRepository:
         await self.session.delete(user)
         await self.session.flush()
         return True
-
-
-
