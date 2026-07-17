@@ -216,7 +216,7 @@ export default function SetupPage() {
                 type="text"
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
-                placeholder="Ví dụ: Vroom Corporation Vietnam"
+                placeholder="Ví dụ: Công ty TNHH ABC"
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                 required
               />
@@ -256,7 +256,7 @@ export default function SetupPage() {
                   type="text"
                   value={hrName}
                   onChange={(e) => setHrName(e.target.value)}
-                  placeholder="Ví dụ: Phạm Thu Hà"
+                  placeholder="Ví dụ: HR Admin"
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
                   required
                 />
@@ -268,7 +268,7 @@ export default function SetupPage() {
                   type="email"
                   value={hrEmail}
                   onChange={(e) => setHrEmail(e.target.value)}
-                  placeholder="ha.pham@vroomhr.vn"
+                  placeholder="hr@tencongty.com"
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
                   required
                 />
