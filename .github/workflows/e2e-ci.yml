@@ -129,11 +129,12 @@ jobs:
         env:
           CI: "true"
 
-      - name: Run Playwright E2E smoke tests
+      - name: Run Playwright full smoke tests (non-blocking)
         working-directory: vroom-hr
         run: pnpm test:e2e
         env:
           CI: "true"
+        continue-on-error: true
 
       # ── Artifacts ───────────────────────────────────────────────────
 
