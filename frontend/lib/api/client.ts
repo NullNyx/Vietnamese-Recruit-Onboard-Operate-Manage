@@ -8,6 +8,7 @@
  */
 
 import { ApiError } from "./types";
+import { isValidationErrorDetail, formatValidationErrors } from "./validation-errors";
 
 /**
  * Base URL for all API requests.
@@ -64,26 +65,39 @@ export async function apiFetch<T>(
       // Halt execution — never resolve, page is navigating away
       return new Promise(() => {});
     }
-    const payload = await res.json().catch(() => null);
-    const errorCode =
-      payload?.error_code ??
-      payload?.error?.code ??
-      payload?.detail?.error_code ??
-      "UNKNOWN_ERROR";
-    const message =
-      payload?.message ??
-      payload?.error?.message ??
-      (typeof payload?.detail === "string" ? payload.detail : undefined) ??
-      payload?.detail?.message ??
-      res.statusText;
-    const details = payload?.detail ?? undefined;
+      const payload = await res.json().catch(() => null);
 
-    throw new ApiError(
-      res.status,
-      errorCode,
-      typeof message === "string" ? message : JSON.stringify(message),
-      details && typeof details === "object" ? (details as Record<string, unknown>) : undefined,
-    );
+        // ── Pydantic validation error (422 detail array) ──
+        if (isValidationErrorDetail(payload?.detail)) {
+          const { fieldErrors, summary } = formatValidationErrors(payload.detail);
+          throw new ApiError(
+            res.status,
+            "VALIDATION_ERROR",
+            summary,
+            undefined,
+            fieldErrors,
+          );
+        }
+
+        const errorCode =
+          payload?.error_code ??
+          payload?.error?.code ??
+          payload?.detail?.error_code ??
+          "UNKNOWN_ERROR";
+        const message =
+          payload?.message ??
+          payload?.error?.message ??
+          (typeof payload?.detail === "string" ? payload.detail : undefined) ??
+          payload?.detail?.message ??
+          res.statusText;
+        const details = payload?.detail ?? undefined;
+
+        throw new ApiError(
+          res.status,
+          errorCode,
+          typeof message === "string" ? message : JSON.stringify(message),
+          details && typeof details === "object" ? (details as Record<string, unknown>) : undefined,
+        );
   }
 
   // Handle 204 No Content
@@ -129,24 +143,37 @@ export async function apiFetchBlob(
       // Halt execution — never resolve, page is navigating away
       return new Promise(() => {});
     }
-    // Same error parsing as apiFetch
-    const payload = await res.json().catch(() => null);
-    const errorCode =
-      payload?.error_code ??
-      payload?.error?.code ??
-      payload?.detail?.error_code ??
-      "UNKNOWN_ERROR";
-    const message =
-      payload?.message ??
-      payload?.error?.message ??
-      (typeof payload?.detail === "string" ? payload.detail : undefined) ??
-      payload?.detail?.message ??
-      res.statusText;
-    throw new ApiError(
-      res.status,
-      errorCode,
-      typeof message === "string" ? message : JSON.stringify(message),
-    );
+        // Same error parsing as apiFetch
+        const payload = await res.json().catch(() => null);
+
+        // ── Pydantic validation error (422 detail array) ──
+        if (isValidationErrorDetail(payload?.detail)) {
+          const { fieldErrors, summary } = formatValidationErrors(payload.detail);
+          throw new ApiError(
+            res.status,
+            "VALIDATION_ERROR",
+            summary,
+            undefined,
+            fieldErrors,
+          );
+        }
+
+        const errorCode =
+          payload?.error_code ??
+          payload?.error?.code ??
+          payload?.detail?.error_code ??
+          "UNKNOWN_ERROR";
+        const message =
+          payload?.message ??
+          payload?.error?.message ??
+          (typeof payload?.detail === "string" ? payload.detail : undefined) ??
+          payload?.detail?.message ??
+          res.statusText;
+        throw new ApiError(
+          res.status,
+          errorCode,
+          typeof message === "string" ? message : JSON.stringify(message),
+        );
   }
 
   return res.blob();

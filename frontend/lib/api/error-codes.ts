@@ -7,10 +7,11 @@
  */
 
 export const ERROR_CODE_MESSAGES: Record<string, string> = {
-  // ── Network / Client Errors ──
-  NETWORK_ERROR: "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.",
-  TIMEOUT: "Yêu cầu đã hết thời gian chờ. Vui lòng thử lại.",
-  UNKNOWN_ERROR: "Đã xảy ra lỗi không xác định. Vui lòng thử lại.",
+      // ── Network / Client Errors ──
+      NETWORK_ERROR: "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.",
+      TIMEOUT: "Yêu cầu đã hết thời gian chờ. Vui lòng thử lại.",
+      UNKNOWN_ERROR: "Đã xảy ra lỗi không xác định. Vui lòng thử lại.",
+      VALIDATION_ERROR: "Vui lòng kiểm tra lại thông tin đã nhập.",
 
   // ── Identity Module ──
 AUTH_ERROR: "Lỗi xác thực hệ thống",

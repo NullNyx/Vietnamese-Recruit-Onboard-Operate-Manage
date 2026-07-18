@@ -24,42 +24,55 @@ import { getErrorMessage } from '@/lib/api/error-codes';
  * Accepts optional `title` override (default: "Đã xảy ra lỗi. Vui lòng thử lại.").
  */
 export function ErrorBanner({
-  error,
-  title = 'Đã xảy ra lỗi. Vui lòng thử lại.',
-}: {
-  error: unknown;
-  title?: string;
-}) {
-  if (!error) return null;
-  let msg = title;
-  let code: string | undefined;
-  if (typeof error === 'string') {
-    msg = error;
-  } else if (error instanceof Error) {
-    const apiErr = error as ApiError;
-    code = apiErr.errorCode;
-    if (code) {
-      const mapped = getErrorMessage(code);
-      // BUG 2: fallback to raw BE message when error_code is unmapped
-      msg = mapped.startsWith('Lỗi hệ thống') && apiErr.message
-        ? apiErr.message
-        : mapped;
-    } else {
-      msg = apiErr.message || msg;
+      error,
+      title = 'Đã xảy ra lỗi. Vui lòng thử lại.',
+    }: {
+      error: unknown;
+      title?: string;
+    }) {
+      if (!error) return null;
+      let msg = title;
+      let code: string | undefined;
+      let fieldErrors: Record<string, string> | undefined;
+      if (typeof error === 'string') {
+        msg = error;
+      } else if (error instanceof Error) {
+        const apiErr = error as ApiError;
+        code = apiErr.errorCode;
+        fieldErrors = apiErr.fieldErrors;
+        if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+          // Validation error: use the detailed per-field message from the client
+          msg = apiErr.message || title;
+        } else if (code) {
+          const mapped = getErrorMessage(code);
+          // BUG 2: fallback to raw BE message when error_code is unmapped
+          msg = mapped.startsWith('Lỗi hệ thống') && apiErr.message
+            ? apiErr.message
+            : mapped;
+        } else {
+          msg = apiErr.message || msg;
+        }
+      }
+      const hasFields = fieldErrors && Object.keys(fieldErrors).length > 0;
+      return (
+        <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          <div className="min-w-0 text-sm">
+            <p className="break-words font-semibold">{msg}</p>
+            {hasFields && (
+              <ul className="mt-1.5 space-y-0.5 list-disc list-inside">
+                {Object.values(fieldErrors!).map((fieldMsg, i) => (
+                  <li key={i} className="text-xs text-rose-600">{fieldMsg}</li>
+                ))}
+              </ul>
+            )}
+            {code && code !== 'UNKNOWN_ERROR' && code !== 'VALIDATION_ERROR' && (
+              <code className="text-[11px] font-mono text-rose-400 block mt-0.5">{code}</code>
+            )}
+          </div>
+        </div>
+      );
     }
-  }
-  return (
-    <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700">
-      <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-      <div className="min-w-0 text-sm">
-        <p className="break-words font-semibold">{msg}</p>
-        {code && code !== 'UNKNOWN_ERROR' && (
-          <code className="text-[11px] font-mono text-rose-400 block mt-0.5">{code}</code>
-        )}
-      </div>
-    </div>
-  );
-}
 
 /** @deprecated Alias for ErrorBanner — kept for backward compat. Use ErrorBanner directly. */
 export const ErrorAlert = ErrorBanner;

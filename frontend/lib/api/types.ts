@@ -190,17 +190,26 @@ export class ApiError extends Error {
   public statusCode: number;
   public errorCode: string;
   public details?: Record<string, unknown>;
+  /** Per-field Vietnamese error messages from Pydantic validation (422) detail arrays. */
+  public fieldErrors?: Record<string, string>;
 
   constructor(
     statusCode: number,
     errorCode: string,
     message: string,
     details?: Record<string, unknown>,
+    fieldErrors?: Record<string, string>,
   ) {
     super(message);
     this.name = "ApiError";
     this.statusCode = statusCode;
     this.errorCode = errorCode;
     this.details = details;
+    this.fieldErrors = fieldErrors;
+  }
+
+  /** True when this error carries field-level validation messages. */
+  isValidationError(): boolean {
+    return this.fieldErrors != null && Object.keys(this.fieldErrors).length > 0;
   }
 }
