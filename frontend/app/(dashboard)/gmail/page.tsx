@@ -12,6 +12,7 @@ import * as gmailApi from '@/lib/api/gmail';
 import type { OutboundEmail, ImportStatusResponse } from '@/lib/api/gmail';
 import type { EmailMessage, OrganizationGoogleConnectionResponse } from '@/lib/api/types';
 import { ApiError } from '@/lib/api/types';
+import DOMPurify from 'dompurify';
 import { getErrorMessage } from '@/lib/api/error-codes';
 import { useAuthGuard } from '@/lib/auth/session';
 
@@ -400,7 +401,7 @@ function GmailPageInner() {
                   <div className="p-4 text-sm text-slate-700 whitespace-pre-wrap max-h-[40vh] overflow-y-auto">
                     {body.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : body.data?.plain_text || body.data?.html ? (
                       body.data.html ? (
-                        <div dangerouslySetInnerHTML={{ __html: body.data.html }} />
+                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(body.data.html) }} />
                       ) : body.data.plain_text
                     ) : '(không có nội dung)'}
                   </div>
