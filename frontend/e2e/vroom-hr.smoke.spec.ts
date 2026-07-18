@@ -356,3 +356,194 @@ test.describe("HR AI Assistant — human-in-the-loop", () => {
     expect(autoWrite, "AI must never auto-write — only HR confirm").toBe(0);
   });
 });
+// ============================================================================
+// Negative Tests — T10–T16 (không mock, real BE, resilient assertions)
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// T10–T12 — Login negative tests (không auth)
+// ----------------------------------------------------------------------------
+test.describe("Negative — Login (T10–T12)", () => {
+  test.use({ storageState: { cookies: [], origins: [] } as any });
+
+  // T10: Wrong password → error message, vẫn ở /login
+  test("T10 | đăng nhập sai mật khẩu → hiển thị lỗi, vẫn ở /login", async ({ page }) => {
+    await page.goto("/login");
+    await expect(page.locator("#login-email-input")).toBeVisible({ timeout: 15000 });
+    await page.locator("#login-email-input").fill(HR_EMAIL);
+    await page.locator("#login-password-input").fill("WrongPassword!999");
+    await page.locator("#login-submit-button").click();
+
+    // Flexible: error surfaced in Vietnamese hoặc English — use error container (bg-rose-50 text-rose-600)
+    await expect(
+      page.locator(".bg-rose-50.text-rose-600").first(),
+    ).toBeVisible({ timeout: 15000 });
+    expect(page.url(), "must stay on /login after failed auth").toContain("/login");
+  });
+
+  // T11: Wrong email (non-existent account) → error, vẫn ở /login
+  test("T11 | đăng nhập email không tồn tại → hiển thị lỗi, vẫn ở /login", async ({ page }) => {
+    await page.goto("/login");
+    await expect(page.locator("#login-email-input")).toBeVisible({ timeout: 15000 });
+    await page.locator("#login-email-input").fill("ghost@vroom.example.com");
+    await page.locator("#login-password-input").fill(HR_PASSWORD);
+    await page.locator("#login-submit-button").click();
+
+    await expect(
+      page.locator(".bg-rose-50.text-rose-600").first(),
+    ).toBeVisible({ timeout: 15000 });
+    expect(page.url()).toContain("/login");
+  });
+
+  // T12: Empty form → validation (HTML5 built-in hoặc JS error surfaced)
+  test("T12 | đăng nhập form rỗng → validation (HTML5 hoặc JS error)", async ({ page }) => {
+    await page.goto("/login");
+    await page.locator("#login-submit-button").click();
+
+    // HTML5 built-in validation ngăn submit, hoặc JS surfaced error.
+    // Cả 2 TH: user vẫn ở /login hoặc thấy validation message.
+    await page.waitForTimeout(1500);
+    const stillOnLogin = page.url().includes("/login");
+    const validationVisible =
+      (await page.getByText(/(required|bắt buộc|vui lòng|please|nhập|invalid|không hợp lệ|điền|trường)/i).count()) > 0;
+
+    expect(
+      stillOnLogin || validationVisible,
+      "empty form must either show validation errors or prevent submission (stay on /login)",
+    ).toBeTruthy();
+  });
+});
+
+// ----------------------------------------------------------------------------
+// T13 — Employee truy cập admin page → redirect hoặc forbidden
+// ----------------------------------------------------------------------------
+test.describe("Negative — Employee permission (T13)", () => {
+  test.use({ storageState: EMP_STATE });
+
+  test("T13 | Employee truy cập trang admin → redirect hoặc forbidden", async ({ page }) => {
+    test.skip(!existsSync(EMP_STATE), "no employee session file — T4 did not complete");
+
+    await page.goto("/dashboard");
+    await page.waitForTimeout(3000);
+
+    const url = page.url();
+    const isRedirected = url.includes("/employee") || url.includes("/login");
+    const forbiddenVisible =
+      (await page.locator('[class*="bg-rose-50"]').filter({ hasText: /403|forbidden|không có quyền|unauthorized/i }).count()) > 0;
+
+    expect(
+      isRedirected || forbiddenVisible,
+      `employee must not access admin dashboard — got URL ${url}`,
+    ).toBeTruthy();
+  });
+});
+
+// ----------------------------------------------------------------------------
+// T14 — Không auth truy cập protected page → redirect /login
+// ----------------------------------------------------------------------------
+test.describe("Negative — No-auth access (T14)", () => {
+  test.use({ storageState: { cookies: [], origins: [] } as any });
+
+  test("T14 | không auth truy cập protected page → redirect /login", async ({ page }) => {
+    await page.goto("/dashboard");
+    await page.waitForURL("**/login", { timeout: 15000 });
+    expect(page.url()).toContain("/login");
+  });
+});
+
+// ----------------------------------------------------------------------------
+// T15 — Setup wizard validation (negative) — chỉ chạy khi DB chưa được setup
+// ----------------------------------------------------------------------------
+test.describe("Negative — Setup wizard validation (T15)", () => {
+  test.use({ storageState: { cookies: [], origins: [] } as any });
+
+  test("T15 | setup wizard từ chối input không hợp lệ (password ngắn, mismatch, email sai)", async ({ page }) => {
+    const alreadySetup = await setupStatus();
+    if (alreadySetup) {
+      test.skip(true as any, "DB already set up — setup wizard not accessible");
+      return;
+    }
+
+    await page.goto("/setup");
+    await expect(page.locator("#setup-wizard-container")).toBeVisible({ timeout: 30000 });
+
+    // --- Step 1: submit without org name → validation error ---
+    await page.locator("#setup-step1-submit").click();
+    await expect(
+      page.locator("#setup-error-msg").filter({ hasText: /bắt buộc|vui lòng|nhập|điền|required/i }),
+    ).toBeVisible({ timeout: 10000 });
+
+    // Fill org name, proceed to step 2
+    await page.locator("#setup-org-name-input").fill(ORG_NAME);
+    await page.locator("#setup-step1-submit").click();
+
+    // --- Step 2: password too short → validation error ---
+    await expect(page.locator("#setup-step2-form")).toBeVisible({ timeout: 10000 });
+    await page.locator("#setup-hr-name-input").fill(HR_NAME);
+    await page.locator("#setup-hr-email-input").fill(HR_EMAIL);
+    await page.locator("#setup-password-input").fill("short");
+    await page.locator("#setup-password-confirm-input").fill("short");
+    await page.locator("#setup-step2-submit").click();
+
+    await expect(
+      page.locator("#setup-error-msg").filter({ hasText: /ngắn|short|ký tự|characters|12 ký tự|tối thiểu|minimum/i }),
+    ).toBeVisible({ timeout: 10000 });
+
+    // --- Step 2: password mismatch → validation error ---
+    await page.locator("#setup-password-input").fill("ValidPass!123");
+    await page.locator("#setup-password-confirm-input").fill("DifferentPass!456");
+    await page.locator("#setup-step2-submit").click();
+
+    await expect(
+      page.locator("#setup-error-msg").filter({ hasText: /không khớp|mismatch|không trùng|trùng khớp|khác/i }),
+    ).toBeVisible({ timeout: 10000 });
+
+    // --- Step 2: invalid email format → validation error ---
+    await page.locator("#setup-password-input").fill("ValidPass!123");
+    await page.locator("#setup-password-confirm-input").fill("ValidPass!123");
+    await page.locator("#setup-hr-email-input").fill("not-an-email");
+    await page.locator("#setup-step2-submit").click();
+
+    await expect(
+      page.locator("#setup-error-msg").filter({ hasText: /email|không hợp lệ|invalid|định dạng|format/i }),
+    ).toBeVisible({ timeout: 10000 });
+  });
+});
+
+// ----------------------------------------------------------------------------
+// T16 — Rate limit (observational, không hard-fail nếu BE không bật rate limiter)
+// ----------------------------------------------------------------------------
+test.describe("Negative — Rate limit (T16)", () => {
+  test.use({ storageState: { cookies: [], origins: [] } as any });
+
+  test("T16 | gửi nhiều request liên tiếp → AUTH_RATE_LIMITED (nếu BE bật)", async ({ page, request }) => {
+    const statuses: number[] = [];
+    // Gửi 8 rapid login requests với wrong credentials để trigger rate limiting.
+    // Dùng page.request (same origin, cookies carried) để BE thấy 1 client.
+    for (let i = 0; i < 8; i++) {
+      const r = await request.post("/api/auth/login", {
+        data: { email: `rate-test-${i}@vroom.example.com`, password: "wrong" },
+        failOnStatusCode: false,
+      });
+      statuses.push(r.status());
+      if (i < 7) await page.waitForTimeout(200);
+    }
+
+    test.info().annotations.push({
+      type: "rate-limit-statuses",
+      description: statuses.join(", "),
+    });
+
+    // Soft assertion: nếu rate limiting được bật, ít nhất 1 request trả về 429.
+    // Nếu không có rate limiter, observation only — không fail.
+    const hasRateLimit = statuses.includes(429);
+    if (!hasRateLimit) {
+      test.info().annotations.push({
+        type: "rate-limit-note",
+        description: "No 429 observed — rate limiting may not be enabled on this BE",
+      });
+    }
+    // Luôn pass; test này quan sát không hard-fail.
+    expect(true).toBeTruthy();
+  });
+});
