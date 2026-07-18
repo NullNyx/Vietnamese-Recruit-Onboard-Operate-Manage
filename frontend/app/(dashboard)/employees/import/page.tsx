@@ -36,7 +36,7 @@ export default function ImportEmployeesPage() {
       <PageHeader
         icon={Upload}
         title="Import Nhân viên"
-        subtitle="Nhập danh sách Employee từ tệp Excel (.xlsx). Phòng ban/Chức vụ mới sẽ tự tạo."
+        subtitle="Nhập danh sách nhân viên từ tệp Excel (.xlsx). Phòng ban và chức vụ mới sẽ được tự động tạo nếu chưa có."
         actions={
           <ButtonGhost onClick={() => router.push('/employees')}>
             <ArrowLeft className="w-4 h-4" /> Danh sách

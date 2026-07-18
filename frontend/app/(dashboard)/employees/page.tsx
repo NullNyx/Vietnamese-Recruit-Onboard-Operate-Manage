@@ -77,7 +77,7 @@ export default function EmployeesListPage() {
       <PageHeader
         icon={Users}
         title="Danh sách Nhân viên"
-        subtitle="Quản lý hồ sơ Employee, phòng ban và chức vụ."
+        subtitle="Quản lý toàn bộ hồ sơ nhân viên: thông tin cá nhân, phòng ban, chức vụ và trạng thái làm việc."
         actions={
           <div className="flex gap-2">
             <ButtonGhost onClick={() => router.push('/employees/import')}>

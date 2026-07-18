@@ -70,7 +70,7 @@ export default function EmployeeDocumentsPage() {
       <PageHeader
         icon={FolderOpen}
         title="Tài liệu của tôi"
-        subtitle="Kho tài liệu cá nhân (MinIO presigned). Bạn có thể tải lên và tải xuống."
+        subtitle="Nơi lưu trữ tài liệu cá nhân của bạn. Bạn có thể tải lên hồ sơ, bằng cấp và tải xuống khi cần."
         actions={<ButtonPrimary onClick={() => setUploadOpen(true)}><Plus className="w-4 h-4" /> Tải tài liệu</ButtonPrimary>}
       />
 

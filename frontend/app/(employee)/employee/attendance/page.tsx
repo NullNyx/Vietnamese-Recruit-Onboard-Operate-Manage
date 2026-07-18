@@ -40,7 +40,7 @@ export default function EmployeeAttendancePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader icon={Clock} title="Chấm công" subtitle="Check-in / check-out hôm nay và lịch sử 30 ngày gần đây." />
+      <PageHeader icon={Clock} title="Chấm công" subtitle="Điểm danh đầu giờ và cuối giờ hôm nay, cùng lịch sử chấm công 30 ngày gần nhất." />
 
       {/* Today */}
       <Card>

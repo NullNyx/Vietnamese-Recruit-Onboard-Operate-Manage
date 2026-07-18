@@ -152,7 +152,7 @@ export default function PayslipsPage() {
       <PageHeader
         icon={FileSpreadsheet}
         title="Phiếu lương (Payslips)"
-        subtitle="Bảng kê theo kỳ — tạo draft, sửa, publish, xóa draft. Chỉ draft đã publish mới lộ cho nhân viên."
+        subtitle="Quản lý phiếu lương theo kỳ: tạo bản nháp, sửa, phát hành hoặc xóa. Nhân viên chỉ nhìn thấy phiếu lương đã được phát hành."
         actions={
           <ButtonPrimary onClick={() => setCreateOpen(true)}>
             <Plus className="w-4 h-4" /> Tạo draft

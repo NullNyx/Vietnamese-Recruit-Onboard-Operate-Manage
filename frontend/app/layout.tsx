@@ -14,8 +14,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Vroom HR — Nền tảng HR self-host tối ưu',
-  description: 'Hệ thống quản trị nhân sự tự động hóa thông minh cho doanh nghiệp Việt Nam.',
+  title: 'Vroom HR — Nền tảng quản trị nhân sự dành cho doanh nghiệp Việt Nam',
+  description: 'Giải pháp nhân sự toàn diện: tuyển dụng, chấm công, tính lương, quản lý hồ sơ — tất cả trong một nền tảng.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

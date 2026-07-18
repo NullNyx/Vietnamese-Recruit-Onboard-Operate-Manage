@@ -40,7 +40,7 @@ export default function EmployeePayslipsPage() {
       <PageHeader
         icon={FileSpreadsheet}
         title="Phiếu lương"
-        subtitle="Xem phiếu lương đã phát hành của bạn."
+        subtitle="Xem các phiếu lương đã được phát hành của bạn."
       />
 
       <Card>

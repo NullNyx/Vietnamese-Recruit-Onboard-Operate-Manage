@@ -69,7 +69,7 @@ export default function InterviewsPage() {
         </div>
       </div>
       <p className="text-sm text-slate-500 -mt-3">
-        Tạo Interview BẮT BUỘC chọn Calendar (GH #214). Lifecycle scheduled → completed/cancelled; reschedule giữ entity. Xung đột Calendar <code>410/412</code> cần HR chọn hướng giải quyết — KHÔNG last-write-wins.
+        Để tạo lịch phỏng vấn, cần chọn lịch làm việc trước. Vòng đời: đã lên lịch → hoàn tất / đã hủy. Khi đổi lịch, buổi cũ được giữ nguyên. Nếu có xung đột lịch, bạn cần chọn hướng xử lý thủ công.
       </p>
 
       {actionError && <ErrorBanner error={actionError} />}
@@ -179,7 +179,7 @@ export default function InterviewsPage() {
       </div>
 
       <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500">
-        Vòng đời phỏng vấn: tạo Interview → <code>scheduled</code> → <code>completed</code> hoặc <code>cancelled</code>. Reschedule giữ entity Interview; replacement tạo Interview mới (giữ lịch sử cancelled). Tạo/hoàn tất Interview <strong>không tự đổi</strong> Candidate pipeline — HR tường minh.
+        Vòng đời buổi phỏng vấn: tạo lịch → đã lên lịch → hoàn tất hoặc đã hủy. Đổi lịch sẽ giữ buổi cũ, tạo buổi mới. Việc tạo hay hoàn tất phỏng vấn không tự động thay đổi trạng thái ứng viên — bạn cần cập nhật thủ công.
       </div>
     </div>
   );

@@ -82,7 +82,7 @@ export default function RequestsReviewPage() {
       <PageHeader
         icon={FileText}
         title="Yêu cầu Nhân viên (Review queue)"
-        subtitle="Phê duyệt / từ chối yêu cầu nghỉ phép và tăng ca. Từ chối cần lý do. Mọi quyết định được audit."
+        subtitle="Duyệt hoặc từ chối yêu cầu nghỉ phép và tăng ca của nhân viên. Khi từ chối cần nêu rõ lý do. Mọi quyết định đều được lưu lại."
       />
 
       <Card>

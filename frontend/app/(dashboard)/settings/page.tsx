@@ -183,7 +183,7 @@ function AITab() {
       <Card title="Capability toggles (độc lập)" icon={<ToggleRight className="w-4 h-4 text-indigo-600" />}>
         <ToggleRow
           title="AI Automation"
-          desc="Phân loại email + parse CV (pipeline nền)."
+          desc="Tự động phân loại email tuyển dụng và đọc hiểu CV gửi kèm."
           enabled={cfg.automation_enabled}
           state={cfg.automation_state}
           loading={toggleAutomation.isPending}
@@ -191,7 +191,7 @@ function AITab() {
         />
         <ToggleRow
           title="AI Assistant"
-          desc="Chatbot hội thoại HR (human-in-the-loop)."
+          desc="Trợ lý AI hỏi đáp về nhân sự, luôn có người kiểm soát trước khi thực thi."
           enabled={cfg.assistant_enabled}
           state={cfg.assistant_state}
           loading={toggleAssistant.isPending}
@@ -253,7 +253,7 @@ function ToolsTab() {
 
   return (
     <Card title="Tool registry (Read-Tool / Draft-Tool)" icon={<Cpu className="w-4 h-4 text-indigo-600" />}>
-      <p className="text-[11px] text-slate-500 mb-3">Bật/tắt công cụ cung cấp cho LLM. Chỉ có Read-Tool và Draft-Tool — không có write-tool cho LLM.</p>
+      <p className="text-[11px] text-slate-500 mb-3">Bật/tắt các công cụ AI được phép dùng. Hệ thống chỉ cấp quyền đọc và đề xuất, không tự động ghi dữ liệu.</p>
       {msg && <div className="text-xs text-rose-600 mb-2 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" />{msg}</div>}
       <div className="space-y-4">
         <div><p className="text-[10px] font-mono uppercase text-slate-400 mb-1.5">Read-Tool</p><div className="space-y-1.5">{readTools.map((t) => <ToolRow key={t.tool_name} t={t} />)}{readTools.length === 0 && <Empty text="Không có Read-Tool." />}</div></div>

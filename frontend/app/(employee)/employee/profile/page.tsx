@@ -50,7 +50,7 @@ export default function EmployeeProfilePage() {
   if (!employeeId) {
     return (
       <div className="space-y-6">
-        <PageHeader icon={User} title="Hồ sơ của tôi" subtitle="Tài khoản chưa liên kết Employee." />
+        <PageHeader icon={User} title="Hồ sơ của tôi" subtitle="Tài khoản này chưa được gắn với hồ sơ nhân viên. Vui lòng liên hệ HR để được hỗ trợ." />
         <Card><SectionTitle icon={User}>Hồ sơ</SectionTitle>
           <p className="text-xs text-rose-600">Tài khoản đăng nhập chưa gắn với Employee. Vui lòng liên hệ HR.</p>
         </Card>
@@ -66,7 +66,7 @@ export default function EmployeeProfilePage() {
       <PageHeader
         icon={User}
         title="Hồ sơ của tôi"
-        subtitle="Xem thông tin nhân sự. Bạn chỉ có thể tự cập nhật điện thoại và địa chỉ."
+        subtitle="Xem thông tin hồ sơ nhân sự của bạn. Bạn có thể tự cập nhật số điện thoại và địa chỉ liên lạc."
         actions={employee && !editing ? (
           <ButtonPrimary onClick={() => setEditing(true)}><Save className="w-4 h-4" /> Cập nhật liên lạc</ButtonPrimary>
         ) : null}

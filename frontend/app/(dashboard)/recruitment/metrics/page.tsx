@@ -23,15 +23,15 @@ export default function MetricsPage() {
         <h1 className="text-xl font-bold text-slate-900">Metrics Tuyển dụng</h1>
       </div>
       <p className="text-sm text-slate-500 -mt-3">
-        Pipeline processing (cửa sổ 24h cuộn) + trạng thái Job Opening. Dữ liệu live từ BE.
+        Thống kê xử lý tuyển dụng trong 24 giờ qua và trạng thái các vị trí đang tuyển. Số liệu được cập nhật trực tiếp.
       </p>
 
       {/* Pipeline metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card icon={TrendingUp} tone="indigo" label="Queue depth" value={String(metrics?.queue_depth ?? 0)} hint="Đang xử lý" />
-        <Card icon={CheckCircle} tone="emerald" label="Tỷ lệ thành công" value={`${Math.round((metrics?.success_rate ?? 0) * 100)}%`} hint="CV parse OK" />
-        <Card icon={XCircle} tone="rose" label="Tỷ lệ thất bại" value={`${Math.round((metrics?.failure_rate ?? 0) * 100)}%`} hint="CV parse lỗi" />
-        <Card icon={Clock} tone="amber" label="Thời gian TB" value={`${((metrics?.average_processing_time_ms ?? 0) / 1000).toFixed(1)}s`} hint="Xử lý trung bình" />
+        <Card icon={TrendingUp} tone="indigo" label="Đang chờ xử lý" value={String(metrics?.queue_depth ?? 0)} hint="Hồ sơ đang trong hàng đợi" />
+        <Card icon={CheckCircle} tone="emerald" label="Tỷ lệ thành công" value={`${Math.round((metrics?.success_rate ?? 0) * 100)}%`} hint="CV được đọc hiểu thành công" />
+        <Card icon={XCircle} tone="rose" label="Tỷ lệ thất bại" value={`${Math.round((metrics?.failure_rate ?? 0) * 100)}%`} hint="CV không đọc được" />
+        <Card icon={Clock} tone="amber" label="Thời gian xử lý" value={`${((metrics?.average_processing_time_ms ?? 0) / 1000).toFixed(1)}s`} hint="Thời gian đọc hiểu trung bình mỗi CV" />
       </div>
 
       {/* Job opening metrics */}
@@ -49,7 +49,7 @@ export default function MetricsPage() {
       )}
 
       <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500">
-        lưu ý: Metrics pipeline đo trên cửa sổ trượt 24h; Job Opening metrics là tổng snapshot đầy đủ.
+        Lưu ý: số liệu xử lý tuyển dụng tính trong 24 giờ gần nhất; số liệu vị trí tuyển dụng là tổng toàn bộ hiện tại.
       </div>
     </div>
   );

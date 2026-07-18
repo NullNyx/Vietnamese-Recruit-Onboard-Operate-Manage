@@ -61,7 +61,7 @@ export default function NewEmployeePage() {
       <PageHeader
         icon={UserPlus}
         title="Thêm nhân viên"
-        subtitle="Tạo hồ sơ Employee mới. Tài khoản đăng nhập (Employee Account) cấp sau khi Employee active."
+        subtitle="Tạo hồ sơ nhân viên mới. Tài khoản đăng nhập sẽ được cấp sau khi nhân viên chính thức đi làm."
         actions={
           <ButtonGhost onClick={() => router.push('/employees')}>
             <ArrowLeft className="w-4 h-4" /> Danh sách

@@ -53,7 +53,7 @@ export default function CandidatesPage() {
         <h1 className="text-xl font-bold text-slate-900">Ứng viên (Candidates)</h1>
       </div>
       <p className="text-sm text-slate-500 -mt-3">
-        Pipeline tuyển dụng: new → reviewing → interview_scheduled → accepted/rejected/archived. Candidate CHƯA phải Employee.
+        Quy trình tuyển dụng: mới → đang xem xét → đã lên lịch phỏng vấn → trúng tuyển / từ chối / lưu trữ. Ứng viên chưa phải là nhân viên chính thức.
       </p>
 
       {/* Filters */}

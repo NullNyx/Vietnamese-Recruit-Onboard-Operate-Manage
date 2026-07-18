@@ -70,7 +70,7 @@ export default function JobOpeningsPage() {
         </button>
       </div>
       <p className="text-sm text-slate-500 -mt-3">
-        Vòng đời draft → open → closed/cancelled. Chỉ vị trí <code>open</code> nhận Candidate assignment mới. Headcount theo Candidate <em>accepted</em>.
+        Vòng đời vị trí: bản nháp → đang tuyển → đã đóng / đã hủy. Chỉ vị trí đang tuyển mới nhận ứng viên mới. Chỉ tiêu tuyển tính theo số ứng viên đã trúng tuyển.
       </p>
 
       {/* Metrics summary */}

@@ -56,7 +56,7 @@ export default function AttendancePage() {
       <PageHeader
         icon={Clock}
         title="Chấm công & Allowlist"
-        subtitle="Bản ghi chấm công (HR correction có reason + audit) và danh sách mạng cho phép CIDR."
+        subtitle="Xem và sửa bản ghi chấm công (mọi sửa đổi đều được ghi lại lý do). Quản lý danh sách mạng văn phòng được phép chấm công."
       />
 
       <div className="flex gap-2">

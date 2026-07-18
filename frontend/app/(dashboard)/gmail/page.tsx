@@ -364,7 +364,7 @@ function GmailPageInner() {
                 ) : (messages.data?.messages?.length ?? 0) === 0 ? (
                   <EmptyState
                     title={category ? 'Không có email khớp bộ lọc' : 'Chưa có email nào'}
-                    hint={category ? 'Trạng thái rỗng do bộ lọc — đổi danh mục hoặc đồng bộ.' : 'Đồng bộ Gmail để load email.'}
+                    hint={category ? 'Không có email nào khớp với bộ lọc hiện tại — hãy thử đổi danh mục hoặc đồng bộ lại.' : 'Nhấn Đồng bộ để tải email từ Gmail về.'}
                   />
                 ) : (
                   messages.data!.messages.map((m) => (
@@ -443,7 +443,7 @@ function GmailPageInner() {
                   )}
                 </div>
               ) : (
-                <EmptyState title="Chọn một email để xem nội dung" hint="Email được AI phân loại sau khi đồng bộ." icon={<Inbox className="w-6 h-6 text-slate-300" />} />
+                <EmptyState title="Chọn một email bên trái để xem nội dung chi tiết." hint="AI sẽ tự động phân loại email sau khi đồng bộ." icon={<Inbox className="w-6 h-6 text-slate-300" />} />
               )}
             </div>
           </div>
@@ -662,7 +662,7 @@ function OutboundSection({
       {loading ? (
         <Loader2 className="w-4 h-4 animate-spin text-slate-300" />
       ) : items.length === 0 ? (
-        <EmptyState title="Chưa có email outbound" hint="Soạn email mới để tạo nháp pending." />
+        <EmptyState title="Chưa có email nào đang chờ gửi." hint="Nhấn Soạn email để tạo thư nháp mới." />
       ) : (
         <div className="space-y-2">
           {items.map((m) => (

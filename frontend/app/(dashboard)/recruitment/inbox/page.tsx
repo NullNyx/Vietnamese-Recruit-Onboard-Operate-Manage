@@ -115,7 +115,7 @@ export default function InboxPage() {
         <h1 className="text-xl font-bold text-slate-900">Hộp thư Tuyển dụng (Recruitment Inbox)</h1>
       </div>
       <p className="text-sm text-slate-500 -mt-3">
-        Workspace hợp nhất xử lý email tuyển dụng & Job Application theo trạng thái. AI phân loại intent; HR xác nhận/tách/promote — không tự tạo Candidate từ tín hiệu chưa chắc.
+        Nơi tập trung xử lý email tuyển dụng và hồ sơ ứng viên. AI tự động phân loại nội dung email; bạn xác nhận, tách hồ sơ hoặc chuyển thành ứng viên chính thức.
       </p>
 
       {/* Group filter tabs */}

@@ -69,7 +69,7 @@ export default function EmployeeRequestsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader icon={FileText} title="Yêu cầu của tôi" subtitle="Gửi yêu cầu nghỉ phép / tăng ca và theo dõi. Yêu cầu chờ HR review trước khi có hiệu lực." />
+      <PageHeader icon={FileText} title="Yêu cầu của tôi" subtitle="Gửi yêu cầu nghỉ phép hoặc tăng ca và theo dõi trạng thái. Yêu cầu cần được HR duyệt trước khi có hiệu lực." />
 
       {/* Create form */}
       <Card>
