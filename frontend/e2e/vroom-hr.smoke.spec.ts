@@ -374,9 +374,9 @@ test.describe("Negative — Login (T10–T12)", () => {
     await page.locator("#login-password-input").fill("WrongPassword!999");
     await page.locator("#login-submit-button").click();
 
-    // Flexible: error surfaced in Vietnamese hoặc English
+    // Flexible: error surfaced in Vietnamese hoặc English — use error container (bg-rose-50 text-rose-600)
     await expect(
-      page.locator("text=/(sai|incorrect|invalid|không đúng|wrong|credentials|mật khẩu|password|không hợp lệ)/i").first(),
+      page.locator(".bg-rose-50.text-rose-600").first(),
     ).toBeVisible({ timeout: 15000 });
     expect(page.url(), "must stay on /login after failed auth").toContain("/login");
   });
@@ -390,7 +390,7 @@ test.describe("Negative — Login (T10–T12)", () => {
     await page.locator("#login-submit-button").click();
 
     await expect(
-      page.locator("text=/(không tìm thấy|not found|không tồn tại|no account|email|không đúng|invalid|sai)/i").first(),
+      page.locator(".bg-rose-50.text-rose-600").first(),
     ).toBeVisible({ timeout: 15000 });
     expect(page.url()).toContain("/login");
   });
@@ -429,7 +429,7 @@ test.describe("Negative — Employee permission (T13)", () => {
     const url = page.url();
     const isRedirected = url.includes("/employee") || url.includes("/login");
     const forbiddenVisible =
-      (await page.getByText(/403|forbidden|không có quyền|unauthorized|truy cập|không được phép/i).count()) > 0;
+      (await page.locator('[class*="bg-rose-50"]').filter({ hasText: /403|forbidden|không có quyền|unauthorized/i }).count()) > 0;
 
     expect(
       isRedirected || forbiddenVisible,
@@ -470,7 +470,7 @@ test.describe("Negative — Setup wizard validation (T15)", () => {
     // --- Step 1: submit without org name → validation error ---
     await page.locator("#setup-step1-submit").click();
     await expect(
-      page.locator("text=/(required|bắt buộc|vui lòng|please|nhập|invalid|không hợp lệ|tên|name|điền)/i").first(),
+      page.locator("#setup-error-msg").filter({ hasText: /bắt buộc|vui lòng|nhập|điền|required/i }),
     ).toBeVisible({ timeout: 10000 });
 
     // Fill org name, proceed to step 2
@@ -486,7 +486,7 @@ test.describe("Negative — Setup wizard validation (T15)", () => {
     await page.locator("#setup-step2-submit").click();
 
     await expect(
-      page.locator("text=/(ngắn|short|ít nhất|at least|ký tự|characters|mật khẩu|password|không hợp lệ|invalid|tối thiểu|minimum)/i").first(),
+      page.locator("#setup-error-msg").filter({ hasText: /ngắn|short|ký tự|characters|12 ký tự|tối thiểu|minimum/i }),
     ).toBeVisible({ timeout: 10000 });
 
     // --- Step 2: password mismatch → validation error ---
@@ -495,7 +495,7 @@ test.describe("Negative — Setup wizard validation (T15)", () => {
     await page.locator("#setup-step2-submit").click();
 
     await expect(
-      page.locator("text=/(không khớp|mismatch|không trùng|match|confirm|khác|giống)/i").first(),
+      page.locator("#setup-error-msg").filter({ hasText: /không khớp|mismatch|không trùng|trùng khớp|khác/i }),
     ).toBeVisible({ timeout: 10000 });
 
     // --- Step 2: invalid email format → validation error ---
@@ -505,7 +505,7 @@ test.describe("Negative — Setup wizard validation (T15)", () => {
     await page.locator("#setup-step2-submit").click();
 
     await expect(
-      page.locator("text=/(email|không hợp lệ|invalid|định dạng|format|hợp lệ)/i").first(),
+      page.locator("#setup-error-msg").filter({ hasText: /email|không hợp lệ|invalid|định dạng|format/i }),
     ).toBeVisible({ timeout: 10000 });
   });
 });
