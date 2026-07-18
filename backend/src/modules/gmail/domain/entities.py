@@ -182,6 +182,8 @@ class OutboundEmail(SQLModel, table=True):
     )
     subject: str = Field(max_length=998, nullable=False)
     body_html: str = Field(nullable=False)
+    cc_recipients: str | None = Field(default=None, nullable=True)  # JSON array of CC email addresses
+    reply_to_message_id: str | None = Field(default=None, max_length=255, nullable=True)
     recipient_email: str = Field(max_length=255, nullable=False)
     sender_email: str | None = Field(default=None, max_length=255)
     status: str = Field(default="pending", max_length=20, nullable=False, index=True)

@@ -302,17 +302,39 @@ class ImportCancelResponse(BaseModel):
 class OutboundEmailCreateRequest(BaseModel):
     """Request schema for creating an outbound email.
 
+    Accepts both the legacy recruitment-flow shape (recipient_email, body_html)
+    and the frontend ComposeDialog shape (to, cc, body_text, reply_to_message_id).
+
     Attributes:
         candidate_id: Optional UUID of the candidate to track sending.
-        recipient_email: The target recipient email address.
+        to: List of TO recipient email addresses (frontend compose).
+        cc: Optional list of CC recipient email addresses.
         subject: Email subject line (max 500).
-        body_html: HTML body content.
+        body_text: Plain-text body content (frontend compose).
+        body_html: HTML body content (legacy / rich editor).
+        reply_to_message_id: Optional Gmail message ID for threading replies.
+        recipient_email: Legacy single recipient email (recruitment flow).
     """
 
     candidate_id: UUID | None = None
-    recipient_email: str = Field(..., max_length=255)
+    # New fields (frontend ComposeDialog)
+    to: list[str] | None = None
+    cc: list[str] | None = None
+    body_text: str | None = None
+    reply_to_message_id: str | None = None
+    # Legacy fields (kept for backward compat)
+    recipient_email: str | None = None
     subject: str = Field(..., max_length=500)
-    body_html: str = Field(...)
+    body_html: str | None = None
+
+    @model_validator(mode='after')
+    def _validate_recipient_and_body(self):
+        """Ensure at least one recipient and one body field are provided."""
+        if not self.to and not self.recipient_email:
+            raise ValueError("Either 'to' or 'recipient_email' is required")
+        if not self.body_html and not self.body_text:
+            raise ValueError("Either 'body_html' or 'body_text' is required")
+        return self
 
 
 class OutboundEmailResponse(BaseModel):

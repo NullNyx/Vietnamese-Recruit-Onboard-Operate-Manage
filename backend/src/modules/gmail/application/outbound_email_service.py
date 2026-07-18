@@ -7,6 +7,7 @@ using the Organization Google Connection (not individual HR tokens).
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -119,6 +120,8 @@ class OutboundEmailService:
         body_html: str,
         created_by_user_id: UUID,
         hr_user: Any,
+        cc_recipients: str | None = None,
+        reply_to_message_id: str | None = None,
     ) -> OutboundEmail:
         """Create an outbound email command with pending status.
 
@@ -132,6 +135,8 @@ class OutboundEmailService:
             body_html: The HTML email body.
             created_by_user_id: The UUID of the HR user confirming the send.
             hr_user: The User entity for audit logging.
+            cc_recipients: Optional JSON array of CC recipient emails.
+            reply_to_message_id: Optional Gmail message ID for threading replies.
 
         Returns:
             The persisted OutboundEmail entity.
@@ -166,6 +171,8 @@ class OutboundEmailService:
             subject=subject,
             body_html=body_html,
             recipient_email=recipient_email,
+            cc_recipients=cc_recipients,
+            reply_to_message_id=reply_to_message_id,
             status=OutboundEmailStatus.pending,
             created_by_user_id=created_by_user_id,
         )
@@ -245,12 +252,13 @@ class OutboundEmailService:
             raise OutboundEmailNotFoundError(f"Outbound email not found: {outbound_id}")
         outbound = _updated
         await self._session.commit()
-
         # Build the MIME message
         mime_bytes = self._build_mime_message(
             to=[outbound.recipient_email],
             subject=outbound.subject,
             body_html=outbound.body_html,
+            cc=json.loads(outbound.cc_recipients) if outbound.cc_recipients else None,
+            reply_to_message_id=outbound.reply_to_message_id,
         )
 
         # Send via GmailAdapter using the org token
@@ -476,6 +484,8 @@ class OutboundEmailService:
         to: list[str],
         subject: str,
         body_html: str,
+        cc: list[str] | None = None,
+        reply_to_message_id: str | None = None,
     ) -> bytes:
         """Build an RFC 2822 MIME message for sending.
 
@@ -483,6 +493,8 @@ class OutboundEmailService:
             to: List of recipient email addresses.
             subject: The email subject.
             body_html: The HTML body content.
+            cc: Optional list of CC recipient email addresses.
+            reply_to_message_id: Optional Gmail message ID for threading (In-Reply-To / References).
 
         Returns:
             The MIME message as bytes.
@@ -490,6 +502,11 @@ class OutboundEmailService:
         msg = MIMEMultipart("alternative")
         msg["To"] = ", ".join(to)
         msg["Subject"] = subject
+        if cc:
+            msg["Cc"] = ", ".join(cc)
+        if reply_to_message_id:
+            msg["In-Reply-To"] = reply_to_message_id
+            msg["References"] = reply_to_message_id
         msg.attach(MIMEText(body_html, "html", "utf-8"))
 
         return msg.as_bytes()
