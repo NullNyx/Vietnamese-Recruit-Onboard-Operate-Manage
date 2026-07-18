@@ -9,7 +9,7 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import update
+from sqlalchemy import func, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -197,7 +197,7 @@ class EmailRepository:
         return message
 
     async def list_by_user(
-        self, user_id: UUID, limit: int = 50, offset: int = 0
+        self, user_id: UUID, limit: int = 50, offset: int = 0, category: str | None = None
     ) -> list[EmailMessage]:
         """List email messages for a user, ordered by received_at descending.
 
@@ -205,6 +205,7 @@ class EmailRepository:
             user_id: The UUID of the user whose messages to list.
             limit: Maximum number of messages to return.
             offset: Number of messages to skip for pagination.
+            category: Optional category to filter by.
 
         Returns:
             A list of EmailMessage entities ordered by most recent first.
@@ -216,8 +217,30 @@ class EmailRepository:
             .limit(limit)
             .offset(offset)
         )
+        if category is not None:
+            statement = statement.where(EmailMessage.category == category)
         result = await self.session.execute(statement)
         return list(result.scalars().all())
+
+    async def count_by_user(
+        self, user_id: UUID, category: str | None = None
+    ) -> int:
+        """Count email messages for a user, optionally filtered by category.
+
+        Args:
+            user_id: The UUID of the user whose messages to count.
+            category: Optional category to filter by.
+
+        Returns:
+            Total number of matching EmailMessage entities.
+        """
+        statement = select(func.count()).select_from(EmailMessage).where(
+            EmailMessage.user_id == user_id
+        )
+        if category is not None:
+            statement = statement.where(EmailMessage.category == category)
+        result = await self.session.execute(statement)
+        return result.scalar_one()
 
     async def get_failed_messages(
         self, user_id: UUID, permanent_only: bool = False
