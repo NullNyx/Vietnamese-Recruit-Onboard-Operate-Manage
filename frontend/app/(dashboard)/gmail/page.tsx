@@ -144,6 +144,7 @@ function GmailPageInner() {
   });
   const attachments = useMutation({
     mutationFn: (id: string) => gmailApi.getAttachments(id),
+    onError: (e) => push({ kind: 'error', text: `Lấy attachments thất bại: ${apiErrorText(e)}` }),
   });
   const processAttachmentsMut = useMutation({
     mutationFn: (id: string) => gmailApi.processAttachments(id),
@@ -408,9 +409,9 @@ function GmailPageInner() {
                     <button
                       onClick={() => attachments.mutate(selected.id)}
                       disabled={attachments.isPending}
-                      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50"
+                      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50"
                     >
-                      <Paperclip className="w-3.5 h-3.5" /> Lấy attachments
+                      {attachments.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Paperclip className="w-3.5 h-3.5" />} Lấy attachments
                     </button>
                     <button
                       onClick={() => processAttachmentsMut.mutate(selected.id)}
@@ -464,6 +465,7 @@ function GmailPageInner() {
         open={composeOpen}
         onClose={() => setComposeOpen(false)}
         replyTo={replyTo}
+        replyBodyText={body.data?.plain_text ?? null}
         onSend={(d) => createOutboundMut.mutate(d)}
         sending={createOutboundMut.isPending}
       />
@@ -700,11 +702,12 @@ function OutboundSection({
 // Compose dialog (creates pending outbound draft; HR confirms to actually send)
 // ---------------------------------------------------------------------------
 function ComposeDialog({
-  open, onClose, replyTo, onSend, sending,
+  open, onClose, replyTo, replyBodyText, onSend, sending,
 }: {
   open: boolean;
   onClose: () => void;
   replyTo: EmailMessage | null;
+  replyBodyText?: string | null;
   onSend: (data: { to: string[]; cc?: string[]; subject: string; body_text?: string; body_html?: string; reply_to_message_id?: string }) => void;
   sending: boolean;
 }) {
@@ -718,9 +721,20 @@ function ComposeDialog({
       setTo(replyTo ? replyTo.sender_email : '');
       setCc('');
       setSubject(replyTo ? `Re: ${replyTo.subject || ''}` : '');
-      setBodyText('');
+      if (replyTo) {
+        const date = replyTo.received_at ? new Date(replyTo.received_at).toLocaleString('vi-VN') : '';
+        const header = `Vào ${date}, ${replyTo.sender_name || replyTo.sender_email} đã viết:\n`;
+        const sourceText = replyBodyText || replyTo.snippet || '';
+        const quoted = sourceText
+          .split('\n')
+          .map((line) => `> ${line}`)
+          .join('\n');
+        setBodyText(header + quoted + '\n\n');
+      } else {
+        setBodyText('');
+      }
     }
-  }, [open, replyTo]);
+  }, [open, replyTo, replyBodyText]);
 
   if (!open) return null;
   const submit = (e: React.FormEvent) => {
