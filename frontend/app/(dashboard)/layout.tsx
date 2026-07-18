@@ -46,17 +46,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Sparkles className="w-4 h-4" />
         </button>
       }
-      sidebarBadge={
-        <div className="p-2.5 mb-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black tracking-tighter text-xs shadow-md shadow-indigo-100">
-            VR
-          </div>
-          <div className="overflow-hidden">
-            <span className="font-semibold text-[11px] text-slate-800 block truncate">Vroom HR</span>
-            <span className="text-[9px] text-slate-400 block truncate font-mono">TZ: Asia/Ho_Chi_Minh</span>
-          </div>
-        </div>
-      }
+      
     >
       {children}
     </AppShell>

@@ -28,7 +28,7 @@ export interface AppShellProps {
   /** Navigation items rendered in the sidebar */
   navItems: NavItem[];
   /** Sidebar badge: the org/user card rendered above the nav section */
-  sidebarBadge: React.ReactNode;
+  sidebarBadge?: React.ReactNode;
   /** Where the AI Assistant button links to, e.g. "/assistant" or "/employee/assistant" */
   assistantHref: string;
   /** Default fallback for user display name */
@@ -99,7 +99,7 @@ export default function AppShell({
       <div className="flex-1 flex flex-col lg:flex-row">
         {/* Sidebar */}
         <aside className="w-full lg:w-56 bg-white border-r border-slate-200 p-3 shrink-0 space-y-1 shadow-sm overflow-y-auto">
-          {sidebarBadge}
+          {sidebarBadge && sidebarBadge}
 
           <div className="text-[9px] font-mono font-bold text-slate-400 px-3 uppercase tracking-wider mb-1">
             {sidebarSectionLabel}
