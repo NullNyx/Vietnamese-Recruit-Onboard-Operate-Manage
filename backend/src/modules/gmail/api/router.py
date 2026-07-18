@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+import json
 from typing import TYPE_CHECKING, Annotated, Any
 
 if TYPE_CHECKING:
@@ -384,8 +385,8 @@ async def get_message_body(
 ) -> MessageBodyResponse:
     """Fetch the full email body content for a message.
 
-    Retrieves both plain text and HTML versions of the email body
-    from Gmail API. Requires an active Gmail connection.
+    Tries to retrieve the body from locally stored encrypted payload first.
+    Falls back to Gmail API if no cached payload is available.
 
     Args:
         message_id: The Gmail message ID.
@@ -396,9 +397,30 @@ async def get_message_body(
     Returns:
         MessageBodyResponse with plain_text and/or html content.
     """
-    # Get access token from organization connection (raises if not connected)
-    access_token = await _get_user_access_token(email_repo.session)
+    # Try local cache first: look up email by Gmail message ID
+    email = await email_repo.get_by_gmail_id(message_id)
+    if email is not None and email.raw_payload_enc:
+        try:
+            from src.modules.identity.container import get_crypto_utils
 
+            crypto = get_crypto_utils()
+            raw_json = crypto.decrypt(email.raw_payload_enc)
+            data = json.loads(raw_json)
+            payload = data.get("payload", {})
+            body = gmail_adapter._extract_body(payload)
+            return MessageBodyResponse(
+                plain_text=body.plain_text,
+                html=body.html,
+            )
+        except Exception:
+            logger.warning(
+                "Failed to decrypt/extract cached body for message %s, falling back to Gmail API",
+                message_id,
+                exc_info=True,
+            )
+
+    # Fallback: fetch from Gmail API
+    access_token = await _get_user_access_token(email_repo.session)
     body = await gmail_adapter.get_message_body(access_token, message_id)
     return MessageBodyResponse(
         plain_text=body.plain_text,

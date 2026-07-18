@@ -399,7 +399,14 @@ function GmailPageInner() {
                     <p className="text-[11px] text-slate-500">Từ: {selected.sender_name} &lt;{selected.sender_email}&gt; · {fmtDate(selected.received_at)}</p>
                   </div>
                   <div className="p-4 text-sm text-slate-700 whitespace-pre-wrap max-h-[40vh] overflow-y-auto">
-                    {body.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : body.data?.plain_text || body.data?.html ? (
+                    {body.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : body.error ? (
+                      <div className="flex flex-col items-center gap-2 text-xs text-rose-500">
+                        <span>Không tải được nội dung: {apiErrorText(body.error)}</span>
+                        <button onClick={() => body.refetch()} className="inline-flex items-center gap-1 px-2 py-1 rounded border border-rose-200 hover:bg-rose-50 text-rose-600">
+                          <RefreshCw className="w-3 h-3" /> Thử lại
+                        </button>
+                      </div>
+                    ) : body.data?.plain_text || body.data?.html ? (
                       body.data.html ? (
                         <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(body.data.html) }} />
                       ) : body.data.plain_text
