@@ -33,10 +33,20 @@ export function ErrorBanner({
   if (!error) return null;
   let msg = title;
   let code: string | undefined;
-  if (error instanceof Error) {
+  if (typeof error === 'string') {
+    msg = error;
+  } else if (error instanceof Error) {
     const apiErr = error as ApiError;
     code = apiErr.errorCode;
-    msg = code ? getErrorMessage(code) : apiErr.message || msg;
+    if (code) {
+      const mapped = getErrorMessage(code);
+      // BUG 2: fallback to raw BE message when error_code is unmapped
+      msg = mapped.startsWith('Lỗi hệ thống') && apiErr.message
+        ? apiErr.message
+        : mapped;
+    } else {
+      msg = apiErr.message || msg;
+    }
   }
   return (
     <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700">
