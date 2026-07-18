@@ -1,7 +1,7 @@
 """Add cc_recipients and reply_to_message_id columns to outbound_emails.
 
-Revision ID: 075
-Revises: 074
+Revision ID: 076
+Revises: 075
 Create Date: 2026-07-17 00:00:00.000000+00:00
 
 Supports the frontend ComposeDialog which sends CC recipients and
@@ -14,8 +14,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "075"
-down_revision: Union[str, None] = "074"
+revision: str = "076"
+down_revision: Union[str, None] = "075"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
