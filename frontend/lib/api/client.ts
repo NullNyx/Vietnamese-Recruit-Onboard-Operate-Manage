@@ -58,6 +58,12 @@ export async function apiFetch<T>(
   }
 
   if (!res.ok) {
+    // 401 → session expired; redirect to login (guard: don't redirect if already on /login)
+    if (res.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/setup" && window.location.pathname !== "/") {
+      window.location.href = "/login";
+      // Halt execution — never resolve, page is navigating away
+      return new Promise(() => {});
+    }
     const payload = await res.json().catch(() => null);
     const errorCode =
       payload?.error_code ??
@@ -117,6 +123,12 @@ export async function apiFetchBlob(
   }
 
   if (!res.ok) {
+    // 401 → session expired; redirect to login (guard: don't redirect if already on /login)
+    if (res.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/setup" && window.location.pathname !== "/") {
+      window.location.href = "/login";
+      // Halt execution — never resolve, page is navigating away
+      return new Promise(() => {});
+    }
     // Same error parsing as apiFetch
     const payload = await res.json().catch(() => null);
     const errorCode =
