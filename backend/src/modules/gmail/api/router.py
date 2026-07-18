@@ -326,22 +326,30 @@ async def list_messages(
     email_repo: EmailRepositoryDep,
     limit: int = Query(default=50, ge=1, le=100, description="Max messages to return"),
     offset: int = Query(default=0, ge=0, description="Pagination offset"),
+    category: str | None = Query(default=None, description="Filter by category"),
 ) -> MessageListResponse:
     """List email messages for the authenticated user.
 
     Returns messages ordered by received_at descending (most recent first).
     Supports pagination via limit/offset parameters.
+    Optionally filter by category.
 
     Args:
         current_user: The authenticated user.
         email_repo: The email repository.
         limit: Maximum number of messages to return (1-100, default 50).
         offset: Number of messages to skip for pagination.
+        category: Optional category filter (e.g. "job_application", "cv").
 
     Returns:
         MessageListResponse with list of messages and total count.
     """
-    messages = await email_repo.list_by_user(user_id=current_user.id, limit=limit, offset=offset)
+    messages = await email_repo.list_by_user(
+        user_id=current_user.id, limit=limit, offset=offset, category=category
+    )
+    total_count = await email_repo.count_by_user(
+        user_id=current_user.id, category=category
+    )
 
     items = [
         MessageListItem(
@@ -363,7 +371,7 @@ async def list_messages(
         for msg in messages
     ]
 
-    return MessageListResponse(messages=items, total=len(items))
+    return MessageListResponse(messages=items, total=total_count)
 
 
 @router.get(

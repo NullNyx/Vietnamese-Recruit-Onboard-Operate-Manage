@@ -168,9 +168,17 @@ export interface MessagesListResponse {
   total: number;
 }
 
-/** List synced Gmail messages (optionally filtered by category). */
-export async function listMessages(category?: string): Promise<MessagesListResponse> {
-  const qs = category ? `?category=${encodeURIComponent(category)}` : "";
+/** List synced Gmail messages (optionally filtered by category, with pagination). */
+export async function listMessages(
+  category?: string,
+  limit?: number,
+  offset?: number,
+): Promise<MessagesListResponse> {
+  const params = new URLSearchParams();
+  if (category) params.set('category', category);
+  if (limit !== undefined) params.set('limit', String(limit));
+  if (offset !== undefined) params.set('offset', String(offset));
+  const qs = params.toString() ? `?${params.toString()}` : '';
   const res = await safeFetch(`${BASE}/messages${qs}`, authInit());
   return handleResponse<MessagesListResponse>(res);
 }

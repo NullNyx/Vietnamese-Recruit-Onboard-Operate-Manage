@@ -116,13 +116,22 @@ function GmailPageInner() {
   });
 
   // --- messages ---
-  const [category, setCategory] = useState<string>('');
-  const messages = useQuery({
-    queryKey: ['gmail-messages', category],
-    queryFn: () => gmailApi.listMessages(category || undefined),
-    enabled: isConnected,
-    staleTime: 30_000,
-  });
+      const PAGE_SIZE = 20;
+      const [category, setCategory] = useState<string>('');
+      const [page, setPage] = useState(1);
+
+      // Reset page when category changes
+      useEffect(() => { setPage(1); }, [category]);
+
+      const messages = useQuery({
+        queryKey: ['gmail-messages', category, page],
+        queryFn: () => gmailApi.listMessages(category || undefined, PAGE_SIZE, (page - 1) * PAGE_SIZE),
+        enabled: isConnected,
+        staleTime: 30_000,
+      });
+
+      const totalPages = messages.data ? Math.ceil(messages.data.total / PAGE_SIZE) : 0;
+      const hasMore = page < totalPages;
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -367,21 +376,37 @@ function GmailPageInner() {
                     hint={category ? 'Không có email nào khớp với bộ lọc hiện tại — hãy thử đổi danh mục hoặc đồng bộ lại.' : 'Nhấn Đồng bộ để tải email từ Gmail về.'}
                   />
                 ) : (
-                  messages.data!.messages.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => { setSelectedId(m.id); attachments.reset(); }}
-                      className={`w-full text-left px-3 py-2.5 border-b border-slate-50 hover:bg-slate-50 transition-colors ${selectedId === m.id ? 'bg-indigo-50' : ''}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {m.category && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600">{m.category}</span>}
-                        {m.has_attachments && <Paperclip className="w-3 h-3 text-slate-400" />}
-                        <span className="text-xs font-medium text-slate-700 truncate flex-1">{m.subject || '(không tiêu đề)'}</span>
-                      </div>
-                      <div className="text-[10px] text-slate-400 truncate mt-0.5">{m.sender_email}</div>
-                    </button>
-                  ))
-                )}
+                      <>
+                        {messages.data!.messages.map((m) => (
+                          <button
+                            key={m.id}
+                            onClick={() => { setSelectedId(m.id); attachments.reset(); }}
+                            className={`w-full text-left px-3 py-2.5 border-b border-slate-50 hover:bg-slate-50 transition-colors ${selectedId === m.id ? 'bg-indigo-50' : ''}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {m.category && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600">{m.category}</span>}
+                              {m.has_attachments && <Paperclip className="w-3 h-3 text-slate-400" />}
+                              <span className="text-xs font-medium text-slate-700 truncate flex-1">{m.subject || '(không tiêu đề)'}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 truncate mt-0.5">{m.sender_email}</div>
+                          </button>
+                        ))}
+                        {/* Pagination */}
+                        {hasMore && (
+                          <div className="px-3 py-2 border-t border-slate-100 flex items-center justify-between">
+                            <button
+                              onClick={() => setPage((p) => p + 1)}
+                              className="text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                            >
+                              Xem thêm...
+                            </button>
+                            <span className="text-[10px] text-slate-400">
+                              {messages.data!.messages.length + (page - 1) * PAGE_SIZE} / {messages.data!.total}
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    )}
               </div>
             </div>
 
