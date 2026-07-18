@@ -653,6 +653,37 @@ class GmailAdapter:
                 raise
             raise GmailFetchError(f"Failed to fetch message body: {exc}") from exc
 
+        async def get_full_message(self, access_token: str, message_id: str) -> dict[str, Any]:
+            """Fetch the full Gmail message JSON (format=full) with retry and quota tracking.
+
+            Args:
+                access_token: OAuth2 access token.
+                message_id: Gmail message ID.
+
+            Returns:
+                Full message JSON as a dictionary.
+
+            Raises:
+                GmailFetchError: If the API call fails after retries.
+                httpx.HTTPStatusError: If 401 (for token refresh handling).
+            """
+
+            async def _request() -> dict[str, Any]:
+                response = await self._http_client.get(
+                    f"{GMAIL_API_BASE}messages/{message_id}",
+                    headers=self._auth_headers(access_token),
+                    params={"format": "full"},
+                )
+                response.raise_for_status()
+                return response.json()  # type: ignore[no-any-return]
+
+            try:
+                return await self.retry_with_backoff(_request, quota_units=5)
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 401:
+                    raise
+                raise GmailFetchError(f"Failed to fetch full message: {exc}") from exc
+
     def _extract_body(self, payload: dict[str, Any]) -> MessageBody:
         """Extract text/plain and text/html body parts from message payload.
 
