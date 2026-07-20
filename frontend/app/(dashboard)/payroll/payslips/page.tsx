@@ -464,9 +464,9 @@ export default function PayslipsPage() {
           <Field label="PDF URL (tùy chọn)"><TextInput value={draft.pdf_url} onChange={(e) => setDraft({ ...draft, pdf_url: e.target.value })} /></Field>
                                 {(() => {
                                   const g = parseFloat(draft.gross_salary) || 0;
-                                  const d = parseFloat(draft.deductions) || 0;
-                                  const ins = parseFloat(draft.insurance_employee) || 0;
-                                  const pit = parseFloat(draft.pit_amount) || 0;
+                                  const d = parseFloat(draft.deductions ?? '0') || 0;
+                                  const ins = parseFloat(draft.insurance_employee ?? '0') || 0;
+                                  const pit = parseFloat(draft.pit_amount ?? '0') || 0;
                                   const calcNet = g - d - ins - pit;
                                   const manualNet = parseFloat(draft.net_salary) || 0;
                                   const mismatch = g > 0 && manualNet > 0 && calcNet !== manualNet;
@@ -481,7 +481,7 @@ export default function PayslipsPage() {
           {createMut.isError && <ErrorAlert error={createMut.error} />}
           <div className="flex justify-end gap-2">
             <ButtonGhost onClick={() => setCreateOpen(false)}>Hủy</ButtonGhost>
-                <ButtonPrimary onClick={submitCreate} disabled={createMut.isPending || !draft.employee_id || !draft.period_month || !draft.gross_salary || !draft.net_salary || (() => { const g = parseFloat(draft.gross_salary) || 0; const d = parseFloat(draft.deductions) || 0; const ins = parseFloat(draft.insurance_employee) || 0; const pit = parseFloat(draft.pit_amount) || 0; const calcNet = g - d - ins - pit; const manualNet = parseFloat(draft.net_salary) || 0; return g > 0 && manualNet > 0 && calcNet !== manualNet; })()}>
+                <ButtonPrimary onClick={submitCreate} disabled={createMut.isPending || !draft.employee_id || !draft.period_month || !draft.gross_salary || !draft.net_salary || (() => { const g = parseFloat(draft.gross_salary) || 0; const d = parseFloat(draft.deductions ?? '0') || 0; const ins = parseFloat(draft.insurance_employee ?? '0') || 0; const pit = parseFloat(draft.pit_amount ?? '0') || 0; const calcNet = g - d - ins - pit; const manualNet = parseFloat(draft.net_salary) || 0; return g > 0 && manualNet > 0 && calcNet !== manualNet; })()}>
               {createMut.isPending ? 'Đang tạo…' : 'Tạo draft'}
             </ButtonPrimary>
           </div>
