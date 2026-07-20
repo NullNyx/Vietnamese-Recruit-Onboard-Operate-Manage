@@ -382,7 +382,7 @@ export default function AiChat({
     setSessionReady(false);
     api.startSession(assistantType)
       .then((res) => { if (mountedRef.current) { sessionIdRef.current = res.session_id; setSessionReady(true); } })
-      .catch(() => { if (mountedRef.current) setSessionReady(true); });
+      .catch(() => { if (mountedRef.current) setSessionReady(true); });  // eslint-disable-line react-hooks/set-state-in-effect
     return () => {
       mountedRef.current = false;
       const sid = sessionIdRef.current;
@@ -445,7 +445,7 @@ export default function AiChat({
     setSessionReady(false);
     api.startSession(assistantType)
       .then((res) => { if (mountedRef.current) { sessionIdRef.current = res.session_id; setSessionReady(true); } })
-      .catch(() => { if (mountedRef.current) setSessionReady(true); });
+      .catch(() => { if (mountedRef.current) setSessionReady(true); });  // eslint-disable-line react-hooks/set-state-in-effect
     textareaRef.current?.focus();
   }, [api, assistantType]);
 

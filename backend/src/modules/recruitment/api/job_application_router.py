@@ -34,7 +34,6 @@ from src.modules.recruitment.infrastructure.repositories import (
     JobApplicationRepository,
     JobOpeningRepository,
 )
-from src.shared.messages import get_error_detail
 
 logger = logging.getLogger(__name__)
 

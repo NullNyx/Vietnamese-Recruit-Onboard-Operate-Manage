@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import logging
 import json
+import logging
 from typing import TYPE_CHECKING, Annotated, Any
 
 if TYPE_CHECKING:
@@ -366,8 +366,9 @@ async def list_messages(
     # M2: Reset stuck cv_processing emails (>30 min)
     from datetime import UTC, datetime, timedelta
 
-    from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
     from sqlmodel import update
+
+    from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
 
     stale_cv_stmt = (
         update(EmailMessageEntity)
@@ -636,8 +637,6 @@ async def process_attachments(
     from sqlmodel import select
 
     from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
-    from src.modules.recruitment.application.cv_processor import AttachmentInput
-    from src.modules.recruitment.container import get_cv_processor_service
 
     # Get access token from organization connection (raises if not connected)
     access_token = await _get_user_access_token(email_repo.session)
@@ -1144,8 +1143,6 @@ async def _update_database_and_process_cvs(
         for email in recruitment_with_attachments:
             try:
                 # Import here to avoid circular imports
-                from src.modules.recruitment.application.cv_processor import AttachmentInput
-                from src.modules.recruitment.container import get_cv_processor_service
 
                 # Run CV processing via shared helper
                 cv_documents = await _fetch_and_process_cv_for_email(

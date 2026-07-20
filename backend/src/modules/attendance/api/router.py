@@ -11,7 +11,6 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from src.shared.messages import get_message
 
 from src.modules.attendance.api.schemas import (
     AttendanceListResponse,
@@ -42,6 +41,7 @@ from src.modules.identity.application.audit_service import AuditService
 from src.modules.identity.container import get_current_user
 from src.modules.identity.domain.entities import AuditActionType, User, UserRole
 from src.modules.identity.domain.exceptions import AccessDeniedError
+from src.shared.messages import get_message
 
 attendance_router = APIRouter(prefix="/api/attendance", tags=["attendance"])
 

@@ -31,7 +31,6 @@ from src.modules.recruitment.api.schemas import (
     SplitInboxItemRequest,
     SplitInboxItemResponse,
 )
-from src.shared.messages import get_error_detail
 from src.modules.recruitment.application.evaluation_service import (
     CorrectionEvaluationService,
     CorrectionRecordNotFoundError,

@@ -7,7 +7,6 @@ require an authenticated Employee.
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from src.shared.messages import get_error_detail
 
 from src.modules.employee.api.dependencies import get_current_employee
 from src.modules.employee.domain.entities import Employee
@@ -30,6 +29,7 @@ from src.modules.employee_request.api.schemas import (
 from src.modules.employee_request.application.leave_service import LeaveService
 from src.modules.employee_request.application.overtime_service import OvertimeService
 from src.modules.employee_request.container import get_leave_service, get_overtime_service
+from src.shared.messages import get_error_detail
 
 employee_request_router = APIRouter(
     prefix="/api/employee-requests",
