@@ -80,7 +80,7 @@ export default function InterviewsPage() {
         Để tạo lịch phỏng vấn, cần chọn lịch làm việc trước. Vòng đời: đã lên lịch → hoàn tất / đã hủy. Khi đổi lịch, buổi cũ được giữ nguyên. Nếu có xung đột lịch, bạn cần chọn hướng xử lý thủ công.
       </p>
 
-      {actionError && <ErrorBanner error={actionError} />}
+      {!!actionError && <ErrorBanner error={actionError} />}
 
       {/* Calendar preconditions */}
       <div className={`p-4 rounded-2xl border shadow-sm shadow-slate-100 ${selectedCalendarId ? 'bg-emerald-50/40 border-emerald-200' : 'bg-amber-50/60 border-amber-200'}`}>

@@ -57,7 +57,7 @@ export default function ReviewPage() {
         Hàng đợi CV do AI Automation parse. Xem confidence/provenance, sửa dữ liệu (correction phục vụ evaluation, không phải online learning), retry parse hoặc dismiss.
       </p>
 
-      {actionError && <ErrorBanner error={actionError} />}
+      {!!actionError && <ErrorBanner error={actionError} />}
 
       {isLoading ? (
         <Loading label="Đang tải review queue..." />

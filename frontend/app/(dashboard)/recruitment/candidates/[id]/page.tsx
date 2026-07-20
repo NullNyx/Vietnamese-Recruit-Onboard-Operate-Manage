@@ -180,7 +180,7 @@ export default function CandidateDetailPage() {
         </div>
       </div>
 
-      {actionError && <ErrorBanner error={actionError} />}
+      {!!actionError && <ErrorBanner error={actionError} />}
 
       {actionSuccess && (
         <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700 flex items-start justify-between gap-3">

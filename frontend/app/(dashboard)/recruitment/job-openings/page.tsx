@@ -94,7 +94,7 @@ export default function JobOpeningsPage() {
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm vị trí..." className="ml-auto px-3 py-1 text-xs bg-white border border-slate-200 rounded-lg w-48" />
       </div>
 
-      {actionError && <ErrorBanner error={actionError} />}
+      {!!actionError && <ErrorBanner error={actionError} />}
 
       {createOpen && (
         <JobForm

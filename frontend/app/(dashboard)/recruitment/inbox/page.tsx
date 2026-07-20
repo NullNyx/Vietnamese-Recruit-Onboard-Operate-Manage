@@ -143,7 +143,7 @@ export default function InboxPage() {
         })}
       </div>
 
-      {actionError && <ErrorBanner error={actionError} />}
+      {!!actionError && <ErrorBanner error={actionError} />}
 
       {isLoading ? (
         <Loading label="Đang tải inbox..." />
