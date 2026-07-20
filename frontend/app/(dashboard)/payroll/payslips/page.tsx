@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  FileSpreadsheet, Plus, Search, Eye, Pencil, Send, Trash2, ChevronLeft, ChevronRight,
+  FileSpreadsheet, Plus, Search, Eye, Pencil, Send, Trash2, ChevronLeft, ChevronRight, Undo2, CheckSquare, X,
 } from 'lucide-react';
 import {
-  fetchPayslips, fetchPayslip, createPayslip, updatePayslip, publishPayslip, deletePayslip,
+  fetchPayslips, fetchPayslip, createPayslip, updatePayslip, publishPayslip, unpublishPayslip, deletePayslip, bulkPublishPayslips,
 } from '@/lib/api/admin-payslips';
 import type {
   Payslip, PayslipListResponse, CreatePayslipRequest, UpdatePayslipRequest,
@@ -45,6 +45,38 @@ function toMonth(stat: string): string {
 const empName = (list: EmployeeListResponse | undefined, id: string) =>
   list?.items?.find((e) => e.id === id)?.full_name ?? id.slice(0, 8);
 
+/** Remove Vietnamese diacritics for accent-insensitive search. */
+function removeDiacritics(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/** Vietnamese month labels + year range for payroll period selectors. */
+const MONTHS = [
+  { value: '01', label: 'Tháng 1' },
+  { value: '02', label: 'Tháng 2' },
+  { value: '03', label: 'Tháng 3' },
+  { value: '04', label: 'Tháng 4' },
+  { value: '05', label: 'Tháng 5' },
+  { value: '06', label: 'Tháng 6' },
+  { value: '07', label: 'Tháng 7' },
+  { value: '08', label: 'Tháng 8' },
+  { value: '09', label: 'Tháng 9' },
+  { value: '10', label: 'Tháng 10' },
+  { value: '11', label: 'Tháng 11' },
+  { value: '12', label: 'Tháng 12' },
+];
+const currentYear = new Date().getFullYear();
+const YEARS = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
+
+function parseMonth(s: string): { year: string; month: string } {
+  if (!s || s.length < 7) return { year: '', month: '' };
+  return { year: s.slice(0, 4), month: s.slice(5, 7) };
+}
+function joinMonth(year: string, month: string): string {
+  if (!year || !month) return '';
+  return `${year}-${month}`;
+}
+
 export default function PayslipsPage() {
   useAuthGuard({ requireAuth: true, requireAdmin: true });
   const qc = useQueryClient();
@@ -57,7 +89,7 @@ export default function PayslipsPage() {
 
   const { data: employees } = useQuery<EmployeeListResponse>({
     queryKey: ['employees-list', { all: true }],
-    queryFn: () => listEmployees({ page: 1, page_size: 100, is_active: true }),
+    queryFn: () => listEmployees({ page: 1, page_size: 500, is_active: true }),
     staleTime: 60_000,
   });
 
@@ -135,13 +167,52 @@ export default function PayslipsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-payslip', viewId] });
       qc.invalidateQueries({ queryKey: ['admin-payslips'] });
+      setToast({ message: 'Đã phát hành phiếu lương.', tone: 'success' });
     },
   });
+  const [delConfirm, setDelConfirm] = useState<string | null>(null);
+  const [unpublishConfirm, setUnpublishConfirm] = useState<string | null>(null);
+  const [empSearch, setEmpSearch] = useState('');
+  const [empDropdownOpen, setEmpDropdownOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
+
+  // Auto-dismiss toast after 3s
+  React.useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [toast]);
+
+  const bulkPubMut = useMutation({
+    mutationFn: (ids: string[]) => bulkPublishPayslips(ids),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['admin-payslips'] });
+      setSelectedIds(new Set());
+      setToast({ message: `Đã phát hành ${data.published_count} phiếu lương.`, tone: 'success' });
+    },
+  });
+
+  const unpublishMut = useMutation({
+    mutationFn: (id: string) => unpublishPayslip(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-payslip', viewId] });
+      qc.invalidateQueries({ queryKey: ['admin-payslips'] });
+      setViewId(null);
+      setEditMode(false);
+      setUnpublishConfirm(null);
+      setToast({ message: 'Đã thu hồi phiếu lương.', tone: 'success' });
+    },
+  });
+
   const delMut = useMutation({
     mutationFn: (id: string) => deletePayslip(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-payslips'] });
       setViewId(null);
+      setDelConfirm(null);
+      setToast({ message: 'Đã xóa phiếu lương draft.', tone: 'success' });
     },
   });
 
@@ -151,7 +222,7 @@ export default function PayslipsPage() {
     <div className="space-y-6">
       <PageHeader
         icon={FileSpreadsheet}
-        title="Phiếu lương (Payslips)"
+        title="Phiếu lương"
         subtitle="Quản lý phiếu lương theo kỳ: tạo bản nháp, sửa, phát hành hoặc xóa. Nhân viên chỉ nhìn thấy phiếu lương đã được phát hành."
         actions={
           <ButtonPrimary onClick={() => setCreateOpen(true)}>
@@ -164,10 +235,46 @@ export default function PayslipsPage() {
         <SectionTitle icon={Search}>Bộ lọc</SectionTitle>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
           <Field label="Nhân viên">
-            <Select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
-              <option value="">Tất cả</option>
-              {employees?.items?.map((e) => <option key={e.id} value={e.id}>{e.full_name}</option>)}
-            </Select>
+            <div className="relative">
+              <div className="flex items-center border border-slate-200 rounded-lg bg-white px-2 py-1.5">
+                <input
+                  type="text"
+                  placeholder="Tìm nhân viên..."
+                  value={empSearch || (employeeId ? empName(employees, employeeId) : '')}
+                  onChange={(e) => { setEmpSearch(e.target.value); setEmployeeId(''); setEmpDropdownOpen(true); }}
+                  onFocus={() => setEmpDropdownOpen(true)}
+                  onBlur={() => setTimeout(() => setEmpDropdownOpen(false), 200)}
+                  className="flex-1 text-xs outline-none bg-transparent"
+                />
+                {employeeId && (
+                  <button onClick={() => { setEmployeeId(''); setEmpSearch(''); }} className="text-slate-400 hover:text-slate-600">
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              {empDropdownOpen && (
+                <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <button
+                    className="w-full text-left px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50"
+                    onMouseDown={() => { setEmployeeId(''); setEmpSearch(''); setEmpDropdownOpen(false); }}
+                  >
+                    Tất cả
+                  </button>
+                  {(employees?.items ?? [])
+                    .filter((e) => !empSearch || removeDiacritics(e.full_name.toLowerCase()).includes(removeDiacritics(empSearch.toLowerCase())))
+                    .slice(0, 50)
+                    .map((e) => (
+                      <button
+                        key={e.id}
+                        className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-indigo-50"
+                        onMouseDown={() => { setEmployeeId(e.id); setEmpSearch(''); setEmpDropdownOpen(false); }}
+                      >
+                        {e.full_name}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
           </Field>
           <Field label="Trạng thái">
             <Select value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)}>
@@ -176,9 +283,18 @@ export default function PayslipsPage() {
               <option value="published">Đã phát hành</option>
             </Select>
           </Field>
-          <Field label="Kỳ lương (YYYY-MM)">
-            <TextInput type="month" value={periodMonth} onChange={(e) => setPeriodMonth(e.target.value)} />
-          </Field>
+              <Field label="Kỳ lương">
+                <div className="flex gap-2">
+                  <Select value={parseMonth(periodMonth).year} onChange={(e) => setPeriodMonth(joinMonth(e.target.value, parseMonth(periodMonth).month))}>
+                    <option value="">Năm</option>
+                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  </Select>
+                  <Select value={parseMonth(periodMonth).month} onChange={(e) => setPeriodMonth(joinMonth(parseMonth(periodMonth).year, e.target.value))}>
+                    <option value="">Tháng</option>
+                    {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </Select>
+                </div>
+              </Field>
           <div />
           <ButtonPrimary onClick={apply} className="h-[38px]"><Search className="w-4 h-4" /> Lọc</ButtonPrimary>
         </div>
@@ -186,7 +302,18 @@ export default function PayslipsPage() {
 
       <Card>
         <SectionTitle icon={FileSpreadsheet}>Danh sách</SectionTitle>
-        {error ? <ErrorAlert error={error} title="Không tải được payslips" />
+        {selectedIds.size > 0 && (
+          <div className="mb-3 flex items-center gap-2 p-2 bg-indigo-50 rounded-lg">
+            <span className="text-xs text-indigo-700 font-medium">{selectedIds.size} phiếu lương được chọn</span>
+            <ButtonPrimary onClick={() => bulkPubMut.mutate([...selectedIds])} disabled={bulkPubMut.isPending} className="!py-1 !px-2 !text-xs">
+              <Send className="w-3 h-3" /> {bulkPubMut.isPending ? 'Đang phát hành…' : 'Phát hành đã chọn'}
+            </ButtonPrimary>
+            <ButtonGhost onClick={() => setSelectedIds(new Set())} className="!py-1 !px-2 !text-xs">
+              Bỏ chọn
+            </ButtonGhost>
+          </div>
+        )}
+        {error ? <ErrorAlert error={error} title="Không tải được phiếu lương" />
           : isLoading && !data ? <LoadingRows count={6} />
           : !data?.payslips?.length ? <EmptyState filtered={Boolean(submitted.employeeId || submitted.status || submitted.periodMonth)} />
           : (
@@ -194,7 +321,21 @@ export default function PayslipsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-[10px] font-mono uppercase text-slate-400 border-b border-slate-100">
-                    <th className="py-2 px-2">Nhân viên</th>
+                    <th className="py-2 px-2 w-8">
+                    <input
+                      type="checkbox"
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds(new Set(data.payslips.filter(p => p.status === 'draft').map(p => p.id)));
+                        } else {
+                          setSelectedIds(new Set());
+                        }
+                      }}
+                      checked={data && data.payslips.filter(p => p.status === 'draft').length > 0 && data.payslips.filter(p => p.status === 'draft').every(p => selectedIds.has(p.id))}
+                      className="rounded border-slate-300"
+                    />
+                  </th>
+                  <th className="py-2 px-2">Nhân viên</th>
                     <th className="py-2 px-2">Kỳ</th>
                     <th className="py-2 px-2">Lương gross</th>
                     <th className="py-2 px-2">Net</th>
@@ -205,16 +346,46 @@ export default function PayslipsPage() {
                 <tbody>
                   {data.payslips.map((p) => (
                     <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50">
-                      <td className="py-2.5 px-2 text-xs font-semibold text-slate-800">{empName(employees, p.employee_id)}</td>
+                      <td className="py-2.5 px-2">
+                    {p.status === 'draft' && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(p.id)}
+                        onChange={() => {
+                          const next = new Set(selectedIds);
+                          if (next.has(p.id)) next.delete(p.id);
+                          else next.add(p.id);
+                          setSelectedIds(next);
+                        }}
+                        className="rounded border-slate-300"
+                      />
+                    )}
+                  </td>
+                  <td className="py-2.5 px-2 text-xs font-semibold text-slate-800">{empName(employees, p.employee_id)}</td>
                       <td className="py-2.5 px-2 font-mono text-xs text-slate-500">{toMonth(p.period_month)}</td>
                       <td className="py-2.5 px-2 text-xs text-slate-600">{formatVND(p.gross_salary)}</td>
                       <td className="py-2.5 px-2 text-xs font-semibold text-slate-800">{formatVND(p.net_salary)}</td>
                       <td className="py-2.5 px-2"><Badge tone={p.status === 'published' ? 'emerald' : 'amber'}>{p.status === 'published' ? 'Đã phát hành' : 'Bản nháp'}</Badge></td>
-                      <td className="py-2.5 px-2">
-                        <button onClick={() => { setViewId(p.id); setEditMode(false); }} className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-indigo-600 transition-all" title="Xem">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </td>
+                          <td className="py-2.5 px-2">
+                            <div className="flex items-center gap-0.5">
+                              <button onClick={() => { setViewId(p.id); setEditMode(false); }} className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-indigo-600 transition-all" title="Xem">
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              {p.status === 'draft' && (
+                                <>
+                                  <button onClick={() => { setViewId(p.id); setEditMode(true); }} className="p-1.5 rounded-lg hover:bg-amber-100 text-slate-500 hover:text-amber-600 transition-all" title="Sửa">
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+                                      <button onClick={() => publishMut.mutate(p.id)} disabled={publishMut.isPending} className="p-1.5 rounded-lg hover:bg-emerald-100 text-slate-500 hover:text-emerald-600 transition-all disabled:opacity-50" title="Phát hành">
+                                        <Send className="w-4 h-4" />
+                                      </button>
+                                  <button onClick={() => setDelConfirm(p.id)} className="p-1.5 rounded-lg hover:bg-rose-100 text-slate-500 hover:text-rose-600 transition-all" title="Xóa">
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
                     </tr>
                   ))}
                 </tbody>
@@ -224,7 +395,7 @@ export default function PayslipsPage() {
 
         {data && data.total > data.page_size && (
           <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-4">
-            <span className="text-xs text-slate-500">{data.total} payslips · trang {submitted.page} / {totalPages}</span>
+            <span className="text-xs text-slate-500">{data.total} phiếu lương · trang {submitted.page} / {totalPages}</span>
             <div className="flex items-center gap-2">
               <button onClick={() => gotoPage(submitted.page - 1)} disabled={submitted.page <= 1} className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 transition-all"><ChevronLeft className="w-4 h-4" /></button>
               <button onClick={() => gotoPage(submitted.page + 1)} disabled={submitted.page >= totalPages} className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 transition-all"><ChevronRight className="w-4 h-4" /></button>
@@ -237,27 +408,80 @@ export default function PayslipsPage() {
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Tạo payslip draft">
         <div className="space-y-3">
           <Field label="Nhân viên *">
-            <Select value={draft.employee_id} onChange={(e) => setDraft({ ...draft, employee_id: e.target.value })}>
-              <option value="">Chọn nhân viên…</option>
-              {employees?.items?.map((e) => <option key={e.id} value={e.id}>{e.full_name}</option>)}
-            </Select>
+            <div className="relative">
+              <div className="flex items-center border border-slate-200 rounded-lg bg-white px-2 py-1.5">
+                <input
+                  type="text"
+                  placeholder="Tìm nhân viên…"
+                  value={draft.employee_id ? empName(employees, draft.employee_id) : ''}
+                  onChange={(e) => { setDraft({ ...draft, employee_id: '' }); }}
+                  onFocus={() => setEmpDropdownOpen(true)}
+                  className="flex-1 text-xs outline-none bg-transparent"
+                />
+                {draft.employee_id && (
+                  <button onClick={() => setDraft({ ...draft, employee_id: '' })} className="text-slate-400 hover:text-slate-600">
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              {empDropdownOpen && (
+                <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {(employees?.items ?? [])
+                    .slice(0, 50)
+                    .map((e) => (
+                      <button
+                        key={e.id}
+                        className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-indigo-50"
+                        onMouseDown={() => { setDraft({ ...draft, employee_id: e.id }); setEmpDropdownOpen(false); }}
+                      >
+                        {e.full_name}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
           </Field>
-          <Field label="Kỳ lương (YYYY-MM) *">
-            <TextInput type="month" value={draft.period_month} onChange={(e) => setDraft({ ...draft, period_month: e.target.value })} />
-          </Field>
+              <Field label="Kỳ lương *">
+                <div className="flex gap-2">
+                  <Select value={parseMonth(draft.period_month).year} onChange={(e) => setDraft({ ...draft, period_month: joinMonth(e.target.value, parseMonth(draft.period_month).month) })}>
+                    <option value="">Năm</option>
+                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  </Select>
+                  <Select value={parseMonth(draft.period_month).month} onChange={(e) => setDraft({ ...draft, period_month: joinMonth(parseMonth(draft.period_month).year, e.target.value) })}>
+                    <option value="">Tháng</option>
+                    {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </Select>
+                </div>
+              </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Lương gross *"><TextInput value={draft.gross_salary} onChange={(e) => setDraft({ ...draft, gross_salary: e.target.value })} /></Field>
-            <Field label="Lương net *"><TextInput value={draft.net_salary} onChange={(e) => setDraft({ ...draft, net_salary: e.target.value })} /></Field>
-            <Field label="Khấu trừ"><TextInput value={draft.deductions} onChange={(e) => setDraft({ ...draft, deductions: e.target.value })} /></Field>
-            <Field label="Bảo hiểm (NV)"><TextInput value={draft.insurance_employee} onChange={(e) => setDraft({ ...draft, insurance_employee: e.target.value })} /></Field>
-            <Field label="Thu nhập chịu thuế"><TextInput value={draft.taxable_income} onChange={(e) => setDraft({ ...draft, taxable_income: e.target.value })} /></Field>
-            <Field label="Thuế TNCN"><TextInput value={draft.pit_amount} onChange={(e) => setDraft({ ...draft, pit_amount: e.target.value })} /></Field>
+                <Field label="Lương gross *" hint="Tổng lương trước các khoản giảm trừ"><TextInput type="number" placeholder="20000000" value={draft.gross_salary} onChange={(e) => setDraft({ ...draft, gross_salary: e.target.value })} /></Field>
+                <Field label="Lương net *" hint="Thực nhận = Gross – Khấu trừ – BHXH – Thuế TNCN"><TextInput type="number" placeholder="18000000" value={draft.net_salary} onChange={(e) => setDraft({ ...draft, net_salary: e.target.value })} /></Field>
+                <Field label="Khấu trừ" hint="Các khoản khấu trừ khác (tạm ứng, phạt...)"><TextInput value={draft.deductions} onChange={(e) => setDraft({ ...draft, deductions: e.target.value })} /></Field>
+                <Field label="BHXH (NLĐ đóng)" hint="10.5% lương đóng BHXH (8% BHXH + 1.5% BHYT + 1% BHTN)"><TextInput value={draft.insurance_employee} onChange={(e) => setDraft({ ...draft, insurance_employee: e.target.value })} /></Field>
+                <Field label="TN chịu thuế" hint="Thu nhập sau khi trừ BHXH và giảm trừ gia cảnh"><TextInput value={draft.taxable_income} onChange={(e) => setDraft({ ...draft, taxable_income: e.target.value })} /></Field>
+                <Field label="Thuế TNCN" hint="Tính theo 7 bậc lũy tiến (5%–35%) trên TN chịu thuế"><TextInput value={draft.pit_amount} onChange={(e) => setDraft({ ...draft, pit_amount: e.target.value })} /></Field>
           </div>
           <Field label="PDF URL (tùy chọn)"><TextInput value={draft.pdf_url} onChange={(e) => setDraft({ ...draft, pdf_url: e.target.value })} /></Field>
+                                {(() => {
+                                  const g = parseFloat(draft.gross_salary) || 0;
+                                  const d = parseFloat(draft.deductions) || 0;
+                                  const ins = parseFloat(draft.insurance_employee) || 0;
+                                  const pit = parseFloat(draft.pit_amount) || 0;
+                                  const calcNet = g - d - ins - pit;
+                                  const manualNet = parseFloat(draft.net_salary) || 0;
+                                  const mismatch = g > 0 && manualNet > 0 && calcNet !== manualNet;
+                                  if (mismatch) {
+                                    return <p className="text-xs text-red-600 font-medium mt-1">⚠ Lỗi: Net tính toán ({calcNet.toLocaleString("vi-VN")}₫) không khớp với Net bạn nhập ({manualNet.toLocaleString("vi-VN")}₫). Vui lòng sửa lại.</p>;
+                                  }
+                                  if (g > 0) {
+                                    return <p className="text-xs text-emerald-600 mt-1">✓ Net khớp: {calcNet.toLocaleString("vi-VN")}₫</p>;
+                                  }
+                                  return null;
+                                })()}
           {createMut.isError && <ErrorAlert error={createMut.error} />}
           <div className="flex justify-end gap-2">
             <ButtonGhost onClick={() => setCreateOpen(false)}>Hủy</ButtonGhost>
-            <ButtonPrimary onClick={submitCreate} disabled={createMut.isPending || !draft.employee_id || !draft.period_month || !draft.gross_salary || !draft.net_salary}>
+                <ButtonPrimary onClick={submitCreate} disabled={createMut.isPending || !draft.employee_id || !draft.period_month || !draft.gross_salary || !draft.net_salary || (() => { const g = parseFloat(draft.gross_salary) || 0; const d = parseFloat(draft.deductions) || 0; const ins = parseFloat(draft.insurance_employee) || 0; const pit = parseFloat(draft.pit_amount) || 0; const calcNet = g - d - ins - pit; const manualNet = parseFloat(draft.net_salary) || 0; return g > 0 && manualNet > 0 && calcNet !== manualNet; })()}>
               {createMut.isPending ? 'Đang tạo…' : 'Tạo draft'}
             </ButtonPrimary>
           </div>
@@ -280,36 +504,62 @@ export default function PayslipsPage() {
                 <Row label="Lương gross" value={formatVND(viewed.gross_salary)} />
                 <Row label="Lương net" value={formatVND(viewed.net_salary)} />
                 <Row label="Khấu trừ" value={formatVND(viewed.deductions)} />
-                <Row label="Bảo hiểm (NV)" value={formatVND(viewed.insurance_employee)} />
-                <Row label="Thu nhập chịu thuế" value={formatVND(viewed.taxable_income)} />
+                <Row label="BHXH (NLĐ đóng)" value={formatVND(viewed.insurance_employee)} />
+                <Row label="TN chịu thuế" value={formatVND(viewed.taxable_income)} />
                 <Row label="Thuế TNCN" value={formatVND(viewed.pit_amount)} />
                 {viewed.pdf_url && <div className="col-span-2"><Row label="PDF URL" value={viewed.pdf_url} /></div>}
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Lương gross"><TextInput value={editForm.gross_salary ?? ''} onChange={(e) => setEditForm({ ...editForm, gross_salary: e.target.value })} /></Field>
-                <Field label="Lương net"><TextInput value={editForm.net_salary ?? ''} onChange={(e) => setEditForm({ ...editForm, net_salary: e.target.value })} /></Field>
-                <Field label="Khấu trừ"><TextInput value={editForm.deductions ?? ''} onChange={(e) => setEditForm({ ...editForm, deductions: e.target.value })} /></Field>
-                <Field label="Bảo hiểm (NV)"><TextInput value={editForm.insurance_employee ?? ''} onChange={(e) => setEditForm({ ...editForm, insurance_employee: e.target.value })} /></Field>
-                <Field label="Thu nhập chịu thuế"><TextInput value={editForm.taxable_income ?? ''} onChange={(e) => setEditForm({ ...editForm, taxable_income: e.target.value })} /></Field>
-                <Field label="Thuế TNCN"><TextInput value={editForm.pit_amount ?? ''} onChange={(e) => setEditForm({ ...editForm, pit_amount: e.target.value })} /></Field>
-                <Field label="PDF URL (trống để xóa)"><TextInput value={editForm.pdf_url ?? ''} onChange={(e) => setEditForm({ ...editForm, pdf_url: e.target.value })} /></Field>
+                    <Field label="Lương gross" hint="Tổng lương trước các khoản giảm trừ"><TextInput value={editForm.gross_salary ?? ''} onChange={(e) => setEditForm({ ...editForm, gross_salary: e.target.value })} /></Field>
+                    <Field label="Lương net" hint="Thực nhận = Gross – Khấu trừ – BHXH – Thuế TNCN"><TextInput value={editForm.net_salary ?? ''} onChange={(e) => setEditForm({ ...editForm, net_salary: e.target.value })} /></Field>
+                    <Field label="Khấu trừ" hint="Các khoản khấu trừ khác (tạm ứng, phạt...)"><TextInput value={editForm.deductions ?? ''} onChange={(e) => setEditForm({ ...editForm, deductions: e.target.value })} /></Field>
+                    <Field label="BHXH (NLĐ đóng)" hint="10.5% lương đóng BHXH (8% BHXH + 1.5% BHYT + 1% BHTN)"><TextInput value={editForm.insurance_employee ?? ''} onChange={(e) => setEditForm({ ...editForm, insurance_employee: e.target.value })} /></Field>
+                    <Field label="TN chịu thuế" hint="Thu nhập sau khi trừ BHXH và giảm trừ gia cảnh"><TextInput value={editForm.taxable_income ?? ''} onChange={(e) => setEditForm({ ...editForm, taxable_income: e.target.value })} /></Field>
+                    <Field label="Thuế TNCN" hint="Tính theo 7 bậc lũy tiến (5%–35%) trên TN chịu thuế"><TextInput value={editForm.pit_amount ?? ''} onChange={(e) => setEditForm({ ...editForm, pit_amount: e.target.value })} /></Field>
+                    <Field label="PDF URL (trống để xóa)"><TextInput value={editForm.pdf_url ?? ''} onChange={(e) => setEditForm({ ...editForm, pdf_url: e.target.value })} /></Field>
+                      {(() => {
+                        const g = parseFloat(editForm.gross_salary ?? '0') || 0;
+                        const d = parseFloat(editForm.deductions ?? '0') || 0;
+                        const ins = parseFloat(editForm.insurance_employee ?? '0') || 0;
+                        const pit = parseFloat(editForm.pit_amount ?? '0') || 0;
+                        const calcNet = g - d - ins - pit;
+                        const manualNet = parseFloat(editForm.net_salary ?? '0') || 0;
+                        const mismatch = g > 0 && manualNet > 0 && calcNet !== manualNet;
+                        if (mismatch) {
+                          return <p className="text-xs text-red-600 font-medium mt-1 col-span-2">⚠ Lỗi: Net tính toán ({calcNet.toLocaleString("vi-VN")}₫) không khớp với Net bạn nhập ({manualNet.toLocaleString("vi-VN")}₫). Vui lòng sửa lại.</p>;
+                        }
+                        if (g > 0) {
+                          return <p className="text-xs text-emerald-600 mt-1 col-span-2">✓ Net khớp: {calcNet.toLocaleString("vi-VN")}₫</p>;
+                        }
+                        return null;
+                      })()}
               </div>
             )}
 
             {editMode && editMut.isError && <ErrorAlert error={editMut.error} />}
             {publishMut.isError && <ErrorAlert error={publishMut.error} />}
+            {bulkPubMut.isError && <ErrorAlert error={bulkPubMut.error} />}
+            {unpublishMut.isError && <ErrorAlert error={unpublishMut.error} />}
             {delMut.isError && <ErrorAlert error={delMut.error} />}
 
             <div className="flex flex-wrap justify-between gap-2 pt-2 border-t border-slate-100">
-              <ButtonDanger onClick={() => delMut.mutate(viewed.id)} disabled={delMut.isPending || !canMutate(viewed)}>
-                <Trash2 className="w-4 h-4" /> Xóa draft
-              </ButtonDanger>
+              <div className="flex gap-2">
+                {canMutate(viewed) ? (
+                  <ButtonDanger onClick={() => setDelConfirm(viewed.id)} disabled={delMut.isPending}>
+                    <Trash2 className="w-4 h-4" /> Xóa draft
+                  </ButtonDanger>
+                ) : (
+                  <ButtonGhost onClick={() => setUnpublishConfirm(viewed.id)} disabled={unpublishMut.isPending}>
+                    <Undo2 className="w-4 h-4" /> {unpublishMut.isPending ? 'Đang thu hồi…' : 'Thu hồi'}
+                  </ButtonGhost>
+                )}
+              </div>
               <div className="flex gap-2">
                 {editMode ? (
                   <>
                     <ButtonGhost onClick={() => setEditMode(false)}>Hủy sửa</ButtonGhost>
-                    <ButtonPrimary onClick={() => editMut.mutate(editForm)} disabled={editMut.isPending}>
+                        <ButtonPrimary onClick={() => editMut.mutate(editForm)} disabled={editMut.isPending || (() => { const g = parseFloat(editForm.gross_salary ?? '0') || 0; const d = parseFloat(editForm.deductions ?? '0') || 0; const ins = parseFloat(editForm.insurance_employee ?? '0') || 0; const pit = parseFloat(editForm.pit_amount ?? '0') || 0; const calcNet = g - d - ins - pit; const manualNet = parseFloat(editForm.net_salary ?? '0') || 0; return g > 0 && manualNet > 0 && calcNet !== manualNet; })()}>
                       <Pencil className="w-4 h-4" /> {editMut.isPending ? 'Đang lưu…' : 'Lưu draft'}
                     </ButtonPrimary>
                   </>
@@ -328,6 +578,41 @@ export default function PayslipsPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Unpublish confirmation modal */}
+          <Modal open={!!unpublishConfirm} onClose={() => setUnpublishConfirm(null)} title="Xác nhận thu hồi">
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600">
+                Bạn có chắc muốn <strong>thu hồi</strong> phiếu lương này?
+                Nhân viên sẽ <strong>không còn</strong> nhìn thấy phiếu lương này nữa.
+                Bạn có thể phát hành lại sau.
+              </p>
+              {unpublishMut.isError && <ErrorAlert error={unpublishMut.error} />}
+              <div className="flex justify-end gap-2">
+                <ButtonGhost onClick={() => setUnpublishConfirm(null)}>Hủy</ButtonGhost>
+                <ButtonPrimary onClick={() => unpublishMut.mutate(unpublishConfirm!)} disabled={unpublishMut.isPending}>
+                  <Undo2 className="w-4 h-4" /> {unpublishMut.isPending ? 'Đang thu hồi…' : 'Xác nhận thu hồi'}
+                </ButtonPrimary>
+              </div>
+            </div>
+          </Modal>
+
+          {/* Delete confirmation modal */}
+      <Modal open={!!delConfirm} onClose={() => setDelConfirm(null)} title="Xác nhận xóa">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Bạn có chắc muốn xóa phiếu lương draft của nhân viên này?
+            Hành động này <strong>không thể hoàn tác</strong>.
+          </p>
+          {delMut.isError && <ErrorAlert error={delMut.error} />}
+          <div className="flex justify-end gap-2">
+            <ButtonGhost onClick={() => setDelConfirm(null)}>Hủy</ButtonGhost>
+            <ButtonDanger onClick={() => delMut.mutate(delConfirm!)} disabled={delMut.isPending}>
+              <Trash2 className="w-4 h-4" /> {delMut.isPending ? 'Đang xóa…' : 'Xác nhận xóa'}
+            </ButtonDanger>
+          </div>
+        </div>
       </Modal>
     </div>
   );

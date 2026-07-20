@@ -11,8 +11,7 @@ import {
   type CalendarConflict, type CandidateListItem,
   type CreateInterviewRequest, type InterviewResponse,
 } from '@/lib/api/recruitment';
-import { getGoogleWorkspaceCalendars, selectGoogleWorkspaceCalendar } from '@/lib/api/admin';
-import type { CalendarListResponse } from '@/lib/api/admin';
+import { getCalendars, selectCalendar, type CalendarListResponse } from '@/lib/api/gmail';
 import { useAuthGuard } from '@/lib/auth/session';
 import { ErrorBanner, Loading, EmptyState, StatusPill, CONFLICT_STATUS_META, formatAuditDetails } from '@/components/shared-ui';
 
@@ -23,12 +22,15 @@ export default function InterviewsPage() {
   const [actionError, setActionError] = useState<unknown>(null);
   const [resolveTarget, setResolveTarget] = useState<string | null>(null);
   const [resolveChoice, setResolveChoice] = useState<'keep_google' | 'overwrite_vroom'>('keep_google');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'reviewing' | 'interview_scheduled'>('all');
 
   // Calendar status (GH #214: creating Interview requires selected Calendar)
-  const { data: calendars, isLoading: calLoading } = useQuery<CalendarListResponse>({
+  const { data: calendars, isLoading: calLoading, isError: calError, error: _calErrorData } = useQuery<CalendarListResponse>({
     queryKey: ['google-calendars'],
-    queryFn: getGoogleWorkspaceCalendars,
+    queryFn: getCalendars,
     staleTime: 60 * 1000,
+    retry: 1,
   });
   const selectedCalendarId = calendars?.selected_calendar_id ?? null;
   const googleConnected = (calendars?.calendars?.length ?? 0) > 0;
@@ -40,6 +42,12 @@ export default function InterviewsPage() {
     staleTime: 30 * 1000,
   });
   const candidates: CandidateListItem[] = candidatesData?.candidates ?? [];
+  const filtered = candidates.filter((c) => {
+    const q = search.toLowerCase().trim();
+    const matchSearch = !q || c.name.toLowerCase().includes(q) || (c.email ?? '').toLowerCase().includes(q) || (c.job_opening_title ?? '').toLowerCase().includes(q);
+    const matchStatus = statusFilter === 'all' || c.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
 
   // Calendar conflicts (status unresolved)
   const { data: conflictsData, isLoading: confLoading } = useQuery({
@@ -50,7 +58,7 @@ export default function InterviewsPage() {
   const conflicts: CalendarConflict[] = conflictsData?.conflicts ?? [];
 
   const selectCalM = useMutation({
-    mutationFn: (id: string) => selectGoogleWorkspaceCalendar(id),
+    mutationFn: (id: string) => selectCalendar(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['google-calendars'] });  setActionError(null); },
     onError: (e: unknown) => setActionError(e),
   });
@@ -80,13 +88,19 @@ export default function InterviewsPage() {
           {selectedCalendarId ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <ShieldAlert className="w-4 h-4 text-amber-600" />}
           <h2 className="text-sm font-bold text-slate-900">Điều kiện tạo Interview</h2>
         </div>
-        {calLoading ? (
-          <p className="text-xs text-slate-500">Đang kiểm tra kết nối Google Calendar...</p>
-        ) : !googleConnected ? (
-          <div className="text-xs text-slate-600 space-y-1">
-            <p>Google Workspace chưa kết nối hoặc chưa có calendar. HR cần kết nối ở Gmail/Settings (Phase 3) trước khi tạo Interview.</p>
-            <button onClick={() => router.push('/settings')} className="mt-1 text-indigo-600 hover:text-indigo-700 font-medium">→ Mở Cấu hình</button>
-          </div>
+            {calError ? (
+              <div className="text-xs text-rose-600 space-y-1">
+                <p className="flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Không thể kiểm tra kết nối Google Calendar — lỗi mạng hoặc chưa cấp quyền.</p>
+                <p className="text-slate-400">Bạn vẫn có thể dùng các tính năng khác. Kiểm tra lại kết nối Gmail trong Cấu hình.</p>
+                <button onClick={() => router.push('/settings')} className="mt-1 text-indigo-600 hover:text-indigo-700 font-medium">→ Mở Cấu hình</button>
+              </div>
+            ) : calLoading ? (
+              <p className="text-xs text-slate-500">Đang kiểm tra kết nối Google Calendar...</p>
+            ) : !googleConnected ? (
+              <div className="text-xs text-slate-600 space-y-1">
+                <p>Google Workspace chưa kết nối hoặc chưa có calendar. HR cần kết nối ở Gmail/Settings (Phase 3) trước khi tạo Interview.</p>
+                <button onClick={() => router.push('/settings')} className="mt-1 text-indigo-600 hover:text-indigo-700 font-medium">→ Mở Cấu hình</button>
+              </div>
         ) : selectedCalendarId ? (
           <p className="text-xs text-emerald-700">Đã chọn calendar: <code className="font-mono">{calendars?.calendars?.find((c) => c.id === selectedCalendarId)?.summary ?? selectedCalendarId}</code></p>
         ) : (
@@ -151,13 +165,24 @@ export default function InterviewsPage() {
       <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm shadow-slate-100">
         <div className="flex items-center gap-2 mb-3">
           <CalendarClock className="w-4 h-4 text-indigo-600" />
-          <h2 className="text-sm font-bold text-slate-900">Candidate cần lên lịch / đã lên lịch</h2>
-        </div>
-        {candidates.length === 0 ? (
-          <EmptyState filtered={false} />
-        ) : (
+                    <h2 className="text-sm font-bold text-slate-900">Candidate cần lên lịch / đã lên lịch</h2>
+                        <span className="text-[10px] font-mono text-slate-400">{filtered.length}/{candidates.length}</span>
+                      </div>
+                      <div className="flex gap-2 mb-3">
+                        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm theo tên, email, vị trí..." className="flex-1 px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg" />
+                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | 'reviewing' | 'interview_scheduled')} className="px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg">
+                          <option value="all">Tất cả</option>
+                          <option value="reviewing">Đang review</option>
+                          <option value="interview_scheduled">Đã lên lịch</option>
+                        </select>
+                      </div>
+                      {candidates.length === 0 ? (
+                        <EmptyState filtered={false} />
+                      ) : filtered.length === 0 ? (
+                        <p className="text-xs text-slate-400 py-4 text-center">{search || statusFilter !== 'all' ? 'Không có candidate khớp bộ lọc.' : 'Chưa có candidate nào.'}</p>
+                      ) : (
           <ul className="divide-y divide-slate-100">
-            {candidates.map((cand) => (
+            {filtered.map((cand) => (
               <li key={cand.id} className="py-2.5 flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-800 truncate">{cand.name}</p>

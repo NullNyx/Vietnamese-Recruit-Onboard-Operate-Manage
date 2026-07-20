@@ -20,6 +20,7 @@ import {
   PageHeader, Card, SectionTitle, Field, TextInput, Select, ButtonPrimary, ButtonGhost, ButtonDanger,
   Badge, ErrorAlert, EmptyState, LoadingRows, Modal, formatDateTime,
 } from '@/components/shared-ui';
+import { toast } from 'sonner';
 
 type Tab = 'records' | 'network';
 
@@ -98,7 +99,7 @@ function RecordsTab() {
 
   const { data: employees } = useQuery<EmployeeListResponse>({
     queryKey: ['employees-list', { active: true, all: true }],
-    queryFn: () => listEmployees({ page: 1, page_size: 100, is_active: true }),
+        queryFn: () => listEmployees({ page: 1, page_size: 200, is_active: true }),
     staleTime: 60_000,
   });
 
@@ -118,7 +119,13 @@ function RecordsTab() {
   });
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
-  const apply = () => setSubmitted({ start, end, employeeId, status, page: 1 });
+      const apply = () => {
+        if (end < start) {
+          toast.error('Ngày kết thúc phải sau hoặc bằng ngày bắt đầu');
+          return;
+        }
+        setSubmitted({ start, end, employeeId, status, page: 1 });
+      };
 
   // Correction dialog
   const [correctTarget, setCorrectTarget] = useState<AttendanceRecord | null>(null);
@@ -135,11 +142,14 @@ function RecordsTab() {
 
   const correctMut = useMutation({
     mutationFn: (payload: CorrectionData) => correctAttendanceRecord(correctTarget!.id, payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['attendance-records'] });
-      setCorrectTarget(null);
-    },
-  });
+    retry: 1,
+  onSuccess: (data) => {
+    qc.invalidateQueries({ queryKey: ['attendance-records'] });
+    setCorrectTarget(null);
+    toast.success(data.message || 'Đã lưu hiệu chỉnh');
+  },
+  onError: (err: any) => toast.error(err?.message || 'Lỗi khi hiệu chỉnh'),
+});
 
   const submitCorrection = () => {
     const payload: CorrectionData = {
@@ -195,8 +205,9 @@ function RecordsTab() {
                   <th className="py-2 px-2">Check-in</th>
                   <th className="py-2 px-2">Check-out</th>
                   <th className="py-2 px-2">IP</th>
-                  <th className="py-2 px-2">Trạng thái</th>
-                  <th className="py-2 px-2"></th>
+                      <th className="py-2 px-2">Trạng thái</th>
+                      <th className="py-2 px-2">Sửa</th>
+                      <th className="py-2 px-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -210,16 +221,23 @@ function RecordsTab() {
                     <td className="py-2.5 px-2 text-xs text-slate-600">{formatDateTime(r.check_in_at)}</td>
                     <td className="py-2.5 px-2 text-xs text-slate-600">{formatDateTime(r.check_out_at)}</td>
                     <td className="py-2.5 px-2 font-mono text-[10px] text-slate-400">{r.check_in_ip ?? '—'}</td>
-                    <td className="py-2.5 px-2">
-                      <Badge tone={r.check_out_at ? 'emerald' : 'amber'}>
-                        {r.check_out_at ? 'completed' : 'checked_in'}
-                      </Badge>
-                    </td>
-                    <td className="py-2.5 px-2">
-                      <button onClick={() => openCorrect(r)} className="p-1.5 rounded-lg hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 transition-all" title="Hiệu chỉnh">
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                    </td>
+                        <td className="py-2.5 px-2">
+                          <Badge tone={r.check_out_at ? 'emerald' : 'amber'}>
+                            {r.check_out_at ? 'completed' : 'checked_in'}
+                          </Badge>
+                        </td>
+                        <td className="py-2.5 px-2">
+                          {r.corrected_at ? (
+                            <span className="text-[10px] text-amber-600 font-medium" title={`Lý do: ${r.correction_reason ?? '—'}`}>Đã sửa</span>
+                          ) : (
+                            <span className="text-[10px] text-slate-300">—</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-2">
+                          <button onClick={() => openCorrect(r)} className="p-1.5 rounded-lg hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 transition-all" title="Hiệu chỉnh">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        </td>
                   </tr>
                 ))}
               </tbody>
@@ -229,7 +247,34 @@ function RecordsTab() {
 
         {data && data.total > data.page_size && (
           <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-4">
-            <span className="text-xs text-slate-500">{data.total} bản ghi · trang {submitted.page} / {totalPages}</span>
+              <span className="text-xs text-slate-500">{data.total} bản ghi · trang {submitted.page} / {totalPages}</span>
+                <button
+                  onClick={() => {
+                    const csv = [
+                      ['Nhân viên', 'Mã NV', 'Ngày', 'Check-in', 'Check-out', 'IP', 'Trạng thái', 'Đã sửa'].join(','),
+                      ...data.records.map((r) => [
+                        r.employee_name ?? '',
+                        r.employee_code ?? '',
+                        r.work_date,
+                        r.check_in_at ?? '',
+                        r.check_out_at ?? '',
+                        r.check_in_ip ?? '',
+                        r.check_out_at ? 'completed' : 'checked_in',
+                        r.corrected_at ? 'yes' : '',
+                      ].join(',')),
+                    ].join('\n');
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `cham-cong-${submitted.start}_${submitted.end}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium"
+                >
+                  Xuất CSV
+                </button>
             <div className="flex items-center gap-2">
               <button onClick={() => gotoPage(submitted.page - 1)} disabled={submitted.page <= 1} className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 transition-all"><ChevronLeft className="w-4 h-4" /></button>
               <button onClick={() => gotoPage(submitted.page + 1)} disabled={submitted.page >= totalPages} className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 transition-all"><ChevronRight className="w-4 h-4" /></button>
@@ -242,17 +287,23 @@ function RecordsTab() {
       <Modal open={!!correctTarget} onClose={() => setCorrectTarget(null)} title="Hiệu chỉnh bản ghi chấm công">
         {correctTarget && (
           <div className="space-y-3">
-            <p className="text-xs text-slate-500">
-              Employee: <strong>{correctTarget.employee_name ?? '—'}</strong> · ngày {correctTarget.work_date}
-            </p>
-            <p className="text-[10px] text-slate-400">Mọi hiệu chỉnh được ghi audit log. Lý do bắt buộc.</p>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Check-in (để trống để xóa)">
-                <TextInput type="datetime-local" value={cIn} onChange={(e) => setCIn(e.target.value)} />
-              </Field>
-              <Field label="Check-out (để trống để xóa)">
-                <TextInput type="datetime-local" value={cOut} onChange={(e) => setCOut(e.target.value)} />
-              </Field>
+                <p className="text-xs text-slate-500">
+                  Employee: <strong>{correctTarget.employee_name ?? '—'}</strong> · ngày {correctTarget.work_date}
+                  <span className="text-[10px] text-slate-400 ml-2">(giờ địa phương)</span>
+                </p>
+                <p className="text-[10px] text-slate-400">Mọi hiệu chỉnh được ghi audit log. Lý do bắt buộc.</p>
+                {correctTarget.corrected_at && (
+                  <div className="p-2 bg-amber-50 rounded-lg border border-amber-100 text-[10px] text-amber-700">
+                    Đã từng sửa lúc {formatDateTime(correctTarget.corrected_at)}: {correctTarget.correction_reason ?? '—'}
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Check-in (để trống nếu muốn xóa giờ này)">
+                    <TextInput type="datetime-local" value={cIn} onChange={(e) => setCIn(e.target.value)} />
+                  </Field>
+                  <Field label="Check-out (để trống nếu muốn xóa giờ này)">
+                    <TextInput type="datetime-local" value={cOut} onChange={(e) => setCOut(e.target.value)} />
+                  </Field>
             </div>
             <Field label="Lý do hiệu chỉnh *">
               <TextInput value={cReason} onChange={(e) => setCReason(e.target.value)} placeholder="Quên check-in do lỗi mạng…" />
@@ -266,12 +317,15 @@ function RecordsTab() {
             </div>
           </div>
         )}
-      </Modal>
-    </Card>
-  );
-}
+          </Modal>
 
-// ---------------------------------------------------------------------------
+        </Card>
+      );
+    }
+
+    // ---------------------------------------------------------------------------
+    // Network allowlist tab
+    // ---------------------------------------------------------------------------
 // Network allowlist tab
 // ---------------------------------------------------------------------------
 
@@ -281,40 +335,65 @@ function NetworkTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
     queryFn: getNetworkAllowlist,
   });
 
-  const [newCidr, setNewCidr] = useState('');
-  const [bulkText, setBulkText] = useState('');
-  const [replaceOpen, setReplaceOpen] = useState(false);
+      const [newCidr, setNewCidr] = useState('');
+      const [bulkText, setBulkText] = useState('');
+      const [replaceOpen, setReplaceOpen] = useState(false);
+      const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const addMut = useMutation({
-    mutationFn: (cidrs: string[]) => addNetworkToAllowlist(cidrs),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['attendance-network-allowlist'] }),
-  });
-  const removeMut = useMutation({
-    mutationFn: (cidr: string) => removeNetworkFromAllowlist(cidr),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['attendance-network-allowlist'] }),
-  });
-  const replaceMut = useMutation({
-    mutationFn: (networks: string[]) => updateNetworkAllowlist(networks),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['attendance-network-allowlist'] });
-      setReplaceOpen(false);
-      setBulkText('');
-    },
-  });
+      const addMut = useMutation({
+        mutationFn: (cidrs: string[]) => addNetworkToAllowlist(cidrs),
+        retry: 1,
+        onSuccess: () => {
+          qc.invalidateQueries({ queryKey: ['attendance-network-allowlist'] });
+          toast.success('Đã thêm CIDR');
+        },
+        onError: (err: any) => toast.error(err?.message || 'Lỗi khi thêm CIDR'),
+      });
+      const removeMut = useMutation({
+        mutationFn: (cidr: string) => removeNetworkFromAllowlist(cidr),
+        retry: 1,
+        onSuccess: () => {
+          qc.invalidateQueries({ queryKey: ['attendance-network-allowlist'] });
+          toast.success('Đã xóa CIDR');
+        },
+        onError: (err: any) => toast.error(err?.message || 'Lỗi khi xóa CIDR'),
+      });
+      const replaceMut = useMutation({
+        mutationFn: (networks: string[]) => updateNetworkAllowlist(networks),
+        retry: 1,
+        onSuccess: () => {
+          qc.invalidateQueries({ queryKey: ['attendance-network-allowlist'] });
+          setReplaceOpen(false);
+          setBulkText('');
+          toast.success('Đã cập nhật allowlist');
+        },
+        onError: (err: any) => toast.error(err?.message || 'Lỗi khi cập nhật allowlist'),
+      });
 
-  const addOne = () => {
-    const v = newCidr.trim();
-    if (!v) return;
-    addMut.mutate([v]);
-    setNewCidr('');
-  };
+      const cidrRegex = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(\/(\d{1,2}))?$/;
+      const addOne = () => {
+        const v = newCidr.trim();
+        if (!v) return;
+        if (!cidrRegex.test(v)) {
+          toast.error('Định dạng CIDR không hợp lệ. Ví dụ: 192.168.1.0/24 hoặc 10.0.0.1');
+          return;
+        }
+        addMut.mutate([v]);
+        setNewCidr('');
+      };
 
   return (
     <Card>
       <SectionTitle icon={Network}>Network Allowlist (CIDR)</SectionTitle>
-      <p className="text-xs text-slate-500 mb-4">
-        Chỉ cho phép chấm công từ các mạng trong danh sách. Mọi thay đổi được audit.
-      </p>
+          {!data?.networks?.length && !isLoading ? (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+              ⚠️ Danh sách đang trống — <strong>tất cả IP đều được phép</strong> chấm công. Thêm CIDR để giới hạn chỉ cho phép mạng văn phòng.
+            </p>
+          ) : (
+            <p className="text-xs text-slate-500 mb-4">
+              Chỉ các mạng trong danh sách được phép chấm công. Mọi thay đổi được audit.
+            </p>
+          )}
 
       {error ? <ErrorAlert error={error} title="Không tải được allowlist" />
         : isLoading && !data ? <LoadingRows count={3} />
@@ -325,23 +404,41 @@ function NetworkTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
             {data.networks.map((cidr) => (
               <div key={cidr} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
                 <span className="font-mono text-xs text-slate-700 flex-1">{cidr}</span>
-                <button onClick={() => removeMut.mutate(cidr)} disabled={removeMut.isPending} className="p-1.5 rounded-lg hover:bg-rose-100 text-slate-400 hover:text-rose-500 transition-all" title="Xóa CIDR">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                    <button onClick={() => setDeleteConfirm(cidr)} disabled={removeMut.isPending} className="p-1.5 rounded-lg hover:bg-rose-100 text-slate-400 hover:text-rose-500 transition-all" title="Xóa CIDR">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
               </div>
             ))}
           </div>
         )}
 
-      <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
-        <Field label="Thêm CIDR" hint="Ví dụ: 192.168.1.0/24">
-          <div className="flex gap-2">
-            <TextInput value={newCidr} onChange={(e) => setNewCidr(e.target.value)} placeholder="10.0.0.0/8" />
-            <ButtonPrimary onClick={addOne} disabled={addMut.isPending || !newCidr.trim()} className="whitespace-nowrap">
-              <Plus className="w-4 h-4" /> Thêm
-            </ButtonPrimary>
-          </div>
-        </Field>
+          {data?.updated_at && (
+            <p className="text-[10px] text-slate-400 mb-2">Cập nhật lần cuối: {formatDateTime(data.updated_at)}</p>
+          )}
+          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+            <Field label="Thêm CIDR" hint="Ví dụ: 192.168.1.0/24">
+              <div className="flex gap-2">
+                <TextInput value={newCidr} onChange={(e) => setNewCidr(e.target.value)} placeholder="10.0.0.0/8" />
+                <ButtonPrimary onClick={addOne} disabled={addMut.isPending || !newCidr.trim()} className="whitespace-nowrap">
+                  <Plus className="w-4 h-4" /> Thêm
+                </ButtonPrimary>
+              </div>
+            </Field>
+            <Field label="Thêm nhiều CIDR (mỗi dòng một CIDR)">
+              <textarea
+                rows={3}
+                placeholder={'192.168.1.0/24\n10.0.0.0/8'}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-mono focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    const lines = e.currentTarget.value.split('\n').map(s => s.trim()).filter(Boolean);
+                    if (lines.length) { addMut.mutate(lines); e.currentTarget.value = ''; }
+                  }
+                }}
+              />
+              <p className="text-[10px] text-slate-400 mt-1">Ctrl+Enter để thêm tất cả</p>
+            </Field>
         {addMut.isError && <ErrorAlert error={addMut.error} />}
         {removeMut.isError && <ErrorAlert error={removeMut.error} />}
 
@@ -361,17 +458,35 @@ function NetworkTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
               placeholder={'192.168.1.0/24\n10.0.0.0/8'}
             />
           </Field>
-          <p className="text-[10px] text-rose-500">Cảnh báo: thao tác này thay thế toàn bộ danh sách hiện tại.</p>
-          {replaceMut.isError && <ErrorAlert error={replaceMut.error} />}
-          <div className="flex justify-end gap-2">
-            <ButtonGhost onClick={() => setReplaceOpen(false)}>Hủy</ButtonGhost>
-            <ButtonDanger onClick={() => replaceMut.mutate(bulkText.split('\n').map((s) => s.trim()).filter(Boolean))} disabled={replaceMut.isPending}>
-              {replaceMut.isPending ? 'Đang lưu…' : 'Thay thế'}
-            </ButtonDanger>
-          </div>
-        </div>
-      </Modal>
-    </Card>
-  );
-}
+              <p className="text-[10px] text-rose-500">Cảnh báo: thao tác này thay thế toàn bộ danh sách hiện tại.</p>
+              {replaceMut.isError && <ErrorAlert error={replaceMut.error} />}
+              <div className="flex justify-end gap-2">
+                <ButtonGhost onClick={() => setReplaceOpen(false)}>Hủy</ButtonGhost>
+                <ButtonDanger onClick={() => replaceMut.mutate(bulkText.split('\n').map((s) => s.trim()).filter(Boolean))} disabled={replaceMut.isPending}>
+                  {replaceMut.isPending ? 'Đang lưu…' : 'Thay thế'}
+                </ButtonDanger>
+              </div>
+            </div>
+          </Modal>
+
+          {/* Confirm delete dialog */}
+          <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Xác nhận xóa CIDR">
+            <div className="space-y-3">
+              <p className="text-sm text-slate-700">
+                Xóa CIDR <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono">{deleteConfirm}</code>?
+              </p>
+              <p className="text-xs text-rose-600">
+                Nhân viên trong mạng này sẽ không check-in được nếu đây là CIDR duy nhất.
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <ButtonGhost onClick={() => setDeleteConfirm(null)}>Hủy</ButtonGhost>
+                <ButtonDanger onClick={() => { if (deleteConfirm) { removeMut.mutate(deleteConfirm); setDeleteConfirm(null); } }} disabled={removeMut.isPending}>
+                  {removeMut.isPending ? 'Đang xóa…' : 'Xóa'}
+                </ButtonDanger>
+              </div>
+            </div>
+          </Modal>
+        </Card>
+      );
+    }
 

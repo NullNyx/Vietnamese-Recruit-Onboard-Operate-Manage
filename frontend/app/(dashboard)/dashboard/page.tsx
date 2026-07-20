@@ -26,7 +26,7 @@ export default function DashboardPage() {
   });
 
   // Runtime health
-  const { data: health, isLoading: healthLoading, error: healthError } = useQuery<RuntimeHealthResponse>({
+  const { data: health, isLoading: healthLoading, error: healthError, dataUpdatedAt: healthUpdatedAt } = useQuery<RuntimeHealthResponse>({
     queryKey: ['runtime-health'],
     queryFn: getRuntimeHealth,
     staleTime: 30 * 1000,
@@ -65,7 +65,7 @@ export default function DashboardPage() {
             <div className="p-2 bg-indigo-50 rounded-lg">
               <TrendingUp className="w-5 h-5 text-indigo-600" />
             </div>
-            <span className="text-[10px] font-mono uppercase text-slate-400">Pipeline</span>
+            <span className="text-[10px] font-mono uppercase text-slate-400">Hàng đợi</span>
           </div>
           {metricsLoading ? (
             <div className="animate-pulse h-8 bg-slate-100 rounded w-3/4" />
@@ -74,7 +74,7 @@ export default function DashboardPage() {
           ) : (
             <>
               <div className="text-2xl font-bold text-slate-900">{metrics?.queue_depth ?? 0}</div>
-              <p className="text-xs text-slate-500 mt-1">Queue depth (đang xử lý)</p>
+              <p className="text-xs text-slate-500 mt-1">Độ sâu hàng đợi (đang xử lý)</p>
             </>
           )}
         </div>
@@ -151,6 +151,11 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2 mb-4">
           <Activity className="w-5 h-5 text-indigo-600" />
           <h2 className="font-bold text-slate-900">Sức khỏe hệ thống (Runtime)</h2>
+          {healthUpdatedAt ? (
+            <span className="text-[10px] text-slate-400 ml-1">
+              · Cập nhật {formatRuntimeDetail(`last beat: ${healthUpdatedAt / 1000}`)}
+            </span>
+          ) : null}
           {health?.status && (
             <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full ${
               health.status === 'healthy' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -164,7 +169,7 @@ export default function DashboardPage() {
 
         {healthLoading ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {[...Array(4)].map((_, i) => (
+            {[...Array(5)].map((_, i) => (
               <div key={i} className="animate-pulse h-16 bg-slate-100 rounded-xl" />
             ))}
           </div>

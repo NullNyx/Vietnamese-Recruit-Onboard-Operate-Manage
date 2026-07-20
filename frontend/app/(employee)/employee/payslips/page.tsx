@@ -13,6 +13,8 @@ import {
 export default function EmployeePayslipsPage() {
   useAuthGuard({ requireAuth: true, requireEmployee: true });
 
+  const [yearFilter, setYearFilter] = useState<string>('');
+
   const { data, isLoading, error } = useQuery<PayslipListResponse>({
     queryKey: ['my-payslips'],
     queryFn: fetchMyPayslips,
@@ -31,8 +33,10 @@ export default function EmployeePayslipsPage() {
   // (payslip_repository.list_by_employee). FE filter lại một lần nữa để bảo
   // boundary Employee-chỉ-xem-published ngay cả nếu BE ever leak — KHÔNG bao
   // giờ render row draft/unpublished (và cũng không render label liên quan).
+  const years = [...new Set((data?.payslips ?? []).map((p) => p.period_month?.slice(0, 4)).filter(Boolean))].sort().reverse();
+
   const publishedPayslips = (data?.payslips ?? []).filter(
-    (p) => p.status === 'published',
+    (p) => p.status === 'published' && (!yearFilter || p.period_month?.startsWith(yearFilter)),
   );
 
   return (
@@ -45,6 +49,19 @@ export default function EmployeePayslipsPage() {
 
       <Card>
         <SectionTitle icon={FileSpreadsheet}>Danh sách phiếu lương</SectionTitle>
+        {years.length > 1 && (
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs text-slate-500">Năm:</span>
+            <select
+              value={yearFilter}
+              onChange={(e) => setYearFilter(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
+            >
+              <option value="">Tất cả</option>
+              {years.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+        )}
         {error ? <ErrorAlert error={error} title="Không tải được phiếu lương" />
           : isLoading && !data ? <p className="text-sm text-slate-400">Đang tải…</p>
           : !publishedPayslips.length ? <EmptyState filtered={false} emptyData="Chưa có phiếu lương nào được phát hành cho bạn." />
@@ -91,11 +108,22 @@ export default function EmployeePayslipsPage() {
               <Row label="Lương gross" value={formatVND(viewed.gross_salary)} />
               <Row label="Lương net" value={formatVND(viewed.net_salary)} />
               <Row label="Khấu trừ" value={formatVND(viewed.deductions)} />
-              <Row label="Bảo hiểm (NV)" value={formatVND(viewed.insurance_employee)} />
-              <Row label="Thu nhập chịu thuế" value={formatVND(viewed.taxable_income)} />
+              <Row label="BHXH (NLĐ đóng)" value={formatVND(viewed.insurance_employee)} />
+              <Row label="TN chịu thuế" value={formatVND(viewed.taxable_income)} />
               <Row label="Thuế TNCN" value={formatVND(viewed.pit_amount)} />
+                  {viewed.pdf_url && (
+                    <div className="col-span-2 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                      <p className="text-[10px] font-mono text-slate-400 uppercase">Phiếu lương PDF</p>
+                      <a href={viewed.pdf_url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-indigo-600 hover:underline break-all">
+                        📄 Xem / Tải PDF
+                      </a>
+                    </div>
+                  )}
             </div>
             <div className="flex justify-end pt-2">
+              <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all no-print">
+                🖨️ In phiếu lương
+              </button>
               <ButtonPrimary onClick={() => setViewId(null)}>Đóng</ButtonPrimary>
             </div>
           </div>

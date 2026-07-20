@@ -4,8 +4,32 @@
  * Provides a shared fetch wrapper that:
  * - Prepends NEXT_PUBLIC_API_URL (or localhost fallback)
  * - Sends credentials: "include" for HttpOnly cookie auth
+ * - Auto-refreshes access token on 401 via POST /api/auth/refresh
  * - Parses error responses into ApiError with error_code
  */
+
+// ── Token refresh state (module-level to dedupe concurrent refreshes) ──
+let _refreshPromise: Promise<boolean> | null = null;
+
+async function _tryRefreshToken(): Promise<boolean> {
+  // Reuse in-flight refresh to avoid thundering-herd on 401
+  if (_refreshPromise) return _refreshPromise;
+
+  _refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      });
+      return res.ok;
+    } catch {
+      return false;
+    } finally {
+      _refreshPromise = null;
+    }
+  })();
+  return _refreshPromise;
+}
 
 import { ApiError } from "./types";
 import { isValidationErrorDetail, formatValidationErrors } from "./validation-errors";
@@ -58,13 +82,30 @@ export async function apiFetch<T>(
     throw new ApiError(0, "NETWORK_ERROR", "Lỗi kết nối mạng");
   }
 
-  if (!res.ok) {
-    // 401 → session expired; redirect to login (guard: don't redirect if already on /login)
-    if (res.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/setup" && window.location.pathname !== "/") {
-      window.location.href = "/login";
-      // Halt execution — never resolve, page is navigating away
-      return new Promise(() => {});
-    }
+      if (!res.ok) {
+        // 401 → try token refresh first, fallback to login redirect
+        if (res.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/setup" && window.location.pathname !== "/") {
+          const refreshed = await _tryRefreshToken();
+          if (refreshed) {
+            // Retry original request with fresh access_token cookie
+            res = await fetch(url, {
+              credentials: "include",
+              ...options,
+              headers: {
+                ...(bodyIsForm ? {} : { "Content-Type": "application/json" }),
+                ...(options.headers || {}),
+              },
+            });
+            if (res.ok) {
+              if (res.status === 204) return undefined as T;
+              return res.json() as Promise<T>;
+            }
+          }
+          // Refresh failed or retry still not ok → login
+          window.location.href = "/login";
+          // Halt execution — never resolve, page is navigating away
+          return new Promise(() => {});
+        }
       const payload = await res.json().catch(() => null);
 
         // ── Pydantic validation error (422 detail array) ──
@@ -136,13 +177,23 @@ export async function apiFetchBlob(
     throw new ApiError(0, "NETWORK_ERROR", "Lỗi kết nối mạng");
   }
 
-  if (!res.ok) {
-    // 401 → session expired; redirect to login (guard: don't redirect if already on /login)
-    if (res.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/setup" && window.location.pathname !== "/") {
-      window.location.href = "/login";
-      // Halt execution — never resolve, page is navigating away
-      return new Promise(() => {});
-    }
+      if (!res.ok) {
+        // 401 → try token refresh first, fallback to login redirect
+        if (res.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/setup" && window.location.pathname !== "/") {
+          const refreshed = await _tryRefreshToken();
+          if (refreshed) {
+            res = await fetch(url, {
+              credentials: "include",
+              ...options,
+              headers: {
+                ...(options.headers || {}),
+              },
+            });
+            if (res.ok) return res.blob();
+          }
+          window.location.href = "/login";
+          return new Promise(() => {});
+        }
         // Same error parsing as apiFetch
         const payload = await res.json().catch(() => null);
 

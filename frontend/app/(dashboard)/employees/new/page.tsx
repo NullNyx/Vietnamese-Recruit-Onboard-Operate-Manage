@@ -52,6 +52,8 @@ export default function NewEmployeePage() {
       ...form,
       department_id: form.department_id || undefined,
       position_id: form.position_id || undefined,
+      date_of_birth: form.date_of_birth || undefined,
+      start_date: form.start_date || undefined,
     };
     createMut.mutate(payload);
   };

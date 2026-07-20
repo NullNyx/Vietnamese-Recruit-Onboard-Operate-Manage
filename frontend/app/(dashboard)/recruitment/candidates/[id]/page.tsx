@@ -3,24 +3,26 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   UserCheck, ArrowLeft, CheckCircle2, XCircle, Archive, Link2, Unlink,
   FileText, Calendar, Briefcase, ExternalLink, AlertTriangle, Plus,
 } from 'lucide-react';
-import {
-  getCandidate, acceptCandidate, rejectCandidate, archiveCandidate,
-  assignCandidate, reassignCandidate, unassignCandidate,
-  createInterview, completeInterview, cancelInterview, createReplacementInterview,
-  getCVPresignedUrl,
-  listJobOpenings,
-  type CandidateDetail, type JobOpeningListItem, type InterviewResponse,
-  type CreateInterviewRequest,
-} from '@/lib/api/recruitment';
-import { useAuthGuard } from '@/lib/auth/session';
-import {
-  ErrorBanner, Loading, StatusPill,
-  CANDIDATE_STATUS_META, confidencePct,
-} from '@/components/shared-ui';
+    import {
+      getCandidate, acceptCandidate, rejectCandidate, archiveCandidate,
+      assignCandidate, reassignCandidate, unassignCandidate,
+      createInterview, completeInterview, cancelInterview, createReplacementInterview,
+      getCVPresignedUrl,
+      listJobOpenings,
+      type CandidateDetail, type JobOpeningListItem, type InterviewResponse,
+      type CreateInterviewRequest,
+    } from '@/lib/api/recruitment';
+    import { getCalendars, type CalendarListResponse } from '@/lib/api/gmail';
+    import { useAuthGuard } from '@/lib/auth/session';
+    import {
+      ErrorBanner, Loading, StatusPill,
+      CANDIDATE_STATUS_META, confidencePct,
+    } from '@/components/shared-ui';
 
 export default function CandidateDetailPage() {
   useAuthGuard({ requireAuth: true, requireAdmin: true });
@@ -31,6 +33,7 @@ export default function CandidateDetailPage() {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [assJob, setAssJob] = useState('');
   const [actionError, setActionError] = useState<unknown>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [interviewOpen, setInterviewOpen] = useState(false);
 
@@ -41,12 +44,19 @@ export default function CandidateDetailPage() {
     staleTime: 30 * 1000,
   });
 
-  const { data: openJobsData } = useQuery({
-    queryKey: ['recruitment-job-openings', 'open'],
-    queryFn: () => listJobOpenings({ status: ['open'], page_size: 100 }),
-    staleTime: 60 * 1000,
-  });
-  const openJobs: JobOpeningListItem[] = openJobsData?.job_openings ?? [];
+      const { data: calendars } = useQuery<CalendarListResponse>({
+        queryKey: ['google-calendars'],
+        queryFn: () => getCalendars(),
+        staleTime: 5 * 60 * 1000,
+      });
+      const selectedCalendarId = calendars?.selected_calendar_id ?? null;
+
+      const { data: openJobsData } = useQuery({
+        queryKey: ['recruitment-job-openings', 'open'],
+        queryFn: () => listJobOpenings({ status: ['open'], page_size: 100 }),
+        staleTime: 60 * 1000,
+      });
+      const openJobs: JobOpeningListItem[] = openJobsData?.job_openings ?? [];
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['recruitment-candidate', params.id] });
@@ -57,7 +67,15 @@ export default function CandidateDetailPage() {
   };
   const wrapErr = (_label: string) => (e: unknown) => setActionError(e);
 
-  const acceptM = useMutation({ mutationFn: () => acceptCandidate(params.id), onSuccess: () => { invalidate();  setActionError(null); }, onError: wrapErr('Lỗi accept') });
+  const acceptM = useMutation({
+    mutationFn: () => acceptCandidate(params.id),
+    onSuccess: () => {
+      invalidate();
+      setActionError(null);
+      setActionSuccess('Ứng viên đã được chấp nhận. Onboarding process đã được tạo tự động.');
+    },
+    onError: wrapErr('Lỗi accept'),
+  });
   const rejectM = useMutation({ mutationFn: (reason: string) => rejectCandidate(params.id, { reason }), onSuccess: () => { invalidate(); setRejectOpen(false); setActionError(''); }, onError: wrapErr('Lỗi reject') });
   const archiveM = useMutation({ mutationFn: () => archiveCandidate(params.id), onSuccess: () => { invalidate(); setActionError(''); }, onError: wrapErr('Lỗi archive') });
   const assignM = useMutation({
@@ -72,8 +90,22 @@ export default function CandidateDetailPage() {
     onSuccess: () => { invalidate(); setInterviewOpen(false); setActionError(''); },
     onError: wrapErr('Lỗi tạo phỏng vấn'),
   });
-  const completeIntM = useMutation({ mutationFn: (ivId: string) => completeInterview(params.id, ivId), onSuccess: () => { invalidate(); setActionError(''); }, onError: wrapErr('Lỗi hoàn tất PV') });
-  const cancelIntM = useMutation({ mutationFn: (ivId: string) => cancelInterview(params.id, ivId), onSuccess: () => { invalidate(); setActionError(''); }, onError: wrapErr('Lỗi hủy PV') });
+      const completeIntM = useMutation({
+        mutationFn: (ivId: string) => {
+          if (!window.confirm('Xác nhận hoàn tất buổi phỏng vấn này?')) return Promise.reject(new Error('Cancelled'));
+          return completeInterview(params.id, ivId);
+        },
+        onSuccess: () => { invalidate(); setActionError(''); },
+        onError: (e: any) => { if (e?.message !== 'Cancelled') setActionError(e); },
+      });
+      const cancelIntM = useMutation({
+        mutationFn: (ivId: string) => {
+          if (!window.confirm('Xác nhận hủy buổi phỏng vấn này? Hành động không thể hoàn tác.')) return Promise.reject(new Error('Cancelled'));
+          return cancelInterview(params.id, ivId);
+        },
+        onSuccess: () => { invalidate(); setActionError(''); },
+        onError: (e: any) => { if (e?.message !== 'Cancelled') setActionError(e); },
+      });
   const [replaceFor, setReplaceFor] = useState<string | null>(null);
   const replaceIntM = useMutation({
     mutationFn: ({ ivId, data }: { ivId: string; data: CreateInterviewRequest }) => createReplacementInterview(params.id, ivId, data),
@@ -150,6 +182,29 @@ export default function CandidateDetailPage() {
 
       {actionError && <ErrorBanner error={actionError} />}
 
+      {actionSuccess && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700 flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{actionSuccess}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href="/onboarding"
+              className="px-3 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-full transition-all flex items-center gap-1"
+            >
+              <ExternalLink className="w-3 h-3" /> Xem Onboarding
+            </Link>
+            <button
+              onClick={() => setActionSuccess(null)}
+              className="text-emerald-500 hover:text-emerald-700"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left: CV + parsed */}
         <div className="lg:col-span-2 space-y-4">
@@ -158,72 +213,8 @@ export default function CandidateDetailPage() {
               <p className="text-sm text-slate-600 leading-relaxed">{candidate.summary}</p>
             </Section>
           )}
-          {candidate.skills.length > 0 && (
-            <Section icon={Briefcase} title="Kỹ năng (Field Provenance: AI trích xuất)">
-              <div className="flex flex-wrap gap-1.5">
-                {candidate.skills.map((s) => (
-                  <span key={s} className="text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded font-mono border border-emerald-100">{s}</span>
-                ))}
-              </div>
-            </Section>
-          )}
-          {candidate.experience.length > 0 && (
-            <Section icon={Briefcase} title="Kinh nghiệm">
-              <ul className="space-y-1.5">
-                {candidate.experience.map((e, i) => (
-                  <li key={i} className="text-xs">
-                    <span className="font-medium text-slate-800">{e.role}</span> · <span className="text-slate-500">{e.company}</span>
-                    <span className="text-slate-400 font-mono block">{e.duration}</span>
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          )}
-          {candidate.education.length > 0 && (
-            <Section icon={FileText} title="Học vấn">
-              <ul className="space-y-1.5">
-                {candidate.education.map((e, i) => (
-                  <li key={i} className="text-xs">
-                    <span className="font-medium text-slate-800">{e.degree}</span> · <span className="text-slate-500">{e.institution}</span>
-                    <span className="text-slate-400 font-mono block">{e.year}</span>
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          )}
-
-          {/* CV documents + provenance */}
-          <Section icon={FileText} title="Tài liệu CV (provenance từ email/attachment)">
-            {candidate.cv_documents.length === 0 ? (
-              <p className="text-xs text-slate-400">Chưa có CV.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {candidate.cv_documents.map((doc) => (
-                  <li key={doc.id} className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg border border-slate-100">
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-slate-800 truncate">{doc.original_filename}</p>
-                      <p className="text-[10px] font-mono text-slate-400">
-                        {doc.processing_status} · {(doc.size_bytes / 1024).toFixed(0)}KB · {doc.mime_type}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => viewCV(candidate.id, doc.id, setActionError)}
-                      disabled={!doc.presigned_url}
-                      className="text-xs px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 disabled:opacity-40 flex items-center gap-1"
-                    >
-                      <ExternalLink className="w-3 h-3" /> Xem
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {candidate.source_email_message_id && (
-              <p className="text-[10px] font-mono text-slate-400 mt-2">Nguồn: email {candidate.source_email_message_id.slice(0, 12)}…</p>
-            )}
-          </Section>
-
-          {/* Interviews */}
-          <Section icon={Calendar} title="Lịch phỏng vấn (Interview — entity riêng, không tự đổi pipeline)">
+    {/* Interviews */}
+              <Section icon={Calendar} title="Lịch phỏng vấn (Interview — entity riêng, không tự đổi pipeline)">
             {interviews.length === 0 ? (
               <p className="text-xs text-slate-400 mb-2">Chưa có lịch phỏng vấn.</p>
             ) : (
@@ -239,33 +230,106 @@ export default function CandidateDetailPage() {
                     </p>
                     {iv.needs_relink && <p className="text-[10px] text-amber-600 mt-0.5">⚠ Cần relink calendar event</p>}
                     {iv.status === 'scheduled' && (
-                      <div className="flex gap-1.5 mt-2">
-                        <button onClick={() => completeIntM.mutate(iv.id)} disabled={completeIntM.isPending} className="text-[10px] px-2 py-1 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100">Hoàn tất</button>
-                        <button onClick={() => cancelIntM.mutate(iv.id)} disabled={cancelIntM.isPending} className="text-[10px] px-2 py-1 bg-rose-50 text-rose-600 rounded hover:bg-rose-100">Hủy</button>
-                      </div>
-                    )}
+                          <div className="flex gap-1.5 mt-2 flex-wrap">
+                            <button onClick={() => completeIntM.mutate(iv.id)} disabled={completeIntM.isPending} className="text-[10px] px-2 py-1 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100">Hoàn tất</button>
+                            <button onClick={() => cancelIntM.mutate(iv.id)} disabled={cancelIntM.isPending} className="text-[10px] px-2 py-1 bg-rose-50 text-rose-600 rounded hover:bg-rose-100">Hủy</button>
+                            <button onClick={() => { setReplaceFor(iv.id); setInterviewOpen(true); }} className="text-[10px] px-2 py-1 bg-amber-50 text-amber-600 rounded hover:bg-amber-100">Đổi lịch</button>
+                          </div>
+                        )}
+                        {iv.status === 'cancelled' && !isTerminal && (
+                          <div className="flex gap-1.5 mt-2">
+                            <button onClick={() => { setReplaceFor(iv.id); setInterviewOpen(true); }} className="text-[10px] px-2 py-1 bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100">Tạo lịch thay thế</button>
+                          </div>
+                        )}
                   </li>
                 ))}
-              </ul>
-            )}
-            {!isTerminal && (
-              <>
-                <button onClick={() => setInterviewOpen((v) => !v)} disabled={createIntM.isPending} className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg flex items-center gap-1.5 disabled:opacity-50">
-                  <Plus className="w-3.5 h-3.5" /> Tạo lịch phỏng vấn
-                </button>
-                {interviewOpen && (
-                  <InterviewForm
-                    onSubmit={(d) => createIntM.mutate(d)}
-                    pending={createIntM.isPending}
-                    onCancel={() => setInterviewOpen(false)}
-                  />
-                )}
-              </>
-            )}
-          </Section>
-        </div>
+                            </ul>
+                              )}
+                              {!isTerminal && (
+                                <>
+                                  <button onClick={() => { setReplaceFor(null); setInterviewOpen((v) => !v); }} disabled={createIntM.isPending || replaceIntM.isPending} className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg flex items-center gap-1.5 disabled:opacity-50">
+                                    <Plus className="w-3.5 h-3.5" /> {replaceFor ? 'Tạo lịch thay thế' : 'Tạo lịch phỏng vấn'}
+                                  </button>
+                                  {interviewOpen && (
+                                    <InterviewForm
+                                      onSubmit={(d) => replaceFor ? replaceIntM.mutate({ ivId: replaceFor, data: d }) : createIntM.mutate(d)}
+                                      pending={replaceFor ? replaceIntM.isPending : createIntM.isPending}
+                                      onCancel={() => { setInterviewOpen(false); setReplaceFor(null); }}
+                                      hasCalendar={!!selectedCalendarId}
+                                      isReplacement={!!replaceFor}
+                                    />
+                                  )}
+                                </>
+                              )}
 
-        {/* Right: assignment */}
+                                </Section>
+
+              {candidate.skills.length > 0 && (
+                <Section icon={Briefcase} title="Kỹ năng (Field Provenance: AI trích xuất)">
+                  <div className="flex flex-wrap gap-1.5">
+                    {candidate.skills.map((s) => (
+                      <span key={s} className="text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded font-mono border border-emerald-100">{s}</span>
+                    ))}
+                  </div>
+                </Section>
+              )}
+              {candidate.experience.length > 0 && (
+                <Section icon={Briefcase} title="Kinh nghiệm">
+                  <ul className="space-y-1.5">
+                    {candidate.experience.map((e, i) => (
+                      <li key={i} className="text-xs">
+                        <span className="font-medium text-slate-800">{e.role}</span> · <span className="text-slate-500">{e.company}</span>
+                        <span className="text-slate-400 font-mono block">{e.duration}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Section>
+              )}
+              {candidate.education.length > 0 && (
+                <Section icon={FileText} title="Học vấn">
+                  <ul className="space-y-1.5">
+                    {candidate.education.map((e, i) => (
+                      <li key={i} className="text-xs">
+                        <span className="font-medium text-slate-800">{e.degree}</span> · <span className="text-slate-500">{e.institution}</span>
+                        <span className="text-slate-400 font-mono block">{e.year}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Section>
+              )}
+
+              {/* CV documents + provenance */}
+              <Section icon={FileText} title="Tài liệu CV (provenance từ email/attachment)">
+                {candidate.cv_documents.length === 0 ? (
+                  <p className="text-xs text-slate-400">Chưa có CV.</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {candidate.cv_documents.map((doc) => (
+                      <li key={doc.id} className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-slate-800 truncate">{doc.original_filename}</p>
+                          <p className="text-[10px] font-mono text-slate-400">
+                            {doc.processing_status} · {(doc.size_bytes / 1024).toFixed(0)}KB · {doc.mime_type}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => viewCV(candidate.id, doc.id, setActionError)}
+                          disabled={!doc.presigned_url}
+                          className="text-xs px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 disabled:opacity-40 flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-3 h-3" /> Xem
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {candidate.source_email_message_id && (
+                  <p className="text-[10px] font-mono text-slate-400 mt-2">Nguồn: email {candidate.source_email_message_id.slice(0, 12)}…</p>
+                )}
+              </Section>
+            </div>
+
+            {/* Right: assignment */}
         <div className="space-y-4">
           <Section icon={Link2} title="Gán Job Opening (tối đa 1, chỉ 'open')">
             {candidate.job_opening_id ? (
@@ -339,7 +403,7 @@ async function viewCV(candidateId: string, docId: string, setErr: (m: string) =>
   }
 }
 
-function InterviewForm({ onSubmit, pending, onCancel }: { onSubmit: (d: CreateInterviewRequest) => void; pending: boolean; onCancel: () => void }) {
+    function InterviewForm({ onSubmit, pending, onCancel, hasCalendar, isReplacement }: { onSubmit: (d: CreateInterviewRequest) => void; pending: boolean; onCancel: () => void; hasCalendar: boolean; isReplacement?: boolean }) {
   const [roundName, setRoundName] = useState('Vòng 1');
   // Use datetime-local → ISO. tz default Asia/Ho_Chi_Minh
   const [start, setStart] = useState('');
@@ -388,13 +452,17 @@ function InterviewForm({ onSubmit, pending, onCancel }: { onSubmit: (d: CreateIn
         </div>
       </div>
       <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ghi chú..." rows={2} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg" />
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] text-amber-600">⚠ Bắt buộc đã chọn Calendar ở Settings/Gmail (GH #214).</p>
-        <div className="flex gap-2">
-          <button onClick={onCancel} className="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg">Hủy</button>
-          <button onClick={submit} disabled={pending || !start} className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg disabled:opacity-50">Tạo</button>
-        </div>
+                <div className="flex items-center justify-between gap-2">
+                  {hasCalendar ? (
+                    <p className="text-[10px] text-emerald-600">✅ Calendar đã chọn — sẵn sàng tạo lịch.</p>
+                  ) : (
+                    <p className="text-[10px] text-amber-600">⚠ Bắt buộc đã chọn Calendar ở Settings/Gmail (GH #214).</p>
+                  )}
+                  <div className="flex gap-2">
+                                        <button onClick={onCancel} className="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg">Hủy</button>
+                                        <button onClick={submit} disabled={pending || !start} className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg disabled:opacity-50">{isReplacement ? 'Tạo thay thế' : 'Tạo'}</button>
+                  </div>
+                </div>
       </div>
-    </div>
   );
 }

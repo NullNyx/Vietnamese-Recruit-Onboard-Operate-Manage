@@ -113,6 +113,19 @@ export async function fetchMyRequests(): Promise<EmployeeRequestListResponse> {
   return apiFetch<EmployeeRequestListResponse>(`${BASE}/me`);
 }
 
+export interface LeaveBalance {
+  annual_entitlement_days: number;
+  approved_days_used: number;
+  pending_days: number;
+  remaining_days: number;
+  as_of: string;
+}
+
+/** Fetch the current employee's annual leave balance. */
+export async function fetchLeaveBalance(): Promise<LeaveBalance> {
+  return apiFetch<LeaveBalance>(`${BASE}/me/leave/balance`);
+}
+
 // ---------------------------------------------------------------------------
 // ESS — Leave
 // ---------------------------------------------------------------------------

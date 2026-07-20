@@ -1,28 +1,29 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   Sparkles, Send, Bot, User, Check, AlertCircle, RefreshCw,
   ChevronDown, ChevronUp, Loader2, ThumbsUp, ThumbsDown, X, FileEdit,
+  Plus, Clock, CheckCircle, Square, Zap, Search, Mail, Calendar,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type {
-  ChatMessage, DraftAction, ChatResponse, AssistantFeedbackRequest, SessionStartResponse,
+  ChatMessage, DraftAction, ChatResponse, AssistantFeedbackRequest,
+  SessionStartResponse, SSEEvent,
 } from '@/lib/api/assistant';
+import { sendStreamMessage } from '@/lib/api/assistant';
 
 // ---------------------------------------------------------------------------
-// Props — API functions are injected so this one panel serves HR + ESS.
-// HR page injects lib/api/assistant; ESS page injects lib/api/employee-assistant.
-// The LLM never writes — confirm calls the real write endpoint directly.
+// Props
 // ---------------------------------------------------------------------------
 
 export interface AiChatApi {
   sendMessage: (messages: ChatMessage[], sessionId?: string) => Promise<ChatResponse>;
+  sendStreamMessage?: (messages: ChatMessage[], onEvent: (event: SSEEvent) => void, onError: (error: Error) => void, onDone: () => void, sessionId?: string) => () => void;
   confirmAction: (draft: DraftAction) => Promise<unknown>;
-  startSession: (assistantType: 'hr' | 'employee') => Promise<SessionStartResponse>;
+  startSession: (assistantType?: 'hr' | 'employee') => Promise<SessionStartResponse>;
   endSession: (sessionId: string) => Promise<void>;
   sendFeedback?: (feedback: AssistantFeedbackRequest) => Promise<void>;
-  /** Record the human decision (confirm/reject) for audit — HR assistant only. */
   recordDecision?: (draft: DraftAction, decision: 'confirm' | 'reject') => Promise<void>;
 }
 
@@ -32,28 +33,111 @@ export interface AiChatProps {
   title?: string;
   description?: string;
   suggestions?: string[];
-  /** For ESS: open the request form prefilled from a draft (leave/overtime). */
   onOpenRequestDialog?: (values: {
     leave?: Record<string, string>;
     overtime?: Record<string, string>;
   }) => void | Promise<void>;
-  /** Start collapsed (panel mode) — default expanded. */
   defaultOpen?: boolean;
   className?: string;
 }
 
-let idCounter = 0;
-function uid(prefix: string): string {
-  idCounter += 1;
-  return `${prefix}-${Date.now()}-${idCounter}`;
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function nowTime(): string {
   return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 }
 
+function toUserError(err: unknown): string {
+  if (err instanceof Error) {
+    const msg = err.message;
+    if (msg.includes('TIMEOUT') || msg.includes('hết thời gian'))
+      return 'Yêu cầu đã hết thời gian chờ — vui lòng thử lại.';
+    if (msg.includes('NETWORK') || msg.includes('mạng'))
+      return 'Lỗi kết nối mạng — vui lòng kiểm tra kết nối và thử lại.';
+    if (msg.includes('500') || msg.includes('Internal Server'))
+      return 'Lỗi máy chủ — vui lòng thử lại sau.';
+    if (msg.includes('503'))
+      return 'Dịch vụ AI chưa được cấu hình — vào Cấu hình AI & Hệ thống để thiết lập.';
+    if (msg.includes('404'))
+      return 'Không tìm thấy tài nguyên — vui lòng thử lại.';
+    if (msg.includes('403'))
+      return 'Bạn không có quyền thực hiện thao tác này.';
+    return msg;
+  }
+  return 'Không thể kết nối trợ lý — vui lòng thử lại.';
+}
+
+/** Simple markdown-like rendering: **bold**, *italic*, `code`, newlines */
+function renderMarkdown(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**'))
+      return <strong key={i} className="text-slate-900 font-semibold">{part.slice(2, -2)}</strong>;
+    if (part.startsWith('*') && part.endsWith('*') && !part.startsWith('**'))
+      return <em key={i} className="italic text-slate-600">{part.slice(1, -1)}</em>;
+    if (part.startsWith('`') && part.endsWith('`'))
+      return <code key={i} className="bg-slate-200 text-slate-800 px-1 py-0.5 rounded text-[11px] font-mono">{part.slice(1, -1)}</code>;
+    return <span key={i}>{part}</span>;
+  });
+}
+
+const TOOL_ICONS: Record<string, React.ReactNode> = {
+  search_candidates: <Search className="w-3 h-3" />,
+  count_candidates_by_status: <Search className="w-3 h-3" />,
+  get_candidate_parsed_cv: <FileEdit className="w-3 h-3" />,
+  list_job_openings: <Zap className="w-3 h-3" />,
+  get_department_info: <Zap className="w-3 h-3" />,
+  list_interviews_for_candidate: <Calendar className="w-3 h-3" />,
+  list_in_progress_onboarding: <RefreshCw className="w-3 h-3" />,
+  get_onboarding_task_details: <Check className="w-3 h-3" />,
+  draft_interview_invitation: <Mail className="w-3 h-3" />,
+      draft_congratulations_email: <Mail className="w-3 h-3" />,
+      // Employee tools
+      get_my_profile: <User className="w-3 h-3" />,
+      list_my_documents: <FileEdit className="w-3 h-3" />,
+      get_today_attendance: <Clock className="w-3 h-3" />,
+      list_my_attendance_records: <Clock className="w-3 h-3" />,
+      list_my_employee_requests: <FileEdit className="w-3 h-3" />,
+      get_my_leave_balance: <Calendar className="w-3 h-3" />,
+      list_my_payslips: <FileEdit className="w-3 h-3" />,
+      draft_leave_request: <Calendar className="w-3 h-3" />,
+      draft_overtime_request: <Clock className="w-3 h-3" />,
+    };
+
+const TOOL_LABELS: Record<string, string> = {
+  search_candidates: 'Tìm ứng viên',
+  count_candidates_by_status: 'Thống kê pipeline',
+  get_candidate_parsed_cv: 'Đọc CV',
+  list_job_openings: 'Danh sách vị trí',
+  get_department_info: 'Thông tin phòng ban',
+  list_interviews_for_candidate: 'Lịch phỏng vấn',
+  list_in_progress_onboarding: 'Onboarding',
+  get_onboarding_task_details: 'Chi tiết onboarding',
+  draft_interview_invitation: 'Soạn thư mời',
+      draft_congratulations_email: 'Soạn thư chúc mừng',
+      // Employee tools
+      get_my_profile: 'Hồ sơ của tôi',
+      list_my_documents: 'Tài liệu của tôi',
+      get_today_attendance: 'Chấm công hôm nay',
+      list_my_attendance_records: 'Lịch sử chấm công',
+      list_my_employee_requests: 'Yêu cầu của tôi',
+      get_my_leave_balance: 'Số dư nghỉ phép',
+      list_my_payslips: 'Bảng lương của tôi',
+      draft_leave_request: 'Soạn đơn nghỉ phép',
+      draft_overtime_request: 'Soạn đơn tăng ca',
+    };
+
+const LOADING_STEPS = [
+  'Đang phân tích câu hỏi...',
+  'Đang truy vấn dữ liệu...',
+  'Đang xử lý kết quả...',
+  'Đang soạn câu trả lời...',
+];
+
 // ---------------------------------------------------------------------------
-// Draft Action card — human-in-the-loop. Confirm fires the real write endpoint.
+// Draft Action card
 // ---------------------------------------------------------------------------
 
 const ACTION_LABELS: Record<string, string> = {
@@ -83,10 +167,7 @@ function friendlyParams(draft: DraftAction): { label: string; value: string }[] 
 }
 
 function DraftActionCard({
-  draft,
-  onConfirm,
-  onReject,
-  onOpenRequest,
+  draft, onConfirm, onReject, onOpenRequest,
 }: {
   draft: DraftAction;
   onConfirm: () => void;
@@ -99,31 +180,26 @@ function DraftActionCard({
   const handleConfirm = async () => {
     setState('pending');
     setError(null);
-    try {
-      await onConfirm();
-      setState('done');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Lỗi không xác định');
-      setState('error');
-    }
+    try { await onConfirm(); setState('done'); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Lỗi không xác định'); setState('error'); }
   };
 
   const handleReject = async () => {
     setState('pending');
-    try {
-      await onReject();
-      setState('idle');
-    } catch {
-      setState('idle');
-    }
+    try { await onReject(); setState('idle'); }
+    catch { setState('idle'); }
   };
 
   if (state === 'done') {
     return (
-      <div className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-xl font-medium">
-        <Check className="w-3.5 h-3.5" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-xl font-medium"
+      >
+        <CheckCircle className="w-4 h-4 text-emerald-500" />
         Đã xác nhận và ghi thành công.
-      </div>
+      </motion.div>
     );
   }
 
@@ -132,25 +208,25 @@ function DraftActionCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="p-3.5 bg-white rounded-xl border border-dashed border-indigo-300/80 space-y-2.5 shadow-sm"
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      className="p-4 bg-white rounded-xl border border-dashed border-indigo-300/80 space-y-3 shadow-sm"
     >
       <div className="flex items-center justify-between border-b border-slate-100 pb-2">
         <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-indigo-600 uppercase tracking-wider font-semibold">
           <FileEdit className="w-3 h-3" />
-          Đề xuất từ trợ lý AI
+          Đề xuất từ AI
         </span>
-        <span className="text-[10px] px-2 py-0.5 rounded-full font-sans font-semibold border bg-amber-50 text-amber-700 border-amber-100">
+        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border bg-amber-50 text-amber-700 border-amber-100">
           {label}
         </span>
       </div>
 
       {params.length > 0 && (
-        <div className="text-xs space-y-1 text-slate-700">
+        <div className="text-xs space-y-1.5 text-slate-700">
           {params.map((row) => (
-            <div key={row.label} className="flex gap-1.5">
-              <span className="text-slate-500 shrink-0">{row.label}:</span>
+            <div key={row.label} className="flex gap-2">
+              <span className="text-slate-400 shrink-0 min-w-[60px]">{row.label}</span>
               <span className="text-slate-900 font-semibold break-words">{row.value}</span>
             </div>
           ))}
@@ -158,22 +234,22 @@ function DraftActionCard({
       )}
 
       {draft.preview && (
-        <div className="text-[11px] text-slate-600 max-h-32 overflow-y-auto p-2 bg-slate-50 rounded border border-slate-200 whitespace-pre-wrap leading-relaxed">
+        <div className="text-xs text-slate-600 max-h-40 overflow-y-auto p-3 bg-slate-50 rounded-lg border border-slate-200 whitespace-pre-wrap leading-relaxed">
           {draft.preview}
         </div>
       )}
 
       {draft.provenance && Object.keys(draft.provenance).length > 0 && (
         <details className="text-[10px] text-slate-400">
-          <summary className="cursor-pointer hover:text-slate-600">Nguồn dữ liệu (provenance)</summary>
-          <pre className="mt-1 p-1.5 bg-slate-50 rounded overflow-x-auto font-mono text-[9px]">
+          <summary className="cursor-pointer hover:text-slate-600 select-none">Nguồn dữ liệu</summary>
+          <pre className="mt-1 p-2 bg-slate-50 rounded overflow-x-auto font-mono text-[9px] leading-relaxed">
             {JSON.stringify(draft.provenance, null, 2)}
           </pre>
         </details>
       )}
 
       {error && (
-        <div className="text-[11px] text-rose-600 bg-rose-50 border border-rose-100 p-1.5 rounded flex items-start gap-1">
+        <div className="text-[11px] text-rose-600 bg-rose-50 border border-rose-100 p-2 rounded-lg flex items-start gap-1.5">
           <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
           <span className="break-words">{error}</span>
         </div>
@@ -184,23 +260,20 @@ function DraftActionCard({
           type="button"
           onClick={handleConfirm}
           disabled={state === 'pending'}
-          className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition-all shadow-md shadow-indigo-100 flex items-center justify-center gap-1.5"
+          className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5"
         >
-          {state === 'pending' ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Check className="w-3.5 h-3.5 stroke-[3]" />
-          )}
-          {onOpenRequest ? 'Mở form' : 'Xác nhận & Ghi dữ liệu'}
+          {state === 'pending'
+            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang xử lý...</>
+            : <><Check className="w-3.5 h-3.5" /> {onOpenRequest ? 'Mở form' : 'Xác nhận & Ghi dữ liệu'}</>
+          }
         </button>
         <button
           type="button"
           onClick={handleReject}
           disabled={state === 'pending'}
-          className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 font-medium text-xs rounded-lg transition-all flex items-center gap-1"
+          className="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 font-medium text-xs rounded-lg transition-all flex items-center gap-1"
         >
-          <X className="w-3.5 h-3.5" />
-          Hủy
+          <X className="w-3.5 h-3.5" /> Hủy
         </button>
       </div>
     </motion.div>
@@ -208,41 +281,44 @@ function DraftActionCard({
 }
 
 // ---------------------------------------------------------------------------
-// Feedback row (thumbs up/down) for an assistant message.
+// Feedback row
 // ---------------------------------------------------------------------------
 
 function FeedbackRow({
-  messageIndex,
-  sessionId,
-  sendFeedback,
+  messageIndex, sessionId, sendFeedback, onToast,
 }: {
   messageIndex: number;
   sessionId?: string;
   sendFeedback?: AiChatApi['sendFeedback'];
+  onToast?: (msg: string) => void;
 }) {
   const [sent, setSent] = useState<'up' | 'down' | null>(null);
   if (!sendFeedback || !sessionId) return null;
+
   const submit = (type: 'up' | 'down') => {
     setSent(type);
-    sendFeedback({ session_id: sessionId, message_index: messageIndex, feedback_type: type }).catch(() => {});
+    sendFeedback({ session_id: sessionId, message_index: messageIndex, feedback_type: type })
+      .then(() => onToast?.('Cảm ơn phản hồi của bạn!'))
+      .catch(() => onToast?.('Không thể gửi phản hồi.'));
   };
+
   return (
-    <div className="flex items-center gap-1 mt-1">
+    <div className="flex items-center gap-0.5 mt-1.5">
       <button
         type="button"
         onClick={() => submit('up')}
-        className={`p-1 rounded-md hover:bg-indigo-50 transition-colors ${sent === 'up' ? 'text-indigo-600' : 'text-slate-300'}`}
+        className={`p-1 rounded-md transition-all ${sent === 'up' ? 'text-indigo-600 scale-110' : 'text-slate-300 hover:text-indigo-400 hover:bg-indigo-50'}`}
         aria-label="Hữu ích"
       >
-        <ThumbsUp className="w-3.5 h-3.5" />
+        <ThumbsUp className="w-3 h-3" />
       </button>
       <button
         type="button"
         onClick={() => submit('down')}
-        className={`p-1 rounded-md hover:bg-rose-50 transition-colors ${sent === 'down' ? 'text-rose-500' : 'text-slate-300'}`}
+        className={`p-1 rounded-md transition-all ${sent === 'down' ? 'text-rose-500 scale-110' : 'text-slate-300 hover:text-rose-400 hover:bg-rose-50'}`}
         aria-label="Không hữu ích"
       >
-        <ThumbsDown className="w-3.5 h-3.5" />
+        <ThumbsDown className="w-3 h-3" />
       </button>
     </div>
   );
@@ -253,110 +329,236 @@ function FeedbackRow({
 // ---------------------------------------------------------------------------
 
 export default function AiChat({
-  assistantType,
-  api,
-  title,
-  description,
-  suggestions,
-  onOpenRequestDialog,
-  defaultOpen = true,
-  className,
+  assistantType, api, title, description, suggestions,
+  onOpenRequestDialog, defaultOpen = true, className,
 }: AiChatProps) {
   const welcome: ChatMessage = {
     role: 'assistant',
-    content:
-      assistantType === 'hr'
-        ? 'Xin chào HR! Tôi là Trợ lý AI Vroom HR. Tôi có thể đọc dữ liệu ứng viên, lịch phỏng vấn, onboarding và soạn nháp email mời phỏng vấn / chúc mừng. Mọi ghi dữ liệu đều do bạn xác nhận.'
-        : 'Chào bạn! Tôi là Trợ lý nhân viên. Tôi có thể kiểm tra chấm công, số dư phép và soạn nháp yêu cầu nghỉ phép / tăng ca của bạn. Bạn cần tự xác nhận mọi yêu cầu.',
-    tool_call_id: undefined,
-    tool_calls: undefined,
-    name: undefined,
+    content: assistantType === 'hr'
+      ? 'Xin chào HR! Tôi là Trợ lý AI Vroom HR. Tôi có thể đọc dữ liệu ứng viên, lịch phỏng vấn, onboarding và soạn nháp email mời phỏng vấn / chúc mừng. Mọi ghi dữ liệu đều do bạn xác nhận.'
+      : 'Chào bạn! Tôi là Trợ lý nhân viên. Tôi có thể kiểm tra chấm công, số dư phép và soạn nháp yêu cầu nghỉ phép / tăng ca của bạn. Bạn cần tự xác nhận mọi yêu cầu.',
+    tool_call_id: undefined, tool_calls: undefined, name: undefined,
   };
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [draftAction, setDraftAction] = useState<DraftAction | null>(null);
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [toast, setToast] = useState<string | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
+  const [toolStatus, setToolStatus] = useState<{ name: string; label: string; done: boolean } | null>(null);
+
   const sessionIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cancelStreamRef = useRef<(() => void) | null>(null);
+  const finalizedRef = useRef(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  const titleText =
-    title ?? (assistantType === 'hr' ? 'Trợ lý AI Vroom HR' : 'Trợ lý Nhân viên (ESS)');
-  const descText =
-    description ??
-    (assistantType === 'hr'
-      ? 'Hỏi về dữ liệu tuyển dụng / onboarding; soạn nháp action cho HR xác nhận.'
-      : 'Hỏi về chấm công, phép; soạn nháp yêu cầu của bạn.');
-  const chipSuggestions =
-    suggestions ??
-    (assistantType === 'hr'
-      ? ['Có bao nhiêu candidate đang reviewing?', 'Onboarding nào đang chạy?', 'Soạn email chúc mừng cho Nguyễn Văn A']
-      : ['Số dư phép của tôi?', 'Soạn đơn nghỉ phép 2 ngày', 'Lịch chấm công tuần này']);
+  const titleText = title ?? (assistantType === 'hr' ? 'Trợ lý AI Vroom HR' : 'Trợ lý Nhân viên (ESS)');
+  const descText = description ?? (assistantType === 'hr'
+    ? 'Hỏi về dữ liệu tuyển dụng / onboarding; soạn nháp action cho HR xác nhận.'
+    : 'Hỏi về chấm công, phép; soạn nháp yêu cầu của bạn.');
+  const chipSuggestions = suggestions ?? (assistantType === 'hr'
+    ? ['Có bao nhiêu candidate đang reviewing?', 'Onboarding nào đang chạy?', 'Soạn email chúc mừng cho Nguyễn Văn A']
+    : ['Số dư phép của tôi?', 'Soạn đơn nghỉ phép 2 ngày', 'Lịch sử chấm công tháng này']);
+
+  // Toast auto-dismiss
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   // Session lifecycle
   useEffect(() => {
     mountedRef.current = true;
-    api
-      .startSession(assistantType)
-      .then((res) => {
-        if (mountedRef.current) sessionIdRef.current = res.session_id;
-      })
-      .catch((err) => {
-        console.warn('Failed to start assistant session:', err);
-      });
+    setSessionReady(false);
+    api.startSession(assistantType)
+      .then((res) => { if (mountedRef.current) { sessionIdRef.current = res.session_id; setSessionReady(true); } })
+      .catch(() => { if (mountedRef.current) setSessionReady(true); });
     return () => {
       mountedRef.current = false;
       const sid = sessionIdRef.current;
-      if (sid) {
-        api.endSession(sid).catch((err) => console.warn('Failed to end session:', err));
-      }
+      if (sid) api.endSession(sid).catch(() => {});
     };
   }, [api, assistantType]);
 
+  // Loading progress animation
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (loading) {
+      loadingIntervalRef.current = setInterval(() => {
+        setLoadingStep((prev) => (prev + 1) % LOADING_STEPS.length);
+      }, 2000);
+    } else {
+      if (loadingIntervalRef.current) { clearInterval(loadingIntervalRef.current); loadingIntervalRef.current = null; }
+      setLoadingStep(0);
     }
-  }, [messages, loading]);
+    return () => { if (loadingIntervalRef.current) { clearInterval(loadingIntervalRef.current); loadingIntervalRef.current = null; } };
+  }, [loading]);
 
+  // Smooth auto-scroll
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, streamingText, loading]);
+
+  // Keyboard shortcut: Ctrl+J
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'j') {
+        e.preventDefault();
+        textareaRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  // Auto-resize textarea
+  const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    const el = e.target;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+  }, []);
+
+  // New chat
+  const handleNewChat = useCallback(async () => {
+    cancelStreamRef.current?.();
+    const sid = sessionIdRef.current;
+    if (sid) await api.endSession(sid).catch(() => {});
+    setMessages([]);
+    setInput('');
+    setError(null);
+    setDraftAction(null);
+    setStreamingText('');
+    setToolStatus(null);
+    setLoading(false);
+    finalizedRef.current = false;
+    setSessionReady(false);
+    api.startSession(assistantType)
+      .then((res) => { if (mountedRef.current) { sessionIdRef.current = res.session_id; setSessionReady(true); } })
+      .catch(() => { if (mountedRef.current) setSessionReady(true); });
+    textareaRef.current?.focus();
+  }, [api, assistantType]);
+
+  // Send with SSE streaming
   const handleSend = useCallback(
-    async (retryText?: string) => {
+    (retryText?: string) => {
       const text = (retryText ?? input).trim();
       if (!text || loading) return;
+      cancelStreamRef.current?.();
+
       const userMessage: ChatMessage = { role: 'user', content: text };
       const history = [...messages, userMessage];
       setMessages(history);
       setInput('');
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
       setError(null);
       setDraftAction(null);
+      setStreamingText('');
+      setToolStatus(null);
       setLoading(true);
-      try {
-        const res: ChatResponse = await api.sendMessage(history, sessionIdRef.current ?? undefined);
-        const display = res.messages.filter(
-          (m) => !(m.role === 'assistant' && m.content === null && m.tool_calls),
-        );
-        setMessages([...history, ...display]);
-        if (res.draft_action) setDraftAction(res.draft_action);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Không thể kết nối trợ lý';
-        setError(msg);
-        setInput(text);
-      } finally {
-        setLoading(false);
-      }
+      finalizedRef.current = false;
+
+          const streamFn = api.sendStreamMessage ?? sendStreamMessage;
+          const cancel = streamFn(
+            history,
+            // onEvent — SSE events
+            (event: SSEEvent) => {
+          if (finalizedRef.current) return;
+          switch (event.event) {
+            case 'text_delta':
+              setStreamingText((prev) => prev + (event.data.content as string || ''));
+              break;
+            case 'tool_start': {
+              const name = event.data.name as string;
+              setToolStatus({ name, label: TOOL_LABELS[name] || name, done: false });
+              break;
+            }
+            case 'tool_end': {
+              const name = event.data.name as string;
+              setToolStatus({ name, label: TOOL_LABELS[name] || name, done: true });
+              break;
+            }
+            case 'draft_action':
+              setDraftAction(event.data as unknown as DraftAction);
+              break;
+            case 'done':
+              if (finalizedRef.current) break;
+              finalizedRef.current = true;
+              setLoading(false);
+              setToolStatus(null);
+              // Read streamingText directly via ref trick: capture in closure
+              setStreamingText((current) => {
+                if (current) {
+                  // Use flushSync-like pattern: append directly in same microtask
+                  setTimeout(() => {
+                    setMessages((prev) => {
+                      // Dedup: only append if not already present
+                      const last = prev[prev.length - 1];
+                      if (last?.role === 'assistant' && last.content === current) return prev;
+                      return [...prev, { role: 'assistant', content: current }];
+                    });
+                  }, 0);
+                }
+                return '';
+              });
+              break;
+            case 'error':
+              finalizedRef.current = true;
+              setLoading(false);
+              setToolStatus(null);
+              setStreamingText('');
+              setError(toUserError(event.data.message || 'Lỗi không xác định'));
+              setInput(text);
+              break;
+          }
+        },
+        // onError — network/fatal error
+        (err) => {
+          if (finalizedRef.current) return;
+          finalizedRef.current = true;
+          setLoading(false);
+          setToolStatus(null);
+          setStreamingText('');
+          setError(toUserError(err));
+          setInput(text);
+        },
+        // onDone — cleanup only, finalization handled by SSE events
+        () => {
+          setLoading(false);
+          setToolStatus(null);
+        },
+        sessionIdRef.current ?? undefined,
+      );
+      cancelStreamRef.current = cancel;
     },
-    [api, input, loading, messages],
+    [input, loading, messages],
   );
 
+  // Stop generation
+  const handleStop = useCallback(() => {
+    cancelStreamRef.current?.();
+    finalizedRef.current = true;
+    setLoading(false);
+    setToolStatus(null);
+    setStreamingText((current) => {
+      if (current) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: current + ' [Đã dừng]' }]);
+      }
+      return '';
+    });
+  }, []);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
   const handleDraftConfirm = useCallback(async () => {
@@ -365,38 +567,33 @@ export default function AiChat({
       const b = draftAction.confirm_body as Record<string, unknown>;
       const values: { leave?: Record<string, string>; overtime?: Record<string, string> } = {};
       if (draftAction.action_type === 'submit_leave_request') {
-        values.leave = {
-          leave_type: String(b.leave_type ?? ''),
-          start_date: String(b.start_date ?? ''),
-          end_date: String(b.end_date ?? ''),
-          reason: String(b.reason ?? ''),
-        };
+        values.leave = { leave_type: String(b.leave_type ?? ''), start_date: String(b.start_date ?? ''), end_date: String(b.end_date ?? ''), reason: String(b.reason ?? '') };
       } else {
-        values.overtime = {
-          work_date: String(b.work_date ?? ''),
-          start_time: String(b.start_time ?? ''),
-          end_time: String(b.end_time ?? ''),
-          reason: String(b.reason ?? ''),
-          project_or_task: String(b.project_or_task ?? ''),
-        };
+        values.overtime = { work_date: String(b.work_date ?? ''), start_time: String(b.start_time ?? ''), end_time: String(b.end_time ?? ''), reason: String(b.reason ?? ''), project_or_task: String(b.project_or_task ?? '') };
       }
       await Promise.resolve(onOpenRequestDialog(values));
       setDraftAction(null);
       return;
     }
-    await api.confirmAction(draftAction);
-    await api.recordDecision?.(draftAction, 'confirm');
+        const actionLabel = ACTION_LABELS[draftAction.action_type] ?? draftAction.action_type;
+        // DraftActionCard already provides confirm/cancel UI — confirm proceeds directly
+        try {
+      await api.recordDecision?.(draftAction, 'confirm');
+      await api.confirmAction(draftAction);
+      setMessages((prev) => [...prev, { role: 'assistant', content: `✅ Đã thực hiện thành công: ${actionLabel} — ${draftAction.preview ?? ''}` }]);
+      setToast('Thao tác đã được thực hiện thành công!');
+    } catch (err) {
+      setToast(`Thất bại: ${toUserError(err)}`);
+      throw err;
+    }
     setDraftAction(null);
   }, [api, draftAction, onOpenRequestDialog]);
 
   const handleDraftReject = useCallback(async () => {
     if (!draftAction) return;
-    try {
-      await api.recordDecision?.(draftAction, 'reject');
-    } catch {
-      // ignore — reject is best-effort audit
-    }
+    try { await api.recordDecision?.(draftAction, 'reject'); } catch {}
     setDraftAction(null);
+    setToast('Đã hủy đề xuất.');
   }, [api, draftAction]);
 
   const displayMessages = messages.length === 0 ? [welcome] : messages;
@@ -404,100 +601,201 @@ export default function AiChat({
   return (
     <div
       id="ai-assistant-chat-panel"
-      className={`flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-md shadow-slate-100 transition-all duration-300 ${className ?? 'h-full'}`}
+      className={`flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-lg shadow-slate-100/50 transition-all duration-300 ${className ?? 'h-full'}`}
     >
-      {/* Header */}
-      <div
-        onClick={() => setIsOpen((o) => !o)}
-        className="flex items-center justify-between px-4 py-3.5 bg-slate-900 border-b border-slate-950 cursor-pointer select-none"
-      >
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
-          <h3 className="font-sans font-semibold text-sm text-white flex items-center gap-1.5">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-900 to-slate-800 border-b border-slate-700 select-none shrink-0">
+        <div onClick={() => setIsOpen((o) => !o)} className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0">
+            <Sparkles className="w-4 h-4 text-indigo-400" />
+          </div>
+          <h3 className="font-sans font-semibold text-sm text-white flex items-center gap-2 truncate">
             {titleText}
-            <span className="text-[10px] bg-indigo-500/25 text-indigo-200 px-1.5 py-0.5 rounded-full font-mono">
+            <span className="text-[9px] bg-indigo-500/25 text-indigo-200 px-1.5 py-0.5 rounded-full font-mono hidden sm:inline-block tracking-wide">
               Human-in-the-loop
             </span>
           </h3>
         </div>
-        <button className="text-slate-300 hover:text-white transition-all">
-          {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-        </button>
+        <div className="flex items-center gap-0.5">
+          {loading && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); handleStop(); }}
+              className="p-1.5 rounded-lg text-rose-400 hover:text-white hover:bg-rose-500/30 transition-all"
+              title="Dừng tạo"
+            >
+              <Square className="w-4 h-4" />
+            </button>
+          )}
+          {messages.length > 0 && !loading && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); handleNewChat(); }}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all"
+              title="Cuộc trò chuyện mới"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => setIsOpen((o) => !o)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-all"
+            aria-label={isOpen ? 'Thu gọn' : 'Mở rộng'}
+          >
+            {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
+
+      {/* ── Toast ── */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className="absolute top-14 left-1/2 -translate-x-1/2 z-20 px-4 py-2.5 bg-slate-900 text-white text-xs rounded-xl flex items-center gap-2 shadow-xl border border-slate-700"
+          >
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span className="flex-1 whitespace-nowrap">{toast}</span>
+            <button onClick={() => setToast(null)} className="text-slate-500 hover:text-white shrink-0"><X className="w-3 h-3" /></button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {isOpen && (
         <>
-          {/* Chat Body */}
+          {/* ── Chat Body ── */}
           <div ref={scrollRef} className="flex-1 p-4 overflow-y-auto space-y-4 h-[350px] md:h-[450px]">
+            {/* Empty state */}
             {messages.length === 0 && (
-              <div className="flex flex-col items-center text-center py-8">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mb-3">
-                  <Bot className="w-6 h-6 text-indigo-600" />
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center text-center py-10"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 flex items-center justify-center mb-4 shadow-sm">
+                  <Bot className="w-7 h-7 text-indigo-600" />
                 </div>
-                <p className="text-sm text-slate-700 font-medium mb-1">{titleText}</p>
-                <p className="text-xs text-slate-500 max-w-sm leading-relaxed mb-4">{descText}</p>
-                <div className="flex flex-wrap justify-center gap-1.5">
+                <p className="text-sm text-slate-800 font-semibold mb-1">{titleText}</p>
+                <p className="text-xs text-slate-500 max-w-xs leading-relaxed mb-5">{descText}</p>
+                <div className="flex flex-wrap justify-center gap-2">
                   {chipSuggestions.map((s) => (
                     <button
                       key={s}
                       type="button"
-                      onClick={() => {
-                        setInput(s);
-                        textareaRef.current?.focus();
-                      }}
-                      className="text-[11px] px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                      onClick={() => { if (!loading) { handleSend(s); } }}
+                      className="text-[11px] px-3 py-1.5 rounded-full border border-slate-200 text-slate-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 transition-all shadow-sm"
                     >
                       {s}
                     </button>
-                    ))}
-                  </div>
-              </div>
+                  ))}
+                </div>
+              </motion.div>
             )}
 
-            {messages.map((m, i) => (
-              <div key={i} className={`flex gap-2.5 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {m.role === 'assistant' && (
-                  <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
-                    <Bot className="w-4 h-4 text-indigo-600" />
-                  </div>
-                )}
-                <div className="max-w-[85%] space-y-1.5">
-                  <div
-                    className={`p-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                      m.role === 'user'
-                        ? 'bg-indigo-600 text-white font-medium rounded-tr-none shadow-sm shadow-indigo-100'
-                        : 'bg-slate-50 text-slate-800 rounded-tl-none border border-slate-200'
-                    }`}
-                  >
-                    {m.content ?? ''}
-                  </div>
-                  {m.role === 'assistant' && m.content && (
-                    <FeedbackRow
-                      messageIndex={i}
-                      sessionId={sessionIdRef.current ?? undefined}
-                      sendFeedback={api.sendFeedback}
-                    />
+            {/* Messages */}
+            <AnimatePresence mode="popLayout">
+              {messages.map((m, i) => (
+                <motion.div
+                  key={`msg-${i}`}
+                  initial={{ opacity: 0, y: 12, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className={`flex gap-2.5 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  {m.role === 'assistant' && (
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 flex items-center justify-center shrink-0 mt-0.5">
+                      <Bot className="w-3.5 h-3.5 text-indigo-600" />
+                    </div>
                   )}
-                </div>
-                {m.role === 'user' && (
-                  <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                    <User className="w-4 h-4" />
+                  <div className="max-w-[85%] space-y-1">
+                    <div className={`text-[9px] text-slate-400 flex items-center gap-1 ${m.role === 'user' ? 'justify-end' : ''}`}>
+                      <Clock className="w-2.5 h-2.5" />
+                      {nowTime()}
+                    </div>
+                    <div
+                      className={`p-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                        m.role === 'user'
+                          ? 'bg-indigo-600 text-white font-medium rounded-tr-none shadow-sm'
+                          : 'bg-slate-50 text-slate-800 rounded-tl-none border border-slate-200/80 shadow-sm'
+                      }`}
+                    >
+                      {m.role === 'assistant' ? renderMarkdown(m.content ?? '') : (m.content ?? '')}
+                    </div>
+                    {m.role === 'assistant' && m.content && (
+                      <FeedbackRow
+                        messageIndex={i}
+                        sessionId={sessionIdRef.current ?? undefined}
+                        sendFeedback={api.sendFeedback}
+                        onToast={setToast}
+                      />
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                  {m.role === 'user' && (
+                    <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                      <User className="w-3.5 h-3.5" />
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
 
+            {/* Streaming indicator */}
             {loading && (
-              <div className="flex gap-2.5 justify-start">
-                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
-                  <Bot className="w-4 h-4 text-indigo-600" />
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex gap-2.5 justify-start"
+              >
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 flex items-center justify-center shrink-0 mt-0.5">
+                  <Bot className="w-3.5 h-3.5 text-indigo-600" />
                 </div>
-                <div className="bg-slate-50 text-slate-500 border border-slate-200 p-3.5 rounded-2xl rounded-tl-none text-xs flex items-center gap-2">
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  Trợ lý đang truy vấn dữ liệu và phân tích...
+                <div className="max-w-[85%] space-y-2">
+                  {/* Tool status chip */}
+                  <AnimatePresence mode="wait">
+                    {toolStatus && (
+                      <motion.div
+                        key={toolStatus.name}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 8 }}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border ${
+                          toolStatus.done
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}
+                      >
+                        {toolStatus.done
+                          ? <Check className="w-3 h-3" />
+                          : (TOOL_ICONS[toolStatus.name] ?? <RefreshCw className="w-3 h-3 animate-spin" />)
+                        }
+                        {toolStatus.label}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  {/* Streaming text bubble */}
+                  <div className="bg-slate-50 text-slate-800 border border-slate-200/80 p-3.5 rounded-2xl rounded-tl-none text-sm leading-relaxed whitespace-pre-wrap shadow-sm">
+                    {streamingText ? (
+                      <>
+                        {renderMarkdown(streamingText)}
+                        <span className="inline-block w-1.5 h-4 bg-indigo-500 ml-0.5 animate-pulse rounded-sm align-middle" />
+                      </>
+                    ) : (
+                      <span className="text-slate-400 text-xs flex items-center gap-2">
+                        <span className="flex gap-1">
+                          <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </span>
+                        {LOADING_STEPS[loadingStep]}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             )}
+            <div ref={bottomRef} />
           </div>
 
           {/* Draft Action */}
@@ -507,71 +805,75 @@ export default function AiChat({
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="px-4 pb-2"
+                className="px-4 pb-3"
               >
-                    <DraftActionCard
-                      draft={draftAction}
-                      onConfirm={handleDraftConfirm}
-                      onReject={handleDraftReject}
-                      onOpenRequest={
-                        onOpenRequestDialog &&
-                        (draftAction.action_type === 'submit_leave_request' ||
-                         draftAction.action_type === 'submit_overtime_request')
-                          ? () => handleDraftConfirm()
-                          : undefined
-                      }
-                    />
+                <DraftActionCard
+                  draft={draftAction}
+                  onConfirm={handleDraftConfirm}
+                  onReject={handleDraftReject}
+                  onOpenRequest={
+                    onOpenRequestDialog &&
+                    (draftAction.action_type === 'submit_leave_request' || draftAction.action_type === 'submit_overtime_request')
+                      ? () => handleDraftConfirm()
+                      : undefined
+                  }
+                />
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Error */}
-          {error && (
-            <div className="mx-4 mb-2 flex items-center justify-between gap-2 border border-rose-200 bg-rose-50 px-3 py-2 rounded-lg text-xs text-rose-600">
-              <span className="flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5" />
-                <span className="break-words">{error}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setError(null);
-                  handleSend();
-                }}
-                className="text-rose-600 underline hover:text-rose-700 shrink-0"
+          {/* Error bar */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mx-4 mb-2 flex items-center justify-between gap-2 border border-rose-200 bg-rose-50 px-3 py-2.5 rounded-xl text-xs text-rose-600"
               >
-                Thử lại
-              </button>
-            </div>
-          )}
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span className="break-words truncate">{error}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { setError(null); handleSend(); }}
+                  className="text-rose-600 underline hover:text-rose-700 shrink-0 font-medium"
+                >
+                  Thử lại
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* Form */}
+          {/* ── Input form ── */}
           <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend();
-            }}
-            className="p-3 bg-slate-50 border-t border-slate-200 flex gap-2"
+            onSubmit={(e) => { e.preventDefault(); if (!loading) handleSend(); }}
+            className="p-3 bg-slate-50 border-t border-slate-200 flex gap-2 shrink-0"
           >
             <textarea
               ref={textareaRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
               rows={1}
-              placeholder={assistantType === 'hr' ? 'Nhập câu hỏi hoặc yêu cầu soạn email...' : 'Hỏi về chấm công, phép hoặc soạn nháp yêu cầu...'}
-              className="flex-1 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none max-h-32"
-              disabled={loading}
+              placeholder={assistantType === 'hr' ? 'Hỏi về ứng viên, onboarding, hoặc yêu cầu soạn email...  (Ctrl+J để focus)' : 'Hỏi về chấm công, phép hoặc soạn nháp yêu cầu...  (Ctrl+J để focus)'}
+              className="flex-1 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none overflow-y-auto transition-all"
+              disabled={loading || !sessionReady}
             />
-                <button
-                  type="submit"
-                  aria-label="Gửi"
-                  disabled={loading || !input.trim()}
-                  className="p-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-100 text-white disabled:text-slate-400 rounded-xl transition-all shrink-0 shadow-md shadow-indigo-50"
-                >
-                  <span className="sr-only">Gửi</span>
-                  <Send className="w-4 h-4" />
-                </button>
+            <button
+              type="submit"
+              aria-label={loading ? 'Dừng' : 'Gửi'}
+              disabled={(!loading && (!input.trim() || !sessionReady))}
+              onClick={loading ? (e) => { e.preventDefault(); handleStop(); } : undefined}
+              className={`p-2.5 rounded-xl transition-all shrink-0 shadow-sm ${
+                loading
+                  ? 'bg-rose-500 hover:bg-rose-600 text-white'
+                  : 'bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 text-white disabled:text-slate-400'
+              }`}
+            >
+              {loading ? <Square className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+            </button>
           </form>
         </>
       )}

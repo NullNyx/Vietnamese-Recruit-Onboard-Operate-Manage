@@ -110,3 +110,10 @@ export async function createEmployeeAccount(
     method: "POST",
   });
 }
+
+/** Delete Employee Account. Idempotent: succeeds whether or not an account exists. */
+export async function deleteEmployeeAccount(
+  employeeId: string,
+): Promise<void> {
+  await apiFetch<void>(`${BASE}/${employeeId}/account`, { method: "DELETE" });
+}

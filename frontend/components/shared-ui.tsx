@@ -286,11 +286,17 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   org_google_reconnect: 'Kết nối lại Google',
   org_google_switch_account: 'Chuyển tài khoản Google',
   org_google_disconnect: 'Ngắt kết nối Google',
+  org_google_calendar_select: 'Chọn lịch Google',
   org_ai_config_update: 'Cập nhật cấu hình AI',
   org_ai_config_rotate: 'Xoay API key AI',
   org_ai_config_revoke: 'Thu hồi cấu hình AI',
   org_ai_config_source: 'Thay đổi nguồn credential AI',
   org_ai_classification_rollout: 'Triển khai phân loại AI',
+  org_ai_toggle_assistant: 'Bật/tắt trợ lý AI',
+  org_ai_consent: 'Đồng ý chính sách AI',
+  org_ai_toggle_automation: 'Bật/tắt AI tự động',
+  payslip_publish: 'Xuất bản phiếu lương',
+  payslip_unpublish: 'Ẩn phiếu lương',
 };
 
 export const MIME_TYPE_LABELS: Record<string, string> = {
@@ -552,6 +558,16 @@ export function formatAuditDetails(details: unknown): string {
     name: 'Tên',
     employee_id: 'Mã NV',
     permissions: 'Quyền hạn',
+    result: 'Kết quả',
+    kết_quả: 'Kết quả',
+    calendar_id: 'Lịch',
+    lịch: 'Lịch',
+  };
+
+  const valueMap: Record<string, string> = {
+    calendar_selected: 'đã chọn lịch',
+    connected: 'đã kết nối',
+    disconnected: 'đã ngắt kết nối',
   };
 
   try {
@@ -560,9 +576,10 @@ export function formatAuditDetails(details: unknown): string {
     return entries
       .map(([key, value]) => {
         const label = fieldMap[key] ?? key;
-        const val =
-          typeof value === 'object' ? JSON.stringify(value) : String(value);
-        return `${label}: ${val}`;
+        let val =
+            typeof value === 'object' ? JSON.stringify(value) : String(value);
+            val = valueMap[val] ?? val;
+            return `${label}: ${val}`;
       })
       .join(', ');
   } catch {

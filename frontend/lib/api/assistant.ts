@@ -53,6 +53,14 @@ export interface ChatResponse {
   draft_action: DraftAction | null;
 }
 
+export interface SSEEvent {
+  event: string;
+  data: Record<string, unknown>;
+}
+
+export type StreamCallback = (event: SSEEvent) => void;
+
+
 export interface SessionStartResponse {
   session_id: string;
 }
@@ -90,6 +98,122 @@ interface ChatRequestMessage {
  * @param messages - Full conversation history. Last message must be from user.
  * @returns New messages from this turn + optional Draft Action.
  */
+
+/**
+ * Send a chat message via SSE streaming.
+ *
+ * Opens a POST connection to /chat/stream and reads Server-Sent Events.
+ * Calls onEvent for each event (text_delta, tool_start, tool_end,
+ * draft_action, done, error).
+ *
+ * Returns an abort function to cancel the stream.
+ */
+export function sendStreamMessage(
+  messages: ChatMessage[],
+  onEvent: StreamCallback,
+  onError: (error: Error) => void,
+  onDone: () => void,
+  sessionId?: string,
+): () => void {
+  const sanitized: ChatRequestMessage[] = messages.flatMap((message) => {
+    if (message.role === "tool") return [];
+    if (message.content === null) return [];
+    const content = message.content.trim();
+    if (!content) return [];
+    return [{ role: message.role, content }];
+  });
+
+  const body: Record<string, unknown> = { messages: sanitized };
+  if (sessionId) {
+    body.session_id = sessionId;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  fetch(`${BASE}/chat/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: controller.signal,
+    credentials: "include",
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        const text = await res.text().catch(() => "Unknown error");
+        onError(new Error(`Assistant API ${res.status}: ${text}`));
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) {
+        onError(new Error("Stream not supported"));
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      let streamDone = false;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          let eventName = "";
+          let eventData = "";
+
+          for (const line of lines) {
+            if (line.startsWith("event: ")) {
+              eventName = line.slice(7);
+            } else if (line.startsWith("data: ")) {
+              eventData = line.slice(6);
+            } else if (line === "" && eventName) {
+              try {
+                const data = JSON.parse(eventData) as Record<string, unknown>;
+                onEvent({ event: eventName, data });
+
+                if (eventName === "done" || eventName === "error") {
+                  streamDone = true;
+                  clearTimeout(timeout);
+                  return;
+                }
+              } catch {
+                // skip malformed JSON
+              }
+              eventName = "";
+              eventData = "";
+            }
+          }
+        }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return;
+        }
+        onError(err instanceof Error ? err : new Error("Stream error"));
+      } finally {
+        clearTimeout(timeout);
+        if (!streamDone) onDone();
+      }
+    })
+    .catch((err) => {
+      clearTimeout(timeout);
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      onError(err instanceof Error ? err : new Error("Connection error"));
+      onDone();
+    });
+
+  return () => {
+    clearTimeout(timeout);
+    controller.abort();
+  };
+}
+
 export async function sendChatMessage(
   messages: ChatMessage[],
   sessionId?: string,

@@ -1,1 +1,40 @@
 @import "tailwindcss";
+
+/* ── Print styles: ẩn UI chrome khi in phiếu lương / payslip ── */
+@media print {
+  /* Ẩn sidebar, header, navigation */
+  nav, .sidebar, [role="navigation"],
+  header, .top-bar,
+  button, .no-print {
+    display: none !important;
+  }
+
+  /* Nội dung chính full width */
+  main, .content, [role="main"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Ẩn shadow, border trang trí */
+  .shadow, .shadow-sm, .shadow-md, .shadow-lg {
+    box-shadow: none !important;
+  }
+
+  /* Font tối ưu cho in */
+  body {
+    font-size: 12pt;
+    color: #000;
+    background: #fff;
+  }
+
+  /* Đảm bảo table không bị cắt */
+  table {
+    page-break-inside: auto;
+  }
+  tr {
+    page-break-inside: avoid;
+  }
+}
+
