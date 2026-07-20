@@ -66,12 +66,12 @@ export default function LoginPage() {
           setServerError('Vui lòng kiểm tra lại thông tin');
         } else {
           const code = err.code;
-          const msg = getErrorMessage(code) || err.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
+          const msg = getErrorMessage(code ?? '') || err.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
           setServerError(msg);
         }
       } else if (err instanceof Error) {
         const code = (err as ApiError).errorCode;
-        const msg = getErrorMessage(code) || err.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
+        const msg = getErrorMessage(code ?? '') || err.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
         setServerError(msg);
       } else {
         setServerError('Đăng nhập thất bại. Vui lòng thử lại.');
