@@ -71,7 +71,7 @@ export default function OnboardingPage() {
         ))}
       </div>
 
-      {actionError && <ErrorBanner error={actionError} />}
+      {!!actionError && <ErrorBanner error={actionError} />}
 
       {isLoading ? (
         <Loading label="Đang tải onboarding..." />
