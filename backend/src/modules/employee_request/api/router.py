@@ -7,6 +7,7 @@ require an authenticated Employee.
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from src.shared.messages import get_error_detail
 
 from src.modules.employee.api.dependencies import get_current_employee
 from src.modules.employee.domain.entities import Employee
@@ -41,7 +42,7 @@ def _require_active_employee(
 ) -> Employee:
     """Dependency that requires an active Employee (not admin)."""
     if employee is None:
-        raise HTTPException(status_code=403, detail="Only employees can submit requests")
+        raise HTTPException(status_code=403, detail=get_error_detail("REQUEST_SUBMIT_FORBIDDEN"))
     return employee
 
 

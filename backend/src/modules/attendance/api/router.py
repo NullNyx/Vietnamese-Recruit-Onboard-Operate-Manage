@@ -11,6 +11,7 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from src.shared.messages import get_message
 
 from src.modules.attendance.api.schemas import (
     AttendanceListResponse,
@@ -179,7 +180,7 @@ async def check_in(
         user_agent=user_agent,
     )
     return CheckInResponse(
-        message="Checked in successfully",
+        message=get_message("CHECKED_IN_SUCCESS"),
         record=AttendanceRecordResponse.model_validate(record),
     )
 
@@ -202,7 +203,7 @@ async def check_out(
         user_agent=user_agent,
     )
     return CheckOutResponse(
-        message="Checked out successfully",
+        message=get_message("CHECKED_OUT_SUCCESS"),
         record=AttendanceRecordResponse.model_validate(record),
     )
 
@@ -338,6 +339,6 @@ async def correct_attendance_record(
     )
 
     return CorrectionResponse(
-        message="Attendance record corrected successfully",
+        message=get_message("ATTENDANCE_CORRECTED_SUCCESS"),
         record=AttendanceRecordResponse.model_validate(record),
     )

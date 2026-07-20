@@ -16,6 +16,7 @@ from functools import lru_cache
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.shared.messages import get_error_detail
 
 from src.modules.assistant.application.assistant_service import AssistantService
 from src.modules.assistant.application.context_builder import ContextBuilder

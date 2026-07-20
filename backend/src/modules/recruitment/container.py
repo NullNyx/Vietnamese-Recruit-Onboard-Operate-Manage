@@ -21,6 +21,7 @@ import httpx
 from arq.connections import RedisSettings
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.shared.messages import get_error_detail
 
 from src.modules.identity.container import (
     get_crypto_utils,

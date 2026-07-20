@@ -28,6 +28,7 @@ from src.modules.recruitment.infrastructure.repositories import (
     RecruitmentInboxItemRepository,
 )
 
+from src.shared.messages import get_error_detail
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/recruitment/evaluation", tags=["recruitment-evaluation"])
