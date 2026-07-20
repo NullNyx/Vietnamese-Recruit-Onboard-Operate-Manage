@@ -379,7 +379,6 @@ export default function AiChat({
   // Session lifecycle
   useEffect(() => {
     mountedRef.current = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- session init
     setSessionReady(false);
     api.startSession(assistantType)
       .then((res) => { if (mountedRef.current) { sessionIdRef.current = res.session_id; setSessionReady(true); } })
@@ -399,8 +398,7 @@ export default function AiChat({
       }, 2000);
     } else {
       if (loadingIntervalRef.current) { clearInterval(loadingIntervalRef.current); loadingIntervalRef.current = null; }
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset loading step when loading ends
-          setLoadingStep(0);
+      setLoadingStep(0);
     }
     return () => { if (loadingIntervalRef.current) { clearInterval(loadingIntervalRef.current); loadingIntervalRef.current = null; } };
   }, [loading]);
@@ -443,8 +441,7 @@ export default function AiChat({
     setToolStatus(null);
     setLoading(false);
     finalizedRef.current = false;
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- session reset
-        setSessionReady(false);
+            setSessionReady(false);
     api.startSession(assistantType)
       .then((res) => { if (mountedRef.current) { sessionIdRef.current = res.session_id; setSessionReady(true); } })
       .catch(() => { if (mountedRef.current) setSessionReady(true); });
