@@ -17,7 +17,10 @@ Usage:
     # Raise with message from catalog
     raise HTTPException(
         status_code=401,
-        detail={"code": "AUTH_INVALID_CREDENTIALS", "message": get_message("AUTH_INVALID_CREDENTIALS")},
+        detail={
+            "code": "AUTH_INVALID_CREDENTIALS",
+            "message": get_message("AUTH_INVALID_CREDENTIALS"),
+        },
     )
 """
 
@@ -150,7 +153,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Cannot delete a read-only whitelist entry from config file",
     },
     "ORG_AI_PROVIDER_NOT_CONFIGURED": {
-        "vi": "Chưa cấu hình AI Provider cho Organization. Vui lòng vào Cấu hình AI & Hệ thống để thiết lập.",
+        "vi": "Chưa cấu hình AI Provider cho Organization. Vui lòng vào Cấu hình AI & Hệ thống để thiết lập.",  # noqa: E501
         "en": "AI Provider not configured for Organization. Go to AI & System Settings to set up.",
     },
 
@@ -278,8 +281,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "AI CV parsing failed",
     },
     "AI_AUTOMATION_DISABLED": {
-        "vi": "AI Automation đang bị tắt. Vào Cấu hình AI & Hệ thống → bật 'Phân loại email & Trích xuất CV' để dùng tính năng này.",
-        "en": "AI Automation is disabled. Go to AI & System Settings → enable 'Email Classification & CV Extraction' to use this feature.",
+        "vi": "AI Automation đang bị tắt. Vào Cấu hình AI & Hệ thống → bật 'Phân loại email & Trích xuất CV' để dùng tính năng này.",  # noqa: E501
+        "en": "AI Automation is disabled. Go to AI & System Settings → enable 'Email Classification & CV Extraction' to use this feature.",  # noqa: E501
     },
     "RECRUITMENT_ACCESS_DENIED": {
         "vi": "Chỉ HR mới có quyền quản lý Tuyển dụng",
@@ -771,18 +774,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "vi": "Không tìm thấy tài nguyên",
         "en": "Resource not found",
     },
-    "ESS_NOT_FOUND": {
-        "vi": "Không tìm thấy tài nguyên",
-        "en": "Resource not found",
-    },
     # Extra codes synced from frontend
     "NOT_FOUND": {
         "vi": "Không tìm thấy tài nguyên yêu cầu.",
         "en": "Requested resource not found.",
-    },
-    "UNAUTHORIZED": {
-        "vi": "Bạn cần đăng nhập để thực hiện thao tác này.",
-        "en": "You need to login to perform this action.",
     },
     "FORBIDDEN": {
         "vi": "Bạn không có quyền thực hiện thao tác này.",
@@ -799,10 +794,6 @@ MESSAGES: dict[str, dict[str, str]] = {
     "AUTH_PASSWORD_TOO_WEAK": {
         "vi": "Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường và số.",
         "en": "Password must be at least 8 characters with uppercase, lowercase, and numbers.",
-    },
-    "ONBOARDING_ERROR": {
-        "vi": "Lỗi module onboarding.",
-        "en": "Onboarding module error.",
     },
     "ONBOARDING_NOT_FOUND": {
         "vi": "Không tìm thấy quy trình onboarding.",

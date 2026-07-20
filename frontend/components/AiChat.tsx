@@ -398,7 +398,8 @@ export default function AiChat({
       }, 2000);
     } else {
       if (loadingIntervalRef.current) { clearInterval(loadingIntervalRef.current); loadingIntervalRef.current = null; }
-      setLoadingStep(0);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset loading step when loading ends
+          setLoadingStep(0);
     }
     return () => { if (loadingIntervalRef.current) { clearInterval(loadingIntervalRef.current); loadingIntervalRef.current = null; } };
   }, [loading]);
@@ -726,7 +727,7 @@ export default function AiChat({
                     {m.role === 'assistant' && m.content && (
                       <FeedbackRow
                         messageIndex={i}
-                        sessionId={sessionIdRef.current ?? undefined}
+                        sessionId={sessionIdRef.current ?? undefined}  // eslint-disable-line react-hooks/refs
                         sendFeedback={api.sendFeedback}
                         onToast={setToast}
                       />
