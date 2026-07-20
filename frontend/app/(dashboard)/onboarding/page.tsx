@@ -54,7 +54,7 @@ export default function OnboardingPage() {
         Candidate <em>accepted</em> → event <code>candidate_accepted</code> (idempotent) → Employee <strong>inactive</strong> + checklist. HR hoàn tất từng task; task cuối done → process complete + Employee <strong>active</strong> trong 1 transaction.
       </p>
 
-      {/* Counts */}
+      
       {counts && (
         <div className="grid grid-cols-3 gap-2">
           <Count label="Tổng" value={counts.total} />
@@ -63,7 +63,6 @@ export default function OnboardingPage() {
         </div>
       )}
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <button key={f.key} onClick={() => setFilter(f.key)} className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${filter === f.key ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
@@ -72,7 +71,7 @@ export default function OnboardingPage() {
         ))}
       </div>
 
-      {actionError && <ErrorBanner error={actionError} />}
+      {!!actionError && <ErrorBanner error={actionError} />}
 
       {isLoading ? (
         <Loading label="Đang tải onboarding..." />

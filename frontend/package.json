@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "clean": "next clean",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test": "echo 'No unit tests yet \u2014 use test:e2e for Playwright' && exit 0"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -25,6 +26,7 @@
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-hook-form": "^7.76.0",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "zod": "^4.4.3"
   },

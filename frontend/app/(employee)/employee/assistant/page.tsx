@@ -4,6 +4,7 @@ import AiChat from '@/components/AiChat';
 import type { AiChatApi } from '@/components/AiChat';
 import {
   sendEmployeeChatMessage,
+  sendEmployeeStreamMessage,
   startEmployeeSession,
   endEmployeeSession,
   sendEmployeeFeedback,
@@ -23,6 +24,7 @@ import { Sparkles } from 'lucide-react';
  */
 const employeeAssistantApi: AiChatApi = {
   sendMessage: sendEmployeeChatMessage,
+  sendStreamMessage: sendEmployeeStreamMessage,
   confirmAction: confirmEmployeeDraftAction,
   startSession: startEmployeeSession,
   endSession: endEmployeeSession,

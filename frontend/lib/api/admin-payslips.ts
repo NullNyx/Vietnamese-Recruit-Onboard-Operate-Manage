@@ -107,6 +107,21 @@ export async function publishPayslip(id: string): Promise<Payslip> {
   });
 }
 
+/** Unpublish a published payslip, reverting it to draft. */
+export async function unpublishPayslip(id: string): Promise<Payslip> {
+  return apiFetch<Payslip>(`${BASE}/${encodeURIComponent(id)}/unpublish`, {
+    method: "POST",
+  });
+}
+
+/** Bulk publish multiple draft payslips. Returns count of published. */
+export async function bulkPublishPayslips(ids: string[]): Promise<{ published_count: number }> {
+  return apiFetch<{ published_count: number }>(`${BASE}/bulk-publish`, {
+    method: "POST",
+    body: JSON.stringify({ payslip_ids: ids }),
+  });
+}
+
 /** Delete a draft payslip. Only draft payslips can be deleted. */
 export async function deletePayslip(id: string): Promise<void> {
   await apiFetch<void>(`${BASE}/${encodeURIComponent(id)}`, { method: "DELETE" });

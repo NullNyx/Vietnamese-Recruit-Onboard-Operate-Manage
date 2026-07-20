@@ -62,3 +62,21 @@ frontend/playwright-report/
 .playwright-mcp/
 
 # E2E auth storage (created fresh by CI)
+
+# ---- Pi coding agent ----
+.pi/
+
+# ---- pnpm store (should not be in repo) ----
+frontend/.pnpm-store/
+
+# ---- Dev screenshots ----
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+!frontend/public/**/*.png
+!frontend/public/**/*.jpg
+!frontend/public/**/*.svg
+!docs/**/*.png
+!docs/**/*.jpg

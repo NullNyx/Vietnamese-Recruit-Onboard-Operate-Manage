@@ -41,6 +41,7 @@ from src.modules.identity.application.audit_service import AuditService
 from src.modules.identity.container import get_current_user
 from src.modules.identity.domain.entities import AuditActionType, User, UserRole
 from src.modules.identity.domain.exceptions import AccessDeniedError
+from src.shared.messages import get_message
 
 attendance_router = APIRouter(prefix="/api/attendance", tags=["attendance"])
 
@@ -179,7 +180,7 @@ async def check_in(
         user_agent=user_agent,
     )
     return CheckInResponse(
-        message="Checked in successfully",
+        message=get_message("CHECKED_IN_SUCCESS"),
         record=AttendanceRecordResponse.model_validate(record),
     )
 
@@ -202,7 +203,7 @@ async def check_out(
         user_agent=user_agent,
     )
     return CheckOutResponse(
-        message="Checked out successfully",
+        message=get_message("CHECKED_OUT_SUCCESS"),
         record=AttendanceRecordResponse.model_validate(record),
     )
 
@@ -338,6 +339,6 @@ async def correct_attendance_record(
     )
 
     return CorrectionResponse(
-        message="Attendance record corrected successfully",
+        message=get_message("ATTENDANCE_CORRECTED_SUCCESS"),
         record=AttendanceRecordResponse.model_validate(record),
     )

@@ -16,8 +16,8 @@ class TestAuthErrorBase:
 
     def test_default_message(self) -> None:
         err = AuthError()
-        assert str(err) == "An authentication error occurred"
-        assert err.message == "An authentication error occurred"
+        assert str(err) == "Lỗi xác thực hệ thống"
+        assert err.message == "Lỗi xác thực hệ thống"
 
     def test_custom_message_override(self) -> None:
         err = AuthError("Custom error message")
@@ -40,7 +40,7 @@ class TestInvalidStateError:
         err = InvalidStateError()
         assert err.status_code == 400
         assert err.error_code == "AUTH_INVALID_STATE"
-        assert err.message == "Invalid authentication state"
+        assert err.message == "Trạng thái xác thực không hợp lệ"
 
     def test_inherits_auth_error(self) -> None:
         assert issubclass(InvalidStateError, AuthError)
@@ -58,7 +58,7 @@ class TestGoogleAuthError:
         err = GoogleAuthError()
         assert err.status_code == 502
         assert err.error_code == "AUTH_GOOGLE_ERROR"
-        assert err.message == "Failed to authenticate with Google"
+        assert err.message == "Xác thực Google thất bại"
 
     def test_inherits_auth_error(self) -> None:
         assert issubclass(GoogleAuthError, AuthError)
@@ -71,7 +71,7 @@ class TestAccessDeniedError:
         err = AccessDeniedError()
         assert err.status_code == 403
         assert err.error_code == "AUTH_ACCESS_DENIED"
-        assert err.message == "Access denied. Contact administrator."
+        assert err.message == "Truy cập bị từ chối. Vui lòng liên hệ quản trị viên."
 
     def test_inherits_auth_error(self) -> None:
         assert issubclass(AccessDeniedError, AuthError)
@@ -84,7 +84,7 @@ class TestInsufficientScopeError:
         err = InsufficientScopeError()
         assert err.status_code == 400
         assert err.error_code == "AUTH_INSUFFICIENT_SCOPE"
-        assert err.message == "Please grant all requested permissions"
+        assert err.message == "Vui lòng cấp tất cả quyền được yêu cầu"
 
     def test_inherits_auth_error(self) -> None:
         assert issubclass(InsufficientScopeError, AuthError)
@@ -97,7 +97,7 @@ class TestInvalidTokenError:
         err = InvalidTokenError()
         assert err.status_code == 401
         assert err.error_code == "AUTH_INVALID_TOKEN"
-        assert err.message == "Invalid or expired token"
+        assert err.message == "Phiên đăng nhập không hợp lệ hoặc đã hết hạn"
 
     def test_inherits_auth_error(self) -> None:
         assert issubclass(InvalidTokenError, AuthError)
@@ -110,7 +110,7 @@ class TestRateLimitExceededError:
         err = RateLimitExceededError()
         assert err.status_code == 429
         assert err.error_code == "AUTH_RATE_LIMITED"
-        assert err.message == "Too many login attempts. Please try again later."
+        assert err.message == "Quá nhiều lần đăng nhập. Vui lòng thử lại sau."
 
     def test_inherits_auth_error(self) -> None:
         assert issubclass(RateLimitExceededError, AuthError)

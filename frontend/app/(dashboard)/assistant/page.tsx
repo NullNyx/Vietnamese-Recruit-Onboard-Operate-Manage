@@ -4,6 +4,7 @@ import AiChat from '@/components/AiChat';
 import type { AiChatApi } from '@/components/AiChat';
 import {
   sendChatMessage,
+  sendStreamMessage,
   startSession,
   endSession,
   sendFeedback,
@@ -22,6 +23,7 @@ import { Sparkles } from 'lucide-react';
  */
 const hrAssistantApi: AiChatApi = {
   sendMessage: sendChatMessage,
+  sendStreamMessage,
   confirmAction: confirmDraftAction,
   startSession,
   endSession,

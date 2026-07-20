@@ -79,15 +79,15 @@ class TestGetCurrentUser:
         mock_token_service.verify_access_token.assert_called_once_with("valid-jwt-token")
 
     async def test_raises_401_when_cookie_missing(self, mock_token_service, mock_user_repository):
-        """Should raise HTTPException 401 when access_token cookie is absent."""
+        """Should raise InvalidTokenError when access_token cookie is absent."""
         request = MagicMock()
         request.cookies = {}
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(InvalidTokenError) as exc_info:
             await get_current_user(request, mock_token_service, mock_user_repository)
 
         assert exc_info.value.status_code == 401
-        assert exc_info.value.detail == "Invalid or expired token"
+        assert exc_info.value.message == "Phiên đăng nhập không hợp lệ hoặc đã hết hạn"
 
     async def test_raises_401_when_token_invalid(
         self, mock_request, mock_token_service, mock_user_repository
@@ -95,11 +95,11 @@ class TestGetCurrentUser:
         """Should raise HTTPException 401 when token verification fails."""
         mock_token_service.verify_access_token.side_effect = InvalidTokenError()
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(InvalidTokenError) as exc_info:
             await get_current_user(mock_request, mock_token_service, mock_user_repository)
 
         assert exc_info.value.status_code == 401
-        assert exc_info.value.detail == "Invalid or expired token"
+        assert exc_info.value.message == "Phiên đăng nhập không hợp lệ hoặc đã hết hạn"
 
     async def test_raises_401_when_user_not_found(
         self, mock_request, mock_token_service, mock_user_repository
@@ -107,11 +107,11 @@ class TestGetCurrentUser:
         """Should raise HTTPException 401 when user ID from token doesn't exist."""
         mock_user_repository.get_by_id = AsyncMock(return_value=None)
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(InvalidTokenError) as exc_info:
             await get_current_user(mock_request, mock_token_service, mock_user_repository)
 
         assert exc_info.value.status_code == 401
-        assert exc_info.value.detail == "Invalid or expired token"
+        assert exc_info.value.message == "Phiên đăng nhập không hợp lệ hoặc đã hết hạn"
 
     async def test_looks_up_user_by_token_sub(
         self, mock_request, mock_token_service, mock_user_repository
@@ -129,7 +129,7 @@ class TestGetCurrentUser:
         request = MagicMock()
         request.cookies = {"access_token": ""}
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(InvalidTokenError) as exc_info:
             await get_current_user(request, mock_token_service, mock_user_repository)
 
         assert exc_info.value.status_code == 401

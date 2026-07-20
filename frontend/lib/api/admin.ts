@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "./client";
+import { ApiError } from "./types";
 
 /**
  * Admin API client — typed functions for all admin endpoints.

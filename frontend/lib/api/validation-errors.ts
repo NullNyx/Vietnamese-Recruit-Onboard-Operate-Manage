@@ -221,8 +221,7 @@ const FIELD_LABELS: Record<string, string> = {
   hours: "Số giờ",
 
   // ── Leave / Overtime ──
-  start_date: "Ngày bắt đầu",
-  end_date: "Ngày kết thúc",
+      end_date: "Ngày kết thúc",
   start_time: "Giờ bắt đầu",
   end_time: "Giờ kết thúc",
   note: "Ghi chú",

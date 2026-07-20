@@ -82,52 +82,52 @@ async def create_outbound_email(
     outbound_service: OutboundServiceDep,
     session: AsyncSession = Depends(get_db_session),
 ) -> OutboundEmailResponse:
-        """Create an outbound email command (pending status).
+    """Create an outbound email command (pending status).
 
-        Does NOT send the email — only creates the command record.
-        """
-        # Resolve recipient_email: prefer to[0] from frontend, fall back to legacy field
-        import json
+    Does NOT send the email — only creates the command record.
+    """
+    # Resolve recipient_email: prefer to[0] from frontend, fall back to legacy field
+    import json
 
-        recipient_email = body.recipient_email
-        if body.to and len(body.to) > 0:
-            recipient_email = body.to[0]
-        if not recipient_email:
-            raise HTTPException(status_code=422, detail="recipient_email is required")
+    recipient_email = body.recipient_email
+    if body.to and len(body.to) > 0:
+        recipient_email = body.to[0]
+    if not recipient_email:
+        raise HTTPException(status_code=422, detail="recipient_email is required")
 
-        # Resolve body_html: use body_html if provided, else wrap body_text in basic HTML
-        body_html = body.body_html
-        if not body_html and body.body_text:
-            escaped = body.body_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            body_html = f"<div>{escaped}</div>"
-        if not body_html:
-            raise HTTPException(status_code=422, detail="body_html is required")
+    # Resolve body_html: use body_html if provided, else wrap body_text in basic HTML
+    body_html = body.body_html
+    if not body_html and body.body_text:
+        escaped = body.body_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        body_html = f"<div>{escaped}</div>"
+    if not body_html:
+        raise HTTPException(status_code=422, detail="body_html is required")
 
-        # Serialize cc to JSON for storage
-        cc_recipients = json.dumps(body.cc) if body.cc else None
+    # Serialize cc to JSON for storage
+    cc_recipients = json.dumps(body.cc) if body.cc else None
 
-        # Validate candidate exists if candidate_id provided
-        if body.candidate_id is not None:
-            candidate_repo = CandidateRepository(session)
-            candidate = await candidate_repo.get_by_id(body.candidate_id)
-            if candidate is None:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Candidate not found: {body.candidate_id}",
-                )
+    # Validate candidate exists if candidate_id provided
+    if body.candidate_id is not None:
+        candidate_repo = CandidateRepository(session)
+        candidate = await candidate_repo.get_by_id(body.candidate_id)
+        if candidate is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Candidate not found: {body.candidate_id}",
+            )
 
-        outbound = await outbound_service.create_outbound(
-            candidate_id=body.candidate_id,
-            recipient_email=recipient_email,
-            subject=body.subject,
-            body_html=body_html,
-            created_by_user_id=current_user.id,
-            hr_user=current_user,
-            cc_recipients=cc_recipients,
-            reply_to_message_id=body.reply_to_message_id,
-        )
+    outbound = await outbound_service.create_outbound(
+        candidate_id=body.candidate_id,
+        recipient_email=recipient_email,
+        subject=body.subject,
+        body_html=body_html,
+        created_by_user_id=current_user.id,
+        hr_user=current_user,
+        cc_recipients=cc_recipients,
+        reply_to_message_id=body.reply_to_message_id,
+    )
 
-        return OutboundEmailResponse.model_validate(outbound)
+    return OutboundEmailResponse.model_validate(outbound)
 
 
 # ---------------------------------------------------------------------------

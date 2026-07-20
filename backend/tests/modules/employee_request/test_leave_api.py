@@ -153,7 +153,8 @@ class TestCreateLeaveAPI:
             )
 
         assert response.status_code == 403
-        assert "Only employees" in response.json()["detail"]
+        assert response.json()["detail"]["code"] == "REQUEST_SUBMIT_FORBIDDEN"
+        assert "Chỉ nhân viên" in response.json()["detail"]["message"]
 
 
 class TestCancelLeaveAPI:

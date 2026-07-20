@@ -305,7 +305,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
     const body = await res.json().catch(() => null);
     const message =
       body?.detail || body?.error?.message || `Yêu cầu thất bại: ${res.status}`;
-    const errorCode = body?.error_code || body?.error?.code || "UNKNOWN_ERROR";
+        const errorCode = body?.error_code || body?.error?.code || body?.detail?.code || "UNKNOWN_ERROR";
     throw new ApiError(res.status, errorCode, message, body);
   }
   if (res.status === 204) return undefined as T;

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { Upload, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { Upload, ArrowLeft, CheckCircle, XCircle, Download } from 'lucide-react';
 import { importEmployees } from '@/lib/api/employees';
 import type { ImportResult } from '@/lib/api/types';
 import { useAuthGuard } from '@/lib/auth/session';
@@ -53,6 +53,23 @@ export default function ImportEmployeesPage() {
           className="text-xs"
         />
         <p className="text-[10px] text-slate-400 mt-2">Tệp tối đa 10MB · định dạng .xlsx</p>
+
+        <div className="mt-3">
+          <ButtonGhost onClick={() => {
+            const headers = 'full_name,email,phone,date_of_birth,gender,address,department,position,start_date,id_number,tax_code,contract_type';
+            const sample = 'Nguyễn Văn A,a@example.com,0912345678,1990-01-01,male,123 Đường ABC Hà Nội,Kỹ thuật,Lập trình viên,2024-01-01,001234567890,1234567890,full_time';
+            const bom = '\uFEFF';
+            const blob = new Blob([bom + headers + '\n' + sample], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'employee_import_template.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+          }}>
+            <Download className="w-4 h-4" /> Tải template
+          </ButtonGhost>
+        </div>
 
         {importMut.isError && <div className="mt-3"><ErrorAlert error={importMut.error} /></div>}
 

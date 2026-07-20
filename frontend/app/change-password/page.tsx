@@ -71,12 +71,12 @@ export default function ChangePasswordPage() {
           }
           setServerError('Vui lòng kiểm tra lại thông tin');
         } else {
-          const msg = getErrorMessage(err.code) || err.message || 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
+          const msg = getErrorMessage(err.code ?? '') || err.message || 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
           setServerError(msg);
         }
       } else if (err instanceof Error) {
         const apiErr = err as ApiError;
-        const msg = getErrorMessage(apiErr.errorCode) || apiErr.message || 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
+        const msg = getErrorMessage(apiErr.errorCode ?? '') || apiErr.message || 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
         setServerError(msg);
       } else {
         setServerError('Đổi mật khẩu thất bại. Vui lòng thử lại.');

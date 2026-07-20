@@ -7,8 +7,8 @@ import {
   Users, FileText, KeyRound, Save, Upload, Download, Trash2, Plus, ArrowLeft,
 } from 'lucide-react';
 import {
-  getEmployee, updateEmployee, listDocuments, uploadDocument, downloadDocument, deleteDocument,
-  getEmployeeAccountStatus, createEmployeeAccount,
+  getEmployee, updateEmployee, deleteEmployee, listDocuments, uploadDocument, downloadDocument, deleteDocument,
+  getEmployeeAccountStatus, createEmployeeAccount, deleteEmployeeAccount,
 } from '@/lib/api/employees';
 import { listDepartments } from '@/lib/api/departments';
 import { listPositions } from '@/lib/api/positions';
@@ -122,9 +122,23 @@ export default function EmployeeDetailPage() {
     },
   });
 
-  // ---- Deactivate ----
-  // (deleteEmployee soft-deletes; not exposed as a destructive button here to avoid
-  // accidental deactivation — keeping the directory read/edit focused.)
+  // ---- Delete Employee ----
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const deleteEmpMut = useMutation({
+    mutationFn: () => deleteEmployee(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['employees-list'] });
+      router.push('/employees');
+    },
+  });
+
+  // ---- Delete Account ----
+  const deleteAccountMut = useMutation({
+    mutationFn: () => deleteEmployeeAccount(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['employee-account', id] });
+    },
+  });
 
   if (isLoading) return <div className="text-sm text-slate-400">Đang tải hồ sơ nhân viên…</div>;
   if (error) return <ErrorAlert error={error} title="Không tải được hồ sơ nhân viên" />;
@@ -140,6 +154,9 @@ export default function EmployeeDetailPage() {
         subtitle={`${employee.employee_code} · ${employee.email}`}
         actions={
           <div className="flex gap-2">
+            <ButtonDanger onClick={() => setDeleteConfirm(true)} disabled={deleteEmpMut.isPending}>
+              <Trash2 className="w-4 h-4" /> Xóa nhân viên
+            </ButtonDanger>
             <ButtonGhost onClick={() => router.push('/employees')}>
               <ArrowLeft className="w-4 h-4" /> Danh sách
             </ButtonGhost>
@@ -174,7 +191,16 @@ export default function EmployeeDetailPage() {
           </Field>
           <Field label="Ngày sinh">
             <TextInput type="date" value={editing.date_of_birth ?? ''} disabled={!editActive}
-              onChange={(e) => setForm({ ...form!, date_of_birth: e.target.value })} />
+              onChange={(e) => setForm({ ...form!, date_of_birth: e.target.value || undefined })} />
+          </Field>
+          <Field label="Giới tính">
+            <Select value={editing.gender ?? ''} disabled={!editActive}
+              onChange={(e) => setForm({ ...form!, gender: e.target.value || undefined })}>
+              <option value="">—</option>
+              <option value="male">Nam</option>
+              <option value="female">Nữ</option>
+              <option value="other">Khác</option>
+            </Select>
           </Field>
           <Field label="Phòng ban">
             <Select value={editing.department_id ?? ''} disabled={!editActive}
@@ -182,6 +208,9 @@ export default function EmployeeDetailPage() {
               <option value="">—</option>
               {departments?.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </Select>
+            {(!departments || departments.length === 0) && editActive && (
+              <p className="text-[10px] text-amber-600 mt-1">Chưa có phòng ban. Phòng ban được tự động tạo khi import danh sách nhân viên.</p>
+            )}
           </Field>
           <Field label="Chức vụ">
             <Select value={editing.position_id ?? ''} disabled={!editActive}
@@ -189,6 +218,9 @@ export default function EmployeeDetailPage() {
               <option value="">—</option>
               {positions?.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </Select>
+            {(!positions || positions.length === 0) && editActive && (
+              <p className="text-[10px] text-amber-600 mt-1">Chưa có chức vụ. Chức vụ được tự động tạo khi import danh sách nhân viên.</p>
+            )}
           </Field>
           <Field label="Ngày bắt đầu">
             <TextInput type="date" value={editing.start_date ?? ''} disabled={!editActive}
@@ -203,8 +235,15 @@ export default function EmployeeDetailPage() {
               onChange={(e) => setForm({ ...form!, tax_code: e.target.value })} />
           </Field>
           <Field label="Loại hợp đồng">
-            <TextInput value={editing.contract_type ?? ''} disabled={!editActive}
-              onChange={(e) => setForm({ ...form!, contract_type: e.target.value })} />
+            <Select value={editing.contract_type ?? ''} disabled={!editActive}
+              onChange={(e) => setForm({ ...form!, contract_type: e.target.value || undefined })}>
+              <option value="">—</option>
+              <option value="full_time">Xác định thời hạn</option>
+              <option value="indefinite">Vô thời hạn</option>
+              <option value="probation">Thử việc</option>
+              <option value="contractor">Cộng tác viên</option>
+              <option value="intern">Thực tập</option>
+            </Select>
           </Field>
           <Field label="Địa chỉ">
             <TextArea value={editing.address ?? ''} disabled={!editActive} rows={2}
@@ -274,15 +313,20 @@ export default function EmployeeDetailPage() {
 
       {/* Employee Account */}
       <Card>
-        <SectionTitle icon={KeyRound}>Employee Account</SectionTitle>
+        <SectionTitle icon={KeyRound}>Tài khoản nhân viên</SectionTitle>
         <p className="text-xs text-slate-500 mb-3">
           HR tạo tài khoản cho Employee. Chỉ Employee đang <strong>active</strong> mới được nhận tài khoản.
         </p>
         {account?.exists ? (
           <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
             <p><span className="text-slate-500">Email:</span> <span className="font-semibold text-slate-800">{account.email}</span></p>
-            <p><span className="text-slate-500">Role:</span> <span className="font-mono">{account.role}</span></p>
+            <p><span className="text-slate-500">Vai trò:</span> <span className="font-mono">{account.role === 'user' ? 'Nhân viên' : account.role}</span></p>
             <p><span className="text-slate-500">Bắt buộc đổi mật khẩu:</span> {account.must_change_password ? 'Có' : 'Không'}</p>
+            <div className="pt-2">
+              <ButtonDanger onClick={() => deleteAccountMut.mutate()} disabled={deleteAccountMut.isPending}>
+                <Trash2 className="w-4 h-4" /> {deleteAccountMut.isPending ? 'Đang xóa…' : 'Xóa tài khoản'}
+              </ButtonDanger>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
@@ -306,6 +350,25 @@ export default function EmployeeDetailPage() {
             <p className="text-[10px] text-slate-400">Lưu lại ngay — mật khẩu tạm thời sẽ không hiển thị lại.</p>
             <div className="flex justify-end pt-2">
               <ButtonPrimary onClick={() => setCreatedPwd(null)}>Đã ghi nhận</ButtonPrimary>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Delete Employee Confirmation */}
+        <Modal open={deleteConfirm} onClose={() => setDeleteConfirm(false)} title="Xác nhận xóa nhân viên">
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Bạn có chắc muốn xóa nhân viên <strong>{employee.full_name}</strong> ({employee.employee_code})?
+            </p>
+            <p className="text-xs text-rose-600">
+              Thao tác này sẽ vô hiệu hóa (soft-delete) nhân viên. Dữ liệu sẽ được giữ lại nhưng nhân viên sẽ không còn truy cập được hệ thống.
+            </p>
+            {deleteEmpMut.isError && <ErrorAlert error={deleteEmpMut.error} />}
+            <div className="flex justify-end gap-2 pt-2">
+              <ButtonGhost onClick={() => setDeleteConfirm(false)}>Hủy</ButtonGhost>
+              <ButtonDanger onClick={() => deleteEmpMut.mutate()} disabled={deleteEmpMut.isPending}>
+                {deleteEmpMut.isPending ? 'Đang xóa…' : 'Xác nhận xóa'}
+              </ButtonDanger>
             </div>
           </div>
         </Modal>

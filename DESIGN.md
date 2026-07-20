@@ -11,18 +11,18 @@ colors:
   page: "#f8fafc"
   on-primary: "#ffffff"
 typography:
-  sans:
-    fontFamily: Inter
-    fontSize: 1rem
-    lineHeight: 1.6
-  h1:
-    fontFamily: Inter
-    fontSize: 1.25rem
-    fontWeight: 700
-  label:
-    fontFamily: Inter
-    fontSize: 0.875rem
-    fontWeight: 500
+    sans:
+      fontFamily: Be Vietnam Pro
+      fontSize: 1rem
+      lineHeight: 1.6
+    h1:
+      fontFamily: Be Vietnam Pro
+      fontSize: 1.25rem
+      fontWeight: 600
+    label:
+      fontFamily: Be Vietnam Pro
+      fontSize: 0.875rem
+      fontWeight: 500
   mono:
     fontFamily: JetBrains Mono
     fontSize: 0.875rem
@@ -83,12 +83,12 @@ Quy ước: nền trang `bg-slate-50/50`, body text `text-slate-800` (xem
 
 ## Typography
 
-- **sans / body:** Inter 1rem, lineHeight 1.6 — font mặc định qua `--font-sans`.
-- **h1:** Inter 1.25rem (text-xl), weight 700.
-- **label / caption:** Inter 0.875rem (text-sm), weight 500.
+- **sans / body:** MiSans 1rem, lineHeight 1.6 — font chính cho toàn bộ giao diện.
+- **h1:** MiSans Semibold 1.25rem (text-xl), weight 600.
+- **label / caption:** MiSans Medium 0.875rem (text-sm), weight 500.
 - **mono:** JetBrains Mono 0.875rem — cho `code`, mã NV, audit id, qua `--font-mono`.
 
-Cả hai font tải qua `next/font/google` trong `frontend/app/layout.tsx` và gắn vào
+Cả hai font tải qua `next/font/local` (MiSans) và `next/font/google` (JetBrains Mono) trong `frontend/app/layout.tsx` và gắn vào
 CSS variable `--font-sans` / `--font-mono`; body dùng `font-sans`.
 
 ## Do's and Don'ts

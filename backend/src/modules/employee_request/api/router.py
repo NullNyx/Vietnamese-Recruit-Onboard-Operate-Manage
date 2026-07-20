@@ -29,6 +29,7 @@ from src.modules.employee_request.api.schemas import (
 from src.modules.employee_request.application.leave_service import LeaveService
 from src.modules.employee_request.application.overtime_service import OvertimeService
 from src.modules.employee_request.container import get_leave_service, get_overtime_service
+from src.shared.messages import get_error_detail
 
 employee_request_router = APIRouter(
     prefix="/api/employee-requests",
@@ -41,7 +42,7 @@ def _require_active_employee(
 ) -> Employee:
     """Dependency that requires an active Employee (not admin)."""
     if employee is None:
-        raise HTTPException(status_code=403, detail="Only employees can submit requests")
+        raise HTTPException(status_code=403, detail=get_error_detail("REQUEST_SUBMIT_FORBIDDEN"))
     return employee
 
 

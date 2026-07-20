@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import logging
 import json
+import logging
 from typing import TYPE_CHECKING, Annotated, Any
 
 if TYPE_CHECKING:
@@ -81,6 +81,7 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 async def require_admin(current_user: CurrentUserDep) -> User:
     if current_user.role != UserRole.ADMIN:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
 
@@ -359,15 +360,14 @@ async def list_messages(
     messages = await email_repo.list_by_user(
         user_id=current_user.id, limit=limit, offset=offset, category=category
     )
-    total_count = await email_repo.count_by_user(
-        user_id=current_user.id, category=category
-    )
+    total_count = await email_repo.count_by_user(user_id=current_user.id, category=category)
 
     # M2: Reset stuck cv_processing emails (>30 min)
     from datetime import UTC, datetime, timedelta
 
-    from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
     from sqlmodel import update
+
+    from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
 
     stale_cv_stmt = (
         update(EmailMessageEntity)
@@ -636,8 +636,6 @@ async def process_attachments(
     from sqlmodel import select
 
     from src.modules.gmail.domain.entities import EmailMessage as EmailMessageEntity
-    from src.modules.recruitment.application.cv_processor import AttachmentInput
-    from src.modules.recruitment.container import get_cv_processor_service
 
     # Get access token from organization connection (raises if not connected)
     access_token = await _get_user_access_token(email_repo.session)
@@ -849,11 +847,9 @@ async def classify_emails(
             content={"detail": "Phân loại email bị timeout. Vui lòng thử lại với số lượng ít hơn."},
         )
 
-
-# ---------------------------------------------------------------------------
-# Helper functions
-# ---------------------------------------------------------------------------
-
+    # ---------------------------------------------------------------------------
+    # Helper functions
+    # ---------------------------------------------------------------------------
 
     async def _fetch_and_process_cv_for_email(
         *,
@@ -926,7 +922,6 @@ async def classify_emails(
             email.gmail_message_id,
         )
         return cv_documents
-
 
 
 async def _get_unclassified_emails_and_count(
@@ -1144,8 +1139,6 @@ async def _update_database_and_process_cvs(
         for email in recruitment_with_attachments:
             try:
                 # Import here to avoid circular imports
-                from src.modules.recruitment.application.cv_processor import AttachmentInput
-                from src.modules.recruitment.container import get_cv_processor_service
 
                 # Run CV processing via shared helper
                 cv_documents = await _fetch_and_process_cv_for_email(

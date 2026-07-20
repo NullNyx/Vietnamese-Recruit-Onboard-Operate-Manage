@@ -222,9 +222,7 @@ class EmailRepository:
         result = await self.session.execute(statement)
         return list(result.scalars().all())
 
-    async def count_by_user(
-        self, user_id: UUID, category: str | None = None
-    ) -> int:
+    async def count_by_user(self, user_id: UUID, category: str | None = None) -> int:
         """Count email messages for a user, optionally filtered by category.
 
         Args:
@@ -234,8 +232,8 @@ class EmailRepository:
         Returns:
             Total number of matching EmailMessage entities.
         """
-        statement = select(func.count()).select_from(EmailMessage).where(
-            EmailMessage.user_id == user_id
+        statement = (
+            select(func.count()).select_from(EmailMessage).where(EmailMessage.user_id == user_id)
         )
         if category is not None:
             statement = statement.where(EmailMessage.category == category)

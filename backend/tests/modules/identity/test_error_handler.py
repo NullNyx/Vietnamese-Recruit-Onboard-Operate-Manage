@@ -45,7 +45,7 @@ class TestAuthErrorHandler:
         assert response.json() == {
             "error": {
                 "code": "AUTH_ERROR",
-                "message": "An authentication error occurred",
+                "message": "Lỗi xác thực hệ thống",
             }
         }
 
@@ -61,7 +61,7 @@ class TestAuthErrorHandler:
         assert response.json() == {
             "error": {
                 "code": "AUTH_INVALID_STATE",
-                "message": "Invalid authentication state",
+                "message": "Trạng thái xác thực không hợp lệ",
             }
         }
 
@@ -77,7 +77,7 @@ class TestAuthErrorHandler:
         assert response.json() == {
             "error": {
                 "code": "AUTH_GOOGLE_ERROR",
-                "message": "Failed to authenticate with Google",
+                "message": "Xác thực Google thất bại",
             }
         }
 
@@ -93,7 +93,7 @@ class TestAuthErrorHandler:
         assert response.json() == {
             "error": {
                 "code": "AUTH_ACCESS_DENIED",
-                "message": "Access denied. Contact administrator.",
+                "message": "Truy cập bị từ chối. Vui lòng liên hệ quản trị viên.",
             }
         }
 
@@ -109,7 +109,7 @@ class TestAuthErrorHandler:
         assert response.json() == {
             "error": {
                 "code": "AUTH_INSUFFICIENT_SCOPE",
-                "message": "Please grant all requested permissions",
+                "message": "Vui lòng cấp tất cả quyền được yêu cầu",
             }
         }
 
@@ -125,7 +125,7 @@ class TestAuthErrorHandler:
         assert response.json() == {
             "error": {
                 "code": "AUTH_INVALID_TOKEN",
-                "message": "Invalid or expired token",
+                "message": "Phiên đăng nhập không hợp lệ hoặc đã hết hạn",
             }
         }
 
@@ -141,7 +141,7 @@ class TestAuthErrorHandler:
         assert response.json() == {
             "error": {
                 "code": "AUTH_RATE_LIMITED",
-                "message": "Too many login attempts. Please try again later.",
+                "message": "Quá nhiều lần đăng nhập. Vui lòng thử lại sau.",
             }
         }
 
