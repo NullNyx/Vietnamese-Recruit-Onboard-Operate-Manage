@@ -163,7 +163,7 @@ class TestCorrectionAccessControl:
             json=VALID_PAYLOAD,
         )
         assert resp.status_code == 200
-        assert resp.json()["message"] == "Attendance record corrected successfully"
+        assert resp.json()["message"] == "Đã lưu hiệu chỉnh chấm công"
         assert len(svc.correct_calls) == 1
 
 

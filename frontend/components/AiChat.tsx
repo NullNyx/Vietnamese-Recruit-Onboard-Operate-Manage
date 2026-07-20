@@ -379,10 +379,11 @@ export default function AiChat({
   // Session lifecycle
   useEffect(() => {
     mountedRef.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- session init
     setSessionReady(false);
     api.startSession(assistantType)
       .then((res) => { if (mountedRef.current) { sessionIdRef.current = res.session_id; setSessionReady(true); } })
-      .catch(() => { if (mountedRef.current) setSessionReady(true); });  // eslint-disable-line react-hooks/set-state-in-effect
+      .catch(() => { if (mountedRef.current) setSessionReady(true); });
     return () => {
       mountedRef.current = false;
       const sid = sessionIdRef.current;
@@ -442,10 +443,11 @@ export default function AiChat({
     setToolStatus(null);
     setLoading(false);
     finalizedRef.current = false;
-    setSessionReady(false);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- session reset
+        setSessionReady(false);
     api.startSession(assistantType)
       .then((res) => { if (mountedRef.current) { sessionIdRef.current = res.session_id; setSessionReady(true); } })
-      .catch(() => { if (mountedRef.current) setSessionReady(true); });  // eslint-disable-line react-hooks/set-state-in-effect
+      .catch(() => { if (mountedRef.current) setSessionReady(true); });
     textareaRef.current?.focus();
   }, [api, assistantType]);
 
