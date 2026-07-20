@@ -106,7 +106,7 @@ export default function SetupPage() {
             setServerError('Hệ thống đã được thiết lập trước đó. Đang chuyển hướng...');
             setTimeout(() => router.replace('/login'), 1500);
           } else {
-            setServerError(getErrorMessage(err.code) || msg);
+            setServerError(getErrorMessage(err.code ?? '') || msg);
           }
         }
       } else if (err instanceof Error) {
