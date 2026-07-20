@@ -697,6 +697,7 @@ export default function AiChat({
 
             {/* Messages */}
             <AnimatePresence mode="popLayout">
+              {/* eslint-disable-next-line react-hooks/refs -- sessionIdRef in FeedbackRow */}
               {messages.map((m, i) => (
                 <motion.div
                   key={`msg-${i}`}
@@ -727,7 +728,7 @@ export default function AiChat({
                     {m.role === 'assistant' && m.content && (
                       <FeedbackRow
                         messageIndex={i}
-                        sessionId={sessionIdRef.current ?? undefined}  // eslint-disable-line react-hooks/refs
+                        sessionId={sessionIdRef.current ?? undefined}
                         sendFeedback={api.sendFeedback}
                         onToast={setToast}
                       />

@@ -24,7 +24,6 @@ Usage:
     )
 """
 
-
 MESSAGES: dict[str, dict[str, str]] = {
     # =========================================================================
     # IDENTITY & AUTH MODULE
@@ -156,7 +155,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "vi": "Chưa cấu hình AI Provider cho Organization. Vui lòng vào Cấu hình AI & Hệ thống để thiết lập.",  # noqa: E501
         "en": "AI Provider not configured for Organization. Go to AI & System Settings to set up.",
     },
-
     # =========================================================================
     # EMPLOYEE MODULE
     # =========================================================================
@@ -236,7 +234,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "vi": "Nhập dữ liệu thành công",
         "en": "Import completed successfully",
     },
-
     # =========================================================================
     # RECRUITMENT MODULE
     # =========================================================================
@@ -340,7 +337,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "vi": "Xử lý CV thất bại",
         "en": "CV processing failed",
     },
-
     # =========================================================================
     # ATTENDANCE MODULE
     # =========================================================================
@@ -468,7 +464,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "vi": "Không tìm thấy lịch làm việc",
         "en": "Schedule not found",
     },
-
     # =========================================================================
     # EMPLOYEE REQUEST MODULE
     # =========================================================================
@@ -496,7 +491,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "vi": "Chỉ nhân viên mới có thể gửi yêu cầu",
         "en": "Only employees can submit requests",
     },
-
     # =========================================================================
     # PAYSLIP / PAYROLL MODULE
     # =========================================================================
@@ -585,7 +579,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "vi": "Tính thuế thất bại",
         "en": "Tax calculation error",
     },
-
     # =========================================================================
     # GMAIL MODULE
     # =========================================================================
@@ -665,7 +658,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "vi": "Đã xử lý {count} CV",
         "en": "Processed {count} CVs",
     },
-
     # =========================================================================
     # ASSISTANT MODULE
     # =========================================================================
@@ -726,7 +718,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "vi": "Loại nghỉ không hợp lệ",
         "en": "Invalid leave type",
     },
-
     # =========================================================================
     # ONBOARDING MODULE
     # =========================================================================
@@ -738,7 +729,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "vi": "Không tìm thấy quy trình onboarding",
         "en": "Onboarding process not found",
     },
-
     # =========================================================================
     # ADMIN / SHARED GENERIC
     # =========================================================================
@@ -854,6 +844,7 @@ def get_error_detail(code: str, lang: str = "vi") -> dict[str, str]:
         A dict with "code" and "message" keys for use in HTTPException detail.
     """
     return {"code": code, "message": get_message(code, lang)}
+
 
 class MessageCodes:
     """Constants for all message codes to enable IDE autocompletion.

@@ -327,7 +327,7 @@ class OutboundEmailCreateRequest(BaseModel):
     subject: str = Field(..., max_length=500)
     body_html: str | None = None
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def _validate_recipient_and_body(self):
         """Ensure at least one recipient and one body field are provided."""
         if not self.to and not self.recipient_email:

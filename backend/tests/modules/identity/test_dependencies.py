@@ -87,7 +87,7 @@ class TestGetCurrentUser:
             await get_current_user(request, mock_token_service, mock_user_repository)
 
         assert exc_info.value.status_code == 401
-        assert exc_info.value.detail == "Invalid or expired token"
+        assert exc_info.value.detail == "Phiên đăng nhập không hợp lệ hoặc đã hết hạn"
 
     async def test_raises_401_when_token_invalid(
         self, mock_request, mock_token_service, mock_user_repository
@@ -99,7 +99,7 @@ class TestGetCurrentUser:
             await get_current_user(mock_request, mock_token_service, mock_user_repository)
 
         assert exc_info.value.status_code == 401
-        assert exc_info.value.detail == "Invalid or expired token"
+        assert exc_info.value.detail == "Phiên đăng nhập không hợp lệ hoặc đã hết hạn"
 
     async def test_raises_401_when_user_not_found(
         self, mock_request, mock_token_service, mock_user_repository
@@ -111,7 +111,7 @@ class TestGetCurrentUser:
             await get_current_user(mock_request, mock_token_service, mock_user_repository)
 
         assert exc_info.value.status_code == 401
-        assert exc_info.value.detail == "Invalid or expired token"
+        assert exc_info.value.detail == "Phiên đăng nhập không hợp lệ hoặc đã hết hạn"
 
     async def test_looks_up_user_by_token_sub(
         self, mock_request, mock_token_service, mock_user_repository
