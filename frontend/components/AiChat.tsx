@@ -21,7 +21,7 @@ export interface AiChatApi {
   sendMessage: (messages: ChatMessage[], sessionId?: string) => Promise<ChatResponse>;
   sendStreamMessage?: (messages: ChatMessage[], onEvent: (event: SSEEvent) => void, onError: (error: Error) => void, onDone: () => void, sessionId?: string) => () => void;
   confirmAction: (draft: DraftAction) => Promise<unknown>;
-  startSession: (assistantType?: 'hr' | 'employee') => Promise<SessionStartResponse>;
+  startSession: (assistantType: 'hr' | 'employee') => Promise<SessionStartResponse>;
   endSession: (sessionId: string) => Promise<void>;
   sendFeedback?: (feedback: AssistantFeedbackRequest) => Promise<void>;
   recordDecision?: (draft: DraftAction, decision: 'confirm' | 'reject') => Promise<void>;
