@@ -16,8 +16,8 @@ class TestAuthErrorBase:
 
     def test_default_message(self) -> None:
         err = AuthError()
-assert str(err) == "Lỗi xác thực hệ thống"
-            assert err.message == "Lỗi xác thực hệ thống"
+        assert str(err) == "Lỗi xác thực hệ thống"
+        assert err.message == "Lỗi xác thực hệ thống"
 
     def test_custom_message_override(self) -> None:
         err = AuthError("Custom error message")
