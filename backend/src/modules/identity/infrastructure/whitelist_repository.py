@@ -45,6 +45,7 @@ class WhitelistRepository:
         """
         self.session.add(entry)
         await self.session.flush()
+        await self.session.commit()
         return entry
 
     async def remove(self, entry_id: UUID) -> None:
@@ -62,6 +63,7 @@ class WhitelistRepository:
         if entry is not None:
             await self.session.delete(entry)
             await self.session.flush()
+            await self.session.commit()
 
     async def get_all(self) -> list[WhitelistEntry]:
         """Retrieve all whitelist entries from the database.

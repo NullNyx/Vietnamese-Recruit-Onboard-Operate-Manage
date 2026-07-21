@@ -57,9 +57,13 @@ from src.modules.identity.infrastructure.rate_limiter import RateLimiter
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # Cookie configuration constants.
-_ACCESS_TOKEN_MAX_AGE = 15 * 60  # 15 minutes
+# Access token JWT expiry is controlled by TokenService (default 15 min).
+# We intentionally use a session cookie (no max_age) so the browser keeps
+# the cookie even after the JWT inside expires. This lets the middleware
+# recognize returning users and lets apiFetch refresh the token seamlessly.
+# The cookie is cleared when the browser session ends.
 _REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60  # 7 days
-_PASSWORD_CHANGE_MAX_AGE = _ACCESS_TOKEN_MAX_AGE
+_PASSWORD_CHANGE_MAX_AGE = 15 * 60  # 15 minutes
 
 # ---------------------------------------------------------------------------
 # Type aliases for injected dependencies
@@ -120,10 +124,13 @@ def _set_session_cookies(
     refresh_token: str,
     must_change_password: bool,
 ) -> None:
+    # Session cookie (no max_age) — browser keeps it until session ends.
+    # The JWT inside still expires per TokenService config (default 15 min).
+    # This lets the middleware recognize returning users and the frontend
+    # apiFetch to refresh the token seamlessly via the refresh_token.
     response.set_cookie(
         key="access_token",
         value=access_token,
-        max_age=_ACCESS_TOKEN_MAX_AGE,
         httponly=True,
         secure=True,
         samesite="lax",
@@ -453,7 +460,6 @@ async def refresh(
     response.set_cookie(
         key="access_token",
         value=new_access_token,
-        max_age=_ACCESS_TOKEN_MAX_AGE,
         httponly=True,
         secure=True,
         samesite="lax",

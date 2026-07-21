@@ -45,6 +45,18 @@ class SuperAdminProtectedError(AuthError):
     message = "Super admin role cannot be changed"
 
 
+class SelfDemotionError(AuthError):
+    """Admin cannot change their own role.
+
+    Raised when an admin attempts to demote or promote themselves.
+    This prevents accidental lockout from administrative functions.
+    """
+
+    status_code = 400
+    error_code = "ADMIN_SELF_DEMOTION"
+    message = "Cannot change your own role. Ask another admin to change it."
+
+
 class UserNotFoundError(AuthError):
     """Target user does not exist.
 
@@ -140,6 +152,10 @@ class RoleService:
 
         if user.role == UserRole.USER:
             return user
+
+        # Prevent self-demotion: an admin cannot change their own role.
+        if user.id == admin_user.id:
+            raise SelfDemotionError()
 
         # Protect the super admin from demotion.
         if self._super_admin_email and user.email.lower() == self._super_admin_email:

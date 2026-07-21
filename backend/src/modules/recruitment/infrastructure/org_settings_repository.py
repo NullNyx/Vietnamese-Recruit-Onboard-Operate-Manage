@@ -197,6 +197,7 @@ class OrganizationSettingsRepository:
             settings_row.allowed_domains = normalized
         self.session.add(settings_row)
         await self.session.flush()
+        await self.session.commit()
         return list(settings_row.allowed_domains)
 
     async def add_domains(self, domains: list[str]) -> list[str]:
@@ -217,11 +218,11 @@ class OrganizationSettingsRepository:
         current_set = set(current)
         duplicates = [d for d in new_normalized if d in current_set]
         if duplicates:
-            raise ValueError(f"Domains already allowed: {', '.join(duplicates)}")
+            raise ValueError(f"Tên miền đã có trong danh sách: {', '.join(duplicates)}")
         combined = current + new_normalized
         if len(combined) > self._MAX_DOMAINS:
             raise ValueError(
-                f"Too many domains (max {self._MAX_DOMAINS}, would have {len(combined)})"
+                f"Quá nhiều tên miền (tối đa {self._MAX_DOMAINS}, sẽ có {len(combined)})"
             )
         return await self.set_allowed_domains(combined)
 
@@ -240,7 +241,7 @@ class OrganizationSettingsRepository:
         normalized = domain.strip().lower()
         current = await self.get_allowed_domains()
         if normalized not in current:
-            raise ValueError(f"Domain not found: {normalized}")
+            raise ValueError(f"Tên miền không tìm thấy: {normalized}")
         updated = [d for d in current if d != normalized]
         return await self.set_allowed_domains(updated)
 
@@ -258,15 +259,15 @@ class OrganizationSettingsRepository:
                 the maximum allowed count.
         """
         if len(domains) > self._MAX_DOMAINS:
-            raise ValueError(f"Too many domains (max {self._MAX_DOMAINS})")
+            raise ValueError(f"Quá nhiều tên miền (tối đa {self._MAX_DOMAINS})")
         normalized: list[str] = []
         seen: set[str] = set()
         for d in domains:
             n = d.strip().lower()
             if not self._DOMAIN_RE.match(n):
-                raise ValueError(f"Invalid domain: {d!r}")
+                raise ValueError(f"Tên miền không hợp lệ: '{d}'. Vui lòng nhập đúng định dạng (vd: congty.com).")
             if n in seen:
-                raise ValueError(f"Duplicate domain: {d!r}")
+                raise ValueError(f"Tên miền trùng lặp: '{d}'")
             seen.add(n)
             normalized.append(n)
         return normalized

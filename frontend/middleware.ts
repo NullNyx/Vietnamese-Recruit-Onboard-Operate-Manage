@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
-  const accessToken = request.cookies.get("access_token");
+  const refreshToken = request.cookies.get("refresh_token");
   const mustChangePassword = request.cookies.get("must_change_password")?.value === "true";
   const path = request.nextUrl.pathname;
 
@@ -12,6 +12,12 @@ export function middleware(request: NextRequest) {
   }
 
   // Protected routes — require authentication
+  // We check the refresh_token cookie (7-day lifetime) instead of access_token
+  // (15-min JWT). The access_token is a session cookie that may contain an
+  // expired JWT; the client-side apiFetch will transparently refresh it via
+  // POST /api/auth/refresh. Checking refresh_token avoids the double-login
+  // problem where the middleware redirected to /login before the client had
+  // a chance to refresh.
   const protectedPaths = [
     "/dashboard",
     "/recruitment",
@@ -28,13 +34,12 @@ export function middleware(request: NextRequest) {
   const isProtected = protectedPaths.some((p) => path.startsWith(p));
 
   if (isProtected) {
-    if (!accessToken) {
+    if (!refreshToken) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    // Employee routes — only for non-admin (enforced by BE, but redirect early)
-    // Admin routes — only for admin
-    // The actual role gate is enforced by the BE; we just check auth here
+    // The actual auth + role gate is enforced by the BE; the client-side
+    // apiFetch + useAuthGuard handle token refresh and role-based redirect.
     return NextResponse.next();
   }
 

@@ -186,8 +186,8 @@ class WhitelistManager:
                 detail={
                     "code": "WHITELIST_INVALID_FORMAT",
                     "message": (
-                        f"Invalid format: '{stripped}'. "
-                        "Must be a valid email address or domain pattern (@domain.com)."
+                        f"'{stripped}' không đúng định dạng. "
+                        "Vui lòng nhập email hợp lệ (vd: ten@congty.com) hoặc tên miền (vd: @congty.com)."
                     ),
                 },
             )
@@ -198,7 +198,7 @@ class WhitelistManager:
                 status_code=409,
                 detail={
                     "code": "WHITELIST_DUPLICATE",
-                    "message": f"Entry already exists: {stripped}",
+                    "message": f"'{stripped}' đã có trong danh sách truy cập.",
                 },
             )
 
@@ -210,7 +210,7 @@ class WhitelistManager:
                     status_code=409,
                     detail={
                         "code": "WHITELIST_DUPLICATE",
-                        "message": f"Entry already exists: {stripped}",
+                        "message": f"'{stripped}' đã có sẵn trong file cấu hình.",
                     },
                 )
 

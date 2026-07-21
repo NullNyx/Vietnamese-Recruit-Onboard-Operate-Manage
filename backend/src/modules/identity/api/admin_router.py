@@ -909,6 +909,11 @@ async def change_user_role(
             status_code=400,
             detail={"code": exc.error_code, "message": exc.message},
         ) from exc
+    except SelfDemotionError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": exc.error_code, "message": exc.message},
+        ) from exc
 
     # Log the role change in the audit trail.
     await audit_service.log_action(

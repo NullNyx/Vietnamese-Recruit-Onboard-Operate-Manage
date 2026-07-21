@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "./client";
 import { ApiError } from "./types";
+import { isValidationErrorDetail, formatValidationErrors } from "./validation-errors";
 
 /**
  * Admin API client — typed functions for all admin endpoints.
@@ -206,8 +207,24 @@ async function adminFetch(
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: { message: res.statusText } }));
-    const message = error?.detail?.message ?? error?.detail ?? `Request failed: ${res.status}`;
+    const payload = await res.json().catch(() => null);
+
+    // ── Pydantic validation error (422 detail array) → Vietnamese ──
+    if (isValidationErrorDetail(payload?.detail)) {
+      const { fieldErrors, summary } = formatValidationErrors(payload.detail);
+      throw new ApiError(
+        res.status,
+        "VALIDATION_ERROR",
+        summary,
+        undefined,
+        fieldErrors,
+      );
+    }
+
+    const message =
+      payload?.detail?.message ??
+      (typeof payload?.detail === "string" ? payload.detail : undefined) ??
+      `Request failed: ${res.status}`;
     throw new Error(typeof message === 'string' ? message : JSON.stringify(message));
   }
   if (res.status === 204) {

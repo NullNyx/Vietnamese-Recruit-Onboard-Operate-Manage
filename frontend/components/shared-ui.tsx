@@ -282,6 +282,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   oauth_update: 'Cập nhật OAuth',
   org_domain_update: 'Cập nhật domain',
   assistant_tool_config: 'Cấu hình tool assistant',
+  assistant_chat: 'Chat với trợ lý AI',
   org_google_connect: 'Kết nối Google',
   org_google_reconnect: 'Kết nối lại Google',
   org_google_switch_account: 'Chuyển tài khoản Google',
@@ -295,9 +296,114 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   org_ai_toggle_assistant: 'Bật/tắt trợ lý AI',
   org_ai_consent: 'Đồng ý chính sách AI',
   org_ai_toggle_automation: 'Bật/tắt AI tự động',
+  payslip_create: 'Tạo phiếu lương',
+  payslip_update: 'Cập nhật phiếu lương',
   payslip_publish: 'Xuất bản phiếu lương',
   payslip_unpublish: 'Ẩn phiếu lương',
+  payslip_delete: 'Xóa phiếu lương',
+  request_approve: 'Phê duyệt yêu cầu',
+  request_reject: 'Từ chối yêu cầu',
+  attendance_network_update: 'Cập nhật IP chấm công',
+  attendance_network_add: 'Thêm IP chấm công',
+  attendance_network_remove: 'Xóa IP chấm công',
+  attendance_correction: 'Sửa chấm công',
+  outbound_email_created: 'Tạo email gửi đi',
+  outbound_email_sent: 'Đã gửi email',
+  outbound_email_failed: 'Gửi email thất bại',
+  outbound_email_retry: 'Thử lại gửi email',
 };
+
+export const AUDIT_ACTION_GROUPS: { label: string; items: { value: string; label: string }[] }[] = [
+  {
+    label: '👤 Quyền & Tài khoản',
+    items: [
+      { value: 'login', label: 'Đăng nhập' },
+      { value: 'role_change', label: 'Thay đổi quyền' },
+      { value: 'user_create', label: 'Tạo tài khoản' },
+      { value: 'user_update', label: 'Cập nhật tài khoản' },
+      { value: 'user_delete', label: 'Xóa tài khoản' },
+      { value: 'permission_grant', label: 'Cấp quyền' },
+      { value: 'permission_revoke', label: 'Thu hồi quyền' },
+      { value: 'settings_update', label: 'Cập nhật cài đặt' },
+    ],
+  },
+  {
+    label: '👥 Nhân sự',
+    items: [
+      { value: 'employee_create', label: 'Tạo nhân viên' },
+      { value: 'employee_update', label: 'Cập nhật nhân viên' },
+    ],
+  },
+  {
+    label: '🤖 AI & Hệ thống',
+    items: [
+      { value: 'org_ai_config_update', label: 'Cập nhật cấu hình AI' },
+      { value: 'org_ai_config_rotate', label: 'Xoay API key AI' },
+      { value: 'org_ai_config_revoke', label: 'Thu hồi cấu hình AI' },
+      { value: 'org_ai_config_source', label: 'Thay đổi nguồn credential AI' },
+      { value: 'org_ai_consent', label: 'Đồng ý chính sách AI' },
+      { value: 'org_ai_toggle_automation', label: 'Bật/tắt AI tự động' },
+      { value: 'org_ai_toggle_assistant', label: 'Bật/tắt trợ lý AI' },
+      { value: 'org_ai_classification_rollout', label: 'Triển khai phân loại AI' },
+      { value: 'assistant_tool_config', label: 'Cấu hình tool assistant' },
+      { value: 'assistant_chat', label: 'Chat với trợ lý AI' },
+    ],
+  },
+  {
+    label: '📧 Email',
+    items: [
+      { value: 'outbound_email_created', label: 'Tạo email gửi đi' },
+      { value: 'outbound_email_sent', label: 'Đã gửi email' },
+      { value: 'outbound_email_failed', label: 'Gửi email thất bại' },
+      { value: 'outbound_email_retry', label: 'Thử lại gửi email' },
+    ],
+  },
+  {
+    label: '🔗 Google',
+    items: [
+      { value: 'org_google_connect', label: 'Kết nối Google' },
+      { value: 'org_google_reconnect', label: 'Kết nối lại Google' },
+      { value: 'org_google_switch_account', label: 'Chuyển tài khoản Google' },
+      { value: 'org_google_disconnect', label: 'Ngắt kết nối Google' },
+      { value: 'org_google_calendar_select', label: 'Chọn lịch Google' },
+    ],
+  },
+  {
+    label: '💰 Phiếu lương',
+    items: [
+      { value: 'payslip_create', label: 'Tạo phiếu lương' },
+      { value: 'payslip_update', label: 'Cập nhật phiếu lương' },
+      { value: 'payslip_publish', label: 'Xuất bản phiếu lương' },
+      { value: 'payslip_unpublish', label: 'Ẩn phiếu lương' },
+      { value: 'payslip_delete', label: 'Xóa phiếu lương' },
+    ],
+  },
+  {
+    label: '⏱️ Chấm công',
+    items: [
+      { value: 'attendance_network_update', label: 'Cập nhật IP chấm công' },
+      { value: 'attendance_network_add', label: 'Thêm IP chấm công' },
+      { value: 'attendance_network_remove', label: 'Xóa IP chấm công' },
+      { value: 'attendance_correction', label: 'Sửa chấm công' },
+    ],
+  },
+  {
+    label: '📋 Yêu cầu & Phê duyệt',
+    items: [
+      { value: 'request_approve', label: 'Phê duyệt yêu cầu' },
+      { value: 'request_reject', label: 'Từ chối yêu cầu' },
+    ],
+  },
+  {
+    label: '🛡️ Bảo mật & Domain',
+    items: [
+      { value: 'whitelist_add', label: 'Thêm whitelist' },
+      { value: 'whitelist_remove', label: 'Xóa whitelist' },
+      { value: 'oauth_update', label: 'Cập nhật OAuth' },
+      { value: 'org_domain_update', label: 'Cập nhật domain' },
+    ],
+  },
+];
 
 export const MIME_TYPE_LABELS: Record<string, string> = {
   'application/pdf': 'PDF',
@@ -552,36 +658,82 @@ export function formatAuditDetails(details: unknown): string {
   if (!details) return '—';
   if (typeof details !== 'object' || details === null) return String(details);
 
+  // Vietnamese field labels
   const fieldMap: Record<string, string> = {
-    role: 'Quyền',
-    email: 'Email',
-    name: 'Tên',
-    employee_id: 'Mã NV',
-    permissions: 'Quyền hạn',
-    result: 'Kết quả',
-    kết_quả: 'Kết quả',
-    calendar_id: 'Lịch',
-    lịch: 'Lịch',
+    role: 'Quyền', email: 'Email', name: 'Tên',
+    employee_id: 'Mã NV', permissions: 'Quyền hạn',
+    result: 'Kết quả', kết_quả: 'Kết quả',
+    calendar_id: 'Lịch', lịch: 'Lịch',
+    // Domain / whitelist
+    value: 'Giá trị', entry_type: 'Loại', domain: 'Tên miền',
+    domains: 'Tên miền', action: 'Hành động',
+    // AI config
+    model: 'Model', provider: 'Nhà cung cấp', base_url: 'API URL',
+    capability: 'Tính năng', credential_source: 'Nguồn xác thực',
+    // Payslip
+    payslip_id: 'Mã phiếu lương', period_month: 'Kỳ lương',
+    gross_salary: 'Lương gross', net_salary: 'Lương net',
+    published_at: 'Ngày xuất bản',
+    // Request
+    request_id: 'Mã yêu cầu', request_type: 'Loại yêu cầu',
+    // Feedback / chat
+    event: 'Sự kiện', feedback_type: 'Đánh giá',
+    message_index: 'Tin nhắn #', optional_text: 'Ghi chú',
+    // OAuth / Google
+    client_id: 'Client ID', redirect_uri: 'Redirect URI',
+    // Attendance
+    network: 'IP/CIDR', cidr: 'IP/CIDR', correction_date: 'Ngày sửa',
+    // General
+    old_role: 'Quyền cũ', new_role: 'Quyền mới',
+    target_user_email: 'Người dùng', target_user_id: 'Người dùng',
+    policy_version: 'Phiên bản chính sách',
   };
 
+  // Vietnamese value translations
   const valueMap: Record<string, string> = {
     calendar_selected: 'đã chọn lịch',
-    connected: 'đã kết nối',
-    disconnected: 'đã ngắt kết nối',
+    connected: 'đã kết nối', disconnected: 'đã ngắt kết nối',
+    enable: 'Bật', disable: 'Tắt',
+    update: 'Cập nhật', add: 'Thêm', remove: 'Xóa',
+    org_api_key: 'API Key tổ chức', deployment_key: 'Khóa triển khai',
+    automation: 'Tự động hóa', assistant: 'Trợ lý AI',
+    capability_consent_accept: 'Đồng ý',
+    data_policy_accept: 'Đồng ý chính sách dữ liệu',
+    exact_email: 'Email cụ thể', domain_pattern: 'Tên miền',
+    message_feedback: 'Phản hồi tin nhắn',
+    up: '👍 Hữu ích', down: '👎 Không hữu ích',
+    admin: 'Quản trị (HR)', user: 'Nhân viên',
+    database: 'Thêm thủ công', file: 'File cấu hình',
+    published: 'Đã xuất bản', draft: 'Bản nháp',
   };
+
+  // Keys that are internal UUIDs or IDs — skip them for readability
+  const skipKeys = new Set([
+    'entry_id', 'session_id',
+  ]);
 
   try {
     const entries = Object.entries(details as Record<string, unknown>);
     if (entries.length === 0) return '—';
-    return entries
-      .map(([key, value]) => {
-        const label = fieldMap[key] ?? key;
-        let val =
-            typeof value === 'object' ? JSON.stringify(value) : String(value);
-            val = valueMap[val] ?? val;
-            return `${label}: ${val}`;
-      })
-      .join(', ');
+    const parts: string[] = [];
+    for (const [key, value] of entries) {
+      if (skipKeys.has(key)) continue;
+      const label = fieldMap[key] ?? key;
+      if (value === null || value === undefined || value === '') continue;
+      let val: string;
+      if (Array.isArray(value)) {
+        if (value.length === 0) continue;
+        val = value.map((v) => (typeof v === 'string' ? v : JSON.stringify(v))).join(', ');
+      } else if (typeof value === 'object') {
+        val = JSON.stringify(value);
+      } else {
+        val = String(value);
+      }
+      if (!val || val === 'null' || val === 'undefined') continue;
+      val = valueMap[val] ?? val;
+      parts.push(`${label}: ${val}`);
+    }
+    return parts.join(' · ');
   } catch {
     return JSON.stringify(details);
   }

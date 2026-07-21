@@ -292,6 +292,7 @@ class AuditActionType(str, Enum):
     PAYSLIP_UPDATE = "payslip_update"
     PAYSLIP_PUBLISH = "payslip_publish"
     PAYSLIP_DELETE = "payslip_delete"
+    PAYSLIP_UNPUBLISH = "payslip_unpublish"
     ORG_GOOGLE_CONNECT = "org_google_connect"
     ORG_GOOGLE_RECONNECT = "org_google_reconnect"
     ORG_GOOGLE_SWITCH_ACCOUNT = "org_google_switch_account"

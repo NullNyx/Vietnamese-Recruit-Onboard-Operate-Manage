@@ -15,3 +15,38 @@ Issue và PRD của repo này sống trong GitHub Issues. PR ngoài không phả
 ### Domain docs
 
 Repo single-context. Đọc `CONTEXT.md` ở root và `docs/adr/` cho quyết định kiến trúc. Xem `docs/agents/domain.md`.
+
+## Môi trường phát triển cục bộ
+
+### Docker services
+
+Services chạy qua `docker compose up -d`:
+- **Backend**: `http://localhost:8000` (Swagger: `http://localhost:8000/docs`)
+- **Frontend**: `http://localhost:3000`
+- **PostgreSQL**: `localhost:5432`, user `postgres`, pass `postgres`, db `vroom_hr`
+- **Redis**: `localhost:6379`
+- **MinIO**: `http://localhost:9000` (console: `http://localhost:9001`)
+
+### Tài khoản test
+
+| Email | Vai trò | Mật khẩu | Ghi chú |
+|---|---|---|---|
+| `admin@vroomhr.com` | admin | `VroomAdmin!2026` | Admin chính, dùng để test UI |
+| `hr@vroom.com` | admin | `VroomAdmin!2026` | HR admin (nếu reset passwd) |
+| `employee@vroomhr.com` | user | _(chưa đặt)_ | Nhân viên test |
+
+Để reset mật khẩu trong DB:
+```bash
+cd backend && python3 -c "
+from src.modules.identity.infrastructure.password_utils import hash_password
+print(hash_password('NEW_PASSWORD'))
+"
+# Copy hash và chạy:
+docker exec vroom-postgres psql -U postgres -d vroom_hr \
+  -c "UPDATE users SET password_hash = 'PASTE_HASH' WHERE email = 'USER_EMAIL';"
+```
+
+### Test cases
+
+Test case AI testing nằm ở `docs/ai-testing/`. Mỗi thư mục là một module, mỗi file là một test case cụ thể.
+Pytest backend: `cd backend && python -m pytest tests/ -v`.

@@ -138,7 +138,6 @@ class GoogleWorkspaceCallbackRequest(BaseModel):
 class WhitelistAddRequest(BaseModel):
     value: str = Field(
         ...,
-        min_length=3,
         max_length=255,
         description="Email address or domain pattern (@domain.com) to whitelist",
     )
