@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:15
+    image: pgvector/pgvector:pg15
     container_name: vroom-postgres
     restart: unless-stopped
     environment:
@@ -16,6 +16,30 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  vroom-embedding:
+    build:
+      context: ./vroom-embedding
+      dockerfile: Dockerfile
+    container_name: vroom-embedding
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - embedding-model-cache:/app/model_cache
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      EMBEDDING_MODEL_NAME: AITeamVN/Vietnamese_Embedding_v2
+      MODEL_CACHE_DIR: /app/model_cache
+      HF_TOKEN: ${HF_TOKEN:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 600s
 
   redis:
     image: redis:7
@@ -45,6 +69,12 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
       EMPLOYEE_MINIO_ENDPOINT: minio:9000
       RECRUITMENT_MINIO_ENDPOINT: minio:9000
+      EMBEDDING_SERVICE_URL: http://vroom-embedding:8080
+      KB_REDIS_URL: redis://redis:6379/0
+      KB_MINIO_ENDPOINT: minio:9000
+      KB_MINIO_BUCKET: knowledge-base
+      KB_EMBEDDING_SERVICE_URL: http://vroom-embedding:8080
+      KB_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -56,6 +86,8 @@ services:
       redis:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      vroom-embedding:
         condition: service_healthy
 
   minio:
@@ -105,6 +137,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
       EMPLOYEE_MINIO_ENDPOINT: minio:9000
       RECRUITMENT_MINIO_ENDPOINT: minio:9000
+      EMBEDDING_SERVICE_URL: http://vroom-embedding:8080
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -131,6 +164,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
       EMPLOYEE_MINIO_ENDPOINT: minio:9000
       RECRUITMENT_MINIO_ENDPOINT: minio:9000
+      EMBEDDING_SERVICE_URL: http://vroom-embedding:8080
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -142,6 +176,38 @@ services:
       redis:
         condition: service_healthy
 
+  kb-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.local
+    container_name: vroom-kb-worker
+    restart: unless-stopped
+    command: uv run arq src.modules.knowledge_base.worker.KnowledgeBaseWorkerSettings
+    env_file:
+      - ./backend/.env
+    environment:
+      KB_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      KB_REDIS_URL: redis://redis:6379/0
+      KB_MINIO_ENDPOINT: minio:9000
+      KB_MINIO_BUCKET: knowledge-base
+      KB_EMBEDDING_SERVICE_URL: http://vroom-embedding:8080
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/vroom_hr
+      EMPLOYEE_MINIO_ENDPOINT: minio:9000
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      - ./backend/config:/app/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      vroom-embedding:
+        condition: service_healthy
 volumes:
   postgres_data:
   minio_data:
+  embedding-model-cache:

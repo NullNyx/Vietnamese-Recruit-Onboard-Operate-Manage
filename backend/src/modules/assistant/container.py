@@ -32,6 +32,11 @@ from src.modules.identity.container import get_crypto_utils, get_db_session
 from src.modules.identity.infrastructure.organization_ai_config_repository import (
     OrganizationAIConfigRepository,
 )
+from src.modules.knowledge_base.application.retrieval_service import RetrievalService
+from src.modules.knowledge_base.container import get_kb_settings
+from src.modules.knowledge_base.infrastructure.repository import (
+    KnowledgeBaseRepository,
+)
 from src.modules.onboarding.application.onboarding_service import OnboardingService
 from src.modules.onboarding.container import get_onboarding_service
 from src.modules.recruitment.application.candidate_service import CandidateService
@@ -114,12 +119,16 @@ async def get_context_builder(
     candidate_service: CandidateService = Depends(get_candidate_service),
     onboarding_service: OnboardingService = Depends(get_onboarding_service),
 ) -> ContextBuilder:
-    """Provide a ContextBuilder wired to recruitment + onboarding data."""
+    """Provide a ContextBuilder wired to recruitment + onboarding + KB retrieval."""
+    kb_settings = get_kb_settings()
+    kb_repo = KnowledgeBaseRepository(session)
+    retrieval_service = RetrievalService(repo=kb_repo, settings=kb_settings)
     return ContextBuilder(
         session=session,
         candidate_service=candidate_service,
         onboarding_service=onboarding_service,
         job_opening_repo=JobOpeningRepository(session),
+        retrieval_service=retrieval_service,
     )
 
 

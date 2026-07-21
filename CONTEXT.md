@@ -40,6 +40,18 @@ _Avoid_: Employee AI Agent, Employee Chatbot, Self-service bot
 Flow thiết lập ban đầu, chỉ hiển thị trên deployment mới trước khi có tài khoản HR. Flow xác lập danh tính tối thiểu của Organization và tạo tài khoản HR đầu tiên; các cài đặt Organization khác được cấu hình sau.
 _Avoid_: Signup, onboarding wizard, install flow, login screen
 
+**Knowledge Base** (Cơ sở tri thức / Tài liệu nội bộ):
+Kho tài liệu phi cấu trúc (PDF, DOCX) do HR quản lý, phục vụ RAG retrieval cho AI Assistant. Hệ thống có hai Knowledge Base riêng biệt về mặt vật lý: HR Knowledge Base (chỉ HR truy cập) và Employee Knowledge Base (HR quản lý, Employee truy vấn). HR upload tài liệu, hệ thống tự động parse → chunk → embed → index vào pgvector. Quá trình ingestion là bất đồng bộ qua ARQ worker. File gốc lưu trên MinIO.
+_Avoid_: FAQ, Document Library, Policy Engine — Knowledge Base là kho dữ liệu phi cấu trúc cho RAG, không phải FAQ tĩnh hay document management tổng quát.
+
+**HR Knowledge Base**:
+Một trong hai Knowledge Base, chứa tài liệu chỉ dành cho HR (ví dụ: quy trình nội bộ HR, tài liệu pháp lý tham khảo, hướng dẫn nghiệp vụ tuyển dụng). HR Assistant truy vấn cả HR Knowledge Base và Employee Knowledge Base.
+_Avoid_: Admin Docs, Internal HR Docs
+
+**Employee Knowledge Base**:
+Một trong hai Knowledge Base, chứa tài liệu HR publish cho Employee (ví dụ: nội quy lao động, sổ tay nhân viên, quy chế phúc lợi, lịch sự kiện công ty). HR Assistant và Employee Assistant đều truy vấn được KB này. Employee Assistant KHÔNG truy cập được HR Knowledge Base.
+_Avoid_: Public Docs, Employee Handbook — Handbook là một tập con của Employee Knowledge Base.
+
 **Attendance Record**:
 Bản ghi chấm công hằng ngày cho một Employee trong một ngày làm việc. Ghi nhận việc Employee có mặt trong ngày đó, tách biệt với nghỉ phép, làm thêm giờ và payroll.
 _Avoid_: Presence status, Shift, Timesheet

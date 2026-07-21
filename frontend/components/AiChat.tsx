@@ -69,19 +69,28 @@ function toUserError(err: unknown): string {
   return 'Không thể kết nối trợ lý — vui lòng thử lại.';
 }
 
-/** Simple markdown-like rendering: **bold**, *italic*, `code`, newlines */
-function renderMarkdown(text: string): React.ReactNode {
-  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**'))
-      return <strong key={i} className="text-slate-900 font-semibold">{part.slice(2, -2)}</strong>;
-    if (part.startsWith('*') && part.endsWith('*') && !part.startsWith('**'))
-      return <em key={i} className="italic text-slate-600">{part.slice(1, -1)}</em>;
-    if (part.startsWith('`') && part.endsWith('`'))
-      return <code key={i} className="bg-slate-200 text-slate-800 px-1 py-0.5 rounded text-[11px] font-mono">{part.slice(1, -1)}</code>;
-    return <span key={i}>{part}</span>;
-  });
-}
+    /** Simple markdown-like rendering: **bold**, *italic*, `code`, newlines */
+    function renderMarkdown(text: string): React.ReactNode {
+      const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g);
+      return parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**'))
+          return <strong key={i} className="text-slate-900 font-semibold">{part.slice(2, -2)}</strong>;
+        if (part.startsWith('*') && part.endsWith('*') && !part.startsWith('**'))
+          return <em key={i} className="italic text-slate-600">{part.slice(1, -1)}</em>;
+        if (part.startsWith('`') && part.endsWith('`'))
+          return <code key={i} className="bg-slate-200 text-slate-800 px-1 py-0.5 rounded text-[11px] font-mono">{part.slice(1, -1)}</code>;
+        return <span key={i}>{part}</span>;
+      });
+    }
+
+    /** Extract citation sources from assistant text (📎 Nguồn: ...) */
+    function extractCitation(text: string): { body: string; sources: string[] } | null {
+      const match = text.match(/^([\s\S]*?)\n*📎\s*Nguồn:\s*(.+?)\s*$/);
+      if (!match) return null;
+      const sources = match[2].split(/,\s*/).map(s => s.trim()).filter(Boolean);
+      if (sources.length === 0) return null;
+      return { body: match[1].trim(), sources };
+    }
 
 const TOOL_ICONS: Record<string, React.ReactNode> = {
   search_candidates: <Search className="w-3 h-3" />,
@@ -705,34 +714,57 @@ export default function AiChat({
                   transition={{ duration: 0.2, ease: 'easeOut' }}
                   className={`flex gap-2.5 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  {m.role === 'assistant' && (
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 flex items-center justify-center shrink-0 mt-0.5">
-                      <Bot className="w-3.5 h-3.5 text-indigo-600" />
-                    </div>
-                  )}
-                  <div className="max-w-[85%] space-y-1">
-                    <div className={`text-[9px] text-slate-400 flex items-center gap-1 ${m.role === 'user' ? 'justify-end' : ''}`}>
-                      <Clock className="w-2.5 h-2.5" />
-                      {nowTime()}
-                    </div>
-                    <div
-                      className={`p-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                        m.role === 'user'
-                          ? 'bg-indigo-600 text-white font-medium rounded-tr-none shadow-sm'
-                          : 'bg-slate-50 text-slate-800 rounded-tl-none border border-slate-200/80 shadow-sm'
-                      }`}
-                    >
-                      {m.role === 'assistant' ? renderMarkdown(m.content ?? '') : (m.content ?? '')}
-                    </div>
-                    {m.role === 'assistant' && m.content && (
-                      <FeedbackRow
-                        messageIndex={i}
-                        sessionId={sessionIdRef.current ?? undefined}
-                        sendFeedback={api.sendFeedback}
-                        onToast={setToast}
-                      />
-                    )}
-                  </div>
+                      {m.role === 'assistant' && (
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 flex items-center justify-center shrink-0 mt-0.5">
+                          <Bot className="w-3.5 h-3.5 text-indigo-600" />
+                        </div>
+                      )}
+                      <div className="max-w-[85%] space-y-1">
+                        <div className={`text-[9px] text-slate-400 flex items-center gap-1 ${m.role === 'user' ? 'justify-end' : ''}`}>
+                          <Clock className="w-2.5 h-2.5" />
+                          {nowTime()}
+                        </div>
+                        {(() => {
+                          const citation = m.role === 'assistant' && m.content ? extractCitation(m.content) : null;
+                          const displayContent = citation ? citation.body : (m.content ?? '');
+                          return (
+                            <>
+                              <div
+                                className={`p-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                                  m.role === 'user'
+                                    ? 'bg-indigo-600 text-white font-medium rounded-tr-none shadow-sm'
+                                    : 'bg-slate-50 text-slate-800 rounded-tl-none border border-slate-200/80 shadow-sm'
+                                }`}
+                              >
+                                {m.role === 'assistant' ? renderMarkdown(displayContent) : (m.content ?? '')}
+                              </div>
+                              {citation && (
+                                <div className="flex flex-wrap gap-1.5 mt-1">
+                                  <span className="text-[9px] text-slate-400 flex items-center gap-0.5">
+                                    📎 Nguồn:
+                                  </span>
+                                  {citation.sources.map((src, si) => (
+                                    <span
+                                      key={si}
+                                      className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-indigo-50 text-indigo-600 border border-indigo-200"
+                                    >
+                                      {src}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                        {m.role === 'assistant' && m.content && (
+                          <FeedbackRow
+                            messageIndex={i}
+                            sessionId={sessionIdRef.current ?? undefined}
+                            sendFeedback={api.sendFeedback}
+                            onToast={setToast}
+                          />
+                        )}
+                      </div>
                   {m.role === 'user' && (
                     <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
                       <User className="w-3.5 h-3.5" />

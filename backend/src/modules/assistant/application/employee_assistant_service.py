@@ -60,6 +60,9 @@ Rules:
   or overtime request — the tool returns a draft for preview.
 - Be concise and helpful. Use Vietnamese when the employee does.
 - If a tool fails, tell the employee clearly and suggest they try again.
+- When you use information from [TÀI LIỆU NỘI BỘ LIÊN QUAN] in the context,
+  answer based on that information but DO NOT include citations.
+  Employees should not see document source references.
 """
 
 
@@ -224,37 +227,37 @@ class EmployeeAssistantService:
                     }
                 )
 
-            has_text_response = any(m.role == "assistant" and m.content for m in all_new_messages)
-            if not has_text_response:
-                all_new_messages.append(ChatMessage(role="assistant", content=_TOOL_LOOP_FALLBACK))
+        has_text_response = any(m.role == "assistant" and m.content for m in all_new_messages)
+        if not has_text_response:
+            all_new_messages.append(ChatMessage(role="assistant", content=_TOOL_LOOP_FALLBACK))
 
-            # Increment message_count for this exchange
-            if session is not None and session_id is not None:
-                from sqlmodel import select
+        # Increment message_count for this exchange
+        if session is not None and session_id is not None:
+            from sqlmodel import select
 
-                from src.modules.assistant.infrastructure.quality_models import AssistantChatSession
+            from src.modules.assistant.infrastructure.quality_models import AssistantChatSession
 
-                result = await session.execute(
-                    select(AssistantChatSession).where(
-                        AssistantChatSession.id == session_id,
-                    )
+            result = await session.execute(
+                select(AssistantChatSession).where(
+                    AssistantChatSession.id == session_id,
                 )
-                chat_session = result.scalar_one_or_none()
-                if chat_session is not None:
-                    chat_session.message_count += 1
-
-            total_duration_ms = (time.monotonic() - round_trip_start) * 1000
-            logger.info(
-                "Employee assistant round-trip took %.0f ms (%d messages, %d new)",
-                total_duration_ms,
-                len(messages),
-                len(all_new_messages),
             )
+            chat_session = result.scalar_one_or_none()
+            if chat_session is not None:
+                chat_session.message_count += 1
 
-            return ChatResponse(
-                messages=all_new_messages,
-                draft_action=draft_action,
-            )
+        total_duration_ms = (time.monotonic() - round_trip_start) * 1000
+        logger.info(
+            "Employee assistant round-trip took %.0f ms (%d messages, %d new)",
+            total_duration_ms,
+            len(messages),
+            len(all_new_messages),
+        )
+
+        return ChatResponse(
+            messages=all_new_messages,
+            draft_action=draft_action,
+        )
 
     async def _build_messages(
         self,
@@ -274,11 +277,19 @@ class EmployeeAssistantService:
 
         result: list[dict[str, Any]] = [{"role": "system", "content": system_content}]
 
-        # Inject dynamic context block as second system message (ticket #227)
+        # Extract last user message for KB retrieval (ticket #259)
+        user_query: str | None = None
+        for msg in reversed(messages):
+            if msg.role == "user" and msg.content:
+                user_query = msg.content
+                break
+
+        # Inject dynamic context block as second system message (ticket #227, #259)
         if self._context_builder is not None:
             try:
                 context_block = await self._context_builder.build_employee_context(
-                    self._employee_id
+                    self._employee_id,
+                    user_query=user_query,
                 )
                 if context_block:
                     result.append({"role": "system", "content": context_block})

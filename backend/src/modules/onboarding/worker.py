@@ -126,6 +126,8 @@ class OnboardingWorkerSettings:
 
     functions = get_arq_tasks()
 
+    queue_name = "onboarding-worker"
+
     on_startup = startup
     on_shutdown = shutdown
 
@@ -139,3 +141,5 @@ class OnboardingWorkerSettings:
             minute={1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 43, 46, 49, 52, 55, 58},
         )
     ]
+
+

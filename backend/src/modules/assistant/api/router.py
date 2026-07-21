@@ -9,11 +9,15 @@ held in frontend memory; backend processes each turn statelessly.
 
 from __future__ import annotations
 
+import json
+import logging
+import typing
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.assistant.api.schemas import (
@@ -136,37 +140,98 @@ async def chat(
         draft_action=draft_action,
     )
 
-    @router.post("/feedback", status_code=204)
-    async def assistant_feedback(
-        body: AssistantFeedbackRequest,
-        _user: AdminUserDep,
-        audit_service: AuditServiceDep,
-        session: AsyncSession = Depends(get_db_session),
-    ) -> None:
-        """Record user feedback (thumbs up/down) for an assistant response."""
-        await audit_service.log_action(
-            admin=_user,
-            action_type=AuditActionType.ASSISTANT_CHAT,
-            details={
-                "event": "message_feedback",
-                "session_id": body.session_id,
-                "message_index": body.message_index,
-                "feedback_type": body.feedback_type,
-                "optional_text": body.optional_text,
-            },
-        )
-        from src.modules.assistant.infrastructure.quality_models import (
-            FeedbackType,
-        )
+@router.post("/chat/stream")
+async def chat_stream(
+    body: ChatRequest,
+    _user: AdminUserDep,
+    assistant_service: AssistantServiceDep,
+    session: AsyncSession = Depends(get_db_session),
+) -> StreamingResponse:
+    """Chat with the AI Assistant via SSE streaming.
 
-        feedback_event = AssistantFeedbackEvent(
-            session_id=uuid.UUID(body.session_id),
-            message_index=body.message_index,
-            feedback_type=FeedbackType(body.feedback_type),
-            optional_text=body.optional_text,
+    Same logic as POST /chat, but streams the response as Server-Sent Events.
+    The frontend reads events (``text_delta``, ``tool_start``, ``tool_end``,
+    ``draft_action``, ``done``, ``error``) for real-time UI updates.
+
+    Requires admin role.
+    """
+    # Validate last message is from user
+    last_msg = body.messages[-1]
+    if last_msg.role != "user":
+        raise HTTPException(status_code=422, detail="Last message must be from user")
+
+    # Fetch enabled tool names from DB config
+    tool_config_repo = ToolConfigRepository(session)
+    enabled_tool_names = await tool_config_repo.get_enabled_tool_names()
+
+    # Convert schema to domain messages
+    domain_messages = [
+        ChatMessage(
+            role=m.role,
+            content=m.content,
         )
-        session.add(feedback_event)
-        await session.commit()
+        for m in body.messages
+    ]
+
+    async def event_stream() -> typing.AsyncGenerator[bytes, None]:
+        """Generate SSE-formatted bytes from the assistant chat_stream generator."""
+        try:
+            async for event in assistant_service.chat_stream(
+                domain_messages,
+                enabled_tool_names=enabled_tool_names,
+                session=session,
+                session_id=uuid.UUID(body.session_id) if body.session_id else None,
+            ):
+                event_name = event["event"]
+                event_data = json.dumps(event["data"], ensure_ascii=False)
+                yield f"event: {event_name}\ndata: {event_data}\n\n".encode()
+        except Exception as exc:
+            logger.exception("chat_stream error")
+            error_data = json.dumps({"error": str(exc)}, ensure_ascii=False)
+            yield f"event: error\ndata: {error_data}\n\n".encode()
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.post("/feedback", status_code=204)
+async def assistant_feedback(
+    body: AssistantFeedbackRequest,
+    _user: AdminUserDep,
+    audit_service: AuditServiceDep,
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Record user feedback (thumbs up/down) for an assistant response."""
+    await audit_service.log_action(
+        admin=_user,
+        action_type=AuditActionType.ASSISTANT_CHAT,
+        details={
+            "event": "message_feedback",
+            "session_id": body.session_id,
+            "message_index": body.message_index,
+            "feedback_type": body.feedback_type,
+            "optional_text": body.optional_text,
+        },
+    )
+    from src.modules.assistant.infrastructure.quality_models import (
+        FeedbackType,
+    )
+
+    feedback_event = AssistantFeedbackEvent(
+        session_id=uuid.UUID(body.session_id),
+        message_index=body.message_index,
+        feedback_type=FeedbackType(body.feedback_type),
+        optional_text=body.optional_text,
+    )
+    session.add(feedback_event)
+    await session.commit()
 
 
 @router.post("/draft-decision", status_code=204)

@@ -41,6 +41,11 @@ from src.modules.gmail.domain.entities import (  # noqa: E402, F401
     OutboundEmail,
     SyncCursor,
 )
+
+from src.modules.knowledge_base.domain.entities import (  # noqa: E402, F401
+    KnowledgeBaseChunk,
+    KnowledgeBaseDocument,
+)
 from src.modules.identity.domain.entities import (  # noqa: E402, F401
     OAuthGrant,
     RefreshToken,

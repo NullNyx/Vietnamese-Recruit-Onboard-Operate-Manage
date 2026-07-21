@@ -308,6 +308,8 @@ class WorkerSettings:
     on_shutdown = shutdown
     functions = [import_historical_emails]
 
+    queue_name = "gmail-worker"
+
     cron_jobs = [
         cron(
             poll_gmail_emails,

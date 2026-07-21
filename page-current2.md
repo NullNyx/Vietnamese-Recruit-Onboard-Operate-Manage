@@ -1,0 +1,112 @@
+- generic [ref=f4e1]:
+  - generic [ref=f4e2]:
+    - banner [ref=f4e3]:
+      - generic [ref=f4e4]:
+        - button "Menu" [ref=f4e5]
+        - generic [ref=f4e7]: VR
+        - generic [ref=f4e8]: Vroom HR
+        - generic [ref=f4e9]: / Quản trị
+      - generic [ref=f4e10]:
+        - button "Cấu hình" [ref=f4e11]
+        - generic [ref=f4e15]: HR Admin
+        - button "Đăng xuất" [ref=f4e16]
+    - generic [ref=f4e20]:
+      - complementary [ref=f4e21]:
+        - button "Tổng quan & Metrics" [ref=f4e23]
+        - generic [ref=f4e30]:
+          - generic [ref=f4e31]: Tuyển dụng
+          - button "Hộp thư Tuyển dụng (Inbox)" [ref=f4e32]
+          - button "Ứng viên (Candidates)" [ref=f4e37]
+          - button "Vị trí Tuyển dụng" [ref=f4e43]
+          - button "Lịch phỏng vấn" [ref=f4e48]
+          - button "Review CV (Parse)" [ref=f4e52]
+          - button "Metrics Tuyển dụng" [ref=f4e59]
+        - generic [ref=f4e63]:
+          - generic [ref=f4e64]: Nhân sự
+          - button "Onboarding Processes" [ref=f4e65]
+          - button "Danh sách Nhân viên" [ref=f4e70]
+          - button "Yêu cầu Nhân viên" [ref=f4e77]
+        - generic [ref=f4e82]:
+          - generic [ref=f4e83]: Chấm công & Lương
+          - button "Chấm công & Allowlist" [ref=f4e84]
+          - button "Phiếu lương" [ref=f4e89]
+        - generic [ref=f4e94]:
+          - generic [ref=f4e95]: Hệ thống
+          - button "Tài liệu nội bộ" [ref=f4e96]
+          - button "Kênh Gmail" [ref=f4e100]
+          - button "Cấu hình AI & Hệ thống" [ref=f4e105]
+        - button "Trợ lý AI" [ref=f4e111]
+      - main [ref=f4e115]:
+        - generic [ref=f4e116]:
+          - generic [ref=f4e117]:
+            - generic [ref=f4e118]:
+              - heading "Tài liệu nội bộ" [level=1] [ref=f4e122]
+              - paragraph [ref=f4e123]: Quản lý tài liệu Knowledge Base cho HR và Nhân viên. Tải lên tài liệu để hệ thống tự động xử lý và lập chỉ mục.
+            - button "Tải lên tài liệu" [ref=f4e125]
+          - generic [ref=f4e129]:
+            - button "HR" [ref=f4e130]
+            - button "Nhân viên" [ref=f4e131]
+          - generic [ref=f4e132]:
+            - combobox [ref=f4e136]:
+              - option "Tất cả danh mục" [selected]
+              - option "Chung"
+              - option "Chính sách"
+              - option "Quy trình"
+              - option "Biểu mẫu"
+              - option "Đào tạo"
+              - option "Pháp lý"
+              - option "Khác"
+            - combobox [ref=f4e137]:
+              - option "Tất cả trạng thái" [selected]
+              - option "Sẵn sàng"
+              - option "Đang xử lý"
+              - option "Đang indexing"
+              - option "Lỗi"
+            - generic [ref=f4e150]: 1 tài liệu
+          - generic [ref=f4e138]:
+            - heading "Danh sách tài liệu HR" [level=2] [ref=f4e143]
+            - generic [ref=f4e152]:
+              - generic [ref=f4e156]:
+                - generic [ref=f4e157]:
+                  - button "Nội quy công ty Vroom HR 2025" [ref=f4e158]
+                  - generic [ref=f4e159]: Chờ xử lý
+                - generic [ref=f4e160]:
+                  - generic [ref=f4e161]: noi-quy-cong-ty.pdf
+                  - generic [ref=f4e162]: 2.5 KB
+              - generic [ref=f4e163]:
+                - generic [ref=f4e164]:
+                  - generic [ref=f4e165]: Chính sách
+                  - generic [ref=f4e166]: 19:14:27 21/7/2026
+                - button "Sửa thông tin" [ref=f4e167]
+                - button "Upload lại file" [ref=f4e171]
+                - button "Xóa tài liệu" [ref=f4e175]
+          - dialog "Tải lên tài liệu (HR)" [ref=f4e211]:
+            - generic [ref=f4e212]:
+              - heading "Tải lên tài liệu (HR)" [level=3] [ref=f4e213]
+              - button "Đóng" [ref=f4e214]: ×
+            - generic [ref=f4e215]:
+              - generic [ref=f4e216]:
+                - generic [ref=f4e217]: File tài liệu
+                - button "File tài liệu Hỗ trợ PDF, DOCX, DOC, TXT (tối đa 20MB)" [ref=f4e218]
+                - generic [ref=f4e219]: Hỗ trợ PDF, DOCX, DOC, TXT (tối đa 20MB)
+              - generic [ref=f4e220]:
+                - generic [ref=f4e221]: Tên hiển thị
+                - textbox "Tên hiển thị" [active] [ref=f4e222]:
+                  - /placeholder: "VD: Quy định làm việc từ xa"
+                  - text: Nội quy công ty Vroom HR 2025
+              - generic [ref=f4e223]:
+                - generic [ref=f4e224]: Danh mục
+                - combobox "Danh mục" [ref=f4e225]:
+                  - option "Chung"
+                  - option "Chính sách" [selected]
+                  - option "Quy trình"
+                  - option "Biểu mẫu"
+                  - option "Đào tạo"
+                  - option "Pháp lý"
+                  - option "Khác"
+              - generic [ref=f4e226]:
+                - button "Hủy" [ref=f4e227]
+                - button "Tải lên" [disabled] [ref=f4e228]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=f4e184] [cursor=pointer]
+  - alert [ref=f4e188]

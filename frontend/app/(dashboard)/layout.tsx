@@ -4,7 +4,7 @@ import React from 'react';
 import {
   LayoutDashboard, Inbox, UserCheck, Briefcase, Calendar,
   CheckSquare, Users, Clock, FileText, FileSpreadsheet,
-  Mail, Settings, FileSearch, BarChart3
+  Mail, Settings, FileSearch, BarChart3, BookOpen
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import AppShell from '@/components/app-shell';
@@ -40,6 +40,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Hệ thống',
     items: [
+          { href: '/knowledge-base', label: 'Tài liệu nội bộ', icon: BookOpen },
       { href: '/gmail', label: 'Kênh Gmail', icon: Mail },
       { href: '/settings', label: 'Cấu hình AI & Hệ thống', icon: Settings },
     ],

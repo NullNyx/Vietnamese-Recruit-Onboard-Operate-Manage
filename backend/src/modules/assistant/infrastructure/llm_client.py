@@ -12,9 +12,10 @@ Features:
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, AsyncGenerator
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI
 
@@ -37,6 +38,23 @@ class LLMResponse:
     content: str | None
     tool_calls: list[dict[str, Any]]
     token_usage: dict[str, int]
+
+
+@dataclass
+class LLMStreamChunk:
+    """A single chunk from a streaming LLM response.
+
+    Attributes:
+        content_delta: Partial text content (None if not a text chunk).
+        tool_calls_acc: Accumulated tool calls so far (None if none).
+        done: Whether the stream is complete.
+        final_content: The complete content string (only set when done=True).
+    """
+
+    content_delta: str | None = None
+    tool_calls_acc: list[dict[str, Any]] | None = None
+    done: bool = False
+    final_content: str | None = None
 
 
 class AssistantLLMClient:
@@ -131,6 +149,93 @@ class AssistantLLMClient:
             token_usage=token_usage,
         )
 
+    async def chat_stream(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> AsyncGenerator[LLMStreamChunk, None]:
+        """Stream a chat completion, yielding text deltas and tool calls.
+
+        Uses OpenAI's streaming API (stream=True). For tool-calling
+        responses the tool calls are accumulated and yielded once complete.
+
+        Args:
+            messages: Full message history (system + user + assistant + tool results).
+            tools: Optional tool definitions in OpenAI format.
+
+        Yields:
+            LLMStreamChunk with content_delta or tool_calls_acc.
+
+        Raises:
+            LLMConnectionError: If the LLM endpoint is unreachable.
+        """
+        kwargs: dict[str, Any] = {
+            "model": self._model,
+            "messages": messages,
+            "temperature": 0.3,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+        if tools:
+            kwargs["tools"] = tools
+            kwargs["tool_choice"] = "auto"
+
+        try:
+            stream = await self._client.chat.completions.create(**kwargs)
+        except APITimeoutError as exc:
+            logger.error("LLM stream request timed out: %s", exc)
+            raise LLMConnectionError(f"LLM timeout: {exc}") from exc
+        except APIConnectionError as exc:
+            logger.error("LLM stream connection failed: %s", exc)
+            raise LLMConnectionError(f"LLM stream connection failed: {exc}") from exc
+        except APIStatusError as exc:
+            logger.error("LLM stream API error: %s", exc)
+            raise LLMConnectionError(f"LLM stream API error {exc.status_code}: {exc}") from exc
+
+        # Track tool calls across chunks (keyed by index)
+        tool_calls_acc: dict[int, dict[str, Any]] = {}
+        content_chunks: list[str] = []
+
+        async for chunk in stream:
+            if not chunk.choices:
+                # May be a usage-only chunk at the end
+                continue
+
+            delta = chunk.choices[0].delta
+            if delta is None:
+                continue
+
+            if delta.content:
+                content_chunks.append(delta.content)
+                yield LLMStreamChunk(content_delta=delta.content)
+
+            if delta.tool_calls:
+                for tc in delta.tool_calls:
+                    idx = tc.index
+                    if idx not in tool_calls_acc:
+                        tool_calls_acc[idx] = {
+                            "id": "",
+                            "type": "function",
+                            "function": {"name": "", "arguments": ""},
+                        }
+                    if tc.id:
+                        tool_calls_acc[idx]["id"] = tc.id
+                    if tc.function:
+                        if tc.function.name:
+                            tool_calls_acc[idx]["function"]["name"] += tc.function.name
+                        if tc.function.arguments:
+                            tool_calls_acc[idx]["function"]["arguments"] += tc.function.arguments
+
+        # Build final result
+        final_content = "".join(content_chunks) if content_chunks else None
+        final_tool_calls = list(tool_calls_acc.values()) if tool_calls_acc else None
+
+        yield LLMStreamChunk(
+            done=True,
+            final_content=final_content,
+            tool_calls_acc=final_tool_calls,
+        )
+
     @staticmethod
     def _extract_token_usage(response: object) -> dict[str, int]:
         """Extract token usage from the API response."""
@@ -142,3 +247,5 @@ class AssistantLLMClient:
             "completion_tokens": getattr(usage, "completion_tokens", 0) or 0,
             "total_tokens": getattr(usage, "total_tokens", 0) or 0,
         }
+
+

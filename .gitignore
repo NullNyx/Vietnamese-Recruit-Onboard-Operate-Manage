@@ -80,3 +80,4 @@ frontend/.pnpm-store/
 !frontend/public/**/*.svg
 !docs/**/*.png
 !docs/**/*.jpg
+vroom-embedding/model_cache/

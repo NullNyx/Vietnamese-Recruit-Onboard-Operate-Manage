@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
     from src.modules.employee.application.employee_service import EmployeeService
+    from src.modules.knowledge_base.application.retrieval_service import RetrievalService
     from src.modules.employee_request.application.leave_service import LeaveService
     from src.modules.employee_request.application.overtime_service import OvertimeService
     from src.modules.onboarding.application.onboarding_service import OnboardingService
@@ -65,6 +66,7 @@ class ContextBuilder:
         leave_service: LeaveService | None = None,
         payslip_service: PayslipService | None = None,
         overtime_service: OvertimeService | None = None,
+        retrieval_service: RetrievalService | None = None,
     ) -> None:
         self._session = session
         self._candidate_service = candidate_service
@@ -75,12 +77,13 @@ class ContextBuilder:
         self._leave_service = leave_service
         self._payslip_service = payslip_service
         self._overtime_service = overtime_service
+        self._retrieval_service = retrieval_service
 
     # ------------------------------------------------------------------
     # HR Assistant context (real-time per request)
     # ------------------------------------------------------------------
 
-    async def build_hr_context(self) -> str:
+    async def build_hr_context(self, user_query: str | None = None) -> str:
         """Build a context block for the HR Assistant.
 
         Includes:
@@ -88,6 +91,11 @@ class ContextBuilder:
         - Pipeline summary (candidate counts by status)
         - Open job openings
         - Onboarding in-progress count
+        - Knowledge Base retrieval (HR KB docs, top-3 chunks)
+
+        Args:
+            user_query: The user's latest chat message, used for KB retrieval.
+                        If None, KB retrieval is skipped.
 
         Returns:
             A formatted string to append as a system message.
@@ -114,6 +122,12 @@ class ContextBuilder:
         if onboarding_summary:
             parts.append(onboarding_summary)
 
+        # 5. Knowledge Base retrieval (HR KB)
+        if user_query:
+            kb_block = await self._get_kb_context(user_query, kb_types=["hr", "employee"])
+            if kb_block:
+                parts.append(kb_block)
+
         if not parts:
             return ""
 
@@ -124,7 +138,7 @@ class ContextBuilder:
     # Employee Assistant context (per-session)
     # ------------------------------------------------------------------
 
-    async def build_employee_context(self, employee_id: UUID) -> str:
+    async def build_employee_context(self, employee_id: UUID, user_query: str | None = None) -> str:
         """Build a context block for the Employee Assistant.
 
         Includes:
@@ -132,9 +146,12 @@ class ContextBuilder:
         - Leave balance
         - Pending request count
         - Payslip count
+        - Knowledge Base retrieval (Employee KB only — no HR KB access)
 
         Args:
             employee_id: The authenticated employee's UUID.
+            user_query: The user's latest chat message, used for KB retrieval.
+                        If None, KB retrieval is skipped.
 
         Returns:
             A formatted string to append as a system message.
@@ -160,6 +177,12 @@ class ContextBuilder:
         payslip_summary = await self._get_payslip_summary(employee_id)
         if payslip_summary:
             parts.append(payslip_summary)
+
+        # 5. Knowledge Base retrieval (Employee KB only — security boundary)
+        if user_query:
+            kb_block = await self._get_kb_context(user_query, kb_types=["employee"])
+            if kb_block:
+                parts.append(kb_block)
 
         if not parts:
             return ""
@@ -346,6 +369,41 @@ class ContextBuilder:
             return f"Phiếu lương: {count} phiếu có sẵn."
         except Exception:
             return ""
+
+    # ------------------------------------------------------------------
+    # Knowledge Base retrieval helper
+    # ------------------------------------------------------------------
+
+    async def _get_kb_context(self, user_query: str, kb_types: list[str]) -> str:
+        """Retrieve relevant KB chunks for the given user query and KB types.
+
+        Calls the RetrievalService to embed the query and search pgvector.
+        Returns a formatted context block string ready for prompt injection.
+        Gracefully degrades to empty string on any error (never blocks chat).
+
+        Args:
+            user_query: The user's chat message text to search for.
+            kb_types: KB types to filter (e.g. ['hr'] or ['employee']).
+
+        Returns:
+            Formatted KB context block, or empty string if no results or error.
+        """
+        if self._retrieval_service is None:
+            return ""
+
+        if not user_query.strip():
+            return ""
+
+        try:
+            return await self._retrieval_service.retrieve(
+                query=user_query,
+                kb_types=kb_types,
+                top_k=3,
+                similarity_threshold=0.5,
+            )
+        except Exception:
+            return ""
+
 
     async def _get_entity_name(self, table: str, entity_id: UUID) -> str | None:
         """Resolve a name field from a generic table by id."""

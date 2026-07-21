@@ -1,0 +1,63 @@
+- generic [ref=f8e1]:
+  - generic [ref=f8e2]:
+    - banner [ref=f8e3]:
+      - generic [ref=f8e4]:
+        - button "Menu" [ref=f8e5]
+        - generic [ref=f8e7]: VR
+        - generic [ref=f8e8]: Vroom HR
+        - generic [ref=f8e9]: / Quản trị
+      - generic [ref=f8e10]:
+        - button "Cấu hình" [ref=f8e11]
+        - generic [ref=f8e15]: HR Admin
+        - button "Đăng xuất" [ref=f8e16]
+    - generic [ref=f8e20]:
+      - complementary [ref=f8e21]:
+        - button "Tổng quan & Metrics" [ref=f8e23]
+        - generic [ref=f8e30]:
+          - generic [ref=f8e31]: Tuyển dụng
+          - button "Hộp thư Tuyển dụng (Inbox)" [ref=f8e32]
+          - button "Ứng viên (Candidates)" [ref=f8e37]
+          - button "Vị trí Tuyển dụng" [ref=f8e43]
+          - button "Lịch phỏng vấn" [ref=f8e48]
+          - button "Review CV (Parse)" [ref=f8e52]
+          - button "Metrics Tuyển dụng" [ref=f8e59]
+        - generic [ref=f8e63]:
+          - generic [ref=f8e64]: Nhân sự
+          - button "Onboarding Processes" [ref=f8e65]
+          - button "Danh sách Nhân viên" [ref=f8e70]
+          - button "Yêu cầu Nhân viên" [ref=f8e77]
+        - generic [ref=f8e82]:
+          - generic [ref=f8e83]: Chấm công & Lương
+          - button "Chấm công & Allowlist" [ref=f8e84]
+          - button "Phiếu lương" [ref=f8e89]
+        - generic [ref=f8e94]:
+          - generic [ref=f8e95]: Hệ thống
+          - button "Tài liệu nội bộ" [ref=f8e96]
+          - button "Kênh Gmail" [ref=f8e100]
+          - button "Cấu hình AI & Hệ thống" [ref=f8e105]
+        - button "Trợ lý AI" [ref=f8e111]
+      - main [ref=f8e115]:
+        - generic [ref=f8e116]:
+          - heading "Trợ lý AI (HR)" [level=1] [ref=f8e121]
+          - paragraph [ref=f8e122]: Đọc dữ liệu tuyển dụng/onboarding và soạn nháp action. Mọi ghi dữ liệu do HR xác nhận.
+          - generic [ref=f8e124]:
+            - generic [ref=f8e125]:
+              - heading "Trợ lý AI Vroom HR Human-in-the-loop" [level=3] [ref=f8e131] [cursor=pointer]:
+                - text: Trợ lý AI Vroom HR
+                - generic [ref=f8e132]: Human-in-the-loop
+              - button "Thu gọn" [ref=f8e134]
+            - generic [ref=f8e138]:
+              - paragraph [ref=f8e143]: Trợ lý AI Vroom HR
+              - paragraph [ref=f8e144]: Hỏi về dữ liệu tuyển dụng / onboarding; soạn nháp action cho HR xác nhận.
+              - generic [ref=f8e145]:
+                - button "Có bao nhiêu candidate đang reviewing?" [ref=f8e146]
+                - button "Onboarding nào đang chạy?" [ref=f8e147]
+                - button "Soạn email chúc mừng cho Nguyễn Văn A" [ref=f8e148]
+            - generic [ref=f8e149]:
+              - textbox "Hỏi về ứng viên, onboarding, hoặc yêu cầu soạn email... (Ctrl+J để focus)" [active] [ref=f8e150]:
+                - /placeholder: Hỏi về ứng viên, onboarding, hoặc yêu cầu soạn email...  (Ctrl+J để focus)
+                - text: Quy định về giờ làm việc và nghỉ phép trong công ty như thế nào?
+              - button "Gửi" [ref=f8e151]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=f8e160] [cursor=pointer]
+  - alert [ref=f8e164]

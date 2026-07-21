@@ -53,6 +53,10 @@ Rules:
 - For Draft-Tools: use draft tools when the user asks to compose/send an email.
 - Be concise and helpful. Use Vietnamese when the user does.
 - If a tool fails, tell the user clearly and suggest they try again.
+- When you use information from [TÀI LIỆU NỘI BỘ LIÊN QUAN] in the context,
+  cite the source at the end of your answer using the format:
+  📎 Nguồn: Tên tài liệu 1, Tên tài liệu 2
+  Only include documents you actually used in your answer.
 """
 
 
@@ -260,10 +264,183 @@ class AssistantService:
             len(all_new_messages),
         )
 
+
         return ChatResponse(
             messages=all_new_messages,
             draft_action=draft_action,
         )
+
+    async def chat_stream(
+        self,
+        messages: list[ChatMessage],
+        enabled_tool_names: set[str] | None = None,
+        session: AsyncSession | None = None,
+        session_id: UUID | None = None,
+    ) -> typing.AsyncGenerator[dict[str, typing.Any], None]:
+        """Process a user message and stream SSE events via async generator.
+
+        Runs the same tool-calling loop as :meth:`chat`, but yields
+        Server-Sent Events for real-time frontend display:
+        - ``text_delta`` — partial text content from the LLM
+        - ``tool_start`` — a tool is being called (name + arguments)
+        - ``tool_end`` — a tool result is ready (name + result)
+        - ``draft_action`` — a Draft Action was generated
+        - ``done`` — stream complete
+
+        Args:
+            messages: Full conversation history including the new user message.
+            enabled_tool_names: If provided, only these tools are sent to the LLM.
+            session: Optional DB session for logging tool call events.
+            session_id: Optional session UUID to correlate tool call events.
+
+        Yields:
+            Dicts with ``event`` and ``data`` keys for SSE serialisation.
+        """
+        from src.modules.assistant.infrastructure.llm_client import LLMStreamChunk
+
+        openai_messages = await self._build_messages(messages, enabled_tool_names)
+
+        draft_action: dict[str, typing.Any] | None = None
+        all_new_messages: list[ChatMessage] = []
+
+        for _iteration in range(_MAX_TOOL_ITERATIONS):
+            tool_calls_result: list[dict[str, typing.Any]] | None = None
+            content_parts: list[str] = []
+
+            async for chunk in self._llm_client.chat_stream(
+                messages=openai_messages,
+                tools=get_openai_tools(enabled_tool_names),
+            ):
+                if chunk.content_delta:
+                    content_parts.append(chunk.content_delta)
+                    yield {"event": "text_delta", "data": {"content": chunk.content_delta}}
+                if chunk.done:
+                    if chunk.final_content is not None:
+                        content_parts.append(chunk.final_content)
+                    tool_calls_result = chunk.tool_calls_acc
+
+            final_content = "".join(content_parts) if content_parts else None
+
+            if not tool_calls_result:
+                # Text response — done with the tool loop
+                assistant_msg = ChatMessage(
+                    role="assistant",
+                    content=final_content or "",
+                )
+                all_new_messages.append(assistant_msg)
+                break
+
+            # Tool calls — execute each tool
+            assistant_msg = ChatMessage(
+                role="assistant",
+                content=final_content,
+                tool_calls=tool_calls_result,
+            )
+            all_new_messages.append(assistant_msg)
+
+            assistant_openai: dict[str, typing.Any] = {
+                "role": "assistant",
+                "content": final_content,
+                "tool_calls": tool_calls_result,
+            }
+            openai_messages.append(assistant_openai)
+
+            for tc in tool_calls_result:
+                tool_name = tc["function"]["name"]
+                try:
+                    tool_args = json.loads(tc["function"]["arguments"])
+                except json.JSONDecodeError:
+                    tool_args = {}
+
+                yield {
+                    "event": "tool_start",
+                    "data": {"name": tool_name, "arguments": tc["function"]["arguments"]},
+                }
+
+                tool_start = time.monotonic()
+                success = True
+                try:
+                    result_str = await self._tool_registry.execute(tool_name, tool_args)
+                except Exception:
+                    success = False
+                    result_str = json.dumps({"error": f"Tool execution failed: {tool_name}"})
+                tool_duration_ms = (time.monotonic() - tool_start) * 1000
+                logger.debug(
+                    "Tool %s took %.0f ms (success=%s)",
+                    tool_name,
+                    tool_duration_ms,
+                    success,
+                )
+
+                if session is not None and session_id is not None:
+                    await self._record_tool_event(
+                        session=session,
+                        session_id=session_id,
+                        tool_name=tool_name,
+                        duration_ms=tool_duration_ms,
+                        success=success,
+                    )
+
+                if self._tool_registry.is_draft_tool(tool_name):
+                    try:
+                        result_data = json.loads(result_str)
+                        if "draft_action" in result_data:
+                            draft_action = result_data["draft_action"]
+                    except json.JSONDecodeError:
+                        pass
+
+                tool_msg = ChatMessage(
+                    role="tool",
+                    content=result_str,
+                    tool_call_id=tc["id"],
+                    name=tool_name,
+                )
+                all_new_messages.append(tool_msg)
+
+                openai_messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tc["id"],
+                        "content": result_str,
+                    }
+                )
+
+                yield {
+                    "event": "tool_end",
+                    "data": {"name": tool_name, "result": result_str},
+                }
+
+        # Fallback when loop exhausts without a text response
+        has_text_response = any(
+            m.role == "assistant" and m.content for m in all_new_messages
+        )
+        if not has_text_response:
+            all_new_messages.append(
+                ChatMessage(role="assistant", content=_TOOL_LOOP_FALLBACK)
+            )
+            yield {"event": "text_delta", "data": {"content": _TOOL_LOOP_FALLBACK}}
+
+        # Increment message_count
+        if session is not None and session_id is not None:
+            from sqlmodel import select
+
+            from src.modules.assistant.infrastructure.quality_models import (
+                AssistantChatSession,
+            )
+
+            result = await session.execute(
+                select(AssistantChatSession).where(
+                    AssistantChatSession.id == session_id,
+                )
+            )
+            chat_session = result.scalar_one_or_none()
+            if chat_session is not None:
+                chat_session.message_count += 1
+
+        if draft_action:
+            yield {"event": "draft_action", "data": draft_action}
+
+        yield {"event": "done", "data": {}}
 
     async def _record_tool_event(
         self,
@@ -316,10 +493,19 @@ class AssistantService:
 
         result: list[dict[str, Any]] = [{"role": "system", "content": system_content}]
 
-        # Inject dynamic context block as second system message (ticket #227)
+        # Extract last user message for KB retrieval (ticket #259)
+        user_query: str | None = None
+        for msg in reversed(messages):
+            if msg.role == "user" and msg.content:
+                user_query = msg.content
+                break
+
+        # Inject dynamic context block as second system message (ticket #227, #259)
         if self._context_builder is not None:
             try:
-                context_block = await self._context_builder.build_hr_context()
+                context_block = await self._context_builder.build_hr_context(
+                    user_query=user_query,
+                )
                 if context_block:
                     result.append({"role": "system", "content": context_block})
             except Exception:

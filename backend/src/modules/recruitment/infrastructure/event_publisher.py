@@ -68,7 +68,7 @@ class ArqDomainEventPublisher:
     async def _get_pool(self) -> ArqRedis:
         """Return the ARQ pool, creating and caching it on first use."""
         if self._pool is None:
-            self._pool = await create_pool(self._redis_settings)
+            self._pool = await create_pool(self._redis_settings, default_queue_name="onboarding-worker")
         return self._pool
 
     async def publish(self, event_type: str, payload: dict[str, Any]) -> None:

@@ -1,0 +1,86 @@
+- generic [active] [ref=f12e1]:
+  - generic [ref=f12e2]:
+    - banner [ref=f12e3]:
+      - generic [ref=f12e4]:
+        - button "Menu" [ref=f12e5]
+        - generic [ref=f12e7]: VR
+        - generic [ref=f12e8]: Vroom HR
+        - generic [ref=f12e9]: / Quản trị
+      - generic [ref=f12e10]:
+        - button "Cấu hình" [ref=f12e11]
+        - generic [ref=f12e15]: HR Admin
+        - button "Đăng xuất" [ref=f12e16]
+    - generic [ref=f12e20]:
+      - complementary [ref=f12e21]:
+        - button "Tổng quan & Metrics" [ref=f12e23]
+        - generic [ref=f12e30]:
+          - generic [ref=f12e31]: Tuyển dụng
+          - button "Hộp thư Tuyển dụng (Inbox)" [ref=f12e32]
+          - button "Ứng viên (Candidates)" [ref=f12e37]
+          - button "Vị trí Tuyển dụng" [ref=f12e43]
+          - button "Lịch phỏng vấn" [ref=f12e48]
+          - button "Review CV (Parse)" [ref=f12e52]
+          - button "Metrics Tuyển dụng" [ref=f12e59]
+        - generic [ref=f12e63]:
+          - generic [ref=f12e64]: Nhân sự
+          - button "Onboarding Processes" [ref=f12e65]
+          - button "Danh sách Nhân viên" [ref=f12e70]
+          - button "Yêu cầu Nhân viên" [ref=f12e77]
+        - generic [ref=f12e82]:
+          - generic [ref=f12e83]: Chấm công & Lương
+          - button "Chấm công & Allowlist" [ref=f12e84]
+          - button "Phiếu lương" [ref=f12e89]
+        - generic [ref=f12e94]:
+          - generic [ref=f12e95]: Hệ thống
+          - button "Tài liệu nội bộ" [ref=f12e96]
+          - button "Kênh Gmail" [ref=f12e100]
+          - button "Cấu hình AI & Hệ thống" [ref=f12e105]
+        - button "Trợ lý AI" [ref=f12e111]
+      - main [ref=f12e115]:
+        - generic [ref=f12e116]:
+          - generic [ref=f12e117]:
+            - generic [ref=f12e118]:
+              - heading "Tài liệu nội bộ" [level=1] [ref=f12e122]
+              - paragraph [ref=f12e123]: Quản lý tài liệu Knowledge Base cho HR và Nhân viên. Tải lên tài liệu để hệ thống tự động xử lý và lập chỉ mục.
+            - button "Tải lên tài liệu" [ref=f12e125]
+          - generic [ref=f12e129]:
+            - button "HR" [ref=f12e130]
+            - button "Nhân viên" [ref=f12e131]
+          - generic [ref=f12e132]:
+            - combobox [ref=f12e136]:
+              - option "Tất cả danh mục" [selected]
+              - option "Chung"
+              - option "Chính sách"
+              - option "Quy trình"
+              - option "Biểu mẫu"
+              - option "Đào tạo"
+              - option "Pháp lý"
+              - option "Khác"
+            - combobox [ref=f12e137]:
+              - option "Tất cả trạng thái" [selected]
+              - option "Sẵn sàng"
+              - option "Đang xử lý"
+              - option "Đang indexing"
+              - option "Lỗi"
+            - generic [ref=f12e150]: 1 tài liệu
+          - generic [ref=f12e138]:
+            - heading "Danh sách tài liệu HR" [level=2] [ref=f12e143]
+            - generic [ref=f12e152]:
+              - generic [ref=f12e156]:
+                - generic [ref=f12e157]:
+                  - button "Nội quy công ty Vroom HR 2025" [ref=f12e158]
+                  - generic [ref=f12e159]: Sẵn sàng
+                - generic [ref=f12e160]:
+                  - generic [ref=f12e161]: noi-quy-cong-ty.pdf
+                  - generic [ref=f12e162]: 2.5 KB
+                  - generic [ref=f12e163]: 1 đoạn
+              - generic [ref=f12e164]:
+                - generic [ref=f12e165]:
+                  - generic [ref=f12e166]: Chung
+                  - generic [ref=f12e167]: 19:24:49 21/7/2026
+                - button "Sửa thông tin" [ref=f12e168]
+                - button "Upload lại file" [ref=f12e172]
+                - button "Xóa tài liệu" [ref=f12e176]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=f12e185] [cursor=pointer]
+  - alert [ref=f12e189]
