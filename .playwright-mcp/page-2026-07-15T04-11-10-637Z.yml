@@ -1,9 +1,0 @@
-- generic [active] [ref=f6e1]:
-  - generic [ref=f6e2]:
-    - banner [ref=f6e3]
-    - main [ref=f6e6]:
-      - generic [ref=f6e9]:
-        - heading "Hộp thư" [level=1] [ref=f6e12]
-        - generic [ref=f6e13]: Đang kiểm tra kết nối...
-  - region "Notifications alt+T"
-  - alert [ref=f6e18]
