@@ -557,20 +557,25 @@ function ToolsTab() {
 }
 
 function ToolRowCheckbox({ t, draft, setDraft }: { t: AssistantToolConfig; draft: Record<string, boolean>; setDraft: (d: Record<string, boolean>) => void }) {
-  const checked = draft[t.tool_name] ?? t.enabled;
-  return (
-    <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
-      <input type="checkbox" checked={checked} onChange={(e) => setDraft({ ...draft, [t.tool_name]: e.target.checked })} className="w-4 h-4 rounded accent-indigo-600" />
-      <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-[13px] font-medium text-slate-800">{t.display_name}</span>
-              <span className="text-[10px] text-slate-400 font-mono">{t.tool_name}</span>
-            </div>
-            {t.description && <p className="text-[11px] text-slate-500 mt-0.5">{t.description}</p>}
-          </div>
-        </label>
-  );
-}
+      const ts = useTranslations('settings');
+      const checked = draft[t.tool_name] ?? t.enabled;
+      const nameKey = `tool_${t.tool_name}_name`;
+      const descKey = `tool_${t.tool_name}_desc`;
+      const displayName = ts.has(nameKey) ? ts(nameKey) : t.display_name;
+      const description = ts.has(descKey) ? ts(descKey) : t.description;
+      return (
+        <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
+          <input type="checkbox" checked={checked} onChange={(e) => setDraft({ ...draft, [t.tool_name]: e.target.checked })} className="w-4 h-4 rounded accent-indigo-600" />
+          <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-1.5 flex-wrap">
+                  <span className="text-[13px] font-medium text-slate-800">{displayName}</span>
+                  <span className="text-[10px] text-slate-400 font-mono">{t.tool_name}</span>
+                </div>
+                {description && <p className="text-[11px] text-slate-500 mt-0.5">{description}</p>}
+              </div>
+            </label>
+      );
+    }
 
 // ---------------------------------------------------------------------------
 // Runtime health
