@@ -182,7 +182,7 @@ class ToolRegistry:
             detail = await self._candidate_service.get_candidate(candidate_id)
             candidate = detail.candidate
         except Exception as e:
-            return {"error": f"Không tìm thấy ứng viên: {str(e)}"}
+            return {"error": get_message("CANDIDATE_NOT_FOUND", "vi")}
 
         return {
             "candidate_id": str(candidate.id),
@@ -218,7 +218,7 @@ class ToolRegistry:
             detail = await self._candidate_service.get_candidate(candidate_id)
             candidate = detail.candidate
         except Exception as e:
-            return {"error": f"Không tìm thấy ứng viên: {str(e)}"}
+            return {"error": get_message("CANDIDATE_NOT_FOUND", "vi")}
 
         import html
 
@@ -227,7 +227,7 @@ class ToolRegistry:
         safe_time = html.escape(str(time_str))
         safe_location = html.escape(str(location))
 
-        subject = f"Thư mời phỏng vấn - {safe_name}"
+        subject = get_message("EMAIL_INTERVIEW_SUBJECT", "vi").format(name=safe_name)
         body_html = f"""
         <div style="font-family: sans-serif; line-height: 1.5;">
             <h3>Thư Mời Phỏng Vấn</h3>
@@ -292,7 +292,7 @@ class ToolRegistry:
             detail = await self._candidate_service.get_candidate(candidate_id)
             candidate = detail.candidate
         except Exception as e:
-            return {"error": f"Không tìm thấy ứng viên: {str(e)}"}
+            return {"error": get_message("CANDIDATE_NOT_FOUND", "vi")}
 
         import html
 
@@ -300,7 +300,7 @@ class ToolRegistry:
         safe_position = html.escape(str(position))
         safe_date = html.escape(str(start_date))
 
-        subject = "Chúc mừng bạn đã trúng tuyển - Vroom HR"
+        subject = get_message("EMAIL_OFFER_SUBJECT", "vi")
         body_html = f"""
         <div style="font-family: sans-serif; line-height: 1.5;">
             <h3>Thư Báo Trúng Tuyển</h3>
@@ -532,7 +532,7 @@ class ToolRegistry:
         try:
             interviews = await self._candidate_service.list_interviews_for_candidate(candidate_id)
         except Exception as e:
-            return {"error": f"Không tìm thấy ứng viên: {str(e)}"}
+            return {"error": get_message("CANDIDATE_NOT_FOUND", "vi")}
 
         return {"interviews": interviews, "total": len(interviews)}
 
@@ -553,7 +553,7 @@ class ToolRegistry:
         try:
             detail = await self._onboarding_service.get_process(process_id)
         except Exception as e:
-            return {"error": f"Không tìm thấy onboarding process: {str(e)}"}
+            return {"error": get_message("ONBOARDING_PROCESS_NOT_FOUND", "vi")}
 
         tasks = []
         for task in detail.tasks:

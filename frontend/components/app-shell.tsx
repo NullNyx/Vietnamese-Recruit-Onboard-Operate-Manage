@@ -7,14 +7,18 @@
  * Follows AI Studio design system: slate/indigo, rounded-full pill, Inter + JetBrains Mono.
  *
  * v2: Added nav grouping (navGroups), mobile hamburger menu.
+ * v3: i18n — replaced hardcoded text with useTranslations.
  */
 
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { Sparkles, LogOut, Menu, X } from 'lucide-react';
 import { useSession } from '@/lib/auth/session';
+import { useTranslations } from 'next-intl';
+import LocaleSwitcher from '@/components/locale-switcher';
 
 export interface NavItem {
   href: string;
@@ -62,6 +66,7 @@ export default function AppShell({
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useSession();
+  const t = useTranslations('appShell');
 
   // Mobile sidebar toggle
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -103,7 +108,7 @@ export default function AppShell({
           <button
             onClick={() => setSidebarOpen((p) => !p)}
             className="lg:hidden p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-all"
-            title="Menu"
+            title={t('menu')}
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -111,12 +116,13 @@ export default function AppShell({
           <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black tracking-tighter text-sm shadow-md shadow-indigo-100">
             VR
           </div>
-          <span className="font-semibold text-sm text-slate-800">Vroom HR</span>
+          <span className="font-semibold text-sm text-slate-800">{t('brand')}</span>
           <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
             {roleLabel}
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <LocaleSwitcher />
           {topBarExtra}
           <span className="text-xs text-slate-500 font-medium hidden sm:block">
             {user?.name ?? userDisplayNameFallback}
@@ -124,7 +130,7 @@ export default function AppShell({
           <button
             onClick={handleLogout}
             className="p-1.5 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-all"
-            title="Đăng xuất"
+            title={t('logout')}
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -149,6 +155,12 @@ export default function AppShell({
           `}
         >
           {sidebarBadge && sidebarBadge}
+
+          {sidebarSectionLabel && (
+            <div className="text-[9px] font-mono font-bold text-purple-500 px-3 uppercase tracking-wider mb-2">
+              {sidebarSectionLabel}
+            </div>
+          )}
 
           {groups.map((group, gi) => (
             <div key={gi}>
@@ -181,7 +193,7 @@ export default function AppShell({
               className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium bg-gradient-to-r from-indigo-600 to-indigo-500 text-white hover:from-indigo-500 hover:to-indigo-400 shadow-md shadow-indigo-100 transition-all"
             >
               <Sparkles className="w-4 h-4" />
-              Trợ lý AI
+              {t('assistant')}
             </button>
           </div>
         </aside>

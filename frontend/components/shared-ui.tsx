@@ -5,7 +5,7 @@
  * Follows AI Studio design system: slate/indigo, rounded-2xl cards, rounded-full
  * pill buttons, Inter + JetBrains Mono. Vietnamese labels default.
  *
- * Keep dependency-free beyond lucide-react; no heavy design library.
+ * v3: i18n — defaults use useTranslations for locale-aware fallback text.
  */
 
 'use client';
@@ -14,22 +14,25 @@ import React from 'react';
 import { AlertTriangle, Inbox, Loader2 } from 'lucide-react';
 import type { ApiError } from '@/lib/api/types';
 import { getErrorMessage } from '@/lib/api/error-codes';
+import { useTranslations } from 'next-intl';
 
 // ---------------------------------------------------------------------------
 // Error banner — renders BE error_code via registry when available
 // ---------------------------------------------------------------------------
 
 /**
- * Render a BE error_code with the mapped Vietnamese message (never self-fabricated).
- * Accepts optional `title` override (default: "Đã xảy ra lỗi. Vui lòng thử lại.").
+ * Render a BE error_code with the mapped message (never self-fabricated).
+ * Accepts optional `title` override (default: translated error text).
  */
 export function ErrorBanner({
       error,
-      title = 'Đã xảy ra lỗi. Vui lòng thử lại.',
+      title: titleProp,
     }: {
       error: unknown;
       title?: string;
     }) {
+      const t = useTranslations('common');
+      const title = titleProp ?? t('error');
       if (!error) return null;
       let msg = title;
       let code: string | undefined;
@@ -82,7 +85,9 @@ export const ErrorAlert = ErrorBanner;
 // ---------------------------------------------------------------------------
 
 /** Centered loading spinner with optional label. */
-export function Loading({ label = 'Đang tải...' }: { label?: string }) {
+export function Loading({ label: labelProp }: { label?: string }) {
+  const t = useTranslations('common');
+  const label = labelProp ?? t('loading');
   return (
     <div className="flex items-center justify-center py-12">
       <div className="animate-spin w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full" />
@@ -109,10 +114,10 @@ export function LoadingRows({ count = 5 }: { count?: number }) {
 export function EmptyState({
   filtered,
   onReset,
-  emptyFiltered = 'Không có bản ghi khớp với bộ lọc hiện tại.',
-  emptyData = 'Chưa có bản ghi nào.',
-  hintFiltered = 'Thử thay đổi từ khóa hoặc bộ lọc.',
-  hintData = 'Dữ liệu sẽ xuất hiện khi có bản ghi.',
+  emptyFiltered: ef,
+  emptyData: ed,
+  hintFiltered: hf,
+  hintData: hd,
 }: {
   filtered: boolean;
   onReset?: () => void;
@@ -121,6 +126,11 @@ export function EmptyState({
   hintFiltered?: string;
   hintData?: string;
 }) {
+  const t = useTranslations('common');
+  const emptyFiltered = ef ?? t('noResults');
+  const emptyData = ed ?? t('noData');
+  const hintFiltered = hf ?? t('clear');
+  const hintData = hd ?? t('noData');
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <Inbox className="w-10 h-10 text-slate-300 mb-3" />
@@ -135,7 +145,7 @@ export function EmptyState({
           onClick={onReset}
           className="mt-4 px-4 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-all"
         >
-          Xóa bộ lọc
+          {t('clear')}
         </button>
       )}
     </div>
@@ -228,44 +238,46 @@ export function statusTone(status: string): BadgeTone {
 
 export const CANDIDATE_STATUS_META: Record<
   string,
-  { label: string; tone: 'slate' | 'indigo' | 'amber' | 'emerald' | 'rose' | 'violet' }
+  { label: string; tone: 'slate' | 'indigo' | 'amber' | 'emerald' | 'rose' | 'violet'; labelKey: string }
 > = {
-  new: { label: 'Mới', tone: 'slate' },
-  reviewing: { label: 'Đang review', tone: 'indigo' },
-  interview_scheduled: { label: 'Đã lên lịch PV', tone: 'violet' },
-  accepted: { label: 'Đã nhận', tone: 'emerald' },
-  rejected: { label: 'Từ chối', tone: 'rose' },
-  archived: { label: 'Lưu trữ', tone: 'slate' },
+  new: { label: 'Mới', tone: 'slate', labelKey: 'candidateNew' },
+  reviewing: { label: 'Đang review', tone: 'indigo', labelKey: 'candidateReviewing' },
+  interview_scheduled: { label: 'Đã lên lịch PV', tone: 'violet', labelKey: 'candidateInterviewScheduled' },
+  accepted: { label: 'Đã nhận', tone: 'emerald', labelKey: 'candidateAccepted' },
+  rejected: { label: 'Từ chối', tone: 'rose', labelKey: 'candidateRejected' },
+  archived: { label: 'Lưu trữ', tone: 'slate', labelKey: 'candidateArchived' },
 };
 
 export const INBOX_STATUS_META: Record<
   string,
-  { label: string; tone: 'amber' | 'rose' | 'indigo' | 'slate' }
+  { label: string; tone: 'amber' | 'rose' | 'indigo' | 'slate'; labelKey: string }
 > = {
-  needs_classification: { label: 'Cần xác nhận phân loại', tone: 'amber' },
-  needs_information: { label: 'Cần bổ sung thông tin', tone: 'rose' },
-  ready_for_review: { label: 'Sẵn sàng review', tone: 'indigo' },
-  resolved: { label: 'Đã xử lý', tone: 'slate' },
+  needs_classification: { label: 'Cần xác nhận phân loại', tone: 'amber', labelKey: 'inboxNeedsClassification' },
+  needs_information: { label: 'Cần bổ sung thông tin', tone: 'rose', labelKey: 'inboxNeedsInfo' },
+  ready_for_review: { label: 'Sẵn sàng review', tone: 'indigo', labelKey: 'inboxReadyForReview' },
+  resolved: { label: 'Đã xử lý', tone: 'slate', labelKey: 'inboxResolved' },
 };
 
 export const JOB_STATUS_META: Record<
   string,
-  { label: string; tone: 'slate' | 'emerald' | 'indigo' | 'rose' }
+  { label: string; tone: 'slate' | 'emerald' | 'indigo' | 'rose'; labelKey: string }
 > = {
-  draft: { label: 'Bản nháp', tone: 'slate' },
-  open: { label: 'Đang tuyển', tone: 'emerald' },
-  closed: { label: 'Đã đóng', tone: 'indigo' },
-  cancelled: { label: 'Đã hủy', tone: 'rose' },
+  draft: { label: 'Bản nháp', tone: 'slate', labelKey: 'jobDraft' },
+  open: { label: 'Đang tuyển', tone: 'emerald', labelKey: 'jobOpen' },
+  closed: { label: 'Đã đóng', tone: 'indigo', labelKey: 'jobClosed' },
+  cancelled: { label: 'Đã hủy', tone: 'rose', labelKey: 'jobCancelled' },
 };
 
 export const CONFLICT_STATUS_META: Record<
   string,
-  { label: string; tone: 'amber' | 'emerald' | 'rose' | 'slate' }
+  { label: string; tone: 'amber' | 'emerald' | 'rose' | 'slate'; labelKey: string }
 > = {
-  pending: { label: 'Chờ xử lý', tone: 'amber' },
-  resolved: { label: 'Đã giải quyết', tone: 'emerald' },
+  pending: { label: 'Chờ xử lý', tone: 'amber', labelKey: 'conflictPending' },
+  resolved: { label: 'Đã giải quyết', tone: 'emerald', labelKey: 'conflictResolved' },
 };
 
+// Audit action labels — Vietnamese values kept for backward compat;
+// new code should use t('audit.{action}') from the 'audit' namespace.
 export const AUDIT_ACTION_LABELS: Record<string, string> = {
   role_change: 'Thay đổi quyền',
   user_create: 'Tạo tài khoản',
@@ -305,6 +317,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   request_reject: 'Từ chối yêu cầu',
   attendance_network_update: 'Cập nhật IP chấm công',
   attendance_network_add: 'Thêm IP chấm công',
+      ai_policy_preset_update: 'Cập nhật chính sách AI',
   attendance_network_remove: 'Xóa IP chấm công',
   attendance_correction: 'Sửa chấm công',
   outbound_email_created: 'Tạo email gửi đi',
@@ -414,6 +427,8 @@ export const MIME_TYPE_LABELS: Record<string, string> = {
   'image/jpeg': 'JPEG',
 };
 
+// Service labels — Vietnamese values kept for backward compat;
+// new code should use t('system.{name}') from the 'system' namespace.
 export const SERVICE_LABELS: Record<string, string> = {
   redis: 'Bộ nhớ đệm',
   postgresql: 'Cơ sở dữ liệu',
@@ -560,6 +575,7 @@ export function Modal({
   title: string;
   children: React.ReactNode;
 }) {
+  const t = useTranslations('common');
   if (!open) return null;
   return (
     <div
@@ -577,7 +593,7 @@ export function Modal({
           <h3 className="font-bold text-slate-900 text-sm">{title}</h3>
           <button
             onClick={onClose}
-            aria-label="Đóng"
+            aria-label={t('close')}
             className="text-slate-400 hover:text-slate-600 text-lg leading-none"
           >
             ×
@@ -594,11 +610,11 @@ export function Modal({
 // ---------------------------------------------------------------------------
 
 /** Format a string Decimal/number as VND currency. */
-export function formatVND(value: string | number | null | undefined): string {
+export function formatVND(value: string | number | null | undefined, locale = 'vi-VN'): string {
   if (value === null || value === undefined || value === '') return '—';
   const n = typeof value === 'string' ? Number(value) : value;
   if (!Number.isFinite(n)) return String(value);
-  return new Intl.NumberFormat('vi-VN', {
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: 'VND',
     maximumFractionDigits: 0,
@@ -606,18 +622,18 @@ export function formatVND(value: string | number | null | undefined): string {
 }
 
 /** Format an ISO date/time into a Vietnamese localized string. */
-export function formatDateTime(iso: string | null | undefined): string {
+export function formatDateTime(iso: string | null | undefined, locale = 'vi-VN'): string {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return String(iso);
-  return d.toLocaleString('vi-VN');
+  return d.toLocaleString(locale);
 }
 
-export function formatDate(iso: string | null | undefined): string {
+export function formatDate(iso: string | null | undefined, locale = 'vi-VN'): string {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return String(iso);
-  return d.toLocaleDateString('vi-VN');
+  return d.toLocaleDateString(locale);
 }
 
 /**
@@ -627,85 +643,139 @@ export function formatDate(iso: string | null | undefined): string {
  * - heartbeat-related → "Không hoạt động"
  * - fallback: return detail as-is
  */
-export function formatRuntimeDetail(detail: string | null): string {
-  if (detail == null) return '';
-  if (detail.startsWith('last beat:')) {
-    const raw = detail.slice('last beat:'.length).trim();
-    const ts = parseFloat(raw);
-    if (Number.isNaN(ts)) return detail;
-    const now = Date.now() / 1000;
-    const diff = Math.max(0, now - ts);
-    if (diff < 60) return 'Vừa xong';
-    if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
-    return `${Math.floor(diff / 86400)} ngày trước`;
-  }
-  if (detail === 'no heartbeat' || detail.includes('heartbeat'))
-    return 'Không hoạt động';
-  return detail;
-}
+export function formatRuntimeDetail(detail: string | null, locale = 'vi-VN'): string {
+      if (detail == null) return '';
+      if (detail.startsWith('last beat:')) {
+        const raw = detail.slice('last beat:'.length).trim();
+        const ts = parseFloat(raw);
+        if (Number.isNaN(ts)) return detail;
+        const now = Date.now() / 1000;
+        const diff = Math.max(0, now - ts);
+        if (diff < 60) return locale === 'vi-VN' ? 'Vừa xong' : 'Just now';
+        if (diff < 3600) {
+          const m = Math.floor(diff / 60);
+          return locale === 'vi-VN' ? `${m} phút trước` : `${m} min ago`;
+        }
+        if (diff < 86400) {
+          const h = Math.floor(diff / 3600);
+          return locale === 'vi-VN' ? `${h} giờ trước` : `${h} hr ago`;
+        }
+        const d = Math.floor(diff / 86400);
+        return locale === 'vi-VN' ? `${d} ngày trước` : `${d} day ago`;
+      }
+      if (detail === 'no heartbeat' || detail.includes('heartbeat'))
+        return locale === 'vi-VN' ? 'Không hoạt động' : 'Inactive';
+      return detail;
+    }
 
 /** Format latency in ms → Vietnamese qualitative label. */
-export function formatLatency(latencyMs: number | null): string {
-  if (latencyMs == null) return '';
-  if (latencyMs < 100) return 'Nhanh';
-  if (latencyMs < 500) return 'Bình thường';
-  return 'Chậm';
-}
+export function formatLatency(latencyMs: number | null, locale = 'vi-VN'): string {
+      if (latencyMs == null) return '';
+      if (latencyMs < 100) return locale === 'vi-VN' ? 'Nhanh' : 'Fast';
+      if (latencyMs < 500) return locale === 'vi-VN' ? 'Bình thường' : 'Normal';
+      return locale === 'vi-VN' ? 'Chậm' : 'Slow';
+    }
 
-/** Format audit details as a Vietnamese-readable string (never raw JSON). */
-export function formatAuditDetails(details: unknown): string {
-  if (!details) return '—';
-  if (typeof details !== 'object' || details === null) return String(details);
+    /** Format audit details as a Vietnamese-readable string (never raw JSON). */
+    export function formatAuditDetails(details: unknown, locale = 'vi-VN'): string {
+      if (!details) return '—';
+      if (typeof details !== 'object' || details === null) return String(details);
 
-  // Vietnamese field labels
-  const fieldMap: Record<string, string> = {
-    role: 'Quyền', email: 'Email', name: 'Tên',
-    employee_id: 'Mã NV', permissions: 'Quyền hạn',
-    result: 'Kết quả', kết_quả: 'Kết quả',
-    calendar_id: 'Lịch', lịch: 'Lịch',
-    // Domain / whitelist
-    value: 'Giá trị', entry_type: 'Loại', domain: 'Tên miền',
-    domains: 'Tên miền', action: 'Hành động',
-    // AI config
-    model: 'Model', provider: 'Nhà cung cấp', base_url: 'API URL',
-    capability: 'Tính năng', credential_source: 'Nguồn xác thực',
-    // Payslip
-    payslip_id: 'Mã phiếu lương', period_month: 'Kỳ lương',
-    gross_salary: 'Lương gross', net_salary: 'Lương net',
-    published_at: 'Ngày xuất bản',
-    // Request
-    request_id: 'Mã yêu cầu', request_type: 'Loại yêu cầu',
-    // Feedback / chat
-    event: 'Sự kiện', feedback_type: 'Đánh giá',
-    message_index: 'Tin nhắn #', optional_text: 'Ghi chú',
-    // OAuth / Google
-    client_id: 'Client ID', redirect_uri: 'Redirect URI',
-    // Attendance
-    network: 'IP/CIDR', cidr: 'IP/CIDR', correction_date: 'Ngày sửa',
-    // General
-    old_role: 'Quyền cũ', new_role: 'Quyền mới',
-    target_user_email: 'Người dùng', target_user_id: 'Người dùng',
-    policy_version: 'Phiên bản chính sách',
-  };
+      // Field labels — locale-aware
+      const fieldMap: Record<string, string> = locale === 'vi-VN'
+        ? {
+          role: 'Quyền', email: 'Email', name: 'Tên',
+          employee_id: 'Mã NV', permissions: 'Quyền hạn',
+          result: 'Kết quả', kết_quả: 'Kết quả',
+          calendar_id: 'Lịch', lịch: 'Lịch',
+          // Domain / whitelist
+          value: 'Giá trị', entry_type: 'Loại', domain: 'Tên miền',
+          domains: 'Tên miền', action: 'Hành động',
+          // AI config
+          model: 'Model', provider: 'Nhà cung cấp', base_url: 'API URL',
+          capability: 'Tính năng', credential_source: 'Nguồn xác thực',
+          // Payslip
+          payslip_id: 'Mã phiếu lương', period_month: 'Kỳ lương',
+          gross_salary: 'Lương gross', net_salary: 'Lương net',
+          published_at: 'Ngày xuất bản',
+          // Request
+          request_id: 'Mã yêu cầu', request_type: 'Loại yêu cầu',
+          // Feedback / chat
+          event: 'Sự kiện', feedback_type: 'Đánh giá',
+          message_index: 'Tin nhắn #', optional_text: 'Ghi chú',
+          // OAuth / Google
+          client_id: 'Client ID', redirect_uri: 'Redirect URI',
+          // Attendance
+          network: 'IP/CIDR', cidr: 'IP/CIDR', correction_date: 'Ngày sửa',
+          // General
+          old_role: 'Quyền cũ', new_role: 'Quyền mới',
+          target_user_email: 'Người dùng', target_user_id: 'Người dùng',
+          policy_version: 'Phiên bản chính sách',
+        }
+        : {
+          role: 'Role', email: 'Email', name: 'Name',
+          employee_id: 'Employee ID', permissions: 'Permissions',
+          result: 'Result', kết_quả: 'Result',
+          calendar_id: 'Calendar', lịch: 'Calendar',
+          // Domain / whitelist
+          value: 'Value', entry_type: 'Type', domain: 'Domain',
+          domains: 'Domains', action: 'Action',
+          // AI config
+          model: 'Model', provider: 'Provider', base_url: 'API URL',
+          capability: 'Capability', credential_source: 'Credential Source',
+          // Payslip
+          payslip_id: 'Payslip ID', period_month: 'Period',
+          gross_salary: 'Gross Salary', net_salary: 'Net Salary',
+          published_at: 'Published At',
+          // Request
+          request_id: 'Request ID', request_type: 'Request Type',
+          // Feedback / chat
+          event: 'Event', feedback_type: 'Feedback',
+          message_index: 'Message #', optional_text: 'Note',
+          // OAuth / Google
+          client_id: 'Client ID', redirect_uri: 'Redirect URI',
+          // Attendance
+          network: 'IP/CIDR', cidr: 'IP/CIDR', correction_date: 'Correction Date',
+          // General
+          old_role: 'Old Role', new_role: 'New Role',
+          target_user_email: 'User', target_user_id: 'User',
+          policy_version: 'Policy Version',
+        };
 
-  // Vietnamese value translations
-  const valueMap: Record<string, string> = {
-    calendar_selected: 'đã chọn lịch',
-    connected: 'đã kết nối', disconnected: 'đã ngắt kết nối',
-    enable: 'Bật', disable: 'Tắt',
-    update: 'Cập nhật', add: 'Thêm', remove: 'Xóa',
-    org_api_key: 'API Key tổ chức', deployment_key: 'Khóa triển khai',
-    automation: 'Tự động hóa', assistant: 'Trợ lý AI',
-    capability_consent_accept: 'Đồng ý',
-    data_policy_accept: 'Đồng ý chính sách dữ liệu',
-    exact_email: 'Email cụ thể', domain_pattern: 'Tên miền',
-    message_feedback: 'Phản hồi tin nhắn',
-    up: '👍 Hữu ích', down: '👎 Không hữu ích',
-    admin: 'Quản trị (HR)', user: 'Nhân viên',
-    database: 'Thêm thủ công', file: 'File cấu hình',
-    published: 'Đã xuất bản', draft: 'Bản nháp',
-  };
+      // Value translations — locale-aware
+      const valueMap: Record<string, string> = locale === 'vi-VN'
+        ? {
+          calendar_selected: 'đã chọn lịch',
+          connected: 'đã kết nối', disconnected: 'đã ngắt kết nối',
+          enable: 'Bật', disable: 'Tắt',
+          update: 'Cập nhật', add: 'Thêm', remove: 'Xóa',
+          org_api_key: 'API Key tổ chức', deployment_key: 'Khóa triển khai',
+          automation: 'Tự động hóa', assistant: 'Trợ lý AI',
+          capability_consent_accept: 'Đồng ý',
+          data_policy_accept: 'Đồng ý chính sách dữ liệu',
+          exact_email: 'Email cụ thể', domain_pattern: 'Tên miền',
+          message_feedback: 'Phản hồi tin nhắn',
+          up: '👍 Hữu ích', down: '👎 Không hữu ích',
+          admin: 'Quản trị (HR)', user: 'Nhân viên',
+          database: 'Thêm thủ công', file: 'File cấu hình',
+          published: 'Đã xuất bản', draft: 'Bản nháp',
+        }
+        : {
+          calendar_selected: 'calendar selected',
+          connected: 'connected', disconnected: 'disconnected',
+          enable: 'Enable', disable: 'Disable',
+          update: 'Update', add: 'Add', remove: 'Remove',
+          org_api_key: 'Org API Key', deployment_key: 'Deployment Key',
+          automation: 'Automation', assistant: 'AI Assistant',
+          capability_consent_accept: 'Accepted',
+          data_policy_accept: 'Data Policy Accepted',
+          exact_email: 'Exact Email', domain_pattern: 'Domain Pattern',
+          message_feedback: 'Message Feedback',
+          up: '👍 Helpful', down: '👎 Not Helpful',
+          admin: 'Admin (HR)', user: 'Employee',
+          database: 'Manual Entry', file: 'Config File',
+          published: 'Published', draft: 'Draft',
+        };
 
   // Keys that are internal UUIDs or IDs — skip them for readability
   const skipKeys = new Set([

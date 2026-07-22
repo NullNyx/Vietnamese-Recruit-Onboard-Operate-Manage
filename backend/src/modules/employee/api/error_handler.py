@@ -5,6 +5,7 @@ EmployeeError exceptions and return consistent JSON error responses.
 """
 
 from __future__ import annotations
+from src.shared.messages import get_message, get_request_language
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -40,12 +41,13 @@ def register_employee_error_handlers(app: FastAPI) -> None:
             A JSONResponse with the appropriate status code and a body
             containing the error code and human-readable message.
         """
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error": {
                     "code": exc.error_code,
-                    "message": exc.message,
+                    "message": get_message(exc.error_code, lang),
                 }
             },
         )

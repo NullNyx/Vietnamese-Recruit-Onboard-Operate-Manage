@@ -1,6 +1,7 @@
 """Error handlers for Attendance module."""
 
 from fastapi import FastAPI, Request
+from src.shared.messages import get_message, get_request_language
 from fastapi.responses import JSONResponse
 
 from src.modules.attendance.domain.exceptions import (
@@ -23,11 +24,12 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: AttendanceError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -36,11 +38,12 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: AlreadyCheckedInError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -49,11 +52,12 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: NotCheckedInError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -62,11 +66,12 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: OfficeNetworkRequiredError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -75,11 +80,12 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: InvalidCidrError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -88,11 +94,12 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: DuplicateCidrError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -101,11 +108,12 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: TooManyNetworksError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -114,10 +122,11 @@ def register_attendance_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: CidrNotFoundError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )

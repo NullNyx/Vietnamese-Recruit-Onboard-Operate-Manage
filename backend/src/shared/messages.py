@@ -24,6 +24,8 @@ Usage:
     )
 """
 
+from fastapi import Request
+
 MESSAGES: dict[str, dict[str, str]] = {
     # =========================================================================
     # IDENTITY & AUTH MODULE
@@ -809,12 +811,40 @@ MESSAGES: dict[str, dict[str, str]] = {
         "vi": "Lỗi module quản trị.",
         "en": "Admin module error.",
     },
+    # =========================================================================
+    # EMAIL TEMPLATES
+    # =========================================================================
+    "EMAIL_INTERVIEW_SUBJECT": {
+        "vi": "Thư mời phỏng vấn - {name}",
+        "en": "Interview Invitation - {name}",
+    },
+    "EMAIL_OFFER_SUBJECT": {
+        "vi": "Chúc mừng bạn đã trúng tuyển - Vroom HR",
+        "en": "Congratulations - You're Hired - Vroom HR",
+    },
     "GENERAL_ERROR": {
         "vi": "Lỗi hệ thống ({code})",
         "en": "System error ({code})",
     },
 }
 
+
+
+
+def get_request_language(request: Request) -> str:
+    """Extract language preference from the Accept-Language header.
+
+    Args:
+        request: The FastAPI Request object.
+
+    Returns:
+        Language code "vi" or "en". Defaults to "vi" if the header is absent,
+        empty, or does not start with a supported language prefix.
+    """
+    accept_lang = request.headers.get("Accept-Language", "vi")
+    if accept_lang and accept_lang.strip().lower().startswith("en"):
+        return "en"
+    return "vi"
 
 def get_message(code: str, lang: str = "vi") -> str:
     """Get a user-facing message by its error code.
@@ -963,6 +993,11 @@ class MessageCodes:
     UNKNOWN_ERROR = "UNKNOWN_ERROR"
     CONNECTION_TEST_SUCCEEDED = "CONNECTION_TEST_SUCCEEDED"
     CONNECTION_TEST_FAILED = "CONNECTION_TEST_FAILED"
+    # Email templates
+    EMAIL_INTERVIEW_SUBJECT = "EMAIL_INTERVIEW_SUBJECT"
+    EMAIL_OFFER_SUBJECT = "EMAIL_OFFER_SUBJECT"
+    EMAIL_INTERVIEW_BODY = "EMAIL_INTERVIEW_BODY"
+    EMAIL_OFFER_BODY = "EMAIL_OFFER_BODY"
 
 
 # Backwards-compatible alias for existing code that imports MESSAGE_CODES

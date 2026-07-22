@@ -60,7 +60,7 @@ services:
     container_name: vroom-backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     env_file:
       - ./backend/.env
     environment:
@@ -118,7 +118,10 @@ services:
     ports:
       - "3000:3000"
     environment:
+      CI: 'true'
+      CONFIRM_MODULES_PURGE: 'false'
       INTERNAL_API_URL: http://backend:8000
+
     depends_on:
       - backend
 

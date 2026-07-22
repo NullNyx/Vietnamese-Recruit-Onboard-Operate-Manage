@@ -1,6 +1,7 @@
 """Error handlers for Employee Request module."""
 
 from fastapi import FastAPI, Request
+from src.shared.messages import get_message, get_request_language
 from fastapi.responses import JSONResponse
 
 from src.modules.employee_request.domain.exceptions import (
@@ -24,11 +25,12 @@ def register_employee_request_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: EmployeeRequestError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -37,11 +39,12 @@ def register_employee_request_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: OvertimeEndBeforeStartError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -50,11 +53,12 @@ def register_employee_request_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: OvertimeOverlapError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -63,11 +67,12 @@ def register_employee_request_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: LeaveEndBeforeStartError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -76,11 +81,12 @@ def register_employee_request_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: LeaveOverlapError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -89,11 +95,12 @@ def register_employee_request_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: RequestNotFoundError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -102,11 +109,12 @@ def register_employee_request_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: RequestNotOwnedByEmployeeError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -115,11 +123,12 @@ def register_employee_request_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: RequestNotCancellableError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -128,10 +137,11 @@ def register_employee_request_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: RequestNotReviewableError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )

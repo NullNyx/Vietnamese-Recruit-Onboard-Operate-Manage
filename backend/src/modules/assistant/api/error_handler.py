@@ -1,6 +1,7 @@
 """Error handlers for the AI Assistant module."""
 
 from __future__ import annotations
+from src.shared.messages import get_message, get_request_language
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -20,32 +21,36 @@ def register_assistant_error_handlers(app: FastAPI) -> None:
     async def handle_llm_connection_error(
         request: Request, exc: LLMConnectionError
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=502,
-            content={"detail": f"LLM service unavailable: {exc}"},
+            content={"error_code": "ASSISTANT_SERVICE_UNAVAILABLE", "detail": get_message("ASSISTANT_SERVICE_UNAVAILABLE", lang)},
         )
 
     @app.exception_handler(ToolExecutionError)
     async def handle_tool_execution_error(
         request: Request, exc: ToolExecutionError
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=500,
-            content={"detail": f"Tool execution failed: {exc}"},
+            content={"error_code": "ASSISTANT_ERROR", "detail": get_message("ASSISTANT_ERROR", lang)},
         )
 
     @app.exception_handler(DraftActionValidationError)
     async def handle_draft_action_error(
         request: Request, exc: DraftActionValidationError
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=422,
-            content={"detail": f"Invalid draft action: {exc}"},
+            content={"error_code": "VALIDATION_ERROR", "detail": get_message("VALIDATION_ERROR", lang)},
         )
 
     @app.exception_handler(AssistantError)
     async def handle_assistant_error(request: Request, exc: AssistantError) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=500,
-            content={"detail": f"Assistant error: {exc}"},
+            content={"error_code": "ASSISTANT_ERROR", "detail": get_message("ASSISTANT_ERROR", lang)},
         )

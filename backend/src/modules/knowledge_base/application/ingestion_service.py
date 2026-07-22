@@ -35,7 +35,13 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
     """Extract text from a PDF file using PyMuPDF (fitz)."""
     import fitz  # PyMuPDF
 
-    doc = fitz.open(stream=file_bytes, filetype="pdf")
+    try:
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+    except fitz.FileDataError as exc:
+        raise ValueError(
+            f"File PDF bị hỏng hoặc không hợp lệ: {exc}"
+        ) from exc
+
     pages: list[str] = []
     try:
         for page in doc:

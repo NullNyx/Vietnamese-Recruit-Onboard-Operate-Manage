@@ -8,6 +8,7 @@ Requirements: 6.8, 7.3-7.5, 8.2-8.5, 9.3, 9.5-9.7, 10.4-10.8,
 """
 
 from __future__ import annotations
+from src.shared.messages import get_message, get_request_language
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -36,12 +37,13 @@ def register_recruitment_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RecruitmentError)
     async def _recruitment_error_handler(request: Request, exc: RecruitmentError) -> JSONResponse:
+        lang = get_request_language(request)
         """Handle RecruitmentError exceptions and return a JSON error response."""
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "message": exc.message,
+                "message": get_message(exc.error_code, lang),
                 "details": exc.details,
             },
         )

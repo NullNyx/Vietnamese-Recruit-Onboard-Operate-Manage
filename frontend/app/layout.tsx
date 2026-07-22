@@ -3,6 +3,8 @@ import { Be_Vietnam_Pro, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import { Toaster } from 'sonner';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages } from 'next-intl/server';
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['vietnamese', 'latin'],
@@ -21,13 +23,18 @@ export const metadata: Metadata = {
   description: 'Giải pháp nhân sự toàn diện: tuyển dụng, chấm công, tính lương, quản lý hồ sơ — tất cả trong một nền tảng.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="vi" className={`${beVietnamPro.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+    <html lang={locale} className={`${beVietnamPro.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased text-slate-800 bg-slate-50/50" suppressHydrationWarning>
-        <Providers>
-          {children}
-        </Providers>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <Providers>
+            {children}
+          </Providers>
+        </NextIntlClientProvider>
         <Toaster position="top-right" richColors closeButton />
         <script
           dangerouslySetInnerHTML={{

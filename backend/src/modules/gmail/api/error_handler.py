@@ -5,6 +5,7 @@ GmailError exceptions and return consistent JSON error responses.
 """
 
 from __future__ import annotations
+from src.shared.messages import get_message, get_request_language
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -25,6 +26,7 @@ def register_gmail_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(RateLimitedException)
     async def _rate_limited_handler(request: Request, exc: RateLimitedException) -> JSONResponse:
         """Handle RateLimitedException with Retry-After header.
+        lang = get_request_language(request)
 
         Args:
             request: The incoming request that triggered the exception.
@@ -41,7 +43,7 @@ def register_gmail_error_handlers(app: FastAPI) -> None:
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "message": exc.message,
+                "message": get_message(exc.error_code, lang),
                 "details": {"retry_after": exc.retry_after},
             },
             headers=headers,
@@ -59,11 +61,12 @@ def register_gmail_error_handlers(app: FastAPI) -> None:
             A JSONResponse with the appropriate status code and a body
             containing the error code and human-readable message.
         """
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "message": exc.message,
+                "message": get_message(exc.error_code, lang),
                 "details": None,
             },
         )

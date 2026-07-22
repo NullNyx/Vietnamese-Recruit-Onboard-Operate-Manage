@@ -35,6 +35,17 @@ import { ApiError } from "./types";
 import { isValidationErrorDetail, formatValidationErrors } from "./validation-errors";
 
 /**
+ * Read the current locale from NEXT_LOCALE cookie (client-side only).
+ * Falls back to 'vi' (default locale) when not found or server-side.
+ */
+function getAcceptLanguage(): string {
+  if (typeof document === 'undefined') return 'vi';
+  const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]*)/);
+  return match?.[1] ?? 'vi';
+}
+
+
+/**
  * Base URL for all API requests.
  * Reads from NEXT_PUBLIC_API_URL env var, falls back to http://localhost:8000
  */
@@ -72,6 +83,7 @@ export async function apiFetch<T>(
       ...options,
       headers: {
         ...(bodyIsForm ? {} : { "Content-Type": "application/json" }),
+        "Accept-Language": getAcceptLanguage(),
         ...(options.headers || {}),
       },
     });
@@ -84,7 +96,8 @@ export async function apiFetch<T>(
 
       if (!res.ok) {
         // 401 → try token refresh first, fallback to login redirect
-        if (res.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/setup" && window.location.pathname !== "/") {
+        if (res.status === 401 && typeof window !== "undefined" && !window.location.pathname.match(/^\/(?:vi|en)?\/?(?:login|setup|change-password)?$/)) {
+
           const refreshed = await _tryRefreshToken();
           if (refreshed) {
             // Retry original request with fresh access_token cookie
@@ -93,6 +106,7 @@ export async function apiFetch<T>(
               ...options,
               headers: {
                 ...(bodyIsForm ? {} : { "Content-Type": "application/json" }),
+                "Accept-Language": getAcceptLanguage(),
                 ...(options.headers || {}),
               },
             });
@@ -167,6 +181,7 @@ export async function apiFetchBlob(
       credentials: "include",
       ...options,
       headers: {
+        "Accept-Language": getAcceptLanguage(),
         ...(options.headers || {}),
       },
     });
@@ -179,13 +194,15 @@ export async function apiFetchBlob(
 
       if (!res.ok) {
         // 401 → try token refresh first, fallback to login redirect
-        if (res.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/setup" && window.location.pathname !== "/") {
+        if (res.status === 401 && typeof window !== "undefined" && !window.location.pathname.match(/^\/(?:vi|en)?\/?(?:login|setup|change-password)?$/)) {
+
           const refreshed = await _tryRefreshToken();
           if (refreshed) {
             res = await fetch(url, {
               credentials: "include",
               ...options,
               headers: {
+                "Accept-Language": getAcceptLanguage(),
                 ...(options.headers || {}),
               },
             });

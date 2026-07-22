@@ -1,6 +1,7 @@
 """Error handlers for Payslip module."""
 
 from fastapi import FastAPI, Request
+from src.shared.messages import get_message, get_request_language
 from fastapi.responses import JSONResponse
 
 from src.modules.payslip.domain.exceptions import (
@@ -18,11 +19,12 @@ def register_payslip_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: PayslipError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -31,11 +33,12 @@ def register_payslip_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: PayslipNotFoundError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
 
@@ -44,10 +47,11 @@ def register_payslip_error_handlers(app: FastAPI) -> None:
         request: Request,
         exc: PayslipNotPublishedError,
     ) -> JSONResponse:
+        lang = get_request_language(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error_code": exc.error_code,
-                "detail": exc.message,
+                "detail": get_message(exc.error_code, lang),
             },
         )
