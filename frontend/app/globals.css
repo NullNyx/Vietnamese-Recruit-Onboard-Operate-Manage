@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* ── Custom animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@utility animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
 /* ── Print styles: ẩn UI chrome khi in phiếu lương / payslip ── */
 @media print {
   /* Ẩn sidebar, header, navigation */

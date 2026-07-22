@@ -8,13 +8,13 @@
  *
  * v2: Added nav grouping (navGroups), mobile hamburger menu.
  * v3: i18n — replaced hardcoded text with useTranslations.
+ * v4: Optimistic active sidebar, navigation skeleton, smooth transitions.
  */
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
-import { useRouter } from '@/i18n/navigation';
+import React, { useState, useEffect, useCallback } from 'react';
+import { usePathname, useRouter } from '@/i18n/navigation';
 import { Sparkles, LogOut, Menu, X } from 'lucide-react';
 import { useSession } from '@/lib/auth/session';
 import { useTranslations } from 'next-intl';
@@ -71,18 +71,35 @@ export default function AppShell({
   // Mobile sidebar toggle
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Close sidebar on route change (mobile)
+  // Optimistic active path — set immediately on click, cleared on actual route change
+  const [optimisticPath, setOptimisticPath] = useState<string | null>(null);
+
+  // Navigation pending flag — set on click, cleared when pathname updates
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  // Close sidebar + clear optimistic path + navigation flag on route change
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- close sidebar on navigation
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSidebarOpen(false);
+    setOptimisticPath(null);
+    setIsNavigating(false);
   }, [pathname]);
 
   const isActive = (href: string) => {
-    // Special case for root dashboard
+    // Check optimistic first for instant visual feedback
+    if (optimisticPath === href) return true;
+    // Fallback to actual pathname
     if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/';
     if (href === '/employee') return pathname === '/employee' || pathname === '/employee/dashboard';
     return pathname.startsWith(href);
   };
+
+  const handleNavClick = useCallback((href: string) => {
+    if (optimisticPath === href && isActive(href)) return; // already there
+    setOptimisticPath(href);
+    setIsNavigating(true);
+    router.push(href);
+  }, [optimisticPath, isActive, router]);
 
   const handleLogout = async () => {
     try {
@@ -169,27 +186,30 @@ export default function AppShell({
                   {group.label}
                 </div>
               )}
-              {group.items.map((item) => (
-                <button
-                  key={item.href}
-                  onClick={() => router.push(item.href)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                    isActive(item.href)
-                      ? 'bg-indigo-50 border border-indigo-100 text-indigo-600 font-semibold shadow-sm shadow-indigo-50/10'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-600'
-                  }`}
-                >
-                  <item.icon className="w-4 h-4 shrink-0" />
-                  <span className="truncate">{item.label}</span>
-                </button>
-              ))}
+              {group.items.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => handleNavClick(item.href)}
+                    className={`relative w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ease-out select-none ${
+                          active
+                            ? 'bg-indigo-50 text-indigo-600 font-semibold shadow-sm shadow-indigo-50/10 scale-[1.02]'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-600'
+                        }`}
+                  >
+                    {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-indigo-500 rounded-full" />}<item.icon className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              })}
             </div>
           ))}
 
           {/* AI Assistant Button */}
           <div className="pt-3 mt-3 border-t border-slate-100">
             <button
-              onClick={() => router.push(assistantHref)}
+              onClick={() => handleNavClick(assistantHref)}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium bg-gradient-to-r from-indigo-600 to-indigo-500 text-white hover:from-indigo-500 hover:to-indigo-400 shadow-md shadow-indigo-100 transition-all"
             >
               <Sparkles className="w-4 h-4" />
@@ -199,7 +219,40 @@ export default function AppShell({
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-4 lg:p-6 overflow-auto">{children}</main>
+        <main className="flex-1 p-4 lg:p-6 overflow-auto relative">
+          {isNavigating ? (
+            <div className="space-y-5 animate-fadeIn">
+              {/* Page header skeleton */}
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-5 h-5 rounded bg-slate-200 animate-pulse" />
+                <div className="h-6 w-48 rounded bg-slate-200 animate-pulse" />
+              </div>
+              <div className="h-4 w-64 rounded bg-slate-100 animate-pulse mb-6" />
+              {/* Card skeletons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="w-9 h-9 rounded-lg bg-slate-100 animate-pulse mb-3" />
+                    <div className="h-8 w-3/4 rounded bg-slate-100 animate-pulse mb-2" />
+                    <div className="h-3 w-1/2 rounded bg-slate-50 animate-pulse" />
+                  </div>
+                ))}
+              </div>
+              {/* List skeleton */}
+              <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-5 h-5 rounded bg-slate-200 animate-pulse" />
+                  <div className="h-5 w-32 rounded bg-slate-200 animate-pulse" />
+                </div>
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-12 rounded-lg bg-slate-50 animate-pulse" />
+                ))}
+              </div>
+            </div>
+          ) : (
+            children
+          )}
+        </main>
       </div>
     </div>
   );
