@@ -721,7 +721,7 @@ function AuditTab() {
             </div>
           ))}
           <div className="flex items-center justify-between pt-3">
-            <span className="text-[12px] text-slate-500">{t('pageOf')} {page}/{totalPages} · {data!.total} {t('records')}</span>
+            <span className="text-[12px] text-slate-500">{t('pageOf', { page, total: totalPages })} · {data!.total} {t('records')}</span>
             <div className="flex gap-1">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 transition-colors"><ChevronLeft className="w-4 h-4" /></button>
               <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 transition-colors"><ChevronRight className="w-4 h-4" /></button>
