@@ -52,8 +52,7 @@ Thumbs.db
 # ---- Local code intelligence ----
 .codegraph/
 
-# ---- Whitelist (real emails must not be committed) ----
-backend/config/whitelist.txt
+
 # Playwright
 frontend/test-results/
 frontend/playwright-report/

@@ -1,8 +1,7 @@
 """Composite whitelist manager with cache.
 
-Merges file-based whitelist entries (via WhitelistLoader) and database-backed
-entries into a unified whitelist with in-memory caching. Supports exact email
-matching and domain pattern matching, both case-insensitive.
+Merges database-backed entries into a unified whitelist with in-memory caching.
+Supports exact email matching and domain pattern matching, both case-insensitive.
 """
 
 import re
@@ -19,7 +18,6 @@ from src.modules.identity.domain.entities import (
     WhitelistEntry,
     WhitelistEntryType,
 )
-from src.modules.identity.infrastructure.whitelist_loader import WhitelistLoader
 from src.modules.identity.infrastructure.whitelist_repository import WhitelistRepository
 
 # Simple email regex for validation (RFC 5322 simplified)
@@ -59,25 +57,21 @@ class WhitelistEntryResponse:
 
 
 class WhitelistManager:
-    """Composite whitelist manager merging file-based and database entries.
+    """Composite whitelist manager merging database entries.
 
     Provides email access control by checking both exact email matches and
-    domain pattern matches from two sources: a file-based whitelist (read-only)
-    and a database-backed whitelist (CRUD-capable). Results are cached in memory
-    for fast lookups.
+    domain pattern matches from a database-backed whitelist (CRUD-capable).
+    Results are cached in memory for fast lookups.
 
     Args:
         repo: The WhitelistRepository for database operations.
-        file_loader: Optional WhitelistLoader for file-based entries.
     """
 
     def __init__(
         self,
         repo: WhitelistRepository,
-        file_loader: WhitelistLoader | None = None,
     ) -> None:
         self._repo = repo
-        self._file_loader = file_loader
         self._cache_exact: set[str] = set()
         self._cache_domains: set[str] = set()
         self._cache_timestamp: float = 0.0
@@ -89,22 +83,12 @@ class WhitelistManager:
             await self.refresh_cache()
 
     async def refresh_cache(self) -> None:
-        """Reload the in-memory cache from both file and database sources.
+        """Reload the in-memory cache from database.
 
-        Rebuilds the exact email set and domain pattern set from the union
-        of file-based entries and database entries.
+        Rebuilds the exact email set and domain pattern set from database entries.
         """
         exact_emails: set[str] = set()
         domain_patterns: set[str] = set()
-
-        # Load file-based entries
-        if self._file_loader is not None:
-            for entry_value in self._file_loader.get_emails():
-                normalized = entry_value.lower()
-                if normalized.startswith("@"):
-                    domain_patterns.add(normalized)
-                else:
-                    exact_emails.add(normalized)
 
         # Load database entries
         db_entries = await self._repo.get_all()
@@ -202,17 +186,6 @@ class WhitelistManager:
                 },
             )
 
-        # Also check against file-based entries for duplicate detection
-        if self._file_loader is not None:
-            file_emails = self._file_loader.get_emails()
-            if stripped.lower() in file_emails:
-                raise HTTPException(
-                    status_code=409,
-                    detail={
-                        "code": "WHITELIST_DUPLICATE",
-                        "message": f"'{stripped}' đã có sẵn trong file cấu hình.",
-                    },
-                )
 
         # Create and persist the entry
         entry = WhitelistEntry(
@@ -302,31 +275,6 @@ class WhitelistManager:
                     is_readonly=False,
                 )
             )
-
-        # File-based entries (only those not already in DB)
-        if self._file_loader is not None:
-            for file_value in self._file_loader.get_emails():
-                normalized = file_value.lower()
-                if normalized in seen_values:
-                    continue  # DB takes precedence
-
-                # Detect type from value
-                if normalized.startswith("@"):
-                    entry_type = WhitelistEntryType.DOMAIN_PATTERN
-                else:
-                    entry_type = WhitelistEntryType.EXACT_EMAIL
-
-                responses.append(
-                    WhitelistEntryResponse(
-                        id=None,
-                        value=file_value,
-                        entry_type=entry_type,
-                        added_by_email="system",
-                        created_at=None,
-                        source="file",
-                        is_readonly=True,
-                    )
-                )
 
         return responses
 

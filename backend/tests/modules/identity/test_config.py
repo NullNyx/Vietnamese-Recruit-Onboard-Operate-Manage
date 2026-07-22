@@ -38,7 +38,6 @@ class TestAuthSettingsDefaults:
         assert settings.jwt_algorithm == "HS256"
         assert settings.access_token_expire_minutes == 15
         assert settings.refresh_token_expire_days == 7
-        assert settings.whitelist_file_path == "config/whitelist.txt"
         assert settings.rate_limit_login_max == 5
         assert settings.rate_limit_login_window_seconds == 60
         assert settings.frontend_url == "http://localhost:3000"

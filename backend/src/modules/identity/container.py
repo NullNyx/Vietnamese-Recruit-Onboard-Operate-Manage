@@ -24,7 +24,6 @@ from src.modules.identity.application.oauth_service import OAuthService
 from src.modules.identity.application.role_service import RoleService
 from src.modules.identity.application.token_service import TokenService
 from src.modules.identity.application.whitelist_manager import WhitelistManager
-from src.modules.identity.application.whitelist_service import WhitelistService
 from src.modules.identity.domain.entities import User
 from src.modules.identity.domain.exceptions import InvalidTokenError
 from src.modules.identity.infrastructure.audit_log_repository import AuditLogRepository
@@ -36,7 +35,6 @@ from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGran
 from src.modules.identity.infrastructure.rate_limiter import RateLimiter
 from src.modules.identity.infrastructure.refresh_token_repository import RefreshTokenRepository
 from src.modules.identity.infrastructure.user_repository import UserRepository
-from src.modules.identity.infrastructure.whitelist_loader import WhitelistLoader
 from src.modules.identity.infrastructure.whitelist_repository import WhitelistRepository
 from src.modules.recruitment.infrastructure.org_settings_repository import (
     OrganizationSettingsRepository,
@@ -75,17 +73,6 @@ def get_crypto_utils() -> CryptoUtils:
     """
     settings = get_settings()
     return CryptoUtils(settings.oauth_token_encryption_key)
-
-
-@lru_cache
-def get_whitelist_service() -> WhitelistService:
-    """Create and cache the WhitelistService singleton.
-
-    Returns:
-        WhitelistService configured with the whitelist file path.
-    """
-    settings = get_settings()
-    return WhitelistService(settings.whitelist_file_path)
 
 
 @lru_cache
@@ -359,40 +346,18 @@ async def get_role_service(
     return RoleService(session=session, super_admin_email=settings.super_admin_email)
 
 
-def _get_whitelist_loader() -> WhitelistLoader | None:
-    """Create a WhitelistLoader if the whitelist file exists.
-
-    Returns:
-        A WhitelistLoader instance, or None if the file does not exist
-        or the path is not configured.
-    """
-    settings = get_settings()
-    try:
-        return WhitelistLoader(settings.whitelist_file_path)
-    except FileNotFoundError:
-        logger.warning(
-            "Whitelist file not found at '%s'. Operating with database-only whitelist.",
-            settings.whitelist_file_path,
-        )
-        return None
-
-
 async def get_whitelist_manager(
     whitelist_repo: WhitelistRepository = Depends(get_whitelist_repository),
 ) -> WhitelistManager:
     """Provide a WhitelistManager instance.
 
-    Combines the database-backed WhitelistRepository with the optional
-    file-based WhitelistLoader for a unified whitelist.
-
     Args:
         whitelist_repo: The whitelist repository from DI.
 
     Returns:
-        A WhitelistManager merging file and database whitelist sources.
+        A WhitelistManager managing the database-backed whitelist.
     """
-    file_loader = _get_whitelist_loader()
-    return WhitelistManager(repo=whitelist_repo, file_loader=file_loader)
+    return WhitelistManager(repo=whitelist_repo)
 
 
 async def get_oauth_config_manager(

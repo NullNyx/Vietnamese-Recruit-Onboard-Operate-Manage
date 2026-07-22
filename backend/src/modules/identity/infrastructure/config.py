@@ -25,7 +25,6 @@ class AuthSettings(BaseSettings):
         access_token_expire_minutes: Lifetime of JWT access tokens in minutes.
         refresh_token_expire_days: Lifetime of refresh tokens in days.
         oauth_token_encryption_key: Base64-encoded 32-byte AES-256-GCM key.
-        whitelist_file_path: Path to the email whitelist text file.
         rate_limit_login_max: Maximum login attempts per window.
         rate_limit_login_window_seconds: Rate limit sliding window in seconds.
         super_admin_email: Email promoted to admin at startup.
@@ -54,9 +53,6 @@ class AuthSettings(BaseSettings):
 
     # Encryption
     oauth_token_encryption_key: str  # 32-byte key, base64-encoded
-
-    # Whitelist
-    whitelist_file_path: str = "config/whitelist.txt"
 
     # Rate limiting
     rate_limit_login_max: int = Field(default=5, gt=0)
