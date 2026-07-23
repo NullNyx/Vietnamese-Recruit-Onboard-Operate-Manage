@@ -14,11 +14,78 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import { Sparkles, LogOut, Menu, X } from 'lucide-react';
 import { useSession } from '@/lib/auth/session';
 import { useTranslations } from 'next-intl';
 import LocaleSwitcher from '@/components/locale-switcher';
+
+/**
+ * Map of sidebar routes to their primary React Query cache keys.
+ * Used by the hover prefetch strategy to warm up query data
+ * before the user clicks through.
+ */
+const ROUTE_QUERY_MAP: Record<string, import('@tanstack/react-query').QueryKey[]> = {
+  '/dashboard': [
+    ['recruitment-metrics'],
+    ['runtime-health'],
+    ['audit-logs'],
+  ],
+  '/recruitment/inbox': [
+    ['recruitment-inbox'],
+    ['recruitment-job-openings', 'open'],
+  ],
+  '/recruitment/candidates': [
+    ['recruitment-candidates'],
+  ],
+  '/recruitment/job-openings': [
+    ['recruitment-job-openings'],
+  ],
+  '/recruitment/interviews': [
+    ['google-calendars'],
+    ['recruitment-candidates', { status: ['reviewing', 'interview_scheduled'], page_size: 100 }],
+    ['recruitment-conflicts'],
+  ],
+  '/onboarding': [
+    ['onboarding', 'counts'],
+  ],
+  '/employees': [
+    ['employees-list'],
+    ['departments-list'],
+    ['positions-list'],
+  ],
+  '/attendance': [
+    ['attendance-records'],
+    ['employees-list', { active: true, all: true }],
+  ],
+  '/payroll/payslips': [
+    ['admin-payslips'],
+    ['employees-list', { all: true }],
+  ],
+  '/knowledge-base': [
+    ['kb-documents'],
+  ],
+  '/gmail': [
+    ['gmail-connection'],
+    ['gmail-messages'],
+  ],
+  '/settings': [
+    ['audit-logs'],
+  ],
+  '/employee': [
+    ['employee-dashboard'],
+  ],
+  '/employee/attendance': [
+    ['attendance-records'],
+  ],
+  '/employee/requests': [
+    ['requests'],
+  ],
+  '/employee/payslips': [
+    ['payslips'],
+  ],
+};
 
 export interface NavItem {
   href: string;
@@ -67,6 +134,7 @@ export default function AppShell({
   const router = useRouter();
   const { user } = useSession();
   const t = useTranslations('appShell');
+  const queryClient = useQueryClient();
 
   // Mobile sidebar toggle
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -100,6 +168,16 @@ export default function AppShell({
     setIsNavigating(true);
     router.push(href);
   }, [optimisticPath, isActive, router]);
+
+  const handleNavHover = useCallback((href: string) => {
+    // Prefetch the Next.js page bundle
+    router.prefetch(href);
+    // Warm up React Query cache for the target route
+    const keys = ROUTE_QUERY_MAP[href] ?? [];
+    keys.forEach(key => {
+      queryClient.prefetchQuery({ queryKey: key });
+    });
+  }, [router, queryClient]);
 
   const handleLogout = async () => {
     try {
@@ -192,6 +270,7 @@ export default function AppShell({
                   <button
                     key={item.href}
                     onClick={() => handleNavClick(item.href)}
+                    onMouseEnter={() => handleNavHover(item.href)}
                     className={`relative w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ease-out select-none ${
                           active
                             ? 'bg-indigo-50 text-indigo-600 font-semibold shadow-sm shadow-indigo-50/10 scale-[1.02]'
