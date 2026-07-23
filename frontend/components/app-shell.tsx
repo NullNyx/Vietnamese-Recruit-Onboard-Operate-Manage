@@ -56,7 +56,7 @@ const ROUTE_QUERY_MAP: Record<string, import('@tanstack/react-query').QueryKey[]
     ['positions-list'],
   ],
   '/attendance': [
-    ['attendance-records'],
+    ['attendance-today', 'me'],
     ['employees-list', { active: true, all: true }],
   ],
   '/payroll/payslips': [
@@ -77,13 +77,13 @@ const ROUTE_QUERY_MAP: Record<string, import('@tanstack/react-query').QueryKey[]
     ['employee-dashboard'],
   ],
   '/employee/attendance': [
-    ['attendance-records'],
+    ['attendance-today', 'me'],
   ],
   '/employee/requests': [
-    ['requests'],
+    ['my-requests'],
   ],
   '/employee/payslips': [
-    ['payslips'],
+    ['my-payslips'],
   ],
 };
 
@@ -288,7 +288,8 @@ export default function AppShell({
           {/* AI Assistant Button */}
           <div className="pt-3 mt-3 border-t border-slate-100">
             <button
-              onClick={() => handleNavClick(assistantHref)}
+                  onMouseEnter={() => handleNavHover(assistantHref)}
+                  onClick={() => handleNavClick(assistantHref)}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium bg-gradient-to-r from-indigo-600 to-indigo-500 text-white hover:from-indigo-500 hover:to-indigo-400 shadow-md shadow-indigo-100 transition-all"
             >
               <Sparkles className="w-4 h-4" />
