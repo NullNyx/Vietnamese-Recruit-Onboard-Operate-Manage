@@ -66,8 +66,8 @@ async def seed_demo_data(session: AsyncSession) -> bool:
 
     employee = Employee(
         employee_code="NV-001",
-        full_name="Hoang Xuan Nguyen",
-        email="hoangxuannguyen2005@gmail.com",
+        full_name="Nhan Vien Mau",
+        email="demo.employee@vroomhr.local",
         phone="0901000001",
         date_of_birth=date(2000, 1, 1),
         gender="male",
