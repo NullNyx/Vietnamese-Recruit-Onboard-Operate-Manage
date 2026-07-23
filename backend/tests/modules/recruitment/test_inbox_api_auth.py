@@ -88,9 +88,7 @@ class FakeRecruitmentInboxRepo:
             )
         ], 1
 
-    async def find_dismissed_by_gmail_message_id(
-        self, gmail_message_id: str
-    ) -> object:
+    async def find_dismissed_by_gmail_message_id(self, gmail_message_id: str) -> object:
         return None
 
 

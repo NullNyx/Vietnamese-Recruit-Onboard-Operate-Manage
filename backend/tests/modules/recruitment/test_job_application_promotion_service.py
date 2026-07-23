@@ -186,9 +186,12 @@ class TestAssignToJobOpening:
             "occurred_at": result.audit_history[-1]["occurred_at"],
         }
         mock_ja_repo.update.assert_awaited_once_with(application)
+
     async def test_assign_unassigned_to_open_succeeds(
-        self, service: JobApplicationDecisionService, mock_ja_repo: AsyncMock,
-        mock_job_opening_repo: AsyncMock
+        self,
+        service: JobApplicationDecisionService,
+        mock_ja_repo: AsyncMock,
+        mock_job_opening_repo: AsyncMock,
     ) -> None:
         ja = _make_job_application(status=JobApplicationStatus.NEW, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.OPEN)
@@ -204,8 +207,10 @@ class TestAssignToJobOpening:
         assert result.audit_history[0]["action"] == "assignment_updated"
 
     async def test_assign_to_non_open_fails(
-        self, service: JobApplicationDecisionService, mock_ja_repo: AsyncMock,
-        mock_job_opening_repo: AsyncMock
+        self,
+        service: JobApplicationDecisionService,
+        mock_ja_repo: AsyncMock,
+        mock_job_opening_repo: AsyncMock,
     ) -> None:
         ja = _make_job_application(status=JobApplicationStatus.NEW, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.CLOSED)
@@ -216,8 +221,10 @@ class TestAssignToJobOpening:
             await service.assign_to_job_opening(ja.id, jo.id)
 
     async def test_assign_to_draft_fails(
-        self, service: JobApplicationDecisionService, mock_ja_repo: AsyncMock,
-        mock_job_opening_repo: AsyncMock
+        self,
+        service: JobApplicationDecisionService,
+        mock_ja_repo: AsyncMock,
+        mock_job_opening_repo: AsyncMock,
     ) -> None:
         ja = _make_job_application(status=JobApplicationStatus.NEW, job_opening_id=None)
         jo = _make_job_opening(status=JobOpeningStatus.DRAFT)
@@ -270,8 +277,10 @@ class TestAssignToJobOpening:
             await service.assign_to_job_opening(uuid4(), uuid4())
 
     async def test_assign_nonexistent_jo_fails(
-        self, service: JobApplicationDecisionService, mock_ja_repo: AsyncMock,
-        mock_job_opening_repo: AsyncMock
+        self,
+        service: JobApplicationDecisionService,
+        mock_ja_repo: AsyncMock,
+        mock_job_opening_repo: AsyncMock,
     ) -> None:
         ja = _make_job_application(status=JobApplicationStatus.NEW, job_opening_id=None)
         mock_ja_repo.get_by_id_for_update = AsyncMock(return_value=ja)
@@ -344,9 +353,7 @@ class TestPromoteToCandidate:
         mock_ja_repo.get_by_id_for_update = AsyncMock(return_value=ja)
 
         with pytest.raises(JobApplicationPromotionBlockedError):
-            await service.promote_to_candidate(
-                ja.id, applicant_name="Test", applicant_email=""
-            )
+            await service.promote_to_candidate(ja.id, applicant_name="Test", applicant_email="")
 
     async def test_promote_with_job_opening(
         self,

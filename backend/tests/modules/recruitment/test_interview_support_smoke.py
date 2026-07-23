@@ -29,13 +29,11 @@ from src.modules.recruitment.application.candidate_service import CalendarPort
 from src.modules.recruitment.domain.enums import CandidateStatus
 from src.modules.recruitment.domain.exceptions import (
     CalendarEventCreateFailedError,
-    CalendarGrantMissingError,
     InterviewerMissingEmailError,
     InterviewerNotFoundError,
 )
 from src.modules.recruitment.domain.value_objects import CalendarEvent, CalendarEventSpec
 from tests.modules.recruitment._interview_support import (
-    CALENDAR_SCOPE,
     FakeCalendarPort,
     FakeCalendarSession,
     FakeCandidateRepository,
@@ -46,7 +44,6 @@ from tests.modules.recruitment._interview_support import (
     make_candidate,
     make_employee,
     make_http_status_error,
-    make_oauth_grant,
 )
 
 
@@ -184,9 +181,7 @@ class TestGrantAndTokenSeams:
         await valid.service._ensure_org_connection_active()  # no raise
 
         # When connection_repo is not set, it must raise.
-        no_repo = build_calendar_harness(
-            candidates=[make_candidate()], connection_repo=None
-        )
+        no_repo = build_calendar_harness(candidates=[make_candidate()], connection_repo=None)
         if hasattr(no_repo.service, "_connection_repo"):
             no_repo.service._connection_repo = None
         with pytest.raises(RuntimeError, match="not configured"):

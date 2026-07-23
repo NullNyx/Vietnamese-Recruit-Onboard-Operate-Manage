@@ -12,7 +12,7 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from src.modules.recruitment.application.candidate_service import (
+from src.modules.recruitment.application.candidate_validators import (
     CandidateValidationError,
 )
 from src.modules.recruitment.application.review_service import (

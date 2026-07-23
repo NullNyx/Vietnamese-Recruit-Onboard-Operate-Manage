@@ -32,7 +32,7 @@ from uuid import UUID
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from src.modules.recruitment.application import candidate_service
+from src.modules.recruitment.application import interview_scheduler_service as candidate_service
 from src.modules.recruitment.application.candidate_validators import VALID_TRANSITIONS
 from src.modules.recruitment.domain.enums import CandidateStatus
 from tests.modules.recruitment._interview_support import (

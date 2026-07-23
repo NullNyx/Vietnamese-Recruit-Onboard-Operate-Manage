@@ -11,7 +11,9 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from src.modules.recruitment.application.candidate_service import CandidateService
+from src.modules.recruitment.application.interview_scheduler_service import (
+    InterviewSchedulerService as CandidateService,
+)
 from src.modules.recruitment.domain.exceptions import (
     InterviewNotFoundError,
     InterviewStatusTransitionError,

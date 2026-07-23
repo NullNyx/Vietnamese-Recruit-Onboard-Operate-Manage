@@ -39,7 +39,6 @@ from src.modules.recruitment.application.candidate_lifecycle_service import (
 from src.modules.recruitment.application.candidate_notification_service import (
     CandidateNotificationService,
 )
-from src.modules.recruitment.application.candidate_service import CandidateService
 from src.modules.recruitment.application.cv_processor import CVProcessorService
 from src.modules.recruitment.application.intent_classifier import IntentClassifierService
 from src.modules.recruitment.application.interview_scheduler_service import (
@@ -265,51 +264,6 @@ async def get_candidate_notification_service(
     )
 
 
-async def get_candidate_service(
-    session: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(get_current_user),
-) -> CandidateService:
-    """Provide a CandidateService instance with all dependencies.
-
-    Wires the Calendar scheduling dependencies (per ADR-0008) so the
-    synchronous schedule/reschedule/cancel flows work end-to-end. Calendar
-    credentials and selected-calendar state come exclusively from the
-    Organization Google Connection; the acting HR user is retained only for
-    audit attribution.
-
-
-    Args:
-        session: The async database session from DI.
-        current_user: The authenticated user.
-
-    Returns:
-        A fully configured CandidateService.
-    """
-    candidate_repo = CandidateRepository(session)
-    cv_document_repo = CVDocumentRepository(session)
-    minio_client = get_minio_client()
-    job_opening_repo = JobOpeningRepository(session)
-
-    # Calendar scheduling dependencies (ADR-0008).
-    org_settings_repo = OrganizationSettingsRepository(session, get_recruitment_settings())
-    connection_repo = OrganizationGoogleConnectionRepository(session)
-    crypto = get_crypto_utils()
-
-    return CandidateService(
-        candidate_repo=candidate_repo,
-        cv_document_repo=cv_document_repo,
-        minio_client=minio_client,
-        session=session,
-        event_publisher=get_event_publisher(),
-        user_id=current_user.id,
-        calendar_port=get_calendar_adapter(),
-        org_settings_repo=org_settings_repo,
-        connection_repo=connection_repo,
-        crypto=crypto,
-        job_opening_repo=job_opening_repo,
-    )
-
-
 async def get_review_service(
     session: AsyncSession = Depends(get_db_session),
 ) -> ReviewService:
@@ -325,10 +279,12 @@ async def get_review_service(
     candidate_repo = CandidateRepository(session)
     minio_client = get_minio_client()
 
-    # CandidateService acts as the CandidateCreatorProtocol
-    candidate_service = CandidateService(
+    # CandidateLifecycleService acts as the CandidateCreatorProtocol
+    job_opening_repo = JobOpeningRepository(session)
+    candidate_service = CandidateLifecycleService(
         candidate_repo=candidate_repo,
         cv_document_repo=cv_document_repo,
+        job_opening_repo=job_opening_repo,
         minio_client=minio_client,
         session=session,
     )
@@ -371,10 +327,12 @@ async def get_cv_processor_service(
     cv_document_repo = CVDocumentRepository(session)
     minio_client = get_minio_client()
 
-    # CandidateService acts as the CandidateCreator protocol
-    candidate_service = CandidateService(
+    # CandidateLifecycleService acts as the CandidateCreator protocol
+    job_opening_repo = JobOpeningRepository(session)
+    candidate_service = CandidateLifecycleService(
         candidate_repo=candidate_repo,
         cv_document_repo=cv_document_repo,
+        job_opening_repo=job_opening_repo,
         minio_client=minio_client,
         session=session,
     )
@@ -440,9 +398,11 @@ async def arq_process_cv_from_email(ctx: dict[str, Any], email_message_id: UUID)
             cv_document_repo = CVDocumentRepository(session)
             minio_client = get_minio_client()
 
-            candidate_service = CandidateService(
+            job_opening_repo = JobOpeningRepository(session)
+            candidate_service = CandidateLifecycleService(
                 candidate_repo=candidate_repo,
                 cv_document_repo=cv_document_repo,
+                job_opening_repo=job_opening_repo,
                 minio_client=minio_client,
                 session=session,
             )

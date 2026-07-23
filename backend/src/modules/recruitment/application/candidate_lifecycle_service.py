@@ -578,9 +578,9 @@ class CandidateLifecycleService:
             raise JobOpeningNotFoundError(f"Job Opening not found: {job_opening_id}")
         if job_opening.status != JobOpeningStatus.OPEN:
             raise JobOpeningNotOpenError(
-                f"Job Opening '{job_opening.title}' is not open (status: {job_opening.status})"
+                job_opening_id=job_opening.id,
+                current_status=job_opening.status,
             )
-
         candidate.job_opening_id = job_opening_id
         candidate = await self._candidate_repo.update(candidate)
         if self._session is not None:
@@ -637,16 +637,17 @@ class CandidateLifecycleService:
                     f"allowed: {', '.join(sorted(self._ASSIGNABLE_STATUSES))}"
                 ),
             )
+        if candidate.job_opening_id == new_job_opening_id:
+            return candidate
 
         new_job_opening = await self._job_opening_repo.get_by_id(new_job_opening_id)
         if new_job_opening is None:
             raise JobOpeningNotFoundError(f"Job Opening not found: {new_job_opening_id}")
         if new_job_opening.status != JobOpeningStatus.OPEN:
             raise JobOpeningNotOpenError(
-                f"Job Opening '{new_job_opening.title}' is not open "
-                f"(status: {new_job_opening.status})"
+                job_opening_id=new_job_opening.id,
+                current_status=new_job_opening.status,
             )
-
         candidate.job_opening_id = new_job_opening_id
         candidate = await self._candidate_repo.update(candidate)
         if self._session is not None:

@@ -13,7 +13,9 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from src.modules.recruitment.application.candidate_service import CandidateService
+from src.modules.recruitment.application.candidate_lifecycle_service import (
+    CandidateLifecycleService as CandidateService,
+)
 from src.modules.recruitment.domain.entities import Candidate, JobOpening
 from src.modules.recruitment.domain.enums import CandidateStatus, JobOpeningStatus
 from src.modules.recruitment.domain.exceptions import (
@@ -553,7 +555,9 @@ class TestCandidateAcceptanceHeadcountSync:
         mock_job_opening_repo.update = AsyncMock(side_effect=lambda j: j)
         mock_session.commit = AsyncMock()
 
-        from src.modules.recruitment.application.candidate_service import CandidateService
+        from src.modules.recruitment.application.candidate_lifecycle_service import (
+            CandidateLifecycleService as CandidateService,
+        )
 
         candidate_service = CandidateService(
             candidate_repo=mock_candidate_repo,
@@ -591,7 +595,9 @@ class TestCandidateAcceptanceHeadcountSync:
         mock_candidate_repo.update = AsyncMock(side_effect=lambda c: c)
         mock_session.commit = AsyncMock()
 
-        from src.modules.recruitment.application.candidate_service import CandidateService
+        from src.modules.recruitment.application.candidate_lifecycle_service import (
+            CandidateLifecycleService as CandidateService,
+        )
 
         candidate_service = CandidateService(
             candidate_repo=mock_candidate_repo,
@@ -639,7 +645,9 @@ class TestCandidateAcceptanceHeadcountSync:
         mock_candidate_repo.update = AsyncMock(side_effect=lambda c: c)
         mock_session.commit = AsyncMock()
 
-        from src.modules.recruitment.application.candidate_service import CandidateService
+        from src.modules.recruitment.application.candidate_lifecycle_service import (
+            CandidateLifecycleService as CandidateService,
+        )
 
         candidate_service = CandidateService(
             candidate_repo=mock_candidate_repo,

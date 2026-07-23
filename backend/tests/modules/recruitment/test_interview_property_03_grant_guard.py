@@ -36,7 +36,9 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from src.modules.employee.domain.entities import Employee
-from src.modules.recruitment.application.candidate_service import CandidateService
+from src.modules.recruitment.application.interview_scheduler_service import (
+    InterviewSchedulerService as CandidateService,
+)
 from src.modules.recruitment.domain.enums import CandidateStatus
 from src.modules.recruitment.domain.exceptions import CalendarGrantMissingError
 from tests.modules.recruitment._interview_support import (

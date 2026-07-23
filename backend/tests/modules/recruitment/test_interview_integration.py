@@ -72,7 +72,9 @@ from src.modules.identity.domain.entities import OAuthGrant, User, UserRole
 from src.modules.identity.infrastructure.config import AuthSettings
 from src.modules.identity.infrastructure.crypto_utils import CryptoUtils
 from src.modules.identity.infrastructure.oauth_grant_repository import OAuthGrantRepository
-from src.modules.recruitment.application.candidate_service import CandidateService
+from src.modules.recruitment.application.interview_scheduler_service import (
+    InterviewSchedulerService as CandidateService,
+)
 from src.modules.recruitment.domain.entities import (
     Candidate,
     Interview,

@@ -52,6 +52,7 @@ Handler = Callable[[httpx.Request], httpx.Response]
 @dataclass
 class _Recorder:
     """Records the requests the adapter sends."""
+
     by_method: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def capture(self, request: httpx.Request) -> None:
@@ -233,7 +234,8 @@ class TestListEventsRequestConstruction:
 
         adapter = make_adapter(handler)
         await adapter.list_events(
-            _ACCESS_TOKEN, _CALENDAR_ID,
+            _ACCESS_TOKEN,
+            _CALENDAR_ID,
             time_min="2025-05-01T00:00:00Z",
             time_max="2025-08-01T00:00:00Z",
         )
@@ -254,7 +256,8 @@ class TestListEventsRequestConstruction:
 
         adapter = make_adapter(handler)
         await adapter.list_events(
-            _ACCESS_TOKEN, _CALENDAR_ID,
+            _ACCESS_TOKEN,
+            _CALENDAR_ID,
             sync_token="tok-existing",
             time_min="2025-05-01T00:00:00Z",
             time_max="2025-08-01T00:00:00Z",
@@ -270,14 +273,16 @@ class TestListEventsRequestConstruction:
         """The location field is parsed from the event response."""
 
         def handler(request: httpx.Request) -> httpx.Response:
-            items = [{
-                "id": "evt-loc",
-                "status": "confirmed",
-                "etag": _ETAG_1,
-                "location": "123 Main St, Ho Chi Minh City",
-                "start": {"dateTime": "2025-06-01T09:00:00+07:00", "timeZone": _TZ_NAME},
-                "end": {"dateTime": "2025-06-01T10:00:00+07:00", "timeZone": _TZ_NAME},
-            }]
+            items = [
+                {
+                    "id": "evt-loc",
+                    "status": "confirmed",
+                    "etag": _ETAG_1,
+                    "location": "123 Main St, Ho Chi Minh City",
+                    "start": {"dateTime": "2025-06-01T09:00:00+07:00", "timeZone": _TZ_NAME},
+                    "end": {"dateTime": "2025-06-01T10:00:00+07:00", "timeZone": _TZ_NAME},
+                }
+            ]
             return httpx.Response(200, json=_sync_response_json(events=items))
 
         adapter = make_adapter(handler)
@@ -292,13 +297,15 @@ class TestListEventsRequestConstruction:
         """Location is None when not present in the event response."""
 
         def handler(request: httpx.Request) -> httpx.Response:
-            items = [{
-                "id": "evt-noloc",
-                "status": "confirmed",
-                "etag": _ETAG_1,
-                "start": {"dateTime": "2025-06-01T09:00:00+07:00", "timeZone": _TZ_NAME},
-                "end": {"dateTime": "2025-06-01T10:00:00+07:00", "timeZone": _TZ_NAME},
-            }]
+            items = [
+                {
+                    "id": "evt-noloc",
+                    "status": "confirmed",
+                    "etag": _ETAG_1,
+                    "start": {"dateTime": "2025-06-01T09:00:00+07:00", "timeZone": _TZ_NAME},
+                    "end": {"dateTime": "2025-06-01T10:00:00+07:00", "timeZone": _TZ_NAME},
+                }
+            ]
             return httpx.Response(200, json=_sync_response_json(events=items))
 
         adapter = make_adapter(handler)
@@ -332,7 +339,9 @@ class FakeSyncCursorRepo:
     async def upsert_cursor(
         self, *, calendar_id: str, sync_token: str | None = None, page_token: str | None = None
     ) -> CalendarSyncCursor:
-        self.upsert_calls.append({"calendar_id": calendar_id, "sync_token": sync_token, "page_token": page_token})
+        self.upsert_calls.append(
+            {"calendar_id": calendar_id, "sync_token": sync_token, "page_token": page_token}
+        )
         if sync_token is not None:
             self.cursor.sync_token = sync_token
         self.cursor.page_token = page_token
@@ -376,18 +385,19 @@ class FakeInterviewSession:
                 if str(iv.id) in param_values:
                     # This is likely an interview participant query
                     participants = [
-                        p for p in self.participants if str(p.interview_id) in param_values
+                        p
+                        for p in self.participants
+                        if str(p.interview_id) in param_values
                         and (len(param_values) <= 1 or p.email in param_values)
                     ]
                     if participants:
                         # Return first matching participant
                         filtered = [
-                            p for p in self.participants
-                            if str(p.interview_id) in param_values
+                            p for p in self.participants if str(p.interview_id) in param_values
                         ]
                         # If email filter is present, narrow
                         for val in param_values:
-                            if '@' in val:
+                            if "@" in val:
                                 filtered = [p for p in filtered if p.email == val]
                         if filtered:
                             return _FakeResult([filtered[0]])
@@ -483,7 +493,6 @@ def sync_service(
 
 
 class TestApplyChanges:
-
     async def test_apply_skips_unknown_event(self) -> None:
         """An event that doesn't match any Interview is skipped."""
         session = FakeInterviewSession()
@@ -626,9 +635,7 @@ class TestApplyChanges:
                     invited_emails=(),
                     etag=_ETAG_2,
                     status="confirmed",
-                    attendees=(
-                        {"email": "candidate@example.com", "responseStatus": "declined"},
-                    ),
+                    attendees=({"email": "candidate@example.com", "responseStatus": "declined"},),
                 ),
             ),
             next_sync_token="tok-next",
@@ -638,9 +645,7 @@ class TestApplyChanges:
         assert count == 1
         assert iv.status == "scheduled"  # Still scheduled — not cancelled
 
-    async def test_apply_updates_participant_rsvp(
-        self, sync_service: CalendarSyncService
-    ) -> None:
+    async def test_apply_updates_participant_rsvp(self, sync_service: CalendarSyncService) -> None:
         """RSVP changes are propagated to InterviewParticipant.response_status."""
         session = FakeInterviewSession()
         iv = make_interview(calendar_event_id="evt-001", etag=_ETAG_1)
@@ -658,9 +663,7 @@ class TestApplyChanges:
         await sync_service._update_participant_rsvps(
             session,
             iv.id,
-            (
-                {"email": "interviewer@example.com", "responseStatus": "accepted"},
-            ),
+            ({"email": "interviewer@example.com", "responseStatus": "accepted"},),
         )
 
         # Check the participant was updated
@@ -677,7 +680,6 @@ class TestApplyChanges:
 
 
 class TestSyncEvents:
-
     async def test_sync_without_cursor_does_full_sync(
         self,
         fake_adapter: AsyncMock,
@@ -886,4 +888,3 @@ class TestSyncEvents:
         await sync_service.sync_events(_ACCESS_TOKEN, session)
         assert iv.calendar_etag == "new-etag"
         assert iv.remote_location == "123 Main St, Ho Chi Minh City"
-

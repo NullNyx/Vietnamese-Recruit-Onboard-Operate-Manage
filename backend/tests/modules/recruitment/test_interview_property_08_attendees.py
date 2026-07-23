@@ -36,7 +36,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from src.modules.employee.domain.entities import Employee
-from src.modules.recruitment.application import candidate_service
+from src.modules.recruitment.application import interview_scheduler_service as candidate_service
 from src.modules.recruitment.domain.enums import CandidateStatus
 from tests.modules.recruitment._interview_support import (
     build_calendar_harness,

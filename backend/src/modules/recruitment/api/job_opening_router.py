@@ -128,6 +128,7 @@ async def create_job_opening(
     )
     # Auto-detect: mark guide task done
     from src.modules.identity.application.guide_service import mark_task_completed
+
     await mark_task_completed(session, "first_job_opening")
     return JobOpeningResponse.model_validate(job_opening)
 

@@ -42,10 +42,10 @@ def _build_processor(
     mock_session,
     recruitment_settings,
     mock_candidate_creator,
-        ocr_text: str = (
-            "Nguyen Van A a@example.com 0901234567 Python Developer "
-            "5 years experience in software engineering"
-        ),
+    ocr_text: str = (
+        "Nguyen Van A a@example.com 0901234567 Python Developer "
+        "5 years experience in software engineering"
+    ),
     parsed_cv: ParsedCV | None = None,
 ):
     """Build a CVProcessorService with mocked dependencies."""

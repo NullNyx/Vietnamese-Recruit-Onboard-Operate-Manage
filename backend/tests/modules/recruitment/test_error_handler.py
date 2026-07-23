@@ -29,8 +29,8 @@ from src.modules.recruitment.api.error_handler import (
     register_recruitment_error_handlers,
 )
 from src.modules.recruitment.api.schemas import ScheduleInterviewRequest
-from src.modules.recruitment.application import candidate_service
-from src.modules.recruitment.application.candidate_service import (
+from src.modules.recruitment.application import interview_scheduler_service as candidate_service
+from src.modules.recruitment.application.candidate_validators import (
     CandidateValidationError,
 )
 from src.modules.recruitment.application.review_service import (

@@ -344,7 +344,9 @@ class TestUnauthorizedReRaise:
 
         adapter = make_adapter(handler)
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
-            await adapter.delete_event(_ACCESS_TOKEN, _EVENT_ID, calendar_id="recruitment@company.vn")
+            await adapter.delete_event(
+                _ACCESS_TOKEN, _EVENT_ID, calendar_id="recruitment@company.vn"
+            )
         assert exc_info.value.response.status_code == 401
 
 

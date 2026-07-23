@@ -18,8 +18,10 @@ from uuid import uuid4
 
 import pytest
 
-from src.modules.recruitment.application.candidate_service import (
-    CandidateService,
+from src.modules.recruitment.application.candidate_lifecycle_service import (
+    CandidateLifecycleService as CandidateService,
+)
+from src.modules.recruitment.application.candidate_validators import (
     CandidateValidationError,
     validate_candidate_fields,
 )
@@ -108,6 +110,7 @@ def candidate_service(
     return CandidateService(
         candidate_repo=mock_candidate_repo,
         cv_document_repo=mock_cv_document_repo,
+        job_opening_repo=AsyncMock(),
         minio_client=AsyncMock(),
         session=mock_session,
     )
@@ -227,7 +230,7 @@ class TestCandidateServiceCreateOrUpdate:
         source_email_id = uuid4()
 
         with patch(
-            "src.modules.recruitment.application.candidate_service.log_audit",
+            "src.modules.recruitment.application.candidate_lifecycle_service.log_audit",
             new_callable=AsyncMock,
         ):
             result = await candidate_service.create_or_update_candidate(
@@ -271,7 +274,7 @@ class TestCandidateServiceCreateOrUpdate:
         cv_doc_id = uuid4()
 
         with patch(
-            "src.modules.recruitment.application.candidate_service.log_audit",
+            "src.modules.recruitment.application.candidate_lifecycle_service.log_audit",
             new_callable=AsyncMock,
         ):
             result = await candidate_service.create_or_update_candidate(
@@ -312,7 +315,7 @@ class TestCandidateServiceCreateOrUpdate:
         mock_cv_document_repo.get_by_id = AsyncMock(return_value=cv_doc)
 
         with patch(
-            "src.modules.recruitment.application.candidate_service.log_audit",
+            "src.modules.recruitment.application.candidate_lifecycle_service.log_audit",
             new_callable=AsyncMock,
         ):
             result = await candidate_service.create_or_update_candidate(
@@ -336,7 +339,7 @@ class TestCandidateServiceCreateOrUpdate:
         cv_doc_id = uuid4()
 
         with patch(
-            "src.modules.recruitment.application.candidate_service.log_audit",
+            "src.modules.recruitment.application.candidate_lifecycle_service.log_audit",
             new_callable=AsyncMock,
         ):
             result = await candidate_service.create_or_update_candidate(
@@ -435,7 +438,7 @@ class TestCandidateServiceCreateOrUpdate:
         source_email_id = uuid4()
 
         with patch(
-            "src.modules.recruitment.application.candidate_service.log_audit",
+            "src.modules.recruitment.application.candidate_lifecycle_service.log_audit",
             new_callable=AsyncMock,
         ):
             result = await candidate_service.create_or_update_candidate(
@@ -468,7 +471,7 @@ class TestCandidateServiceCreateOrUpdate:
         cv_doc_id = uuid4()
 
         with patch(
-            "src.modules.recruitment.application.candidate_service.log_audit",
+            "src.modules.recruitment.application.candidate_lifecycle_service.log_audit",
             new_callable=AsyncMock,
         ):
             result = await candidate_service.create_or_update_candidate(
@@ -495,7 +498,7 @@ class TestCandidateServiceCreateOrUpdate:
         cv_doc_id = uuid4()
 
         with patch(
-            "src.modules.recruitment.application.candidate_service.log_audit",
+            "src.modules.recruitment.application.candidate_lifecycle_service.log_audit",
             new_callable=AsyncMock,
         ):
             result = await candidate_service.create_or_update_candidate(

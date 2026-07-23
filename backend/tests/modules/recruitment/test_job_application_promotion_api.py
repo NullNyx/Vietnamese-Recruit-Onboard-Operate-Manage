@@ -65,6 +65,7 @@ class FakeEmployeeUser:
         self.role = UserRole.USER
         self.email = "employee@example.com"
 
+
 class FakeServiceCredential:
     """Non-user principal representing an automation/service credential."""
 
@@ -210,6 +211,7 @@ def _build_app(
     app.include_router(ja_router)
     register_auth_error_handlers(app)
     from src.modules.recruitment.api.error_handler import register_recruitment_error_handlers
+
     register_recruitment_error_handlers(app)
     app.dependency_overrides[get_current_user] = lambda: user
     if service is not None:

@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
 
-from src.modules.recruitment.application import candidate_service
+from src.modules.recruitment.application import interview_scheduler_service as candidate_service
 from src.modules.recruitment.domain.entities import (
     CalendarConflict,
     Interview,
@@ -26,8 +26,6 @@ from src.modules.recruitment.domain.exceptions import (
 from src.modules.recruitment.domain.value_objects import CalendarEvent, CalendarEventSpec
 from tests.modules.recruitment._interview_support import (
     DEFAULT_HTML_LINK,
-    DEFAULT_MEET_LINK,
-    CalendarServiceHarness,
     FakeCalendarPort,
     RecordedCalendarCall,
     build_calendar_harness,

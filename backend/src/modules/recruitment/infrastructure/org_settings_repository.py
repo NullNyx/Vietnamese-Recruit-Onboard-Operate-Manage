@@ -265,7 +265,9 @@ class OrganizationSettingsRepository:
         for d in domains:
             n = d.strip().lower()
             if not self._DOMAIN_RE.match(n):
-                raise ValueError(f"Tên miền không hợp lệ: '{d}'. Vui lòng nhập đúng định dạng (vd: congty.com).")
+                raise ValueError(
+                    f"Tên miền không hợp lệ: '{d}'. Vui lòng nhập đúng định dạng (vd: congty.com)."
+                )
             if n in seen:
                 raise ValueError(f"Tên miền trùng lặp: '{d}'")
             seen.add(n)
