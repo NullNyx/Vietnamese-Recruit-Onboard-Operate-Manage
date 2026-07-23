@@ -37,6 +37,7 @@ export default function ReviewPage() {
     queryKey: ['recruitment-review', page],
     queryFn: () => listReviewQueue({ page, page_size: 12 }),
     staleTime: 30 * 1000,
+    placeholderData: (prev) => prev,
   });
 
   const submitM = useMutation({

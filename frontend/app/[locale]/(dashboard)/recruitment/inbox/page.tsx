@@ -51,6 +51,7 @@ export default function InboxPage() {
     queryKey: inboxKey,
     queryFn: () => listInbox(activeGroup === 'all' ? {} : { inbox_status: activeGroup }),
     staleTime: 30 * 1000,
+    placeholderData: (prev) => prev,
   });
 
   // Open job openings for split assign + promote + link target
@@ -58,6 +59,7 @@ export default function InboxPage() {
     queryKey: ['recruitment-job-openings', 'open'],
     queryFn: () => listJobOpenings({ status: ['open'], page_size: 100 }),
     staleTime: 60 * 1000,
+    placeholderData: (prev) => prev,
   });
   const openJobs: JobOpeningListItem[] = jobOpeningsData?.job_openings ?? [];
 

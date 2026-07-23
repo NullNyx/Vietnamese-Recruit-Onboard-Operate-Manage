@@ -37,6 +37,7 @@ export default function CandidatesPage() {
     queryKey: ['recruitment-candidates', params],
     queryFn: () => listCandidates(params),
     staleTime: 30 * 1000,
+    placeholderData: (prev) => prev,
   });
 
   const toggleStatus = (s: CandidateStatus) => {

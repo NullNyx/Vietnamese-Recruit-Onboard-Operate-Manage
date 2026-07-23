@@ -7,16 +7,16 @@ import { QueryClient } from "@tanstack/react-query";
  * Strategy: stale-while-revalidate
  * - Show cached data immediately (instant navigation)
  * - Refetch in background when stale
- * - Keep unused data in cache for 10 minutes
+ * - Keep unused data in cache for 30 minutes
  */
 export function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // Data is fresh for 30 seconds — no refetch during this window
-        staleTime: 30 * 1000,
-        // Keep unused cache entries for 10 minutes
-        gcTime: 10 * 60 * 1000,
+        // Data is fresh for 5 minutes — no refetch during this window
+        staleTime: 300 * 1000,
+        // Keep unused cache entries for 30 minutes
+        gcTime: 30 * 60 * 1000,
         // Show stale data while refetching (instant navigation)
         refetchOnWindowFocus: false,
         // Don't retry on 4xx errors

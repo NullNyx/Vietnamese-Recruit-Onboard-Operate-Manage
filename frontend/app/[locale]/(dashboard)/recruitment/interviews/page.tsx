@@ -33,6 +33,7 @@ export default function InterviewsPage() {
     queryKey: ['google-calendars'],
     queryFn: getCalendars,
     staleTime: 60 * 1000,
+    placeholderData: (prev) => prev,
     retry: 1,
   });
   const selectedCalendarId = calendars?.selected_calendar_id ?? null;
@@ -43,6 +44,7 @@ export default function InterviewsPage() {
     queryKey: ['recruitment-candidates', { status: ['reviewing', 'interview_scheduled'], page_size: 100 }],
     queryFn: () => listCandidates({ status: ['reviewing', 'interview_scheduled'], page_size: 100 }),
     staleTime: 30 * 1000,
+    placeholderData: (prev) => prev,
   });
   const candidates: CandidateListItem[] = candidatesData?.candidates ?? [];
   const filtered = candidates.filter((c) => {
@@ -57,6 +59,7 @@ export default function InterviewsPage() {
     queryKey: ['recruitment-conflicts'],
     queryFn: () => listCalendarConflicts({ status: 'unresolved' }),
     staleTime: 30 * 1000,
+    placeholderData: (prev) => prev,
   });
   const conflicts: CalendarConflict[] = conflictsData?.conflicts ?? [];
 

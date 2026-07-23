@@ -178,6 +178,19 @@ _Avoid_: Không tìm thấy khi nguyên nhân là hệ thống chưa có dữ li
 Danh sách các bước hoặc tài liệu mà Employee cần hoàn thành trong quá trình onboarding.
 _Avoid_: AI Assistant placeholder.
 
+**Quick-Start Guide**:
+Flow hướng dẫn sau First-Run Setup, hiển thị trên Dashboard HR dưới dạng widget task list cho đến khi HR hoàn tất các tác vụ thiết yếu. Đây không phải tour tính năng — là danh sách tác vụ có trạng thái, được auto-detect completion bởi backend hoặc manual confirm bởi HR. HR có thể dismiss và xem lại từ Dashboard hoặc trang /guide.
+_Avoid_: Feature tour, Walkthrough, Onboarding wizard
+
+**Essential Setup Task**:
+Một trong bốn tác vụ HR cần hoàn thành sau First-Run Setup trước khi Backbone Flow hoạt động. Bốn task: kết nối Google Workspace, cấu hình AI, tạo Job Opening đầu tiên, upload tài liệu đầu tiên vào Employee Knowledge Base.
+_Avoid_: Step, Checklist item (generic)
+
+**Guide Widget**:
+Widget thu nhỏ trên Dashboard HR hiển thị progress bar và danh sách Essential Setup Task. Ẩn được (dismiss). Click vào task → navigate đến trang cấu hình tương ứng.
+_Avoid_: Banner, Tour popup, Slideshow
+
+
 **Tiếng Việt mặc định**:
 Ngôn ngữ mặc định của giao diện trong deployment dành cho doanh nghiệp Việt Nam; nhãn nghiệp vụ dùng tiếng Việt nhất quán.
 _Avoid_: trộn Việt/Anh không có chủ đích.

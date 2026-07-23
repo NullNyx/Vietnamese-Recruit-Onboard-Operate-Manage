@@ -413,3 +413,25 @@ class OrganizationSettingsRepository:
             seen.add(nn)
             normalized.append(nn)
         return normalized
+
+    async def get_guide_progress(self) -> dict:
+        """Return guide_progress JSON dict."""
+        settings_row = await self._get_row()
+        if settings_row is None:
+            return {}
+        return dict(settings_row.guide_progress or {})
+
+    async def update_guide_progress(self, updates: dict) -> dict:
+        """Update guide_progress with the given dict keys (merge semantics)."""
+        settings_row = await self._get_row()
+        if settings_row is None:
+            settings_row = OrganizationSettings(
+                timezone=self.default_timezone,
+            )
+        current = dict(settings_row.guide_progress or {})
+        current.update(updates)
+        settings_row.guide_progress = current
+        self.session.add(settings_row)
+        await self.session.flush()
+        await self.session.commit()
+        return dict(settings_row.guide_progress or {})

@@ -12,8 +12,8 @@ export default function MetricsPage() {
   useAuthGuard({ requireAuth: true, requireAdmin: true });
   const t = useTranslations('recruitment');
 
-  const { data: metrics, isLoading, error } = useQuery<MetricsResponse>({ queryKey: ['recruitment-metrics'], queryFn: getMetrics, staleTime: 30 * 1000 });
-  const { data: jobMetrics } = useQuery<JobOpeningMetrics>({ queryKey: ['recruitment-job-openings', 'metrics'], queryFn: getJobOpeningMetrics, staleTime: 30 * 1000 });
+  const { data: metrics, isLoading, error } = useQuery<MetricsResponse>({ queryKey: ['recruitment-metrics'], queryFn: getMetrics, staleTime: 30 * 1000, placeholderData: (prev) => prev });
+  const { data: jobMetrics } = useQuery<JobOpeningMetrics>({ queryKey: ['recruitment-job-openings', 'metrics'], queryFn: getJobOpeningMetrics, staleTime: 30 * 1000, placeholderData: (prev) => prev });
 
   if (isLoading) return <Loading label={t('loadingMetrics')} />;
   if (error) return <ErrorBanner error={error} />;

@@ -9,6 +9,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import AppShell from '@/components/app-shell';
+import GuideWidget from '@/components/guide-widget';
 import type { NavGroup } from '@/components/app-shell';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -72,7 +73,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </button>
       }
     >
-      {children}
+      <div>
+        <GuideWidget />
+        {children}
+      </div>
     </AppShell>
   );
 }

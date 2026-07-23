@@ -274,6 +274,10 @@ class OrganizationSettings(SQLModel, table=True):
     attendance_allowed_networks: list[str] = Field(
         sa_column=Column(ARRAY(String), nullable=False, server_default="{}"),
     )
+    guide_progress: dict = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB, nullable=False, server_default="{}"),
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

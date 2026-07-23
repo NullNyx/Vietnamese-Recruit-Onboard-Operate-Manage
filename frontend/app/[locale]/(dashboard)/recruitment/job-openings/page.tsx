@@ -11,6 +11,7 @@ import {
 } from '@/lib/api/recruitment';
 import { listPositions } from '@/lib/api/positions';
 import type { Position } from '@/lib/api/types';
+import { markTaskDone } from '@/lib/api/guide';
 import { useAuthGuard } from '@/lib/auth/session';
 import { ErrorBanner, Loading, EmptyState, StatusPill, JOB_STATUS_META } from '@/components/shared-ui';
 
@@ -41,13 +42,14 @@ export default function JobOpeningsPage() {
         page_size: 100,
       }),
     staleTime: 30 * 1000,
+    placeholderData: (prev) => prev,
   });
-  const { data: metrics } = useQuery<JobOpeningMetrics>({ queryKey: ['recruitment-job-openings', 'metrics'], queryFn: getJobOpeningMetrics, staleTime: 30 * 1000 });
-  const { data: positions } = useQuery<Position[]>({ queryKey: ['positions'], queryFn: listPositions, staleTime: 5 * 60 * 1000 });
+  const { data: metrics } = useQuery<JobOpeningMetrics>({ queryKey: ['recruitment-job-openings', 'metrics'], queryFn: getJobOpeningMetrics, staleTime: 30 * 1000, placeholderData: (prev) => prev });
+  const { data: positions } = useQuery<Position[]>({ queryKey: ['positions'], queryFn: listPositions, staleTime: 5 * 60 * 1000, placeholderData: (prev) => prev });
 
   const createM = useMutation({
     mutationFn: (d: JobOpeningCreateInput) => createJobOpening(d),
-    onSuccess: () => { invalidate(); setCreateOpen(false);  setActionError(null); },
+    onSuccess: () => { invalidate(); qc.invalidateQueries({ queryKey: ['guide-progress'] }); markTaskDone('first_job_opening').catch(() => {}); setCreateOpen(false); setActionError(null); },
     onError: (e: unknown) => setActionError(e),
   });
   const openM = useMutation({ mutationFn: openJobOpening, onSuccess: () => { invalidate(); setActionError(''); }, onError: (e: unknown) => setActionError(e) });

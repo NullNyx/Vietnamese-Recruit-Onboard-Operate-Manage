@@ -1322,5 +1322,20 @@
     "outbound_email_sent": "Đã gửi email",
     "outbound_email_failed": "Gửi email thất bại",
     "outbound_email_retry": "Thử lại gửi email"
+  },
+  "guide": {
+    "title": "Hướng dẫn nhanh",
+    "pageTitle": "Hướng dẫn khởi tạo hệ thống",
+    "pageDesc": "Hoàn thành các bước sau để Vroom HR sẵn sàng hoạt động.",
+    "progress": "{done}/{total} bước",
+    "dismiss": "Ẩn hướng dẫn",
+    "dismissAndGo": "Ẩn và về Dashboard",
+    "goToDashboard": "Về Dashboard",
+    "viewAll": "Xem tất cả",
+    "go": "Đi",
+    "goTo": "Đến {label}",
+    "markDone": "Đã làm xong",
+    "completed": "Hoàn tất",
+    "close": "Đóng"
   }
 }

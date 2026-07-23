@@ -28,6 +28,7 @@
         queryKey: ['recruitment-metrics'],
         queryFn: getMetrics,
         staleTime: 30 * 1000,
+        placeholderData: (prev) => prev,
       });
 
       // Runtime health
@@ -35,6 +36,7 @@
         queryKey: ['runtime-health'],
         queryFn: getRuntimeHealth,
         staleTime: 30 * 1000,
+        placeholderData: (prev) => prev,
       });
 
       // Audit logs (paginated)
@@ -45,10 +47,11 @@
         queryKey: ['audit-logs', auditPage, auditFilter],
         queryFn: () => getAuditLogs(auditParams),
         staleTime: 30 * 1000,
+        placeholderData: (prev) => prev,
       });
 
       return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fadeSlideIn">
           {/* Page Header */}
           <div className="flex items-center justify-between">
             <div>
