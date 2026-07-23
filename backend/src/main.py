@@ -80,15 +80,12 @@ async def _bootstrap_super_admin() -> None:
     from sqlalchemy import func
     from sqlmodel import select
 
-    from src.bootstrap.demo_data import DEFAULT_DEMO_SUPER_ADMIN_EMAIL
     from src.modules.identity.application.role_service import RoleService
     from src.modules.identity.container import _get_async_session_maker, get_settings
     from src.modules.identity.domain.entities import User, UserRole
 
     settings = get_settings()
     super_admin_email = settings.super_admin_email
-    if super_admin_email is None and settings.auto_seed_sample_data is True:
-        super_admin_email = DEFAULT_DEMO_SUPER_ADMIN_EMAIL
 
     session_maker = _get_async_session_maker()
     async with session_maker() as session:
@@ -110,55 +107,7 @@ async def _bootstrap_super_admin() -> None:
                 )
 
 
-async def _seed_demo_data() -> None:
-    """Seed demo data for local Docker development when enabled."""
-    from src.modules.identity.container import _get_async_session_maker, get_settings
 
-    settings = get_settings()
-    if not settings.auto_seed_sample_data:
-        return
-
-    from src.bootstrap.demo_data import seed_demo_data
-
-    session_maker = _get_async_session_maker()
-    async with session_maker() as session:
-        seeded = await seed_demo_data(session)
-        if seeded:
-            await session.commit()
-
-
-async def _seed_demo_attendance() -> None:
-    """Seed demo attendance records when enabled."""
-    from src.modules.identity.container import _get_async_session_maker, get_settings
-
-    settings = get_settings()
-    if not settings.auto_seed_sample_data:
-        return
-
-    from src.bootstrap.demo_data import seed_demo_attendance
-
-    session_maker = _get_async_session_maker()
-    async with session_maker() as session:
-        seeded = await seed_demo_attendance(session)
-        if seeded:
-            await session.commit()
-
-
-async def _seed_demo_payslips() -> None:
-    """Seed demo payslips when enabled."""
-    from src.modules.identity.container import _get_async_session_maker, get_settings
-
-    settings = get_settings()
-    if not settings.auto_seed_sample_data:
-        return
-
-    from src.bootstrap.demo_data import seed_demo_payslips
-
-    session_maker = _get_async_session_maker()
-    async with session_maker() as session:
-        seeded = await seed_demo_payslips(session)
-        if seeded:
-            await session.commit()
 
 
 async def _seed_assistant_tool_configs() -> None:
@@ -200,9 +149,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler for startup and shutdown events."""
     # Startup
     await _bootstrap_super_admin()
-    await _seed_demo_data()
-    await _seed_demo_attendance()
-    await _seed_demo_payslips()
     await _seed_assistant_tool_configs()
     yield
     # Shutdown (nothing to clean up currently)

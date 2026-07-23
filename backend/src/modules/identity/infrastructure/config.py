@@ -28,8 +28,6 @@ class AuthSettings(BaseSettings):
         rate_limit_login_max: Maximum login attempts per window.
         rate_limit_login_window_seconds: Rate limit sliding window in seconds.
         super_admin_email: Email promoted to admin at startup.
-        auto_seed_sample_data: Enable demo bootstrap on startup.
-        frontend_url: Frontend application URL for redirects after auth.
     """
 
     model_config = SettingsConfigDict(env_prefix="AUTH_")
@@ -62,8 +60,6 @@ class AuthSettings(BaseSettings):
     super_admin_email: str | None = None
 
     # Dev bootstrap
-    auto_seed_sample_data: bool = Field(default=False)
-
     # AI Deployment
     ai_deployment_key: str | None = None  # Optional deployment-wide API key for AI provider
 
