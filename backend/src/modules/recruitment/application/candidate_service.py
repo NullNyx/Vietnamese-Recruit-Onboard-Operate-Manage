@@ -24,6 +24,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
 from src.modules.employee.domain.entities import Employee
+from src.modules.recruitment.application.candidate_validators import (
+    CandidateValidationError,
+    validate_candidate_fields,
+    validate_transition,
+)
 from src.modules.recruitment.domain.entities import (
     CalendarConflict,
     Candidate,
@@ -61,6 +66,7 @@ from src.modules.recruitment.infrastructure.minio_client import RecruitmentMinIO
 from src.modules.recruitment.infrastructure.repositories import (
     CandidateRepository,
     CVDocumentRepository,
+    InterviewRepository,
     JobOpeningRepository,
 )
 
@@ -76,91 +82,6 @@ logger = logging.getLogger(__name__)
 
 # Return type for adapter calls executed through ``_with_org_token``.
 _CalendarResultT = TypeVar("_CalendarResultT")
-
-
-# ─── State Machine Definition ──────────────────────────────────────────
-
-VALID_TRANSITIONS: dict[str, set[str]] = {
-    CandidateStatus.NEW: {
-        CandidateStatus.REVIEWING,
-        CandidateStatus.INTERVIEW_SCHEDULED,
-        CandidateStatus.REJECTED,
-        CandidateStatus.ARCHIVED,
-    },
-    CandidateStatus.REVIEWING: {
-        CandidateStatus.INTERVIEW_SCHEDULED,
-        CandidateStatus.ACCEPTED,
-        CandidateStatus.REJECTED,
-        CandidateStatus.ARCHIVED,
-    },
-    CandidateStatus.INTERVIEW_SCHEDULED: {
-        CandidateStatus.ACCEPTED,
-        CandidateStatus.REJECTED,
-        CandidateStatus.ARCHIVED,
-    },
-    CandidateStatus.ACCEPTED: set(),
-    CandidateStatus.REJECTED: set(),
-    CandidateStatus.ARCHIVED: set(),
-}
-
-
-# ─── Validation ────────────────────────────────────────────────────────
-
-# Basic email regex: must contain exactly one @ with non-empty local and domain parts
-_EMAIL_PATTERN = re.compile(r"^[^@]+@[^@]+$")
-
-
-class CandidateValidationError(Exception):
-    """Raised when candidate field validation fails.
-
-    Attributes:
-        errors: List of validation error dicts with field and reason.
-    """
-
-    def __init__(self, errors: list[dict[str, Any]]) -> None:
-        self.errors = errors
-        super().__init__(f"Candidate validation failed: {errors}")
-
-
-def validate_candidate_fields(parsed_cv: ParsedCV) -> list[dict[str, Any]]:
-    """Validate required candidate fields from parsed CV data.
-
-    Checks:
-    - name: non-empty, ≤ 255 characters
-    - email: valid format (contains @, non-empty local and domain parts), ≤ 255 chars
-
-    Args:
-        parsed_cv: The parsed CV data to validate.
-
-    Returns:
-        List of validation error dicts. Empty list means validation passed.
-    """
-    errors: list[dict[str, Any]] = []
-
-    # Validate name
-    name = parsed_cv.name.strip() if parsed_cv.name else ""
-    if not name:
-        errors.append({"field": "name", "reason": "Name is required and cannot be empty"})
-    elif len(name) > 255:
-        errors.append({"field": "name", "reason": "Name must not exceed 255 characters"})
-
-    # Validate email
-    email = parsed_cv.email.strip() if parsed_cv.email else ""
-    if not email:
-        errors.append({"field": "email", "reason": "Email is required and cannot be empty"})
-    elif len(email) > 255:
-        errors.append({"field": "email", "reason": "Email must not exceed 255 characters"})
-    elif not _EMAIL_PATTERN.match(email):
-        errors.append(
-            {
-                "field": "email",
-                "reason": (
-                    "Email must contain exactly one '@' with non-empty local and domain parts"
-                ),
-            }
-        )
-
-    return errors
 
 
 # ─── Protocols for cross-module communication ──────────────────────────
@@ -357,6 +278,7 @@ class CandidateService:
         oauth_grant_repo: Deprecated, ignored — use ``connection_repo`` instead.
         oauth_service: Deprecated, ignored — use ``connection_repo`` instead.
         crypto: Optional AES-256-GCM utilities for decrypting the access token.
+            interview_repo: Optional repository for interview persistence.
     """
 
     def __init__(
@@ -378,6 +300,7 @@ class CandidateService:
         oauth_service: object | None = None,
         crypto: TokenCipher | None = None,
         job_opening_repo: JobOpeningRepository | None = None,
+        interview_repo: InterviewRepository | None = None,
     ) -> None:
         self._candidate_repo = candidate_repo
         self._cv_document_repo = cv_document_repo
@@ -394,6 +317,7 @@ class CandidateService:
         self._org_settings_repo = org_settings_repo
         self._crypto = crypto
         self._job_opening_repo = job_opening_repo
+        self._interview_repo = interview_repo
 
     # ─── Create / Update (CandidateCreator protocol) ───────────────────
 
@@ -724,23 +648,6 @@ class CandidateService:
             cv_doc.candidate_id = candidate_id
             await self._cv_document_repo.update(cv_doc)
 
-    # ─── Status transition validation ──────────────────────────────────
-
-    def _validate_transition(self, current_status: str, target_status: str, action: str) -> None:
-        """Validate that a status transition is allowed by the state machine.
-
-        Args:
-            current_status: The candidate's current status.
-            target_status: The desired target status.
-            action: The action name being performed (for error messages).
-
-        Raises:
-            InvalidStatusTransitionError: If the transition is not allowed.
-        """
-        allowed = VALID_TRANSITIONS.get(current_status, set())
-        if target_status not in allowed:
-            raise InvalidStatusTransitionError(current_status, action)
-
     async def _get_candidate_or_raise(self, candidate_id: UUID) -> Candidate:
         """Retrieve a candidate by ID or raise CandidateNotFoundError.
 
@@ -792,7 +699,7 @@ class CandidateService:
         candidate = await self._get_candidate_or_raise(candidate_id)
         previous_status = candidate.status
 
-        self._validate_transition(
+        validate_transition(
             current_status=candidate.status,
             target_status=CandidateStatus.REJECTED,
             action="reject",
@@ -841,7 +748,7 @@ class CandidateService:
         candidate = await self._get_candidate_or_raise(candidate_id)
         previous_status = candidate.status
 
-        self._validate_transition(
+        validate_transition(
             current_status=candidate.status,
             target_status=CandidateStatus.ACCEPTED,
             action="accept",
@@ -919,7 +826,7 @@ class CandidateService:
         if candidate.status == CandidateStatus.ARCHIVED:
             return candidate
 
-        self._validate_transition(
+        validate_transition(
             current_status=candidate.status,
             target_status=CandidateStatus.ARCHIVED,
             action="archive",
@@ -1232,7 +1139,7 @@ class CandidateService:
         # invalid transition raises here, before any Calendar call.
         candidate = await self._get_candidate_or_raise(candidate_id)
         previous_status = candidate.status
-        self._validate_transition(
+        validate_transition(
             current_status=candidate.status,
             target_status=CandidateStatus.INTERVIEW_SCHEDULED,
             action="schedule_interview",
@@ -2255,13 +2162,16 @@ class CandidateService:
         Returns:
             A list of interview dicts, empty list if none found.
         """
-        stmt = (
-            select(Interview)
-            .where(Interview.candidate_id == candidate_id)
-            .order_by(Interview.start_at.desc())
-        )
-        res = await self._session.execute(stmt)
-        interviews = res.scalars().all()
+        if self._interview_repo is not None:
+            interviews = await self._interview_repo.find_by_candidate_id(candidate_id)
+        else:
+            stmt = (
+                select(Interview)
+                .where(Interview.candidate_id == candidate_id)
+                .order_by(Interview.start_at.desc())
+            )
+            res = await self._session.execute(stmt)
+            interviews = res.scalars().all()
 
         return [
             {
@@ -2291,12 +2201,16 @@ class CandidateService:
 
     async def _get_interview_or_raise(self, interview_id: UUID) -> Interview:
         """Retrieve an Interview by ID or raise InterviewNotFoundError."""
-        stmt = select(Interview).where(Interview.id == interview_id)
-        res = await self._session.execute(stmt)
-        interview = res.scalars().first()
-        if interview is None:
-            from src.modules.recruitment.domain.exceptions import InterviewNotFoundError
+        from src.modules.recruitment.domain.exceptions import InterviewNotFoundError
 
+        if self._interview_repo is not None:
+            interview = await self._interview_repo.get_by_id(interview_id)
+        else:
+            stmt = select(Interview).where(Interview.id == interview_id)
+            res = await self._session.execute(stmt)
+            interview = res.scalars().first()
+
+        if interview is None:
             raise InterviewNotFoundError(f"Interview not found: {interview_id}")
         return interview
 

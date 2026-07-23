@@ -19,6 +19,8 @@ from src.modules.recruitment.domain.entities import (
     CVDocument,
     EvaluationSample,
     EvaluationSet,
+    Interview,
+    InterviewParticipant,
     JobApplication,
     JobApplicationLinkProposal,
     JobOpening,
@@ -1029,3 +1031,135 @@ class RecruitmentInboxItemRepository:
         )
         result = await self.session.execute(statement)
         return result.scalars().first()
+
+
+class InterviewRepository:
+    """Handles Interview entity persistence using async SQLAlchemy sessions.
+
+    Attributes:
+        session: The async database session for executing queries.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        """Initialize the repository with an async database session.
+
+        Args:
+            session: An SQLAlchemy AsyncSession instance for database operations.
+        """
+        self.session = session
+
+    async def create(self, interview: Interview) -> Interview:
+        """Persist a new Interview entity to the database.
+
+        Args:
+            interview: The Interview entity to create.
+
+        Returns:
+            The persisted Interview entity with generated fields populated.
+        """
+        self.session.add(interview)
+        await self.session.flush()
+        return interview
+
+    async def get_by_id(self, id: UUID) -> Interview | None:
+        """Retrieve an Interview by its unique identifier.
+
+        Args:
+            id: The UUID primary key of the Interview.
+
+        Returns:
+            The Interview entity if found, None otherwise.
+        """
+        statement = select(Interview).where(Interview.id == id)
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
+    async def get_by_id_for_update(self, id: UUID) -> Interview | None:
+        """Retrieve an Interview by UUID with a row-level lock.
+
+        Args:
+            id: The UUID primary key of the Interview.
+
+        Returns:
+            The Interview entity if found, None otherwise.
+        """
+        statement = select(Interview).where(Interview.id == id).with_for_update()
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
+    async def update(self, interview: Interview) -> Interview:
+        """Update an existing Interview entity.
+
+        Updates the updated_at timestamp automatically.
+
+        Args:
+            interview: The Interview entity with updated fields.
+
+        Returns:
+            The updated Interview entity.
+        """
+        interview.updated_at = datetime.now(UTC)
+        self.session.add(interview)
+        await self.session.flush()
+        return interview
+
+    async def find_by_candidate_id(self, candidate_id: UUID) -> list[Interview]:
+        """Retrieve all interviews for a given candidate.
+
+        Results are ordered by start_at descending.
+
+        Args:
+            candidate_id: The UUID of the candidate.
+
+        Returns:
+            A list of Interview entities for the candidate.
+        """
+        statement = (
+            select(Interview)
+            .where(Interview.candidate_id == candidate_id)
+            .order_by(desc(Interview.start_at))  # type: ignore[arg-type]
+        )
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
+    async def get_participants(self, interview_id: UUID) -> list[InterviewParticipant]:
+        """Get all participants for an interview.
+
+        Args:
+            interview_id: The UUID of the interview.
+
+        Returns:
+            A list of InterviewParticipant entities.
+        """
+        statement = select(InterviewParticipant).where(
+            InterviewParticipant.interview_id == interview_id
+        )
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
+    async def add_participant(self, participant: InterviewParticipant) -> InterviewParticipant:
+        """Persist a new InterviewParticipant.
+
+        Args:
+            participant: The InterviewParticipant entity to create.
+
+        Returns:
+            The persisted InterviewParticipant entity.
+        """
+        self.session.add(participant)
+        await self.session.flush()
+        return participant
+
+    async def delete(self, id: UUID) -> None:
+        """Hard-delete an Interview from the database.
+
+        Args:
+            id: The UUID of the Interview to delete.
+        """
+        statement = select(Interview).where(Interview.id == id)
+        result = await self.session.execute(statement)
+        interview = result.scalars().first()
+
+        if interview is not None:
+            await self.session.delete(interview)
+            await self.session.flush()

@@ -24,7 +24,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from src.modules.recruitment.application.candidate_service import VALID_TRANSITIONS
+from src.modules.recruitment.application.candidate_validators import VALID_TRANSITIONS
 from src.modules.recruitment.domain.enums import CandidateStatus
 from src.modules.recruitment.domain.exceptions import InvalidStatusTransitionError
 from tests.modules.recruitment._interview_support import (

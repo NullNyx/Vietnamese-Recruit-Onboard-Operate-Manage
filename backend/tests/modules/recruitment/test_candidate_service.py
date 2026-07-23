@@ -16,9 +16,9 @@ from uuid import uuid4
 import pytest
 
 from src.modules.recruitment.application.candidate_service import (
-    VALID_TRANSITIONS,
     CandidateService,
 )
+from src.modules.recruitment.application.candidate_validators import VALID_TRANSITIONS
 from src.modules.recruitment.domain.entities import Candidate
 from src.modules.recruitment.domain.enums import CandidateStatus
 from src.modules.recruitment.domain.exceptions import (
@@ -474,6 +474,7 @@ class _FakeConnectionRepo:
             return None
         return _FakeConnection()
 
+
 class _FakeCalendarPort:
     """Fake CalendarPort recording create calls; returns or raises scripted."""
 
@@ -703,7 +704,6 @@ class TestScheduleInterview:
 
         interviewer_id = uuid4()
         _set_interviewers(mock_session, [SimpleNamespace(id=interviewer_id, email="a@example.com")])
-
 
         failing_port = _FakeCalendarPort(error=RuntimeError("calendar down"))
         service = CandidateService(
