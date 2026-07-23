@@ -9,7 +9,7 @@ Two layers are exercised:
 * Publisher level: ``ArqDomainEventPublisher.publish`` with an injected fake
   ARQ pool — asserts exactly one ``enqueue_job`` call with the job name and the
   unchanged payload, and that non-``candidate_accepted`` events are a no-op.
-* Service level: ``CandidateService.accept_candidate`` wired with the real
+* Service level: ``CandidateLifecycleService.accept_candidate`` wired with the real
   ``ArqDomainEventPublisher`` (fake pool) — asserts the accept flow enqueues
   exactly one job whose payload (``candidate_id``, ``name``, ``email``) is the
   one the service builds.
@@ -26,7 +26,9 @@ from uuid import uuid4
 import pytest
 from arq.connections import RedisSettings
 
-from src.modules.recruitment.application.candidate_service import CandidateService
+from src.modules.recruitment.application.candidate_lifecycle_service import (
+    CandidateLifecycleService,
+)
 from src.modules.recruitment.domain.entities import Candidate
 from src.modules.recruitment.domain.enums import CandidateStatus
 from src.modules.recruitment.infrastructure.event_publisher import (
@@ -75,8 +77,8 @@ def _make_candidate(
 
 def _make_candidate_service(
     candidate: Candidate, publisher: ArqDomainEventPublisher
-) -> tuple[CandidateService, AsyncMock]:
-    """Build a CandidateService with mocked deps and the real publisher wired."""
+) -> tuple[CandidateLifecycleService, AsyncMock]:
+    """Build a CandidateLifecycleService with mocked deps and the real publisher wired."""
     candidate_repo = AsyncMock()
     candidate_repo.get_by_id = AsyncMock(return_value=candidate)
     candidate_repo.update = AsyncMock(side_effect=lambda c: c)
@@ -89,10 +91,11 @@ def _make_candidate_service(
     # the audit helper's ``session.add(...)`` does not create a stray coroutine.
     session.add = MagicMock()
 
-    service = CandidateService(
+    service = CandidateLifecycleService(
         candidate_repo=candidate_repo,
         cv_document_repo=AsyncMock(),
         minio_client=AsyncMock(),
+        job_opening_repo=AsyncMock(),
         session=session,
         event_publisher=publisher,
         user_id=uuid4(),

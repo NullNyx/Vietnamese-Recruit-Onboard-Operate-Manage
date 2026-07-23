@@ -2,7 +2,7 @@
 
 This module provides the in-memory test doubles and Hypothesis strategies that
 the interview-calendar property tests (tasks 5.2-5.13, 7.x, 8.x, 10.x) build
-on, so the orchestration logic in :class:`CandidateService` can be exercised
+on, so the orchestration logic in :class:`InterviewSchedulerService` can be exercised
 without a real Google Calendar API or a real database. It is imported directly
 by the property-test modules (``from ._interview_support import ...``); it is
 not itself a test module.
@@ -19,18 +19,18 @@ Seams provided
 * :class:`FakeCandidateRepository` and :class:`FakeCalendarSession` - in-memory
   candidate persistence with explicit staging + commit/rollback semantics (for
   the atomic-rollback property) and an employee lookup compatible with how
-  :meth:`CandidateService._resolve_interviewers` reads ``select(Employee)``.
+  :meth:`InterviewSchedulerService._resolve_interviewers` reads ``select(Employee)``.
 * :class:`SpyAuditSink` - a stand-in for the module-level ``log_audit`` that
   records audit entries and can be configured to raise (to test R12.5 - audit
   failure must never roll back the action). Tests install it with
-  ``monkeypatch.setattr(candidate_service, "log_audit", sink)``.
+  ``monkeypatch.setattr(interview_scheduler_service, "log_audit", sink)``.
 * :class:`FakeOAuthGrantRepository`, :class:`FakeCalendarGrantChecker`, and
   :class:`FakeTokenCipher` - the identity-side seams the calendar helpers
   (``_assert_calendar_grant`` / ``_with_calendar_token``) read, so grant-guard
   (R9) and 401-refresh behaviour are testable.
 * :class:`FixedClock` - a deterministic ``now`` provider for the
   "start must be in the future" rule (R1.4). See the note on
-  :func:`build_candidate_service` for how task 5.1 should consume it.
+  :func:`build_calendar_harness` for how task 5.1 should consume it.
 * :func:`iana_timezones` - a Hypothesis strategy drawing IANA timezones from
   ``zoneinfo.available_timezones()`` (R11).
 
@@ -53,9 +53,9 @@ from hypothesis import strategies as st
 from src.modules.employee.domain.entities import Employee
 from src.modules.identity.api.schemas import GoogleTokens, GrantStatus
 from src.modules.identity.domain.entities import OAuthGrant
-from src.modules.recruitment.application.candidate_service import (
+from src.modules.recruitment.application.interview_scheduler_service import (
     CalendarPort,
-    CandidateService,
+    InterviewSchedulerService,
 )
 from src.modules.recruitment.domain.entities import Candidate, Interview
 from src.modules.recruitment.domain.enums import CandidateStatus
@@ -377,7 +377,7 @@ class FakeCandidateRepository:
     """In-memory ``CandidateRepository`` stand-in with staging semantics.
 
     Models the subset of :class:`CandidateRepository` that
-    :class:`CandidateService` uses for the interview flows: ``get_by_id`` and
+    :class:`InterviewSchedulerService` uses for the interview flows: ``get_by_id`` and
     ``update``. Mutations made through ``update`` are staged on the shared
     :class:`FakeCalendarSession` and only become visible to a *fresh* read
     after ``commit``; ``rollback`` discards them. This lets the atomic-rollback
@@ -456,13 +456,13 @@ def _snapshot_candidate(candidate: Candidate) -> dict[str, Any]:
 class FakeCalendarSession:
     """Minimal async session modelling commit/rollback + employee lookup.
 
-    Provides the two things :class:`CandidateService` needs from its
+    Provides the two things :class:`InterviewSchedulerService` needs from its
     ``AsyncSession`` during the interview flows:
 
     1. ``commit`` / ``rollback`` that drive the staged Candidate mutations held
        by :class:`FakeCandidateRepository` (atomicity for R3 / Property 12).
     2. ``execute`` for the ``select(Employee).where(col(Employee.id).in_(...))``
-       query used by :meth:`CandidateService._resolve_interviewers`. The session
+       query used by :meth:`InterviewSchedulerService._resolve_interviewers`. The session
        returns a result whose ``.scalars().all()`` yields the seeded Employees
        whose ids appear in the query's ``IN`` clause.
 
@@ -653,7 +653,7 @@ class SpyAuditSink:
     ``recruitment.infrastructure.audit_repository.log_audit`` async function.
     Tests install it with::
 
-        monkeypatch.setattr(candidate_service, "log_audit", spy)
+        monkeypatch.setattr(interview_scheduler_service, "log_audit", spy)
 
     Each call is captured in :attr:`entries`. When ``fail`` is true the sink
     *swallows* the error exactly like the real ``log_audit`` (which wraps writes
@@ -993,14 +993,14 @@ def make_interview(
 
 @dataclass
 class CalendarServiceHarness:
-    """A wired :class:`CandidateService` plus the seams it was built from.
+    """A wired :class:`InterviewSchedulerService` plus the seams it was built from.
 
     Bundles the service under test with every seam so property tests can drive
     the service and then assert against the recorded calls, audit entries, and
     persisted Candidate state.
 
     Attributes:
-        service: The :class:`CandidateService` under test.
+        service: The :class:`InterviewSchedulerService` under test.
         calendar: The :class:`FakeCalendarPort` recording adapter calls.
         candidate_repo: The in-memory candidate repository.
         session: The fake session coordinating commit/rollback + employee lookup.
@@ -1012,7 +1012,7 @@ class CalendarServiceHarness:
         user_id: The acting HR user id.
     """
 
-    service: CandidateService
+    service: InterviewSchedulerService
     calendar: FakeCalendarPort
     candidate_repo: FakeCandidateRepository
     session: FakeCalendarSession
@@ -1046,7 +1046,7 @@ def build_calendar_harness(
 
     The :class:`SpyAuditSink` is returned on the harness, but installing it in
     place of the module-level ``log_audit`` is left to the test (via
-    ``monkeypatch.setattr(candidate_service, "log_audit", harness.audit_sink)``)
+    ``monkeypatch.setattr(interview_scheduler_service, "log_audit", harness.audit_sink)``)
     so each property test controls the patch lifetime.
 
     Args:
@@ -1114,17 +1114,14 @@ def build_calendar_harness(
     org_settings_repo = AsyncMock()
     org_settings_repo.get_timezone = AsyncMock(return_value=org_timezone)
 
-    service = CandidateService(
+    service = InterviewSchedulerService(
         candidate_repo=candidate_repo,  # type: ignore[arg-type]
-        cv_document_repo=AsyncMock(),
-        minio_client=AsyncMock(),
+        interview_repo=AsyncMock(),
         session=session,  # type: ignore[arg-type]
         user_id=acting_user_id,
         calendar_port=calendar,
         org_settings_repo=org_settings_repo,
         connection_repo=resolved_conn_repo,  # type: ignore[arg-type]
-        oauth_grant_repo=grant_repo,
-        oauth_service=oauth_service,
         crypto=crypto,
     )
 

@@ -24,8 +24,8 @@ import httpx
 import pytest
 from hypothesis import given, settings
 
-from src.modules.recruitment.application import candidate_service
-from src.modules.recruitment.application.candidate_service import CalendarPort
+from src.modules.recruitment.application import interview_scheduler_service
+from src.modules.recruitment.application.interview_scheduler_service import CalendarPort
 from src.modules.recruitment.domain.enums import CandidateStatus
 from src.modules.recruitment.domain.exceptions import (
     CalendarEventCreateFailedError,
@@ -237,8 +237,8 @@ class TestSpyAuditSink:
     def test_installable_over_module_log_audit(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """The sink can replace the module-level log_audit symbol."""
         sink = SpyAuditSink()
-        monkeypatch.setattr(candidate_service, "log_audit", sink)
-        assert candidate_service.log_audit is sink
+        monkeypatch.setattr(interview_scheduler_service, "log_audit", sink)
+        assert interview_scheduler_service.log_audit is sink
 
 
 class TestFixedClock:
@@ -264,7 +264,7 @@ def test_timezone_strategy_yields_valid_iana_zones(tz: str) -> None:
 
 
 def test_build_harness_smoke() -> None:
-    """The harness wires a usable CandidateService with all seams attached."""
+    """The harness wires a usable InterviewSchedulerService with all seams attached."""
 
     async def _run() -> None:
         harness = build_calendar_harness(
