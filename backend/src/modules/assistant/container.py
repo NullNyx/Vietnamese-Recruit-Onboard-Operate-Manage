@@ -39,8 +39,10 @@ from src.modules.knowledge_base.infrastructure.repository import (
 )
 from src.modules.onboarding.application.onboarding_service import OnboardingService
 from src.modules.onboarding.container import get_onboarding_service
-from src.modules.recruitment.application.candidate_service import CandidateService
-from src.modules.recruitment.container import get_candidate_service
+from src.modules.recruitment.application.candidate_lifecycle_service import (
+    CandidateLifecycleService,
+)
+from src.modules.recruitment.container import get_candidate_lifecycle_service
 from src.modules.recruitment.infrastructure.repositories import JobOpeningRepository
 
 # ---------------------------------------------------------------------------
@@ -68,7 +70,7 @@ def get_assistant_llm_client() -> AssistantLLMClient:
 
 async def get_tool_registry(
     session: AsyncSession = Depends(get_db_session),
-    candidate_service: CandidateService = Depends(get_candidate_service),
+    candidate_service: CandidateLifecycleService = Depends(get_candidate_lifecycle_service),
     onboarding_service: OnboardingService = Depends(get_onboarding_service),
     department_service: DepartmentService = Depends(get_department_service),
 ) -> ToolRegistry:
@@ -116,7 +118,7 @@ async def get_configured_assistant_llm_client(
 
 async def get_context_builder(
     session: AsyncSession = Depends(get_db_session),
-    candidate_service: CandidateService = Depends(get_candidate_service),
+    candidate_service: CandidateLifecycleService = Depends(get_candidate_lifecycle_service),
     onboarding_service: OnboardingService = Depends(get_onboarding_service),
 ) -> ContextBuilder:
     """Provide a ContextBuilder wired to recruitment + onboarding + KB retrieval."""

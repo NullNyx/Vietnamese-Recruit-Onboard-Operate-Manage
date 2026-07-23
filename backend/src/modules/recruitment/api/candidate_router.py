@@ -38,11 +38,21 @@ from src.modules.recruitment.api.schemas import (
     ScheduleInterviewRequest,
     SendEmailRequest,
 )
-from src.modules.recruitment.application.candidate_service import (
-    CandidateService,
+from src.modules.recruitment.application.candidate_lifecycle_service import (
+    CandidateLifecycleService,
     PaginatedCandidates,
 )
-from src.modules.recruitment.container import get_candidate_service
+from src.modules.recruitment.application.candidate_notification_service import (
+    CandidateNotificationService,
+)
+from src.modules.recruitment.application.interview_scheduler_service import (
+    InterviewSchedulerService,
+)
+from src.modules.recruitment.container import (
+    get_candidate_lifecycle_service,
+    get_candidate_notification_service,
+    get_interview_scheduler_service,
+)
 from src.modules.recruitment.domain.entities import Interview, InterviewParticipant, JobOpening
 from src.modules.recruitment.domain.enums import CandidateStatus, ProcessingStatus
 from src.modules.recruitment.domain.exceptions import (
@@ -90,7 +100,15 @@ async def require_admin(current_user: CurrentUserDep) -> User:
 
 
 AdminUserDep = Annotated[User, Depends(require_admin)]
-CandidateServiceDep = Annotated[CandidateService, Depends(get_candidate_service)]
+CandidateLifecycleServiceDep = Annotated[
+    CandidateLifecycleService, Depends(get_candidate_lifecycle_service)
+]
+InterviewSchedulerServiceDep = Annotated[
+    InterviewSchedulerService, Depends(get_interview_scheduler_service)
+]
+CandidateNotificationServiceDep = Annotated[
+    CandidateNotificationService, Depends(get_candidate_notification_service)
+]
 
 
 # ---------------------------------------------------------------------------
@@ -111,7 +129,7 @@ candidate_router = APIRouter(
 @candidate_router.get("", response_model=CandidateListResponse)
 async def list_candidates(
     current_user: CurrentUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: CandidateLifecycleServiceDep,
     session: AsyncSession = Depends(get_db_session),
     page: int = Query(default=1, ge=1, description="Page number (1-indexed)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
@@ -219,7 +237,7 @@ async def list_candidates(
 async def get_candidate(
     candidate_id: UUID,
     current_user: CurrentUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: CandidateLifecycleServiceDep,
     session: AsyncSession = Depends(get_db_session),
 ) -> CandidateDetailResponse:
     """Get full candidate detail with linked CV documents.
@@ -409,7 +427,7 @@ async def schedule_interview(
     candidate_id: UUID,
     body: ScheduleInterviewRequest,
     current_user: CurrentUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: InterviewSchedulerServiceDep,
 ) -> CandidateResponse:
     """Schedule an interview for a candidate.
 
@@ -454,7 +472,7 @@ async def reschedule_interview(
     candidate_id: UUID,
     body: ScheduleInterviewRequest,
     current_user: CurrentUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: InterviewSchedulerServiceDep,
 ) -> CandidateResponse:
     """Reschedule an existing interview for a candidate.
 
@@ -503,7 +521,7 @@ async def create_interview(
     candidate_id: UUID,
     body: CreateInterviewRequest,
     current_user: AdminUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: InterviewSchedulerServiceDep,
 ) -> InterviewResponse:
     """Create a new interview with a Calendar event on the selected calendar.
 
@@ -585,7 +603,7 @@ async def complete_interview(
     candidate_id: UUID,
     interview_id: UUID,
     current_user: AdminUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: InterviewSchedulerServiceDep,
 ) -> InterviewResponse:
     """Mark an Interview as completed.
 
@@ -652,7 +670,7 @@ async def cancel_interview(
     candidate_id: UUID,
     interview_id: UUID,
     current_user: AdminUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: InterviewSchedulerServiceDep,
 ) -> InterviewResponse:
     """Cancel an Interview and send Calendar cancellation.
 
@@ -722,7 +740,7 @@ async def create_replacement_interview(
     interview_id: UUID,
     body: CreateInterviewRequest,
     current_user: AdminUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: InterviewSchedulerServiceDep,
 ) -> InterviewResponse:
     """Create a replacement Interview after cancellation.
 
@@ -801,7 +819,7 @@ async def send_email(
     candidate_id: UUID,
     body: SendEmailRequest,
     current_user: CurrentUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: CandidateNotificationServiceDep,
     session: AsyncSession = Depends(get_db_session),
 ) -> OutboundEmailResponseSchema:
     """Create an outbound email command for a candidate.
@@ -826,8 +844,12 @@ async def send_email(
     """
 
     from src.modules.gmail.container import build_outbound_email_service
+    from src.modules.recruitment.infrastructure.repositories import CandidateRepository
 
-    candidate = await candidate_service._get_candidate_or_raise(candidate_id)
+    candidate_repo = CandidateRepository(session)
+    candidate = await candidate_repo.get_by_id(candidate_id)
+    if candidate is None:
+        raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
 
     # Validate candidate email
     if not candidate.email or not candidate.email.strip():
@@ -851,11 +873,6 @@ async def send_email(
     return OutboundEmailResponseSchema.model_validate(outbound)
 
 
-# ---------------------------------------------------------------------------
-# Reject candidate
-# ---------------------------------------------------------------------------
-
-
 @candidate_router.post(
     "/{candidate_id}/reject",
     response_model=CandidateResponse,
@@ -863,7 +880,7 @@ async def send_email(
 async def reject_candidate(
     candidate_id: UUID,
     current_user: CurrentUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: CandidateLifecycleServiceDep,
     body: RejectRequest | None = None,
 ) -> CandidateResponse:
     """Reject a candidate.
@@ -905,7 +922,7 @@ async def reject_candidate(
 async def accept_candidate(
     candidate_id: UUID,
     current_user: CurrentUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: CandidateLifecycleServiceDep,
 ) -> CandidateResponse:
     """Accept a candidate (pass interview).
 
@@ -940,7 +957,7 @@ async def accept_candidate(
 async def archive_candidate(
     candidate_id: UUID,
     current_user: CurrentUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: CandidateLifecycleServiceDep,
 ) -> CandidateResponse:
     """Archive a candidate.
 
@@ -976,7 +993,7 @@ async def assign_candidate(
     candidate_id: UUID,
     body: AssignCandidateRequest,
     current_user: AdminUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: CandidateLifecycleServiceDep,
 ) -> CandidateResponse:
     """Assign an unassigned Candidate to an open Job Opening.
 
@@ -1012,7 +1029,7 @@ async def reassign_candidate(
     candidate_id: UUID,
     body: ReassignCandidateRequest,
     current_user: AdminUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: CandidateLifecycleServiceDep,
 ) -> CandidateResponse:
     """Reassign a Candidate to a different open Job Opening.
 
@@ -1047,7 +1064,7 @@ async def reassign_candidate(
 async def unassign_candidate(
     candidate_id: UUID,
     current_user: AdminUserDep,
-    candidate_service: CandidateServiceDep,
+    candidate_service: CandidateLifecycleServiceDep,
 ) -> CandidateResponse:
     """Remove a Candidate's assignment to a Job Opening.
 

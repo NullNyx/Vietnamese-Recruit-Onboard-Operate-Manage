@@ -22,12 +22,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
     from src.modules.employee.application.employee_service import EmployeeService
-    from src.modules.knowledge_base.application.retrieval_service import RetrievalService
     from src.modules.employee_request.application.leave_service import LeaveService
     from src.modules.employee_request.application.overtime_service import OvertimeService
+    from src.modules.knowledge_base.application.retrieval_service import RetrievalService
     from src.modules.onboarding.application.onboarding_service import OnboardingService
     from src.modules.payslip.application.payslip_service import PayslipService
-    from src.modules.recruitment.application.candidate_service import CandidateService
+    from src.modules.recruitment.application.candidate_lifecycle_service import (
+        CandidateLifecycleService,
+    )
     from src.modules.recruitment.infrastructure.org_settings_repository import (
         OrganizationSettingsRepository,
     )
@@ -58,7 +60,7 @@ class ContextBuilder:
     def __init__(
         self,
         session: AsyncSession,
-        candidate_service: CandidateService | None = None,
+        candidate_service: CandidateLifecycleService | None = None,
         onboarding_service: OnboardingService | None = None,
         org_settings_repo: OrganizationSettingsRepository | None = None,
         job_opening_repo: JobOpeningRepository | None = None,
@@ -403,7 +405,6 @@ class ContextBuilder:
             )
         except Exception:
             return ""
-
 
     async def _get_entity_name(self, table: str, entity_id: UUID) -> str | None:
         """Resolve a name field from a generic table by id."""

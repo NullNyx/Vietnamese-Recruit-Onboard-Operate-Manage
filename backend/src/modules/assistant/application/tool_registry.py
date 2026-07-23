@@ -25,7 +25,9 @@ if TYPE_CHECKING:
 
     from src.modules.employee.application.department_service import DepartmentService
     from src.modules.onboarding.application.onboarding_service import OnboardingService
-    from src.modules.recruitment.application.candidate_service import CandidateService
+    from src.modules.recruitment.application.candidate_lifecycle_service import (
+        CandidateLifecycleService,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -39,17 +41,17 @@ _VALID_JOB_OPENING_STATUSES = {"draft", "open", "closed", "cancelled"}
 class ToolRegistry:
     """Executes tools and returns results for the LLM.
 
-    Injects CandidateService and OnboardingService (read-only usage).
+    Injects CandidateLifecycleService and OnboardingService (read-only usage).
     No write capabilities — structural safety per ADR-0006.
 
     Args:
-        candidate_service: Recruitment CandidateService for read operations.
+        candidate_service: Recruitment CandidateLifecycleService for read operations.
         onboarding_service: Onboarding OnboardingService for read operations.
     """
 
     def __init__(
         self,
-        candidate_service: CandidateService,
+        candidate_service: CandidateLifecycleService,
         onboarding_service: OnboardingService,
         session: AsyncSession | None = None,
         department_service: DepartmentService | None = None,
@@ -181,7 +183,7 @@ class ToolRegistry:
         try:
             detail = await self._candidate_service.get_candidate(candidate_id)
             candidate = detail.candidate
-        except Exception as e:
+        except Exception:
             return {"error": get_message("CANDIDATE_NOT_FOUND", "vi")}
 
         return {
@@ -217,7 +219,7 @@ class ToolRegistry:
             candidate_id = uuid.UUID(candidate_id_str)
             detail = await self._candidate_service.get_candidate(candidate_id)
             candidate = detail.candidate
-        except Exception as e:
+        except Exception:
             return {"error": get_message("CANDIDATE_NOT_FOUND", "vi")}
 
         import html
@@ -291,7 +293,7 @@ class ToolRegistry:
             candidate_id = uuid.UUID(candidate_id_str)
             detail = await self._candidate_service.get_candidate(candidate_id)
             candidate = detail.candidate
-        except Exception as e:
+        except Exception:
             return {"error": get_message("CANDIDATE_NOT_FOUND", "vi")}
 
         import html
@@ -531,7 +533,7 @@ class ToolRegistry:
 
         try:
             interviews = await self._candidate_service.list_interviews_for_candidate(candidate_id)
-        except Exception as e:
+        except Exception:
             return {"error": get_message("CANDIDATE_NOT_FOUND", "vi")}
 
         return {"interviews": interviews, "total": len(interviews)}
@@ -552,7 +554,7 @@ class ToolRegistry:
 
         try:
             detail = await self._onboarding_service.get_process(process_id)
-        except Exception as e:
+        except Exception:
             return {"error": get_message("ONBOARDING_PROCESS_NOT_FOUND", "vi")}
 
         tasks = []

@@ -8,7 +8,6 @@ Requirements: 6.8, 7.3-7.5, 8.2-8.5, 9.3, 9.5-9.7, 10.4-10.8,
 """
 
 from __future__ import annotations
-from src.shared.messages import get_message, get_request_language
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -20,6 +19,7 @@ from src.modules.recruitment.application.review_service import (
     ReviewValidationError,
 )
 from src.modules.recruitment.domain.exceptions import RecruitmentError
+from src.shared.messages import get_message, get_request_language
 
 
 def register_recruitment_error_handlers(app: FastAPI) -> None:

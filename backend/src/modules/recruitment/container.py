@@ -33,9 +33,18 @@ from src.modules.identity.infrastructure.connection_state_repository import (
     OrganizationGoogleConnectionRepository,
 )
 from src.modules.recruitment.application.calendar_sync_service import CalendarSyncService
+from src.modules.recruitment.application.candidate_lifecycle_service import (
+    CandidateLifecycleService,
+)
+from src.modules.recruitment.application.candidate_notification_service import (
+    CandidateNotificationService,
+)
 from src.modules.recruitment.application.candidate_service import CandidateService
 from src.modules.recruitment.application.cv_processor import CVProcessorService
 from src.modules.recruitment.application.intent_classifier import IntentClassifierService
+from src.modules.recruitment.application.interview_scheduler_service import (
+    InterviewSchedulerService,
+)
 from src.modules.recruitment.application.review_service import ReviewService
 from src.modules.recruitment.infrastructure.calendar_adapter import CalendarAdapter
 from src.modules.recruitment.infrastructure.config import RecruitmentSettings
@@ -50,6 +59,7 @@ from src.modules.recruitment.infrastructure.pii_redactor import PIIRedactor
 from src.modules.recruitment.infrastructure.repositories import (
     CandidateRepository,
     CVDocumentRepository,
+    InterviewRepository,
     JobOpeningRepository,
 )
 from src.modules.recruitment.infrastructure.sync_cursor_repository import (
@@ -160,6 +170,99 @@ def get_event_publisher() -> ArqDomainEventPublisher:
 # ---------------------------------------------------------------------------
 # FastAPI dependency functions for services
 # ---------------------------------------------------------------------------
+
+
+async def get_candidate_lifecycle_service(
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+) -> CandidateLifecycleService:
+    """Provide a CandidateLifecycleService instance with all dependencies.
+
+    Wires lifecycle-only dependencies: repositories, MinIO, event publisher.
+    Does NOT include Calendar, Gmail, or crypto dependencies.
+
+    Args:
+        session: The async database session from DI.
+        current_user: The authenticated user.
+
+    Returns:
+        A fully configured CandidateLifecycleService.
+    """
+    candidate_repo = CandidateRepository(session)
+    cv_document_repo = CVDocumentRepository(session)
+    job_opening_repo = JobOpeningRepository(session)
+    minio_client = get_minio_client()
+
+    return CandidateLifecycleService(
+        candidate_repo=candidate_repo,
+        cv_document_repo=cv_document_repo,
+        job_opening_repo=job_opening_repo,
+        minio_client=minio_client,
+        event_publisher=get_event_publisher(),
+        session=session,
+        user_id=current_user.id,
+    )
+
+
+async def get_interview_scheduler_service(
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+) -> InterviewSchedulerService:
+    """Provide an InterviewSchedulerService instance with all dependencies.
+
+    Wires Calendar scheduling dependencies (per ADR-0008):
+    InterviewRepository, CalendarPort, OrgSettingsRepo, ConnectionRepo, Crypto.
+
+    Args:
+        session: The async database session from DI.
+        current_user: The authenticated user.
+
+    Returns:
+        A fully configured InterviewSchedulerService.
+    """
+    candidate_repo = CandidateRepository(session)
+    interview_repo = InterviewRepository(session)
+
+    # Calendar scheduling dependencies (ADR-0008).
+    org_settings_repo = OrganizationSettingsRepository(session, get_recruitment_settings())
+    connection_repo = OrganizationGoogleConnectionRepository(session)
+    crypto = get_crypto_utils()
+
+    return InterviewSchedulerService(
+        candidate_repo=candidate_repo,
+        interview_repo=interview_repo,
+        calendar_port=get_calendar_adapter(),
+        org_settings_repo=org_settings_repo,
+        connection_repo=connection_repo,
+        crypto=crypto,
+        session=session,
+        user_id=current_user.id,
+    )
+
+
+async def get_candidate_notification_service(
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+) -> CandidateNotificationService:
+    """Provide a CandidateNotificationService instance with all dependencies.
+
+    Wires notification-only dependencies: CandidateRepository.
+    Does NOT include Calendar or crypto dependencies.
+
+    Args:
+        session: The async database session from DI.
+        current_user: The authenticated user.
+
+    Returns:
+        A fully configured CandidateNotificationService.
+    """
+    candidate_repo = CandidateRepository(session)
+
+    return CandidateNotificationService(
+        candidate_repo=candidate_repo,
+        session=session,
+        user_id=current_user.id,
+    )
 
 
 async def get_candidate_service(

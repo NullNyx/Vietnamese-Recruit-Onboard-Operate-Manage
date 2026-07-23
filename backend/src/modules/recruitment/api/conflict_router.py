@@ -25,8 +25,10 @@ from src.modules.recruitment.api.schemas import (
     CalendarConflictResponse,
     ResolveConflictRequest,
 )
-from src.modules.recruitment.application.candidate_service import CandidateService
-from src.modules.recruitment.container import get_candidate_service
+from src.modules.recruitment.application.interview_scheduler_service import (
+    InterviewSchedulerService,
+)
+from src.modules.recruitment.container import get_interview_scheduler_service
 from src.modules.recruitment.domain.entities import CalendarConflict
 from src.modules.recruitment.domain.exceptions import (
     CalendarConflictNotFoundError,
@@ -45,7 +47,9 @@ async def require_admin(current_user: Annotated[User, Depends(get_current_user)]
 
 
 AdminUserDep = Annotated[User, Depends(require_admin)]
-CandidateServiceDep = Annotated[CandidateService, Depends(get_candidate_service)]
+InterviewSchedulerServiceDep = Annotated[
+    InterviewSchedulerService, Depends(get_interview_scheduler_service)
+]
 
 
 # ---------------------------------------------------------------------------
@@ -66,7 +70,7 @@ conflict_router = APIRouter(
 @conflict_router.get("", response_model=CalendarConflictListResponse)
 async def list_calendar_conflicts(
     current_user: AdminUserDep,
-    candidate_service: CandidateServiceDep,
+    interview_scheduler: InterviewSchedulerServiceDep,
     status: str | None = Query(
         default=None,
         description="Filter by status (default: unresolved)",
@@ -80,7 +84,7 @@ async def list_calendar_conflicts(
 
     By default, returns only unresolved conflicts.
     """
-    conflicts = await candidate_service.list_calendar_conflicts(
+    conflicts = await interview_scheduler.list_calendar_conflicts(
         status=status,
         candidate_id=candidate_id,
     )
@@ -130,7 +134,7 @@ async def resolve_calendar_conflict(
     conflict_id: UUID,
     body: ResolveConflictRequest,
     current_user: AdminUserDep,
-    candidate_service: CandidateServiceDep,
+    interview_scheduler: InterviewSchedulerServiceDep,
 ) -> CalendarConflictResponse:
     """Resolve a calendar conflict.
 
@@ -141,7 +145,7 @@ async def resolve_calendar_conflict(
     the remote event's ETag.
     """
     try:
-        conflict = await candidate_service.resolve_calendar_conflict(
+        conflict = await interview_scheduler.resolve_calendar_conflict(
             conflict_id=conflict_id,
             choice=body.choice,
             acting_user_id=current_user.id,
