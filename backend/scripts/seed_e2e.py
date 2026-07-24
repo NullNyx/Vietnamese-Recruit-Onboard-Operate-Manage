@@ -34,6 +34,8 @@ CORE_TABLES = [
     "payslips",
     "whitelist_entries",
     "outbound_emails",
+    "departments",
+    "positions",
 ]
 
 

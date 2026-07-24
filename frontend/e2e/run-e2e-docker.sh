@@ -67,29 +67,23 @@ echo "  setup_complete=${SETUP_COMPLETE}"
 echo "============================================"
 
 if [ "${SETUP_COMPLETE}" = "true" ]; then
-  # Step order: seed_all.py creates comprehensive demo data,
-  # then seed_e2e.py overrides admin credentials for E2E tests.
+  # Truncate, then seed_all.py creates comprehensive demo data, then override admin
   cd "${BACKEND_DIR}"
+  echo "[run-e2e] Truncating DB..."
+  ${SEED_SCRIPT}
   echo "[run-e2e] Running seed_all.py (comprehensive demo data)..."
   uv run python scripts/seed_all.py 2>&1 | tail -5
   echo "[run-e2e] seed_all.py done."
-
   echo "[run-e2e] Updating admin credentials for E2E tests..."
-  cd "${BACKEND_DIR}"
   python scripts/override_admin_for_e2e.py
   echo "[run-e2e] Admin override done."
   cd "${FRONTEND_DIR}"
-conn.close();
-print("Admin updated.")
-"
-  cd "${FRONTEND_DIR}"
-  cd "${FRONTEND_DIR}"
-else
-  cd "${BACKEND_DIR}"
-  ${SEED_SCRIPT}
-  cd "${FRONTEND_DIR}"
-fi
 
+  else
+    cd "${BACKEND_DIR}"
+    ${SEED_SCRIPT}
+    cd "${FRONTEND_DIR}"
+  fi
 echo ""
 
 # ---------------------------------------------------------------------------
