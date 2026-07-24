@@ -145,7 +145,7 @@ async def seed_payroll() -> None:
 
         await session.commit()
 
-        print(f"✅ Seeded payroll data:")
+        print("✅ Seeded payroll data:")
         print(f"   Salary configs: {config_count}")
         print(f"   Allowances: {allowance_count}")
         print(f"   Dependents: {dependent_count}")

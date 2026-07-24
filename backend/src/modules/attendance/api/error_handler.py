@@ -1,7 +1,6 @@
 """Error handlers for Attendance module."""
 
 from fastapi import FastAPI, Request
-from src.shared.messages import get_message, get_request_language
 from fastapi.responses import JSONResponse
 
 from src.modules.attendance.domain.exceptions import (
@@ -14,6 +13,7 @@ from src.modules.attendance.domain.exceptions import (
     OfficeNetworkRequiredError,
     TooManyNetworksError,
 )
+from src.shared.messages import get_message, get_request_language
 
 
 def register_attendance_error_handlers(app: FastAPI) -> None:

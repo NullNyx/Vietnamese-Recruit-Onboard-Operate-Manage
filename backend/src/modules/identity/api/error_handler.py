@@ -5,12 +5,12 @@ AuthError exceptions and return consistent JSON error responses.
 """
 
 from __future__ import annotations
-from src.shared.messages import get_message, get_request_language
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from src.modules.identity.domain.exceptions import AuthError
+from src.shared.messages import get_message, get_request_language
 
 
 def register_auth_error_handlers(app: FastAPI) -> None:

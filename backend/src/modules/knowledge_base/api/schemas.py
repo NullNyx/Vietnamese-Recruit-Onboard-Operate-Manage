@@ -6,7 +6,6 @@ Pydantic models for request/response serialization of knowledge base endpoints.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -38,8 +37,8 @@ class DocumentListItem(BaseModel):
     file_size: int
     mime_type: str
     chunk_count: int
-    description: Optional[str] = None
-    error_message: Optional[str] = None
+    description: str | None = None
+    error_message: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -67,8 +66,8 @@ class DocumentDetailResponse(BaseModel):
     file_size: int
     mime_type: str
     chunk_count: int
-    description: Optional[str] = None
-    error_message: Optional[str] = None
+    description: str | None = None
+    error_message: str | None = None
     kb_type: str
     created_at: datetime
     updated_at: datetime
@@ -79,9 +78,9 @@ class DocumentDetailResponse(BaseModel):
 class DocumentUpdateRequest(BaseModel):
     """Request body for PATCH /documents/{id} — metadata-only update."""
 
-    display_name: Optional[str] = Field(default=None, description="Tên hiển thị mới")
-    category: Optional[str] = Field(default=None, description="Danh mục mới")
-    description: Optional[str] = Field(default=None, description="Mô tả mới")
+    display_name: str | None = Field(default=None, description="Tên hiển thị mới")
+    category: str | None = Field(default=None, description="Danh mục mới")
+    description: str | None = Field(default=None, description="Mô tả mới")
 
 
 class DocumentUpdateResponse(BaseModel):
@@ -91,7 +90,7 @@ class DocumentUpdateResponse(BaseModel):
     display_name: str
     category: str
     status: str
-    description: Optional[str] = None
+    description: str | None = None
     updated_at: datetime
 
     model_config = {"from_attributes": True}

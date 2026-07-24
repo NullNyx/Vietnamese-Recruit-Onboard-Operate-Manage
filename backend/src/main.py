@@ -46,6 +46,7 @@ from src.modules.identity.api.error_handler import (  # noqa: E402
 from src.modules.identity.api.guide_router import guide_router  # noqa: E402
 from src.modules.identity.api.router import router as auth_router  # noqa: E402
 from src.modules.identity.container import get_settings  # noqa: E402
+from src.modules.knowledge_base.api.router import router as kb_router  # noqa: E402
 from src.modules.onboarding.api.error_handler import (  # noqa: E402
     register_onboarding_error_handlers,
 )
@@ -65,8 +66,6 @@ from src.modules.recruitment.api.job_application_router import router as job_app
 from src.modules.recruitment.api.job_opening_router import job_opening_router  # noqa: E402
 from src.modules.recruitment.api.metrics_router import metrics_router  # noqa: E402
 from src.modules.recruitment.api.runtime_router import runtime_router
-
-from src.modules.knowledge_base.api.router import router as kb_router  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -105,9 +104,6 @@ async def _bootstrap_super_admin() -> None:
                     "Set AUTH_SUPER_ADMIN_EMAIL environment variable to bootstrap "
                     "the first administrator."
                 )
-
-
-
 
 
 async def _seed_assistant_tool_configs() -> None:

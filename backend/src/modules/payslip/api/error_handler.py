@@ -1,7 +1,6 @@
 """Error handlers for Payslip module."""
 
 from fastapi import FastAPI, Request
-from src.shared.messages import get_message, get_request_language
 from fastapi.responses import JSONResponse
 
 from src.modules.payslip.domain.exceptions import (
@@ -9,6 +8,7 @@ from src.modules.payslip.domain.exceptions import (
     PayslipNotFoundError,
     PayslipNotPublishedError,
 )
+from src.shared.messages import get_message, get_request_language
 
 
 def register_payslip_error_handlers(app: FastAPI) -> None:

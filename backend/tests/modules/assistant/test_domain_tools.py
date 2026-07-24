@@ -48,7 +48,6 @@ class TestToolDefinitions:
         names = {t.name for t in draft_tools}
         assert names == {"draft_interview_invitation", "draft_congratulations_email"}
 
-
     def test_read_tools_include_new_tools(self) -> None:
         """Read-Tools include the 4 new tools."""
         read_tools = [t for t in TOOL_DEFINITIONS if t.kind == ToolKind.READ]
@@ -57,6 +56,7 @@ class TestToolDefinitions:
         assert "get_department_info" in names
         assert "list_interviews_for_candidate" in names
         assert "get_onboarding_task_details" in names
+
 
 class TestOpenAIFormat:
     """Test OpenAI function-calling format conversion."""

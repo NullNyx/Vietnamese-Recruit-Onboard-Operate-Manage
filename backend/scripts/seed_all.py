@@ -21,13 +21,18 @@ from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlmodel import SQLModel, select
+
+from src.modules.attendance.domain.entities import AttendanceRecord, AttendanceSource
+from src.modules.employee.domain.entities import Department, Employee, Position
+from src.modules.employee_request.domain.entities import EmployeeRequest
+from src.modules.employee_request.domain.enums import LeaveType, RequestStatus, RequestType
+from src.modules.gmail.domain.entities import EmailMessage  # noqa: F401 - needed for FK resolution
+from src.modules.identity.domain.entities import User, UserRole
 
 # Reuse the project's password hashing
 from src.modules.identity.infrastructure.password_utils import hash_password
-from src.modules.identity.domain.entities import User, UserRole
-from src.modules.employee.domain.entities import Department, Employee, Position
-from src.modules.gmail.domain.entities import EmailMessage  # noqa: F401 - needed for FK resolution
+from src.modules.onboarding.domain.entities import OnboardingProcess, OnboardingTask
+from src.modules.payslip.domain.entities import Payslip, PayslipStatus
 from src.modules.recruitment.domain.entities import (
     Candidate,
     Interview,
@@ -35,11 +40,6 @@ from src.modules.recruitment.domain.entities import (
     JobOpening,
     OrganizationSettings,
 )
-from src.modules.attendance.domain.entities import AttendanceRecord, AttendanceSource
-from src.modules.payslip.domain.entities import Payslip, PayslipStatus
-from src.modules.onboarding.domain.entities import OnboardingProcess, OnboardingTask
-from src.modules.employee_request.domain.entities import EmployeeRequest
-from src.modules.employee_request.domain.enums import LeaveType, RequestStatus, RequestType
 
 logger = logging.getLogger(__name__)
 HCM = ZoneInfo("Asia/Ho_Chi_Minh")
@@ -49,50 +49,172 @@ DB_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/vroom_hr"
 # ── Vietnamese data pools ──────────────────────────────────────────
 
 FAMILY_NAMES = [
-    "Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Vũ", "Đặng", "Bùi", "Đỗ",
-    "Ngô", "Dương", "Lý", "Đinh", "Phan", "Mai", "Hà", "Văn", "Tạ",
-    "Trịnh", "Đoàn", "Lương", "Cao", "Tô", "Nghiêm", "Hồ",
+    "Nguyễn",
+    "Trần",
+    "Lê",
+    "Phạm",
+    "Hoàng",
+    "Vũ",
+    "Đặng",
+    "Bùi",
+    "Đỗ",
+    "Ngô",
+    "Dương",
+    "Lý",
+    "Đinh",
+    "Phan",
+    "Mai",
+    "Hà",
+    "Văn",
+    "Tạ",
+    "Trịnh",
+    "Đoàn",
+    "Lương",
+    "Cao",
+    "Tô",
+    "Nghiêm",
+    "Hồ",
 ]
 
 MALE_MIDDLE = ["Văn", "Đức", "Minh", "Quang", "Anh", "Tuấn", "Thanh", "Hữu", "Xuân", "Hồng"]
 FEMALE_MIDDLE = ["Thị", "Minh", "Thanh", "Ngọc", "Mỹ", "Thu", "Kim", "Hồng", "Ánh", "Phương"]
 
 MALE_FIRST = [
-    "Anh", "Bảo", "Cường", "Dũng", "Đạt", "Giang", "Hiếu", "Hùng", "Huy",
-    "Khang", "Khoa", "Kiên", "Long", "Lâm", "Mạnh", "Nam", "Nghĩa", "Phong",
-    "Phúc", "Quân", "Quốc", "Sơn", "Tài", "Thắng", "Thành", "Tuấn", "Trung",
-    "Tùng", "Việt", "Vinh",
+    "Anh",
+    "Bảo",
+    "Cường",
+    "Dũng",
+    "Đạt",
+    "Giang",
+    "Hiếu",
+    "Hùng",
+    "Huy",
+    "Khang",
+    "Khoa",
+    "Kiên",
+    "Long",
+    "Lâm",
+    "Mạnh",
+    "Nam",
+    "Nghĩa",
+    "Phong",
+    "Phúc",
+    "Quân",
+    "Quốc",
+    "Sơn",
+    "Tài",
+    "Thắng",
+    "Thành",
+    "Tuấn",
+    "Trung",
+    "Tùng",
+    "Việt",
+    "Vinh",
 ]
 FEMALE_FIRST = [
-    "Anh", "Bình", "Châu", "Diệu", "Dung", "Hà", "Hạnh", "Hoa", "Hương",
-    "Lan", "Linh", "Ly", "Mai", "Minh", "Ngọc", "Nhi", "Quỳnh", "Thảo",
-    "Thúy", "Trang", "Uyên", "Vy", "Xuân", "Yến", "Ánh",
+    "Anh",
+    "Bình",
+    "Châu",
+    "Diệu",
+    "Dung",
+    "Hà",
+    "Hạnh",
+    "Hoa",
+    "Hương",
+    "Lan",
+    "Linh",
+    "Ly",
+    "Mai",
+    "Minh",
+    "Ngọc",
+    "Nhi",
+    "Quỳnh",
+    "Thảo",
+    "Thúy",
+    "Trang",
+    "Uyên",
+    "Vy",
+    "Xuân",
+    "Yến",
+    "Ánh",
 ]
 
 STREETS = [
-    "Nguyễn Huệ", "Lê Lợi", "Trần Hưng Đạo", "Hai Bà Trưng",
-    "Lý Thường Kiệt", "Phạm Ngũ Lão", "Nguyễn Trãi", "Điện Biên Phủ",
-    "Võ Văn Kiệt", "Hoàng Diệu", "Bùi Thị Xuân", "Cách Mạng Tháng 8",
+    "Nguyễn Huệ",
+    "Lê Lợi",
+    "Trần Hưng Đạo",
+    "Hai Bà Trưng",
+    "Lý Thường Kiệt",
+    "Phạm Ngũ Lão",
+    "Nguyễn Trãi",
+    "Điện Biên Phủ",
+    "Võ Văn Kiệt",
+    "Hoàng Diệu",
+    "Bùi Thị Xuân",
+    "Cách Mạng Tháng 8",
 ]
 DISTRICTS = [
-    "Quận 1", "Quận 3", "Quận 5", "Quận 7", "Quận 10",
-    "Quận Bình Thạnh", "Quận Tân Bình", "Quận Phú Nhuận",
+    "Quận 1",
+    "Quận 3",
+    "Quận 5",
+    "Quận 7",
+    "Quận 10",
+    "Quận Bình Thạnh",
+    "Quận Tân Bình",
+    "Quận Phú Nhuận",
 ]
 CITIES = ["TP. Hồ Chí Minh", "Hà Nội", "Đà Nẵng", "Hải Phòng", "Cần Thơ"]
 
 SKILLS_POOL = [
-    "Python", "JavaScript", "TypeScript", "React", "Next.js", "Node.js",
-    "PostgreSQL", "Docker", "Kubernetes", "AWS", "GCP", "Terraform",
-    "Go", "Rust", "Java", "Spring Boot", "Kotlin", "Swift",
-    "Flutter", "React Native", "Vue.js", "Angular", "GraphQL", "REST API",
-    "CI/CD", "Git", "Agile/Scrum", "Linux", "System Design",
-    "Excel", "Power BI", "Tableau", "SAP", "QuickBooks",
-    "Tuyển dụng IT", "Đào tạo nhân sự", "C&B", "Luật lao động",
-    "Bán hàng B2B", "Chăm sóc khách hàng", "Digital Marketing",
-    "SEO", "Content Writing", "Figma", "Adobe Suite",
+    "Python",
+    "JavaScript",
+    "TypeScript",
+    "React",
+    "Next.js",
+    "Node.js",
+    "PostgreSQL",
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "GCP",
+    "Terraform",
+    "Go",
+    "Rust",
+    "Java",
+    "Spring Boot",
+    "Kotlin",
+    "Swift",
+    "Flutter",
+    "React Native",
+    "Vue.js",
+    "Angular",
+    "GraphQL",
+    "REST API",
+    "CI/CD",
+    "Git",
+    "Agile/Scrum",
+    "Linux",
+    "System Design",
+    "Excel",
+    "Power BI",
+    "Tableau",
+    "SAP",
+    "QuickBooks",
+    "Tuyển dụng IT",
+    "Đào tạo nhân sự",
+    "C&B",
+    "Luật lao động",
+    "Bán hàng B2B",
+    "Chăm sóc khách hàng",
+    "Digital Marketing",
+    "SEO",
+    "Content Writing",
+    "Figma",
+    "Adobe Suite",
 ]
 
 # ── Helpers ─────────────────────────────────────────────────────────
+
 
 def rng() -> random.Random:
     return random.Random()
@@ -116,6 +238,7 @@ def make_email(full_name: str) -> str:
 
 
 # ── Seed functions ──────────────────────────────────────────────────
+
 
 async def seed_organization(session: AsyncSession) -> OrganizationSettings:
     org = OrganizationSettings(
@@ -147,7 +270,9 @@ async def seed_departments(session: AsyncSession) -> dict[str, Department]:
     return depts
 
 
-async def seed_positions(session: AsyncSession, depts: dict[str, Department]) -> dict[str, Position]:
+async def seed_positions(
+    session: AsyncSession, depts: dict[str, Department]
+) -> dict[str, Position]:
     pos_data = [
         ("Giám đốc điều hành (CEO)", "Ban Giám Đốc"),
         ("Giám đốc Kỹ thuật (CTO)", "Ban Giám Đốc"),
@@ -214,14 +339,70 @@ async def seed_employees(
                 dept_positions.setdefault(dept_name, []).append(p)
 
     key_roles: list[dict] = [
-        {"name": "Nguyễn Minh Tuấn", "gender": "male", "dept": "Ban Giám Đốc", "pos": "Giám đốc điều hành (CEO)", "dob": date(1978, 5, 12), "start": date(2019, 1, 15)},
-        {"name": "Trần Đức Thắng", "gender": "male", "dept": "Ban Giám Đốc", "pos": "Giám đốc Kỹ thuật (CTO)", "dob": date(1980, 8, 22), "start": date(2019, 3, 1)},
-        {"name": "Lê Thanh Hà", "gender": "female", "dept": "Ban Giám Đốc", "pos": "Giám đốc Tài chính (CFO)", "dob": date(1982, 12, 5), "start": date(2019, 6, 1)},
-        {"name": "Phạm Quang Huy", "gender": "male", "dept": "Phòng Kỹ Thuật", "pos": "Trưởng phòng Kỹ Thuật", "dob": date(1985, 3, 18), "start": date(2020, 2, 1)},
-        {"name": "Hoàng Ngọc Linh", "gender": "female", "dept": "Phòng Sản Phẩm", "pos": "Product Manager", "dob": date(1988, 7, 14), "start": date(2020, 5, 1)},
-        {"name": "Vũ Thị Hương", "gender": "female", "dept": "Phòng Nhân Sự", "pos": "Trưởng phòng Nhân Sự", "dob": date(1986, 9, 30), "start": date(2020, 8, 1)},
-        {"name": "Đặng Văn Nam", "gender": "male", "dept": "Phòng Kinh Doanh", "pos": "Trưởng phòng Kinh Doanh", "dob": date(1984, 11, 8), "start": date(2020, 1, 15)},
-        {"name": "Bùi Thanh Mai", "gender": "female", "dept": "Phòng Tài Chính - Kế Toán", "pos": "Kế toán trưởng", "dob": date(1983, 4, 25), "start": date(2020, 4, 1)},
+        {
+            "name": "Nguyễn Minh Tuấn",
+            "gender": "male",
+            "dept": "Ban Giám Đốc",
+            "pos": "Giám đốc điều hành (CEO)",
+            "dob": date(1978, 5, 12),
+            "start": date(2019, 1, 15),
+        },
+        {
+            "name": "Trần Đức Thắng",
+            "gender": "male",
+            "dept": "Ban Giám Đốc",
+            "pos": "Giám đốc Kỹ thuật (CTO)",
+            "dob": date(1980, 8, 22),
+            "start": date(2019, 3, 1),
+        },
+        {
+            "name": "Lê Thanh Hà",
+            "gender": "female",
+            "dept": "Ban Giám Đốc",
+            "pos": "Giám đốc Tài chính (CFO)",
+            "dob": date(1982, 12, 5),
+            "start": date(2019, 6, 1),
+        },
+        {
+            "name": "Phạm Quang Huy",
+            "gender": "male",
+            "dept": "Phòng Kỹ Thuật",
+            "pos": "Trưởng phòng Kỹ Thuật",
+            "dob": date(1985, 3, 18),
+            "start": date(2020, 2, 1),
+        },
+        {
+            "name": "Hoàng Ngọc Linh",
+            "gender": "female",
+            "dept": "Phòng Sản Phẩm",
+            "pos": "Product Manager",
+            "dob": date(1988, 7, 14),
+            "start": date(2020, 5, 1),
+        },
+        {
+            "name": "Vũ Thị Hương",
+            "gender": "female",
+            "dept": "Phòng Nhân Sự",
+            "pos": "Trưởng phòng Nhân Sự",
+            "dob": date(1986, 9, 30),
+            "start": date(2020, 8, 1),
+        },
+        {
+            "name": "Đặng Văn Nam",
+            "gender": "male",
+            "dept": "Phòng Kinh Doanh",
+            "pos": "Trưởng phòng Kinh Doanh",
+            "dob": date(1984, 11, 8),
+            "start": date(2020, 1, 15),
+        },
+        {
+            "name": "Bùi Thanh Mai",
+            "gender": "female",
+            "dept": "Phòng Tài Chính - Kế Toán",
+            "pos": "Kế toán trưởng",
+            "dob": date(1983, 4, 25),
+            "start": date(2020, 4, 1),
+        },
     ]
 
     employees: list[Employee] = []
@@ -229,8 +410,15 @@ async def seed_employees(
     used_names: set[str] = set()
     emp_counter = 1
 
-    def create_employee(name: str, gender: str, dept_name: str, pos_name: str,
-                        dob: date, start: date, is_active: bool = True) -> Employee:
+    def create_employee(
+        name: str,
+        gender: str,
+        dept_name: str,
+        pos_name: str,
+        dob: date,
+        start: date,
+        is_active: bool = True,
+    ) -> Employee:
         nonlocal emp_counter
         email = make_email(name)
         base_email = email
@@ -264,15 +452,24 @@ async def seed_employees(
     # Create key employees
     key_employees: dict[str, Employee] = {}
     for kr in key_roles:
-        emp = create_employee(kr["name"], kr["gender"], kr["dept"], kr["pos"], kr["dob"], kr["start"])
+        emp = create_employee(
+            kr["name"], kr["gender"], kr["dept"], kr["pos"], kr["dob"], kr["start"]
+        )
         key_employees[kr["name"]] = emp
         employees.append(emp)
         session.add(emp)
 
     # Manager hierarchy
     ceo = key_employees["Nguyễn Minh Tuấn"]
-    for kr_name in ["Trần Đức Thắng", "Lê Thanh Hà", "Phạm Quang Huy", "Hoàng Ngọc Linh",
-                     "Vũ Thị Hương", "Đặng Văn Nam", "Bùi Thanh Mai"]:
+    for kr_name in [
+        "Trần Đức Thắng",
+        "Lê Thanh Hà",
+        "Phạm Quang Huy",
+        "Hoàng Ngọc Linh",
+        "Vũ Thị Hương",
+        "Đặng Văn Nam",
+        "Bùi Thanh Mai",
+    ]:
         key_employees[kr_name].manager_id = ceo.id
 
     def get_dept_manager(dept_name: str) -> Employee | None:
@@ -320,8 +517,16 @@ async def seed_employees(
 
         dept_name = r.choices(dept_names_list, weights=dept_weights, k=1)[0]
         dept_pos = dept_positions[dept_name]
-        non_lead = [p for p in dept_pos if "Trưởng" not in p.name and "Giám đốc" not in p.name
-                     and "Kế toán trưởng" not in p.name and "CEO" not in p.name and "CTO" not in p.name and "CFO" not in p.name]
+        non_lead = [
+            p
+            for p in dept_pos
+            if "Trưởng" not in p.name
+            and "Giám đốc" not in p.name
+            and "Kế toán trưởng" not in p.name
+            and "CEO" not in p.name
+            and "CTO" not in p.name
+            and "CFO" not in p.name
+        ]
         pos_obj = r.choice(non_lead or dept_pos)
         pos_name = pos_obj.name
 
@@ -376,7 +581,9 @@ async def seed_job_openings(
             position_id=positions[pos_name].id,
             target_headcount=headcount,
             status=status,
-            opened_at=datetime.now(UTC) - timedelta(days=r.randint(7, 90)) if status != "draft" else None,
+            opened_at=datetime.now(UTC) - timedelta(days=r.randint(7, 90))
+            if status != "draft"
+            else None,
         )
         session.add(jo)
         openings.append(jo)
@@ -395,9 +602,22 @@ async def seed_candidates(
     statuses = ["new", "reviewing", "interview_scheduled", "accepted", "rejected", "archived"]
     status_weights = [15, 25, 25, 8, 17, 10]
     companies = [
-        "FPT Software", "VNG", "Shopee", "Tiki", "MoMo", "Vingroup",
-        "VNPT", "Viettel", "Nashtech", "KMS Technology", "Axon Active",
-        "TMA Solutions", "Haravan", "Sendo", "Topica", "VCCorp",
+        "FPT Software",
+        "VNG",
+        "Shopee",
+        "Tiki",
+        "MoMo",
+        "Vingroup",
+        "VNPT",
+        "Viettel",
+        "Nashtech",
+        "KMS Technology",
+        "Axon Active",
+        "TMA Solutions",
+        "Haravan",
+        "Sendo",
+        "Topica",
+        "VCCorp",
     ]
 
     for i in range(count):
@@ -422,27 +642,46 @@ async def seed_candidates(
             num_jobs = min(exp_years, r.randint(1, 3))
             for j in range(num_jobs):
                 start_year = 2025 - exp_years + j * max(1, exp_years // num_jobs)
-                experience.append({
-                    "company": r.choice(companies),
-                    "title": r.choice(["Software Engineer", "Developer", "Senior Dev", "Tech Lead", "Intern"]),
-                    "from": f"{start_year}-{r.randint(1,12):02d}",
-                    "to": f"{start_year + max(1, exp_years // num_jobs)}-{r.randint(1,12):02d}" if j < num_jobs - 1 else "Hiện tại",
-                })
+                experience.append(
+                    {
+                        "company": r.choice(companies),
+                        "title": r.choice(
+                            ["Software Engineer", "Developer", "Senior Dev", "Tech Lead", "Intern"]
+                        ),
+                        "from": f"{start_year}-{r.randint(1, 12):02d}",
+                        "to": f"{start_year + max(1, exp_years // num_jobs)}-{r.randint(1, 12):02d}"
+                        if j < num_jobs - 1
+                        else "Hiện tại",
+                    }
+                )
 
-        education = [{
-            "school": r.choice([
-                "Đại học Bách Khoa Hà Nội", "ĐH Khoa Học Tự Nhiên",
-                "ĐH Công Nghệ Thông Tin", "Đại học FPT", "RMIT Vietnam",
-                "Đại học Kinh Tế TP.HCM", "Đại học Ngoại Thương",
-            ]),
-            "degree": r.choice(["Cử nhân", "Kỹ sư", "Thạc sĩ"]),
-            "major": r.choice([
-                "Công nghệ thông tin", "Khoa học máy tính",
-                "Kỹ thuật phần mềm", "Quản trị kinh doanh",
-                "Tài chính - Ngân hàng", "Marketing",
-            ]),
-            "year": str(r.randint(2010, 2023)),
-        }]
+        education = [
+            {
+                "school": r.choice(
+                    [
+                        "Đại học Bách Khoa Hà Nội",
+                        "ĐH Khoa Học Tự Nhiên",
+                        "ĐH Công Nghệ Thông Tin",
+                        "Đại học FPT",
+                        "RMIT Vietnam",
+                        "Đại học Kinh Tế TP.HCM",
+                        "Đại học Ngoại Thương",
+                    ]
+                ),
+                "degree": r.choice(["Cử nhân", "Kỹ sư", "Thạc sĩ"]),
+                "major": r.choice(
+                    [
+                        "Công nghệ thông tin",
+                        "Khoa học máy tính",
+                        "Kỹ thuật phần mềm",
+                        "Quản trị kinh doanh",
+                        "Tài chính - Ngân hàng",
+                        "Marketing",
+                    ]
+                ),
+                "year": str(r.randint(2010, 2023)),
+            }
+        ]
 
         c = Candidate(
             id=uuid4(),
@@ -460,12 +699,14 @@ async def seed_candidates(
 
         if status == "rejected":
             c.rejected_at = datetime.now(UTC) - timedelta(days=r.randint(1, 30))
-            c.rejection_reason = r.choice([
-                "Không phù hợp văn hóa công ty",
-                "Thiếu kỹ năng chuyên môn cần thiết",
-                "Ứng viên từ chối offer",
-                "Đã chọn ứng viên phù hợp hơn",
-            ])
+            c.rejection_reason = r.choice(
+                [
+                    "Không phù hợp văn hóa công ty",
+                    "Thiếu kỹ năng chuyên môn cần thiết",
+                    "Ứng viên từ chối offer",
+                    "Đã chọn ứng viên phù hợp hơn",
+                ]
+            )
         if status == "accepted":
             c.accepted_at = datetime.now(UTC) - timedelta(days=r.randint(1, 14))
         if status == "archived":
@@ -488,9 +729,18 @@ async def seed_interviews(
     interviews: list[Interview] = []
     statuses = ["scheduled", "completed", "cancelled"]
     status_weights = [30, 55, 15]
-    rounds = ["Vòng 1 - Phone Screen", "Vòng 2 - Technical", "Vòng 3 - Culture Fit", "Vòng 4 - Final"]
+    rounds = [
+        "Vòng 1 - Phone Screen",
+        "Vòng 2 - Technical",
+        "Vòng 3 - Culture Fit",
+        "Vòng 4 - Final",
+    ]
 
-    interviewing = [c for c in candidates if c.status in ("interviewing", "offered", "accepted", "new", "screening")]
+    interviewing = [
+        c
+        for c in candidates
+        if c.status in ("interviewing", "offered", "accepted", "new", "screening")
+    ]
     if not interviewing:
         interviewing = candidates[:count]
 
@@ -525,26 +775,30 @@ async def seed_interviews(
         interviews.append(interview)
 
         # Candidate participant
-        session.add(InterviewParticipant(
-            id=uuid4(),
-            interview_id=interview.id,
-            type="candidate",
-            email=candidate.email,
-            name=candidate.name,
-        ))
+        session.add(
+            InterviewParticipant(
+                id=uuid4(),
+                interview_id=interview.id,
+                type="candidate",
+                email=candidate.email,
+                name=candidate.name,
+            )
+        )
 
         # 1-2 employee interviewers
         for _ in range(r.randint(1, 2)):
             emp = r.choice(employees)
-            session.add(InterviewParticipant(
-                id=uuid4(),
-                interview_id=interview.id,
-                type="employee",
-                email=emp.email,
-                name=emp.full_name,
-                employee_id=emp.id,
-                response_status=r.choice(["accepted", "tentative", "needsAction"]),
-            ))
+            session.add(
+                InterviewParticipant(
+                    id=uuid4(),
+                    interview_id=interview.id,
+                    type="employee",
+                    email=emp.email,
+                    name=emp.full_name,
+                    employee_id=emp.id,
+                    response_status=r.choice(["accepted", "tentative", "needsAction"]),
+                )
+            )
 
     await session.flush()
     return interviews
@@ -578,13 +832,17 @@ async def seed_attendance(
             # Check-in time
             check_in_hour = r.choices([8, 9, 10], weights=[60, 25, 15], k=1)[0]
             check_in_min = r.randint(0, 59)
-            check_in = datetime(wd.year, wd.month, wd.day, check_in_hour, check_in_min, 0, tzinfo=HCM).astimezone(UTC)
+            check_in = datetime(
+                wd.year, wd.month, wd.day, check_in_hour, check_in_min, 0, tzinfo=HCM
+            ).astimezone(UTC)
 
             check_out = None
             if r.random() < 0.85:  # 85% check out
                 out_h = 17 + r.randint(0, 2)
                 out_m = r.randint(0, 59)
-                check_out = datetime(wd.year, wd.month, wd.day, out_h, out_m, 0, tzinfo=HCM).astimezone(UTC)
+                check_out = datetime(
+                    wd.year, wd.month, wd.day, out_h, out_m, 0, tzinfo=HCM
+                ).astimezone(UTC)
 
             ip = f"192.168.{r.randint(1, 255)}.{r.randint(1, 254)}"
             record = AttendanceRecord(
@@ -597,7 +855,9 @@ async def seed_attendance(
                 check_out_ip=ip if check_out else None,
                 check_in_user_agent="VroomHR-Web/1.0",
                 check_out_user_agent="VroomHR-Web/1.0" if check_out else None,
-                source=r.choice([AttendanceSource.WEB, AttendanceSource.WEB, AttendanceSource.MOBILE]),
+                source=r.choice(
+                    [AttendanceSource.WEB, AttendanceSource.WEB, AttendanceSource.MOBILE]
+                ),
             )
             session.add(record)
             records.append(record)
@@ -697,7 +957,7 @@ async def seed_onboarding(
     processes: list[OnboardingProcess] = []
 
     accepted = [c for c in candidates if c.status == "accepted"]
-    targets = accepted[:min(count, len(accepted))]
+    targets = accepted[: min(count, len(accepted))]
 
     task_templates = [
         ("personal_info", "Cập nhật thông tin cá nhân"),
@@ -715,23 +975,29 @@ async def seed_onboarding(
             candidate_id=candidate.id,
             employee_id=emp.id,
             status=status,
-            completed_at=datetime.now(UTC) - timedelta(days=r.randint(1, 30)) if status == "complete" else None,
+            completed_at=datetime.now(UTC) - timedelta(days=r.randint(1, 30))
+            if status == "complete"
+            else None,
         )
         session.add(proc)
         processes.append(proc)
 
         for idx, (task_key, task_name) in enumerate(task_templates):
             task_done = (status == "complete") or (status == "in_progress" and r.random() < 0.5)
-            session.add(OnboardingTask(
-                id=uuid4(),
-                process_id=proc.id,
-                task_key=task_key,
-                name=task_name,
-                status="done" if task_done else "pending",
-                order_index=idx,
-                completed_at=datetime.now(UTC) - timedelta(days=r.randint(1, 14)) if task_done else None,
-                completed_by_user_id=admin.id if task_done else None,
-            ))
+            session.add(
+                OnboardingTask(
+                    id=uuid4(),
+                    process_id=proc.id,
+                    task_key=task_key,
+                    name=task_name,
+                    status="done" if task_done else "pending",
+                    order_index=idx,
+                    completed_at=datetime.now(UTC) - timedelta(days=r.randint(1, 14))
+                    if task_done
+                    else None,
+                    completed_by_user_id=admin.id if task_done else None,
+                )
+            )
 
     await session.flush()
     return processes
@@ -751,18 +1017,29 @@ async def seed_employee_requests(
 
     for i in range(count):
         emp = r.choice(active_employees)
-        req_type = r.choice([RequestType.LEAVE, RequestType.LEAVE, RequestType.LEAVE, RequestType.OVERTIME])
+        req_type = r.choice(
+            [RequestType.LEAVE, RequestType.LEAVE, RequestType.LEAVE, RequestType.OVERTIME]
+        )
         status = r.choices(
-            [RequestStatus.SUBMITTED, RequestStatus.APPROVED, RequestStatus.REJECTED, RequestStatus.CANCELLED],
+            [
+                RequestStatus.SUBMITTED,
+                RequestStatus.APPROVED,
+                RequestStatus.REJECTED,
+                RequestStatus.CANCELLED,
+            ],
             weights=[25, 55, 15, 5],
             k=1,
         )[0]
 
-        reviewed_by = admin.id if status in (RequestStatus.APPROVED, RequestStatus.REJECTED) else None
+        reviewed_by = (
+            admin.id if status in (RequestStatus.APPROVED, RequestStatus.REJECTED) else None
+        )
         reviewed_at = datetime.now(UTC) - timedelta(days=r.randint(0, 14)) if reviewed_by else None
 
         if req_type == RequestType.LEAVE:
-            leave_type = r.choice([LeaveType.ANNUAL, LeaveType.SICK, LeaveType.UNPAID, LeaveType.OTHER])
+            leave_type = r.choice(
+                [LeaveType.ANNUAL, LeaveType.SICK, LeaveType.UNPAID, LeaveType.OTHER]
+            )
             if status != RequestStatus.SUBMITTED:
                 start_date = today - timedelta(days=r.randint(1, 30))
             else:
@@ -770,9 +1047,15 @@ async def seed_employee_requests(
             end_date = start_date + timedelta(days=r.randint(0, 3))
 
             reason_map = {
-                LeaveType.ANNUAL: r.choice(["Nghỉ phép năm", "Về quê thăm gia đình", "Du lịch", "Việc cá nhân"]),
-                LeaveType.SICK: r.choice(["Ốm, sốt cao", "Đau dạ dày", "Viêm họng cấp", "Khám sức khỏe định kỳ"]),
-                LeaveType.UNPAID: r.choice(["Việc gia đình khẩn cấp", "Chưa có phép năm", "Nghỉ dài hạn"]),
+                LeaveType.ANNUAL: r.choice(
+                    ["Nghỉ phép năm", "Về quê thăm gia đình", "Du lịch", "Việc cá nhân"]
+                ),
+                LeaveType.SICK: r.choice(
+                    ["Ốm, sốt cao", "Đau dạ dày", "Viêm họng cấp", "Khám sức khỏe định kỳ"]
+                ),
+                LeaveType.UNPAID: r.choice(
+                    ["Việc gia đình khẩn cấp", "Chưa có phép năm", "Nghỉ dài hạn"]
+                ),
                 LeaveType.OTHER: r.choice(["Đám cưới người thân", "Tang lễ", "Thi cử", "Hội thảo"]),
             }
             reason = reason_map.get(leave_type, "Lý do cá nhân")
@@ -789,7 +1072,8 @@ async def seed_employee_requests(
                 reviewed_by_user_id=reviewed_by,
                 reviewed_at=reviewed_at,
                 review_reason=(
-                    "Không đủ điều kiện" if status == RequestStatus.REJECTED
+                    "Không đủ điều kiện"
+                    if status == RequestStatus.REJECTED
                     else ("Đã duyệt" if status == RequestStatus.APPROVED else None)
                 ),
             )
@@ -806,15 +1090,23 @@ async def seed_employee_requests(
                 start_time=time(start_h, 0),
                 end_time=time(end_h, 0),
                 duration_minutes=(end_h - start_h) * 60,
-                reason=r.choice([
-                    "Hoàn thành sprint", "Fix bug khẩn cấp",
-                    "Deploy phiên bản mới", "Hỗ trợ khách hàng",
-                    "Chuẩn bị báo cáo cuối tháng",
-                ]),
-                project_or_task=r.choice([
-                    "Dự án Vroom HR", "Hệ thống Payroll",
-                    "Migration Database", "Release 2.0",
-                ]),
+                reason=r.choice(
+                    [
+                        "Hoàn thành sprint",
+                        "Fix bug khẩn cấp",
+                        "Deploy phiên bản mới",
+                        "Hỗ trợ khách hàng",
+                        "Chuẩn bị báo cáo cuối tháng",
+                    ]
+                ),
+                project_or_task=r.choice(
+                    [
+                        "Dự án Vroom HR",
+                        "Hệ thống Payroll",
+                        "Migration Database",
+                        "Release 2.0",
+                    ]
+                ),
                 reviewed_by_user_id=reviewed_by,
                 reviewed_at=reviewed_at,
                 review_reason=(
@@ -832,6 +1124,7 @@ async def seed_employee_requests(
 
 
 # ── Main ────────────────────────────────────────────────────────────
+
 
 async def main() -> None:
     engine = create_async_engine(DB_URL, echo=False)
@@ -881,7 +1174,7 @@ async def main() -> None:
 
         print("=" * 60)
         print("  ✅ SEED COMPLETE!")
-        print(f"  🔑 Login: hr@vroom.com / admin123")
+        print("  🔑 Login: hr@vroom.com / admin123")
         print("=" * 60)
 
 

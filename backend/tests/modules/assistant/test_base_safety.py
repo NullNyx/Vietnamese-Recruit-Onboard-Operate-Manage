@@ -189,5 +189,7 @@ class BaseToolSafetyTest(ABC):
 
     def assert_error(self, result: dict[str, Any], key: str = "error") -> None:
         """Assert the result contains an error message (not a crash/empty)."""
-        assert key in result, f"Expected error key '{key}' in result, got keys: {list(result.keys())}"
+        assert key in result, (
+            f"Expected error key '{key}' in result, got keys: {list(result.keys())}"
+        )
         assert result[key], f"Error message is empty: {result}"

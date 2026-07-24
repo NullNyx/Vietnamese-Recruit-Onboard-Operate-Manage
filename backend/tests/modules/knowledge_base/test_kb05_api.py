@@ -16,7 +16,6 @@ from io import BytesIO
 from pathlib import Path
 
 import pytest
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 # testcontainers / docker are integration-only dependencies.
@@ -40,6 +39,7 @@ def _docker_available() -> bool:
 def _run_alembic_upgrade_head(async_url: str) -> None:
     """Run ``alembic upgrade head`` against ``async_url``."""
     from alembic.config import Config
+
     from alembic import command
 
     config = Config(str(BACKEND_DIR / "alembic.ini"))
@@ -57,7 +57,7 @@ def _run_alembic_upgrade_head(async_url: str) -> None:
             os.environ["DATABASE_URL"] = previous
 
 
-def _make_admin_user() -> "User":  # type: ignore[name-defined]
+def _make_admin_user() -> User:  # type: ignore[name-defined]
     """Build a fake admin User for auth dependency overrides."""
     from src.modules.identity.domain.entities import User, UserRole
 
@@ -93,12 +93,12 @@ def kb_client() -> Iterator[TestClient]:
         os.environ["AUTH_JWT_ALGORITHM"] = "HS256"
 
         import importlib
+
         import src.main as main_module
 
         importlib.reload(main_module)
         from src.main import app
         from src.modules.identity.api.admin_router import require_admin
-        from src.modules.knowledge_base.api.router import router as kb_router
 
         # Override require_admin to bypass auth in tests
         admin_user = _make_admin_user()
@@ -355,10 +355,7 @@ class TestFilteredDocumentList:
         )
         assert response.status_code == 200
         items = response.json()["items"]
-        assert all(
-            item["category"] == "policy" and item["status"] == "pending"
-            for item in items
-        )
+        assert all(item["category"] == "policy" and item["status"] == "pending" for item in items)
 
     def test_filter_empty_result(self, kb_client: TestClient):
         """AC: Filter that matches nothing returns empty list with total=0."""

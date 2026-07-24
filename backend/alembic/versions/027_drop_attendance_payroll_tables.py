@@ -8,8 +8,9 @@ Revises: 026
 Create Date: 2026-05-27
 """
 
-from alembic import op
 from sqlalchemy import inspect
+
+from alembic import op
 
 revision: str = "027"
 down_revision: str = "026"

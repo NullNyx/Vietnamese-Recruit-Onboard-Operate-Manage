@@ -1,7 +1,6 @@
 """Error handlers for Employee Request module."""
 
 from fastapi import FastAPI, Request
-from src.shared.messages import get_message, get_request_language
 from fastapi.responses import JSONResponse
 
 from src.modules.employee_request.domain.exceptions import (
@@ -15,6 +14,7 @@ from src.modules.employee_request.domain.exceptions import (
     RequestNotOwnedByEmployeeError,
     RequestNotReviewableError,
 )
+from src.shared.messages import get_message, get_request_language
 
 
 def register_employee_request_error_handlers(app: FastAPI) -> None:

@@ -158,9 +158,7 @@ class TestUncertainEmailRouting:
             return_value=_make_low_confidence_recruitment_result()
         )
         ai_classifier = AsyncMock()
-        ai_classifier.classify = AsyncMock(
-            return_value=_make_low_confidence_recruitment_result()
-        )
+        ai_classifier.classify = AsyncMock(return_value=_make_low_confidence_recruitment_result())
 
         service = ClassificationService(
             rules_classifier=rules_classifier,
@@ -197,13 +195,9 @@ class TestUncertainEmailRouting:
         inbox_service = InboxService(session=session, inbox_repo=inbox_repo)
 
         rules_classifier = MagicMock()
-        rules_classifier.classify = MagicMock(
-            return_value=_make_low_confidence_vendor_result()
-        )
+        rules_classifier.classify = MagicMock(return_value=_make_low_confidence_vendor_result())
         ai_classifier = AsyncMock()
-        ai_classifier.classify = AsyncMock(
-            return_value=_make_low_confidence_vendor_result()
-        )
+        ai_classifier.classify = AsyncMock(return_value=_make_low_confidence_vendor_result())
 
         service = ClassificationService(
             rules_classifier=rules_classifier,
@@ -259,9 +253,7 @@ class TestUncertainEmailRouting:
             return_value=_make_high_confidence_recruitment_result()
         )
         ai_classifier = AsyncMock()
-        ai_classifier.classify = AsyncMock(
-            return_value=_make_high_confidence_recruitment_result()
-        )
+        ai_classifier.classify = AsyncMock(return_value=_make_high_confidence_recruitment_result())
 
         service = ClassificationService(
             rules_classifier=rules_classifier,
@@ -315,9 +307,7 @@ class TestCallbackFailure:
             return_value=_make_low_confidence_recruitment_result()
         )
         ai_classifier = AsyncMock()
-        ai_classifier.classify = AsyncMock(
-            return_value=_make_low_confidence_recruitment_result()
-        )
+        ai_classifier.classify = AsyncMock(return_value=_make_low_confidence_recruitment_result())
 
         service = ClassificationService(
             rules_classifier=rules_classifier,
@@ -354,9 +344,7 @@ class TestCallbackFailure:
             return_value=_make_low_confidence_recruitment_result()
         )
         ai_classifier = AsyncMock()
-        ai_classifier.classify = AsyncMock(
-            return_value=_make_low_confidence_recruitment_result()
-        )
+        ai_classifier.classify = AsyncMock(return_value=_make_low_confidence_recruitment_result())
 
         service = ClassificationService(
             rules_classifier=rules_classifier,
@@ -522,9 +510,7 @@ class TestDismissedRetrySuppression:
             return_value=_make_low_confidence_recruitment_result()
         )
         ai_classifier = AsyncMock()
-        ai_classifier.classify = AsyncMock(
-            return_value=_make_low_confidence_recruitment_result()
-        )
+        ai_classifier.classify = AsyncMock(return_value=_make_low_confidence_recruitment_result())
 
         service = ClassificationService(
             rules_classifier=rules_classifier,
@@ -574,9 +560,7 @@ class TestDismissedRetrySuppression:
             return_value=_make_low_confidence_recruitment_result()
         )
         ai_classifier = AsyncMock()
-        ai_classifier.classify = AsyncMock(
-            return_value=_make_low_confidence_recruitment_result()
-        )
+        ai_classifier.classify = AsyncMock(return_value=_make_low_confidence_recruitment_result())
 
         service = ClassificationService(
             rules_classifier=rules_classifier,
@@ -639,9 +623,7 @@ class TestFilterStateReachability:
         )
         inbox_repo.list_by_status.return_value = ([item], 1)
 
-        items, total = await inbox_service.list_inbox(
-            inbox_status=InboxStatus.NEEDS_CLASSIFICATION
-        )
+        items, total = await inbox_service.list_inbox(inbox_status=InboxStatus.NEEDS_CLASSIFICATION)
 
         assert total == 1
         assert items[0].inbox_status == InboxStatus.NEEDS_CLASSIFICATION
@@ -663,9 +645,7 @@ class TestFilterStateReachability:
         )
         inbox_repo.list_by_status.return_value = ([item], 1)
 
-        items, total = await inbox_service.list_inbox(
-            inbox_status=InboxStatus.NEEDS_INFORMATION
-        )
+        items, total = await inbox_service.list_inbox(inbox_status=InboxStatus.NEEDS_INFORMATION)
 
         assert total == 1
         assert items[0].inbox_status == InboxStatus.NEEDS_INFORMATION
@@ -688,9 +668,7 @@ class TestFilterStateReachability:
         )
         inbox_repo.list_by_status.return_value = ([item], 1)
 
-        items, total = await inbox_service.list_inbox(
-            inbox_status=InboxStatus.READY_FOR_REVIEW
-        )
+        items, total = await inbox_service.list_inbox(inbox_status=InboxStatus.READY_FOR_REVIEW)
 
         assert total == 1
         assert items[0].inbox_status == InboxStatus.READY_FOR_REVIEW
@@ -711,9 +689,7 @@ class TestFilterStateReachability:
         )
         inbox_repo.list_by_status.return_value = ([item], 1)
 
-        items, total = await inbox_service.list_inbox(
-            inbox_status=InboxStatus.RESOLVED
-        )
+        items, total = await inbox_service.list_inbox(inbox_status=InboxStatus.RESOLVED)
 
         assert total == 1
         assert items[0].inbox_status == InboxStatus.RESOLVED
@@ -726,22 +702,26 @@ class TestFilterStateReachability:
 
         items_by_status = {
             InboxStatus.NEEDS_CLASSIFICATION: RecruitmentInboxItem(
-                gmail_message_id="msg_a", gmail_thread_id="t_a",
+                gmail_message_id="msg_a",
+                gmail_thread_id="t_a",
                 sender_email="a@example.com",
                 inbox_status=InboxStatus.NEEDS_CLASSIFICATION,
             ),
             InboxStatus.NEEDS_INFORMATION: RecruitmentInboxItem(
-                gmail_message_id="msg_b", gmail_thread_id="t_b",
+                gmail_message_id="msg_b",
+                gmail_thread_id="t_b",
                 sender_email="b@example.com",
                 inbox_status=InboxStatus.NEEDS_INFORMATION,
             ),
             InboxStatus.READY_FOR_REVIEW: RecruitmentInboxItem(
-                gmail_message_id="msg_c", gmail_thread_id="t_c",
+                gmail_message_id="msg_c",
+                gmail_thread_id="t_c",
                 sender_email="c@example.com",
                 inbox_status=InboxStatus.READY_FOR_REVIEW,
             ),
             InboxStatus.RESOLVED: RecruitmentInboxItem(
-                gmail_message_id="msg_d", gmail_thread_id="t_d",
+                gmail_message_id="msg_d",
+                gmail_thread_id="t_d",
                 sender_email="d@example.com",
                 inbox_status=InboxStatus.RESOLVED,
             ),
@@ -810,9 +790,7 @@ class TestInboxService:
         inbox_repo: MagicMock,
     ) -> None:
         """list_inbox with specific status filter."""
-        items, total = await inbox_service.list_inbox(
-            inbox_status=InboxStatus.NEEDS_CLASSIFICATION
-        )
+        items, total = await inbox_service.list_inbox(inbox_status=InboxStatus.NEEDS_CLASSIFICATION)
         inbox_repo.list_by_status.assert_awaited_once_with(
             inbox_status=InboxStatus.NEEDS_CLASSIFICATION,
             dismissed=False,

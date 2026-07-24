@@ -301,7 +301,6 @@ class TestJobApplicationPersistenceIntegration:
         )
         assert len(audit_result.scalars().all()) >= 2
 
-
     async def test_replay_does_not_create_second_job_application(
         self,
         session: AsyncSession,

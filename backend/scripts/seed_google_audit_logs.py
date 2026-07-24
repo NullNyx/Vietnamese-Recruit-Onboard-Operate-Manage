@@ -33,8 +33,15 @@ async def seed_google_audit_logs() -> bool:
 
     result = subprocess.run(
         [
-            "docker", "exec", "-i", "vroom-postgres",
-            "psql", "-U", "postgres", "-d", "vroom_hr",
+            "docker",
+            "exec",
+            "-i",
+            "vroom-postgres",
+            "psql",
+            "-U",
+            "postgres",
+            "-d",
+            "vroom_hr",
         ],
         stdin=_SQL_FILE.open("rb"),
         capture_output=True,

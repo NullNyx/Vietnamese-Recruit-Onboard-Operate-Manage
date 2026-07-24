@@ -9,9 +9,7 @@ For unit-level tests of the chunking/parsing logic, see test_kb_worker.py.
 from __future__ import annotations
 
 import os
-import uuid
 from collections.abc import Iterator
-from io import BytesIO
 from pathlib import Path
 
 import pytest
@@ -38,6 +36,7 @@ def _docker_available() -> bool:
 def _run_alembic_upgrade_head(async_url: str) -> None:
     """Run ``alembic upgrade head`` against ``async_url``."""
     from alembic.config import Config
+
     from alembic import command
 
     config = Config(str(BACKEND_DIR / "alembic.ini"))
@@ -78,6 +77,7 @@ def test_app() -> Iterator[TestClient]:
         os.environ["AUTH_JWT_ALGORITHM"] = "HS256"
 
         import importlib
+
         import src.main as main_module
 
         importlib.reload(main_module)
@@ -97,7 +97,7 @@ class TestKnowledgeBaseAPIMigration:
 
     def test_tables_exist(self, test_app: TestClient):
         """AC: Migration creates hr_knowledge_base_documents and hr_knowledge_base_chunks tables."""
-        from sqlalchemy import create_engine, inspect, text
+        from sqlalchemy import create_engine, inspect
 
         db_url = os.environ.get("DATABASE_URL", "")
         if not db_url:
@@ -146,9 +146,7 @@ class TestKnowledgeBaseAPIMigration:
         sync_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
         engine = create_engine(sync_url)
         with engine.connect() as conn:
-            result = conn.execute(
-                text("SELECT extname FROM pg_extension WHERE extname = 'vector'")
-            )
+            result = conn.execute(text("SELECT extname FROM pg_extension WHERE extname = 'vector'"))
             row = result.fetchone()
             assert row is not None, "pgvector extension 'vector' is not enabled"
 

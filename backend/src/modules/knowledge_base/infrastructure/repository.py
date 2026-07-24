@@ -8,8 +8,8 @@ on kb_type (physical security isolation per Issue #260).
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Optional, Sequence
 
 from sqlalchemy import and_, func, select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -70,7 +70,8 @@ class KnowledgeBaseRepository:
     # ------------------------------------------------------------------
 
     async def insert_document(
-        self, doc: KnowledgeBaseDocument | EmployeeKnowledgeBaseDocument,
+        self,
+        doc: KnowledgeBaseDocument | EmployeeKnowledgeBaseDocument,
     ) -> KnowledgeBaseDocument | EmployeeKnowledgeBaseDocument:
         """Insert a new document record and return it with the generated id.
 
@@ -88,9 +89,7 @@ class KnowledgeBaseRepository:
     ) -> KnowledgeBaseDocument | EmployeeKnowledgeBaseDocument | None:
         """Fetch a single document by id from the appropriate table."""
         doc_entity = _get_doc_entity(kb_type)
-        result = await self._session.execute(
-            select(doc_entity).where(doc_entity.id == document_id)
-        )
+        result = await self._session.execute(select(doc_entity).where(doc_entity.id == document_id))
         return result.scalar_one_or_none()
 
     async def list_documents(
@@ -98,8 +97,8 @@ class KnowledgeBaseRepository:
         kb_type: str = "hr",
         page: int = 1,
         page_size: int = 20,
-        category: Optional[str] = None,
-        status: Optional[str] = None,
+        category: str | None = None,
+        status: str | None = None,
     ) -> tuple[Sequence, int]:
         """List documents with pagination and optional filters, ordered by created_at DESC.
 
@@ -143,9 +142,9 @@ class KnowledgeBaseRepository:
         document_id: uuid.UUID,
         *,
         kb_type: str = "hr",
-        display_name: Optional[str] = None,
-        category: Optional[str] = None,
-        description: Optional[str] = None,
+        display_name: str | None = None,
+        category: str | None = None,
+        description: str | None = None,
     ) -> KnowledgeBaseDocument | EmployeeKnowledgeBaseDocument | None:
         """Update document metadata (display_name, category, description).
 
@@ -171,8 +170,8 @@ class KnowledgeBaseRepository:
         status: str,
         *,
         kb_type: str = "hr",
-        chunk_count: Optional[int] = None,
-        error_message: Optional[str] = None,
+        chunk_count: int | None = None,
+        error_message: str | None = None,
     ) -> KnowledgeBaseDocument | EmployeeKnowledgeBaseDocument | None:
         """Update document status and related fields.
 
@@ -304,7 +303,9 @@ class KnowledgeBaseRepository:
                     chunk_entity.token_count.label("token_count"),
                     chunk_entity.created_at.label("chunk_created_at"),
                     doc_entity.display_name.label("display_name"),
-                    (1.0 - chunk_entity.embedding.cosine_distance(query_embedding)).label("similarity"),
+                    (1.0 - chunk_entity.embedding.cosine_distance(query_embedding)).label(
+                        "similarity"
+                    ),
                 )
                 .join(
                     doc_entity,
@@ -319,16 +320,14 @@ class KnowledgeBaseRepository:
             subqueries.append(subq)
 
         if len(subqueries) == 1:
-            stmt = subqueries[0].order_by(
-                subqueries[0].selected_columns.similarity.desc()
-            ).limit(top_k)
-        else:
-            union_stmt = union_all(*subqueries).subquery()
             stmt = (
-                select(union_stmt)
-                .order_by(union_stmt.c.similarity.desc())
+                subqueries[0]
+                .order_by(subqueries[0].selected_columns.similarity.desc())
                 .limit(top_k)
             )
+        else:
+            union_stmt = union_all(*subqueries).subquery()
+            stmt = select(union_stmt).order_by(union_stmt.c.similarity.desc()).limit(top_k)
 
         result = await self._session.execute(stmt)
         rows = result.all()
@@ -339,6 +338,7 @@ class KnowledgeBaseRepository:
         # The RetrievalService only uses .content and .strip() on the chunk.
         class _ChunkProxy:
             """Minimal proxy for chunk results from UNION queries."""
+
             __slots__ = ("id", "document_id", "chunk_index", "content", "token_count", "created_at")
 
             def __init__(self, row: tuple) -> None:
@@ -349,7 +349,4 @@ class KnowledgeBaseRepository:
                 self.token_count = row.token_count
                 self.created_at = row.chunk_created_at
 
-        return [
-            (_ChunkProxy(row), row.display_name, float(row.similarity))
-            for row in rows
-        ]
+        return [(_ChunkProxy(row), row.display_name, float(row.similarity)) for row in rows]

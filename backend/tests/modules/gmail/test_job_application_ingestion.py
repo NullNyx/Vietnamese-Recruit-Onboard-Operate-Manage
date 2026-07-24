@@ -594,9 +594,7 @@ class TestIssue185ApplicantIdentity:
         )
         repo = MagicMock(spec=JobApplicationRepository)
         repo.get_by_gmail_message_id = AsyncMock(return_value=None)
-        repo.list_by_gmail_thread_id = AsyncMock(
-            return_value=[existing, second_split_application]
-        )
+        repo.list_by_gmail_thread_id = AsyncMock(return_value=[existing, second_split_application])
         repo.update = AsyncMock(side_effect=lambda application: application)
         repo.create = AsyncMock()
         service = JobApplicationService(session=session, job_application_repo=repo)

@@ -295,6 +295,7 @@ class TestHandleCallback:
             with pytest.raises(GmailConnectFailedException):
                 await connection_service.handle_callback(user_id, "auth_code")
 
+
 class TestDisconnect:
     """Tests for ConnectionService.disconnect."""
 

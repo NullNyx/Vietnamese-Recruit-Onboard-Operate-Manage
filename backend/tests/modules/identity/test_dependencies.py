@@ -10,7 +10,6 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
 
 from src.modules.identity.api.dependencies import get_current_user
 from src.modules.identity.api.schemas import TokenPayload

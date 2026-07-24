@@ -1,7 +1,7 @@
 """Unit tests for OutboundEmailService."""
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, PropertyMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import httpx
@@ -52,7 +52,9 @@ def gmail_adapter() -> AsyncMock:
 def crypto() -> MagicMock:
     mock = MagicMock()
     mock.encrypt.side_effect = lambda x: f"enc_{x}"
-    mock.decrypt.side_effect = lambda x: x.replace("enc_", "") if isinstance(x, str) and x.startswith("enc_") else x
+    mock.decrypt.side_effect = lambda x: (
+        x.replace("enc_", "") if isinstance(x, str) and x.startswith("enc_") else x
+    )
     return mock
 
 
@@ -182,12 +184,18 @@ def test_make_idempotency_key_deterministic() -> None:
 
     # Same everything
     cid = uuid4()
-    key3 = _make_idempotency_key(candidate_id=cid, recipient_email="a@b.com", subject="Hello", body_hash="abc")
-    key4 = _make_idempotency_key(candidate_id=cid, recipient_email="a@b.com", subject="Hello", body_hash="abc")
+    key3 = _make_idempotency_key(
+        candidate_id=cid, recipient_email="a@b.com", subject="Hello", body_hash="abc"
+    )
+    key4 = _make_idempotency_key(
+        candidate_id=cid, recipient_email="a@b.com", subject="Hello", body_hash="abc"
+    )
     assert key3 == key4
 
     # Different body hash
-    key5 = _make_idempotency_key(candidate_id=cid, recipient_email="a@b.com", subject="Hello", body_hash="xyz")
+    key5 = _make_idempotency_key(
+        candidate_id=cid, recipient_email="a@b.com", subject="Hello", body_hash="xyz"
+    )
     assert key3 != key5
 
 
@@ -319,6 +327,7 @@ async def test_send_outbound_success(
     service._connection_repo.get_singleton.return_value = _make_connection()
 
     sent_info = SentMessageInfo(message_id="msg_123", thread_id="thread_456")
+
     # Make adapter return a sent result
     async def fake_send(token, mime):
         return sent_info
@@ -411,6 +420,7 @@ async def test_retry_outbound_success(
     service._connection_repo.get_singleton.return_value = _make_connection()
 
     sent_info = SentMessageInfo(message_id="msg_789", thread_id="thread_789")
+
     async def fake_send(token, mime):
         return sent_info
 

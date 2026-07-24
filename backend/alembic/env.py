@@ -41,15 +41,14 @@ from src.modules.gmail.domain.entities import (  # noqa: E402, F401
     OutboundEmail,
     SyncCursor,
 )
-
-from src.modules.knowledge_base.domain.entities import (  # noqa: E402, F401
-    KnowledgeBaseChunk,
-    KnowledgeBaseDocument,
-)
 from src.modules.identity.domain.entities import (  # noqa: E402, F401
     OAuthGrant,
     RefreshToken,
     User,
+)
+from src.modules.knowledge_base.domain.entities import (  # noqa: E402, F401
+    KnowledgeBaseChunk,
+    KnowledgeBaseDocument,
 )
 from src.modules.onboarding.domain.entities import (  # noqa: E402, F401
     OnboardingAuditLog,
@@ -65,9 +64,9 @@ from src.modules.recruitment.domain.entities import (  # noqa: E402, F401
     Interview,
     InterviewParticipant,
     JobApplication,
-    RecruitmentInboxItem,
     OrganizationSettings,
     RecruitmentAuditLog,
+    RecruitmentInboxItem,
 )
 
 target_metadata = SQLModel.metadata

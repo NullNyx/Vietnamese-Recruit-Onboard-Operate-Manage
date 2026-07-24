@@ -9,17 +9,18 @@ Adds the two core tables for the Knowledge Base RAG feature (Issue #256, #258):
 - hr_knowledge_base_chunks: chunked text with pgvector embeddings.
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from pgvector.sqlalchemy import Vector
 
+from alembic import op
+
 # revision identifiers, used by Alembic.
 revision: str = "078"
-down_revision: Union[str, None] = "077"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "077"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

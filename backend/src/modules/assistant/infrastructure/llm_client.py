@@ -12,10 +12,10 @@ Features:
 
 from __future__ import annotations
 
-import json
 import logging
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import Any, AsyncGenerator
+from typing import Any
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI
 
@@ -247,5 +247,3 @@ class AssistantLLMClient:
             "completion_tokens": getattr(usage, "completion_tokens", 0) or 0,
             "total_tokens": getattr(usage, "total_tokens", 0) or 0,
         }
-
-

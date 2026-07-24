@@ -204,7 +204,7 @@ async def seed_attendance() -> None:
         await session.commit()
 
         print(f"✅ Seeded {total_records} attendance records for {MONTH}/{YEAR}")
-        print(f"   📊 Distribution:")
+        print("   📊 Distribution:")
         print(f"      Present:     {status_counts['present']}")
         print(f"      Late:        {status_counts['late']}")
         print(f"      Absent:      {status_counts['absent']}")

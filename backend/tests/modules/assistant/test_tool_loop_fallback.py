@@ -164,7 +164,6 @@ class TestToolLoopFallback:
         assert last_msg.content == "Found 5 candidates."
         assert last_msg.content != _TOOL_LOOP_FALLBACK
 
-
     class TestBuildMessagesDefense:
         """Verify _build_messages strips tool messages and client tool_calls."""
 
@@ -200,7 +199,9 @@ class TestToolLoopFallback:
             assert "tool_calls" not in assistant_msg
 
         @pytest.mark.asyncio
-        async def test_strips_assistant_messages_without_content(self, service: AssistantService) -> None:
+        async def test_strips_assistant_messages_without_content(
+            self, service: AssistantService
+        ) -> None:
             """Assistant history placeholders from prior tool calls are stripped."""
             messages = [
                 ChatMessage(role="user", content="hello"),

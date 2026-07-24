@@ -5,12 +5,12 @@ EmployeeError exceptions and return consistent JSON error responses.
 """
 
 from __future__ import annotations
-from src.shared.messages import get_message, get_request_language
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from src.modules.employee.domain.exceptions import EmployeeError
+from src.shared.messages import get_message, get_request_language
 
 
 def register_employee_error_handlers(app: FastAPI) -> None:

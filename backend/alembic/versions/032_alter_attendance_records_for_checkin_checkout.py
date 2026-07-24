@@ -11,6 +11,7 @@ Create Date: 2026-06-09
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "032"
@@ -32,9 +33,7 @@ def upgrade() -> None:
         sa.Column("check_out_ip", sa.String(length=45), nullable=True),
         sa.Column("check_in_user_agent", sa.String(length=512), nullable=True),
         sa.Column("check_out_user_agent", sa.String(length=512), nullable=True),
-        sa.Column(
-            "source", sa.String(length=20), nullable=False, server_default="web"
-        ),
+        sa.Column("source", sa.String(length=20), nullable=False, server_default="web"),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -49,9 +48,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["employee_id"], ["employees.id"]),
-        sa.UniqueConstraint(
-            "employee_id", "work_date", name="uq_attendance_employee_date"
-        ),
+        sa.UniqueConstraint("employee_id", "work_date", name="uq_attendance_employee_date"),
     )
 
     op.create_index(
@@ -68,10 +65,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Drop attendance_records table."""
-    op.drop_index(
-        "ix_attendance_records_work_date", table_name="attendance_records"
-    )
-    op.drop_index(
-        "ix_attendance_records_employee_id", table_name="attendance_records"
-    )
+    op.drop_index("ix_attendance_records_work_date", table_name="attendance_records")
+    op.drop_index("ix_attendance_records_employee_id", table_name="attendance_records")
     op.drop_table("attendance_records")

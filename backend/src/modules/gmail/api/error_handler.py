@@ -5,12 +5,12 @@ GmailError exceptions and return consistent JSON error responses.
 """
 
 from __future__ import annotations
-from src.shared.messages import get_message, get_request_language
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from src.modules.gmail.domain.exceptions import GmailError, RateLimitedException
+from src.shared.messages import get_message, get_request_language
 
 
 def register_gmail_error_handlers(app: FastAPI) -> None:

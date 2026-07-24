@@ -28,12 +28,14 @@ from src.modules.knowledge_base.infrastructure.repository import (
 logger = logging.getLogger(__name__)
 
 # Allowed MIME types for upload
-ALLOWED_MIME_TYPES = frozenset({
-    "application/pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/msword",
-    "text/plain",
-})
+ALLOWED_MIME_TYPES = frozenset(
+    {
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/msword",
+        "text/plain",
+    }
+)
 
 # Max file size (20 MB default)
 MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
@@ -66,21 +68,17 @@ class DocumentService:
         """Validate MIME type and file size. Raises ValueError on failure."""
         if mime_type not in ALLOWED_MIME_TYPES:
             raise ValueError(
-                f"Loại file không được hỗ trợ: {mime_type}. "
-                f"Chỉ chấp nhận PDF, DOCX, DOC, TXT."
+                f"Loại file không được hỗ trợ: {mime_type}. Chỉ chấp nhận PDF, DOCX, DOC, TXT."
             )
         if file_size > max_size:
-            raise ValueError(
-                f"File vượt quá kích thước tối đa {max_size // (1024 * 1024)}MB."
-            )
+            raise ValueError(f"File vượt quá kích thước tối đa {max_size // (1024 * 1024)}MB.")
 
     @staticmethod
     def _validate_kb_type(kb_type: str) -> None:
         """Validate kb_type. Raises ValueError on failure."""
         if kb_type not in ("hr", "employee"):
             raise ValueError(
-                f"Loại knowledge base không hợp lệ: {kb_type}. "
-                f"Chỉ chấp nhận hr hoặc employee."
+                f"Loại knowledge base không hợp lệ: {kb_type}. Chỉ chấp nhận hr hoặc employee."
             )
 
     # ------------------------------------------------------------------

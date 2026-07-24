@@ -6,18 +6,14 @@ without requiring live MinIO, Redis, or embedding service.
 
 from __future__ import annotations
 
-import uuid
-from io import BytesIO
-
 import pytest
 
 from src.modules.knowledge_base.application.ingestion_service import (
+    _extract_text_from_pdf,
+    _extract_text_from_txt,
     chunk_text,
     estimate_token_count,
     extract_text,
-    _extract_text_from_pdf,
-    _extract_text_from_docx,
-    _extract_text_from_txt,
 )
 
 

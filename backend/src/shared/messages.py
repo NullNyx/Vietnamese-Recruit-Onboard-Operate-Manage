@@ -829,8 +829,6 @@ MESSAGES: dict[str, dict[str, str]] = {
 }
 
 
-
-
 def get_request_language(request: Request) -> str:
     """Extract language preference from the Accept-Language header.
 
@@ -845,6 +843,7 @@ def get_request_language(request: Request) -> str:
     if accept_lang and accept_lang.strip().lower().startswith("en"):
         return "en"
     return "vi"
+
 
 def get_message(code: str, lang: str = "vi") -> str:
     """Get a user-facing message by its error code.

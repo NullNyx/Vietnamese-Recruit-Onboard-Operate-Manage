@@ -186,7 +186,6 @@ class WhitelistManager:
                 },
             )
 
-
         # Create and persist the entry
         entry = WhitelistEntry(
             value=stripped.lower(),

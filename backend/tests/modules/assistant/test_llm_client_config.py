@@ -31,6 +31,8 @@ def test_llm_client_forwards_timeout_and_retry_policy(monkeypatch) -> None:
 
     assert constructed["timeout"] == 5
     assert constructed["max_retries"] == 0
+
+
 @pytest.mark.asyncio
 async def test_llm_client_parses_data_wrapped_provider_response() -> None:
     """OpenAI-compatible gateways may wrap choices under response.data."""

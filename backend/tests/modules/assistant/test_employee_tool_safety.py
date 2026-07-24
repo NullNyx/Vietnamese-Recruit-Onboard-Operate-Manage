@@ -6,7 +6,6 @@ All 9 employee tools in EmployeeToolRegistry are covered.
 
 from __future__ import annotations
 
-import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

@@ -14,9 +14,8 @@ import asyncio
 import random
 import sys
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 # Add backend/src to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -216,7 +215,7 @@ async def seed_leave() -> None:
         await session.commit()
 
         print(f"✅ Created {request_count} sample leave requests")
-        print(f"   📊 Status distribution:")
+        print("   📊 Status distribution:")
         from collections import Counter
 
         status_dist = Counter(statuses)

@@ -7,9 +7,11 @@ with a composite (organization_singleton_key, calendar_id) unique constraint.
 Revision ID: 073
 Revises: 072
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "073"
@@ -27,9 +29,7 @@ def upgrade() -> None:
 
     # 2. Backfill existing rows with "primary" so the new NOT NULL constraint
     #    is satisfied for any cursors created before this migration.
-    op.execute(
-        "UPDATE calendar_sync_cursors SET calendar_id = 'primary' WHERE calendar_id IS NULL"
-    )
+    op.execute("UPDATE calendar_sync_cursors SET calendar_id = 'primary' WHERE calendar_id IS NULL")
 
     # 3. Now make it NOT NULL and add an index.
     op.alter_column(

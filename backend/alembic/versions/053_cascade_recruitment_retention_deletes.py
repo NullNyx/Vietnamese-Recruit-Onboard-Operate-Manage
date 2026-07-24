@@ -25,7 +25,9 @@ def upgrade() -> None:
         ["id"],
         ondelete="CASCADE",
     )
-    op.drop_constraint("interview_participants_interview_id_fkey", "interview_participants", type_="foreignkey")
+    op.drop_constraint(
+        "interview_participants_interview_id_fkey", "interview_participants", type_="foreignkey"
+    )
     op.create_foreign_key(
         "interview_participants_interview_id_fkey",
         "interview_participants",
@@ -34,7 +36,9 @@ def upgrade() -> None:
         ["id"],
         ondelete="CASCADE",
     )
-    op.drop_constraint("calendar_conflicts_candidate_id_fkey", "calendar_conflicts", type_="foreignkey")
+    op.drop_constraint(
+        "calendar_conflicts_candidate_id_fkey", "calendar_conflicts", type_="foreignkey"
+    )
     op.create_foreign_key(
         "calendar_conflicts_candidate_id_fkey",
         "calendar_conflicts",
@@ -46,9 +50,27 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint("calendar_conflicts_candidate_id_fkey", "calendar_conflicts", type_="foreignkey")
-    op.create_foreign_key("calendar_conflicts_candidate_id_fkey", "calendar_conflicts", "candidates", ["candidate_id"], ["id"])
-    op.drop_constraint("interview_participants_interview_id_fkey", "interview_participants", type_="foreignkey")
-    op.create_foreign_key("interview_participants_interview_id_fkey", "interview_participants", "interviews", ["interview_id"], ["id"])
+    op.drop_constraint(
+        "calendar_conflicts_candidate_id_fkey", "calendar_conflicts", type_="foreignkey"
+    )
+    op.create_foreign_key(
+        "calendar_conflicts_candidate_id_fkey",
+        "calendar_conflicts",
+        "candidates",
+        ["candidate_id"],
+        ["id"],
+    )
+    op.drop_constraint(
+        "interview_participants_interview_id_fkey", "interview_participants", type_="foreignkey"
+    )
+    op.create_foreign_key(
+        "interview_participants_interview_id_fkey",
+        "interview_participants",
+        "interviews",
+        ["interview_id"],
+        ["id"],
+    )
     op.drop_constraint("interviews_candidate_id_fkey", "interviews", type_="foreignkey")
-    op.create_foreign_key("interviews_candidate_id_fkey", "interviews", "candidates", ["candidate_id"], ["id"])
+    op.create_foreign_key(
+        "interviews_candidate_id_fkey", "interviews", "candidates", ["candidate_id"], ["id"]
+    )

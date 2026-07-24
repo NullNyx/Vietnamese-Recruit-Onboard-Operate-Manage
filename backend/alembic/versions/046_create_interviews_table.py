@@ -6,17 +6,18 @@ Create Date: 2026-07-11 00:00:00.000000+00:00
 """
 
 import uuid
-from datetime import datetime, timedelta, UTC
-from typing import Sequence, Union
+from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "046"
-down_revision: Union[str, None] = "045"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "045"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -32,8 +33,18 @@ def upgrade() -> None:
         sa.Column("timezone", sa.String(length=64), nullable=False),
         sa.Column("calendar_event_id", sa.String(length=1024), nullable=True),
         sa.Column("needs_relink", sa.Boolean(), nullable=False, server_default=sa.text("false")),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["candidate_id"], ["candidates.id"]),
     )
@@ -49,12 +60,19 @@ def upgrade() -> None:
         sa.Column("email", sa.String(length=255), nullable=False),
         sa.Column("name", sa.String(length=255), nullable=True),
         sa.Column("employee_id", sa.Uuid(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["interview_id"], ["interviews.id"]),
         sa.ForeignKeyConstraint(["employee_id"], ["employees.id"]),
     )
-    op.create_index("ix_interview_participants_interview_id", "interview_participants", ["interview_id"])
+    op.create_index(
+        "ix_interview_participants_interview_id", "interview_participants", ["interview_id"]
+    )
 
     # 3. Backfill existing candidates with calendar data
     bind = op.get_bind()
@@ -71,10 +89,10 @@ def upgrade() -> None:
             start_at = datetime.now(UTC)
         if not timezone:
             timezone = "Asia/Ho_Chi_Minh"
-        
+
         interview_id = uuid.uuid4()
         end_at = start_at + timedelta(hours=1)
-        
+
         bind.execute(
             sa.text(
                 "INSERT INTO interviews (id, candidate_id, status, round_name, start_at, end_at, timezone, calendar_event_id, needs_relink) "
@@ -90,9 +108,9 @@ def upgrade() -> None:
                 "timezone": timezone,
                 "calendar_event_id": event_id,
                 "needs_relink": False,
-            }
+            },
         )
-        
+
         bind.execute(
             sa.text(
                 "INSERT INTO interview_participants (id, interview_id, type, email, name, employee_id) "
@@ -105,7 +123,7 @@ def upgrade() -> None:
                 "email": email or "",
                 "name": name,
                 "employee_id": None,
-            }
+            },
         )
 
 

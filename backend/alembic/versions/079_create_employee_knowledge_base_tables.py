@@ -11,17 +11,18 @@ Adds the two Employee Knowledge Base tables (Issue #260, KB-04):
 Schema is identical to HR KB tables (078) for physical security isolation.
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from pgvector.sqlalchemy import Vector
 
+from alembic import op
+
 # revision identifiers, used by Alembic.
 revision: str = "079"
-down_revision: Union[str, None] = "078"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "078"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -88,7 +89,9 @@ def upgrade() -> None:
     # Index for fast document lookups and status-based queries
     op.create_index("ix_emp_kb_documents_status", "employee_knowledge_base_documents", ["status"])
     op.create_index("ix_emp_kb_documents_kb_type", "employee_knowledge_base_documents", ["kb_type"])
-    op.create_index("ix_emp_kb_chunks_document_id", "employee_knowledge_base_chunks", ["document_id"])
+    op.create_index(
+        "ix_emp_kb_chunks_document_id", "employee_knowledge_base_chunks", ["document_id"]
+    )
 
 
 def downgrade() -> None:

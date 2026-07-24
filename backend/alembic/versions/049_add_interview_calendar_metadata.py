@@ -6,16 +6,17 @@ Revises: 048
 Create Date: 2026-07-11 16:00:00.000000+00:00
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "049"
-down_revision: Union[str, None] = "048"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "048"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -30,7 +31,9 @@ def upgrade() -> None:
     )
     op.add_column(
         "interviews",
-        sa.Column("meeting_mode", sa.String(length=20), nullable=False, server_default="google_meet"),
+        sa.Column(
+            "meeting_mode", sa.String(length=20), nullable=False, server_default="google_meet"
+        ),
     )
     op.add_column(
         "interviews",

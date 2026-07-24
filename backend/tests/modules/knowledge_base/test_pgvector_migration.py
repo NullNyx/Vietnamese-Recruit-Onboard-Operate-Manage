@@ -18,7 +18,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, text
 
 # testcontainers / docker are integration-only dependencies. Skip the whole
 # module cleanly if either the library or a running Docker daemon is absent.
@@ -96,9 +96,7 @@ def test_vector_extension_is_enabled(migrated_engine: object) -> None:
     Verifies the ``vector`` extension appears in ``pg_extension``.
     """
     with migrated_engine.connect() as conn:  # type: ignore[attr-defined]
-        result = conn.execute(
-            text("SELECT extname FROM pg_extension WHERE extname = 'vector'")
-        )
+        result = conn.execute(text("SELECT extname FROM pg_extension WHERE extname = 'vector'"))
         row = result.fetchone()
         assert row is not None, (
             "pgvector extension 'vector' is not enabled in PostgreSQL. "
@@ -125,9 +123,7 @@ def test_can_create_table_with_vector_768_column(migrated_engine: object) -> Non
             {"vec": zeros},
         )
         # Query it back
-        result = conn.execute(
-            text("SELECT embedding FROM _test_vector_table WHERE id = 1")
-        )
+        result = conn.execute(text("SELECT embedding FROM _test_vector_table WHERE id = 1"))
         row = result.fetchone()
         assert row is not None
         # Drop the test table

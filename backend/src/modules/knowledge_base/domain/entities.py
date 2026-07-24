@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from typing import Optional
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Text
-from sqlalchemy.orm import mapped_column
+from sqlalchemy import BigInteger, Column, DateTime, Text
 from sqlmodel import Field, SQLModel
 
 
@@ -33,9 +31,9 @@ class KnowledgeBaseDocument(SQLModel, table=True):
         default="pending",
         max_length=20,
     )
-    error_message: Optional[str] = Field(default=None)
+    error_message: str | None = Field(default=None)
     chunk_count: int = Field(default=0)
-    description: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+    description: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     kb_type: str = Field(default="hr", max_length=20)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -63,7 +61,7 @@ class KnowledgeBaseChunk(SQLModel, table=True):
     )
     chunk_index: int
     content: str = Field(sa_column=Column(Text, nullable=False))
-    embedding: Optional[list[float]] = Field(
+    embedding: list[float] | None = Field(
         default=None,
         sa_column=Column(Vector(1024), nullable=True),
     )
@@ -97,9 +95,9 @@ class EmployeeKnowledgeBaseDocument(SQLModel, table=True):
         default="pending",
         max_length=20,
     )
-    error_message: Optional[str] = Field(default=None)
+    error_message: str | None = Field(default=None)
     chunk_count: int = Field(default=0)
-    description: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+    description: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     kb_type: str = Field(default="employee", max_length=20)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -127,7 +125,7 @@ class EmployeeKnowledgeBaseChunk(SQLModel, table=True):
     )
     chunk_index: int
     content: str = Field(sa_column=Column(Text, nullable=False))
-    embedding: Optional[list[float]] = Field(
+    embedding: list[float] | None = Field(
         default=None,
         sa_column=Column(Vector(1024), nullable=True),
     )

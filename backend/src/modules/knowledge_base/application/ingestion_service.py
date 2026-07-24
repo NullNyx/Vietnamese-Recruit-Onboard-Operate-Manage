@@ -38,9 +38,7 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
     try:
         doc = fitz.open(stream=file_bytes, filetype="pdf")
     except fitz.FileDataError as exc:
-        raise ValueError(
-            f"File PDF bị hỏng hoặc không hợp lệ: {exc}"
-        ) from exc
+        raise ValueError(f"File PDF bị hỏng hoặc không hợp lệ: {exc}") from exc
 
     pages: list[str] = []
     try:
@@ -162,7 +160,7 @@ def chunk_text(
             if sentence_len > chunk_size_chars:
                 # Character-based splitting for very long sentences
                 for i in range(0, sentence_len, step):
-                    sub = sentence[i:i + chunk_size_chars].strip()
+                    sub = sentence[i : i + chunk_size_chars].strip()
                     if sub:
                         chunks.append(sub)
                 current_chunk = ""
@@ -263,7 +261,9 @@ class IngestionService:
         try:
             # Step 1: Mark as processing
             await self._repo.update_document_status(
-                document_id, "processing", kb_type=kb_type,
+                document_id,
+                "processing",
+                kb_type=kb_type,
             )
 
             # Step 2: Download file from MinIO

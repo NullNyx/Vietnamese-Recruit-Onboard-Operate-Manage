@@ -10,7 +10,7 @@ Verifies that:
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -22,10 +22,10 @@ from src.modules.assistant.infrastructure.quality_models import (
     FeedbackType,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_mock_session() -> MagicMock:
     """Create a mock AsyncSession that tracks adds and commits."""
@@ -45,6 +45,7 @@ def _make_mock_scalar_result(session_obj: object | None) -> MagicMock:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestFeedbackPersistence:
     """Feedback is persisted to AssistantFeedbackEvent table."""
@@ -70,6 +71,8 @@ class TestFeedbackPersistence:
 
         from src.modules.assistant.infrastructure.quality_models import (
             AssistantFeedbackEvent as AFE,
+        )
+        from src.modules.assistant.infrastructure.quality_models import (
             FeedbackType as FT,
         )
 
@@ -101,6 +104,8 @@ class TestFeedbackPersistence:
 
         from src.modules.assistant.infrastructure.quality_models import (
             AssistantFeedbackEvent as AFE,
+        )
+        from src.modules.assistant.infrastructure.quality_models import (
             FeedbackType as FT,
         )
 

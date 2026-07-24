@@ -29,7 +29,6 @@ from sqlalchemy.ext.asyncio import (
 
 from src.modules.employee.infrastructure.minio_client import MinIOClient
 from src.modules.knowledge_base.container import get_arq_tasks, get_kb_settings
-from src.modules.knowledge_base.infrastructure.config import KnowledgeBaseSettings
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +59,7 @@ async def startup(ctx: dict[str, Any]) -> None:
     redis_client = redis.from_url(  # type: ignore[no-untyped-call]
         settings.redis_url, decode_responses=True
     )
-    await redis_client.set(
-        "runtime:heartbeat:kb-worker", _time.time(), ex=600
-    )
+    await redis_client.set("runtime:heartbeat:kb-worker", _time.time(), ex=600)
     ctx["redis_client"] = redis_client
 
 
@@ -126,5 +123,3 @@ class KnowledgeBaseWorkerSettings:
             minute={1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 43, 46, 49, 52, 55, 58},
         )
     ]
-
-

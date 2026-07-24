@@ -208,10 +208,7 @@ class TestContextBuilderKBIntegration:
     ) -> None:
         """HR context includes KB retrieval block when query provided."""
         mock_retrieval.retrieve.return_value = (
-            "---\n"
-            "[TÀI LIỆU NỘI BỘ LIÊN QUAN]\n"
-            '(Nội quy): "Nội dung mẫu"\n'
-            "---\n"
+            '---\n[TÀI LIỆU NỘI BỘ LIÊN QUAN]\n(Nội quy): "Nội dung mẫu"\n---\n'
         )
 
         builder = ContextBuilder(
@@ -249,9 +246,7 @@ class TestContextBuilderKBIntegration:
 
         mock_retrieval.retrieve.assert_not_called()
 
-    async def test_hr_context_no_kb_when_service_none(
-        self, mock_session: AsyncMock
-    ) -> None:
+    async def test_hr_context_no_kb_when_service_none(self, mock_session: AsyncMock) -> None:
         """HR context degrades gracefully when no retrieval service."""
         builder = ContextBuilder(
             session=mock_session,
@@ -320,10 +315,7 @@ class TestContextBuilderKBIntegration:
     ) -> None:
         """KB section appears after standard context blocks."""
         mock_retrieval.retrieve.return_value = (
-            "---\n"
-            "[TÀI LIỆU NỘI BỘ LIÊN QUAN]\n"
-            '(Doc): "Nội dung"\n'
-            "---\n"
+            '---\n[TÀI LIỆU NỘI BỘ LIÊN QUAN]\n(Doc): "Nội dung"\n---\n'
         )
 
         builder = ContextBuilder(
@@ -440,9 +432,7 @@ class TestEmployeeKBSecurityIsolation:
         ) as mock_embed:
             mock_embed.return_value = [[0.1] * 768]
 
-            result = await service.retrieve(
-                query="Câu hỏi nhân viên", kb_types=["employee"]
-            )
+            result = await service.retrieve(query="Câu hỏi nhân viên", kb_types=["employee"])
 
         # The service should return results (employee table queries work)
         assert result != ""

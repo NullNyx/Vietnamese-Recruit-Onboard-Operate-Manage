@@ -18,9 +18,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
-import io
-import os
-import random
 import sys
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -31,22 +28,19 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 # Reuse the CV generators from seed_gmail
 from scripts.seed_gmail import (
     _ALL_GENERATORS,
-    _CANDIDATE_PROFILES,
-    _generate_cv_pdf,
-    _build_mime,
 )
-
 from src.modules.gmail.domain.entities import EmailMessage
+from src.modules.identity.infrastructure.config import AuthSettings
 from src.modules.recruitment.domain.entities import CVDocument
 from src.modules.recruitment.domain.enums import ProcessingStatus
 from src.modules.recruitment.infrastructure.config import RecruitmentSettings
 from src.modules.recruitment.infrastructure.minio_client import RecruitmentMinIOClient
-from src.modules.identity.infrastructure.config import AuthSettings
 
 
 async def _get_first_user_id(session: AsyncSession) -> UUID:
     """Get the first user's UUID from the database."""
     from src.modules.identity.domain.entities import User
+
     result = await session.execute(select(User).limit(1))
     user = result.scalar_one_or_none()
     if user is None:
@@ -56,9 +50,9 @@ async def _get_first_user_id(session: AsyncSession) -> UUID:
 
 def _extract_mime_info(mime_bytes: bytes) -> dict:
     """Extract key fields from a MIME message bytes."""
+    import email
     from email.parser import BytesParser
     from email.policy import default as default_policy
-    import email
 
     msg = BytesParser(policy=default_policy).parsebytes(mime_bytes)
 
@@ -101,12 +95,15 @@ def _extract_mime_info(mime_bytes: bytes) -> dict:
 
 async def main() -> None:
     parser = argparse.ArgumentParser(description="Seed DB with test HR emails")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Print what would be inserted without writing to DB")
-    parser.add_argument("--categories", type=str, nargs="*",
-                        help="Specific categories (default: all)")
-    parser.add_argument("--skip-minio", action="store_true",
-                        help="Skip MinIO CV uploads (CV PDFs not stored)")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print what would be inserted without writing to DB"
+    )
+    parser.add_argument(
+        "--categories", type=str, nargs="*", help="Specific categories (default: all)"
+    )
+    parser.add_argument(
+        "--skip-minio", action="store_true", help="Skip MinIO CV uploads (CV PDFs not stored)"
+    )
     args = parser.parse_args()
 
     selected = set(args.categories) if args.categories else set(_ALL_GENERATORS)
@@ -176,10 +173,14 @@ async def main() -> None:
                     # Extract CV attachment data from MIME
                     from email.parser import BytesParser
                     from email.policy import default as default_policy
+
                     msg = BytesParser(policy=default_policy).parsebytes(mime_bytes)
                     for part in msg.walk():
                         disp = part.get_content_disposition() or ""
-                        if disp.startswith("attachment") and part.get_content_type() == "application/pdf":
+                        if (
+                            disp.startswith("attachment")
+                            and part.get_content_type() == "application/pdf"
+                        ):
                             cv_bytes = part.get_payload(decode=True)
                             if cv_bytes:
                                 filename = part.get_filename() or "CV.pdf"
@@ -210,7 +211,9 @@ async def main() -> None:
                                 break
 
                 await session.commit()
-                print(f"[{i:3d}/{len(all_emails)}] ✓ {cat:20s} | {info['sender_email']:40s} | {info['subject'][:50]}")
+                print(
+                    f"[{i:3d}/{len(all_emails)}] ✓ {cat:20s} | {info['sender_email']:40s} | {info['subject'][:50]}"
+                )
                 inserted += 1
 
             except Exception as exc:

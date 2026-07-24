@@ -6,6 +6,7 @@ tool call latency/outcome events for the AI Assistant quality dashboard.
 Revision ID: 075
 Revises: 074
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -28,13 +29,9 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False, index=True),
         sa.Column("assistant_type", sa.String(length=10), nullable=False),
-        sa.Column(
-            "employee_id", sa.Uuid(), nullable=True, index=True
-        ),
+        sa.Column("employee_id", sa.Uuid(), nullable=True, index=True),
         sa.Column("start_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column(
-            "end_at", sa.DateTime(timezone=True), nullable=True
-        ),
+        sa.Column("end_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("message_count", sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.Column("last_error", sa.Text(), nullable=True),
         sa.ForeignKeyConstraint(
@@ -50,9 +47,7 @@ def upgrade() -> None:
     op.create_table(
         "assistant_feedback_events",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "session_id", sa.Uuid(), nullable=False, index=True
-        ),
+        sa.Column("session_id", sa.Uuid(), nullable=False, index=True),
         sa.Column("message_index", sa.Integer(), nullable=False),
         sa.Column("feedback_type", sa.String(length=4), nullable=False),
         sa.Column("optional_text", sa.Text(), nullable=True),
@@ -70,9 +65,7 @@ def upgrade() -> None:
     op.create_table(
         "assistant_tool_call_events",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "session_id", sa.Uuid(), nullable=False, index=True
-        ),
+        sa.Column("session_id", sa.Uuid(), nullable=False, index=True),
         sa.Column("tool_name", sa.String(length=255), nullable=False),
         sa.Column("arguments_hash", sa.String(length=64), nullable=True),
         sa.Column("success", sa.Boolean(), nullable=False),

@@ -264,7 +264,6 @@ class AssistantService:
             len(all_new_messages),
         )
 
-
         return ChatResponse(
             messages=all_new_messages,
             draft_action=draft_action,
@@ -296,7 +295,6 @@ class AssistantService:
         Yields:
             Dicts with ``event`` and ``data`` keys for SSE serialisation.
         """
-        from src.modules.assistant.infrastructure.llm_client import LLMStreamChunk
 
         openai_messages = await self._build_messages(messages, enabled_tool_names)
 
@@ -411,13 +409,9 @@ class AssistantService:
                 }
 
         # Fallback when loop exhausts without a text response
-        has_text_response = any(
-            m.role == "assistant" and m.content for m in all_new_messages
-        )
+        has_text_response = any(m.role == "assistant" and m.content for m in all_new_messages)
         if not has_text_response:
-            all_new_messages.append(
-                ChatMessage(role="assistant", content=_TOOL_LOOP_FALLBACK)
-            )
+            all_new_messages.append(ChatMessage(role="assistant", content=_TOOL_LOOP_FALLBACK))
             yield {"event": "text_delta", "data": {"content": _TOOL_LOOP_FALLBACK}}
 
         # Increment message_count

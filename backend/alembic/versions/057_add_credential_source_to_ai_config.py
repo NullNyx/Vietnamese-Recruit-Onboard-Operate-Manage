@@ -4,9 +4,10 @@ Revision ID: 057
 Revises: 056
 """
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "057"

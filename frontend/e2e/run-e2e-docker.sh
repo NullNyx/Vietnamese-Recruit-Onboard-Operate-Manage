@@ -65,21 +65,24 @@ echo "============================================"
 echo "[run-e2e] Step 1 -- Seed DB"
 echo "  setup_complete=${SETUP_COMPLETE}"
 echo "============================================"
-cd "${BACKEND_DIR}"
+
 if [ "${SETUP_COMPLETE}" = "true" ]; then
-  ${SEED_SCRIPT} --setup-complete
-
-
-  # Also populate full demo data via seed_all.py (async)
-  echo "[run-e2e] Running seed_all.py for demo data..."
+  # Step order: seed_all.py creates comprehensive demo data,
+  # then seed_e2e.py overrides admin credentials for E2E tests.
   cd "${BACKEND_DIR}"
-  uv run python scripts/seed_all.py 2>&1 | head -15
-  cd "${FRONTEND_DIR}"
+  echo "[run-e2e] Running seed_all.py (comprehensive demo data)..."
+  uv run python scripts/seed_all.py 2>&1 | tail -5
   echo "[run-e2e] seed_all.py done."
+
+  echo "[run-e2e] Overriding admin credentials for E2E tests..."
+  ${SEED_SCRIPT} --setup-complete
+  echo "[run-e2e] Admin override done."
+  cd "${FRONTEND_DIR}"
 else
+  cd "${BACKEND_DIR}"
   ${SEED_SCRIPT}
+  cd "${FRONTEND_DIR}"
 fi
-cd "${FRONTEND_DIR}"
 
 echo ""
 
@@ -90,7 +93,6 @@ echo "============================================"
 echo "[run-e2e] Step 2 -- Start proxy on :${PROXY_PORT}"
 echo "============================================"
 
-# Kill any stale proxy on our port
 if command -v fuser >/dev/null 2>&1; then
   fuser -k "${PROXY_PORT}/tcp" 2>/dev/null || true
 fi
@@ -101,7 +103,6 @@ PROXY_PORT="${PROXY_PORT}" \
   node e2e/proxy.mjs &
 PROXY_PID=$!
 
-# Wait for proxy health
 echo "[run-e2e] Waiting for proxy health on :${PROXY_PORT} ..."
 for i in $(seq 1 30); do
   if curl -sf "http://localhost:${PROXY_PORT}/api/auth/setup-status" >/dev/null 2>&1; then

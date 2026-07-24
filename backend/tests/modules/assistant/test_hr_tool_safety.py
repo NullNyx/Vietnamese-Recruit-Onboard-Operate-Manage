@@ -6,14 +6,12 @@ All 8 handler-wired tools in ToolRegistry are covered.
 
 from __future__ import annotations
 
-import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.modules.assistant.application.tool_registry import ToolRegistry
 from tests.modules.assistant.test_base_safety import BaseToolSafetyTest
-
 
 # =========================================================================
 # Read-Tools — no entity lookup
@@ -151,6 +149,7 @@ class TestListInProgressOnboardingSafety(BaseToolSafetyTest):
         # Should still work because extra params are ignored
         assert "error" not in result
         assert result["processes"] == []
+
 
 class TestSearchCandidatesSafety(BaseToolSafetyTest):
     """Safety tests for search_candidates (Read-Tool)."""
@@ -398,7 +397,9 @@ class TestGetOnboardingTaskDetailsSafety(BaseToolSafetyTest):
 
         registry._onboarding_service.get_process = AsyncMock(return_value=mock_detail)
 
-        result = await self.execute_tool(registry, {"onboarding_process_id": self._VALID_PROCESS_ID})
+        result = await self.execute_tool(
+            registry, {"onboarding_process_id": self._VALID_PROCESS_ID}
+        )
         assert "error" not in result
         assert result["process_id"] == self._VALID_PROCESS_ID
 
@@ -412,7 +413,9 @@ class TestGetOnboardingTaskDetailsSafety(BaseToolSafetyTest):
         registry._onboarding_service.get_process = AsyncMock(
             side_effect=Exception("Process not found")
         )
-        result = await self.execute_tool(registry, {"onboarding_process_id": self._MISSING_PROCESS_ID})
+        result = await self.execute_tool(
+            registry, {"onboarding_process_id": self._MISSING_PROCESS_ID}
+        )
         self.assert_error(result)
 
     @pytest.mark.asyncio
@@ -464,7 +467,9 @@ class _BaseDraftToolSafety(BaseToolSafetyTest):
         registry._candidate_service.get_candidate = AsyncMock(
             side_effect=Exception("Candidate not found")
         )
-        result = await self.execute_tool(registry, {self.ENTITY_ID_PARAM: self._MISSING_CANDIDATE_ID})
+        result = await self.execute_tool(
+            registry, {self.ENTITY_ID_PARAM: self._MISSING_CANDIDATE_ID}
+        )
         self.assert_error(result)
 
     @pytest.mark.asyncio

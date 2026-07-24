@@ -7,14 +7,12 @@ Requires admin role for all endpoints.
 
 from __future__ import annotations
 
-from typing import Annotated, Optional
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.identity.api.admin_router import require_admin
-from src.modules.identity.container import get_db_session
 from src.modules.identity.domain.entities import User
 from src.modules.knowledge_base.api.schemas import (
     DocumentDetailResponse,
@@ -102,8 +100,10 @@ async def list_documents(
     kb_type: str = Query(default="hr", description="Loại knowledge base: hr | employee"),
     page: int = Query(default=1, ge=1, description="Số trang"),
     page_size: int = Query(default=20, ge=1, le=100, description="Số bản ghi mỗi trang"),
-    category: Optional[str] = Query(default=None, description="Lọc theo danh mục"),
-    status: Optional[str] = Query(default=None, description="Lọc theo trạng thái: pending | processing | ready | error"),
+    category: str | None = Query(default=None, description="Lọc theo danh mục"),
+    status: str | None = Query(
+        default=None, description="Lọc theo trạng thái: pending | processing | ready | error"
+    ),
     _user: AdminUserDep = None,
     service: DocumentServiceDep = None,
 ) -> DocumentListResponse:

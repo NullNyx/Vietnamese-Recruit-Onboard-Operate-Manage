@@ -12,12 +12,12 @@ Requirements: 3.5, 4.4, 4.5, 4.6, 5.6, 6.5, 6.6, 8.2
 """
 
 from __future__ import annotations
-from src.shared.messages import get_message, get_request_language
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from src.modules.onboarding.domain.exceptions import OnboardingError
+from src.shared.messages import get_message, get_request_language
 
 
 def register_onboarding_error_handlers(app: FastAPI) -> None:

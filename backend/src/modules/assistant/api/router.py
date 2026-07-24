@@ -10,7 +10,6 @@ held in frontend memory; backend processes each turn statelessly.
 from __future__ import annotations
 
 import json
-import logging
 import typing
 import uuid
 from datetime import UTC, datetime
@@ -139,6 +138,7 @@ async def chat(
         messages=new_messages,
         draft_action=draft_action,
     )
+
 
 @router.post("/chat/stream")
 async def chat_stream(

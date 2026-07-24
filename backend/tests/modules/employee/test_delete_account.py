@@ -128,6 +128,5 @@ class TestDeleteEmployeeAccount:
         employee_svc.get_employee.assert_awaited_once()
         # No employee deletion was triggered
         assert (
-            not hasattr(employee_svc, "delete_employee")
-            or not employee_svc.delete_employee.called
+            not hasattr(employee_svc, "delete_employee") or not employee_svc.delete_employee.called
         )

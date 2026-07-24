@@ -7,6 +7,7 @@ Revises: 069
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "070"
@@ -26,7 +27,9 @@ def upgrade() -> None:
     )
     op.add_column(
         "organization_ai_configurations",
-        sa.Column("ai_policy_preset", sa.String(length=32), nullable=False, server_default="balanced"),
+        sa.Column(
+            "ai_policy_preset", sa.String(length=32), nullable=False, server_default="balanced"
+        ),
     )
     op.add_column(
         "organization_ai_configurations",
