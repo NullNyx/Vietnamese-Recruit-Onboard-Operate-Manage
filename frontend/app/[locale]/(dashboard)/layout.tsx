@@ -11,8 +11,10 @@ import { useRouter } from '@/i18n/navigation';
 import AppShell from '@/components/app-shell';
 import GuideWidget from '@/components/guide-widget';
 import type { NavGroup } from '@/components/app-shell';
+import { useAuthGuard } from '@/lib/auth/session';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  useAuthGuard({ requireAuth: true, requireAdmin: true });
   const router = useRouter();
   const t = useTranslations();
 
