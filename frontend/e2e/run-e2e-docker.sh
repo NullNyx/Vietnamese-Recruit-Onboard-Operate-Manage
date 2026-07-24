@@ -74,9 +74,15 @@ if [ "${SETUP_COMPLETE}" = "true" ]; then
   uv run python scripts/seed_all.py 2>&1 | tail -5
   echo "[run-e2e] seed_all.py done."
 
-  echo "[run-e2e] Overriding admin credentials for E2E tests..."
-  ${SEED_SCRIPT} --setup-complete
+  echo "[run-e2e] Updating admin credentials for E2E tests..."
+  cd "${BACKEND_DIR}"
+  python scripts/override_admin_for_e2e.py
   echo "[run-e2e] Admin override done."
+  cd "${FRONTEND_DIR}"
+conn.close();
+print("Admin updated.")
+"
+  cd "${FRONTEND_DIR}"
   cd "${FRONTEND_DIR}"
 else
   cd "${BACKEND_DIR}"
