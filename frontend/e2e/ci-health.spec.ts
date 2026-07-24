@@ -7,7 +7,8 @@ import { test, expect } from "@playwright/test";
  */
 test.describe("CI health-check", () => {
   test("backend setup-status returns JSON via proxy", async ({ page }) => {
-    const r = await page.request.get("http://localhost:3000/api/auth/setup-status");
+    const base = process.env.E2E_BASE_URL || "http://localhost:3000";
+    const r = await page.request.get(`${base}/api/auth/setup-status`);
     expect(r.status()).toBe(200);
     const body = await r.json();
     expect(typeof body.setup_complete).toBe("boolean");
