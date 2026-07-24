@@ -16,11 +16,11 @@ const AUTH_DIR = path.join(__dirname, ".auth");
 mkdirSync(AUTH_DIR, { recursive: true });
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-const HR_EMAIL = process.env.E2E_HR_EMAIL ?? "hr@vroom.com";
-const HR_PASSWORD = process.env.E2E_HR_PASSWORD ?? "VroomAdmin!2026";
+const HR_EMAIL = process.env.E2E_HR_EMAIL ?? "hr.qa@vroom.example.com";
+const HR_PASSWORD = process.env.E2E_HR_PASSWORD ?? "VroomQA!148#2026";
 
-// Given employee@vroom.com exists in seed data, we need its password.
-// If unset, we'll need to create an account or reset password.
+// Seeded admin is hr.qa@vroom.example.com / VroomQA!148#2026.
+// Override via E2E_HR_EMAIL / E2E_HR_PASSWORD env vars for custom setups.
 const GMAIL_EMAIL = "testuser@gmail.com";
 
 async function loginAs(page: Page, email: string, password: string) {

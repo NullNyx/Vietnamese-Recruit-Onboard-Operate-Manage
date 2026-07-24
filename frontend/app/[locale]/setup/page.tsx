@@ -90,10 +90,7 @@ export default function SetupPage() {
       );
       // Success — session cookie is set by BE, redirect to dashboard
       setStep(4);
-      // Redirect after a brief delay
-      setTimeout(() => {
-        router.replace('/dashboard');
-      }, 1500);
+      // User clicks the "Mở Dashboard" button below to navigate (no auto-redirect — avoids race with E2E test)
     } catch (err: unknown) {
       if (err instanceof AuthApiError) {
         // Map BE field-level errors to form fields
