@@ -18,7 +18,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -40,13 +40,22 @@ const TOPBAR = {
   menu: 'Menu',
 } as const;
 
-const ADMIN_EMAIL = 'admin@vroomhr.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'VroomAdmin!2026';
+const ADMIN_EMAIL = process.env.E2E_HR_EMAIL ?? 'hr.qa@vroom.example.com';
+const ADMIN_PASSWORD = process.env.E2E_HR_PASSWORD ?? 'VroomQA!148#2026';
 
 // Temp storage state shared across tests — first test writes, others read.
 const AUTH_DIR = join(__dirname, '.auth');
 mkdirSync(AUTH_DIR, { recursive: true });
 const ADMIN_STATE = join(AUTH_DIR, 'admin-sidebar.json');
+
+/** Strip `secure: true` from stored cookies so they work over http:// in Docker E2E. */
+function stripSecureCookieFlag(path: string): void {
+  const data = JSON.parse(readFileSync(path, 'utf-8'));
+  if (data.cookies) {
+    data.cookies = data.cookies.map((c: any) => ({ ...c, secure: false }));
+  }
+  writeFileSync(path, JSON.stringify(data, null, 2));
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -67,10 +76,6 @@ async function isActivelyStyled(btn: any): Promise<boolean> {
 
 test.describe('Sidebar Navigation UX', () => {
   test('T0 | login as admin and save storage state', async ({ page, context }) => {
-    if (existsSync(ADMIN_STATE)) {
-      // Already has state from a prior run; just verify it works
-      return;
-    }
     await page.goto('/login');
     await expect(page.locator('#login-email-input')).toBeVisible({ timeout: 15_000 });
     await page.locator('#login-email-input').fill(ADMIN_EMAIL);
@@ -80,6 +85,7 @@ test.describe('Sidebar Navigation UX', () => {
 
     // Save state for downstream tests
     await context.storageState({ path: ADMIN_STATE });
+    stripSecureCookieFlag(ADMIN_STATE);
   });
 
   // -----------------------------------------------------------------------

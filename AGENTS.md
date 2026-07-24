@@ -31,8 +31,8 @@ Services chạy qua `docker compose up -d`:
 
 | Email | Vai trò | Mật khẩu | Ghi chú |
 |---|---|---|---|
-| `admin@vroomhr.com` | admin | `VroomAdmin!2026` | Admin chính, dùng để test UI |
-| `hr@vroom.com` | admin | `VroomAdmin!2026` | HR admin (nếu reset passwd) |
+| `hr.qa@vroom.example.com` | admin (E2E) | `VroomQA!148#2026` | Admin E2E, seeded từ seed_all.py + override script |
+| `admin@vroomhr.com` | admin | `VroomAdmin!2026` | Admin dev, dùng để test UI local |
 | `employee@vroomhr.com` | user | _(chưa đặt)_ | Nhân viên test |
 
 Để reset mật khẩu trong DB:

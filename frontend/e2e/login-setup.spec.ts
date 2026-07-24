@@ -51,6 +51,7 @@ export async function loginAndSaveAdminState(
 
     // Persist the storage state (cookies + localStorage).
     await context.storageState({ path: ADMIN_STATE });
+    stripSecureCookieFlag(ADMIN_STATE);
     console.log(`[login-setup] Admin state saved to ${ADMIN_STATE}`);
     return true;
   } catch (err) {
@@ -78,5 +79,6 @@ setup("login and save storage state", { tag: "@login-setup" }, async ({ page, co
   await page.waitForTimeout(2000);
 
   await context.storageState({ path: ADMIN_STATE });
+  stripSecureCookieFlag(ADMIN_STATE);
   console.log(`[login-setup] Admin state saved to ${ADMIN_STATE}`);
 });
