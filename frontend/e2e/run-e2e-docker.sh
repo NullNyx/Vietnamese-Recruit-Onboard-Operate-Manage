@@ -27,7 +27,7 @@ PROXY_PORT=3099
 E2E_BASE_URL="http://localhost:${PROXY_PORT}"
 BACKEND_DIR="${REPO_DIR}/backend"
 SEED_SCRIPT="python scripts/seed_e2e.py"
-PLAYWRIGHT="npx playwright"
+PW_CLI="node node_modules/@playwright/test/cli.js"
 
 SETUP_COMPLETE="false"
 EXTRA_ARGS=()
@@ -36,7 +36,7 @@ EXTRA_ARGS=()
 for arg in "$@"; do
   case "$arg" in
     --skip-setup) SETUP_COMPLETE="true" ;;
-    *) EXTRA_ARGS+=("$arg") ;;
+    *) EXTRA_ARGS+=("${arg}") ;;
   esac
 done
 
@@ -47,7 +47,7 @@ PROXY_PID=""
 cleanup() {
   local exit_code=$?
   echo ""
-  echo "[run-e2e] Cleaning up \u2026"
+  echo "[run-e2e] Cleaning up ..."
   if [ -n "${PROXY_PID}" ]; then
     kill "${PROXY_PID}" 2>/dev/null || true
     wait "${PROXY_PID}" 2>/dev/null || true
@@ -59,10 +59,10 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 # ---------------------------------------------------------------------------
-# Step 1 \u2014 Seed DB
+# Step 1 -- Seed DB
 # ---------------------------------------------------------------------------
 echo "============================================"
-echo "[run-e2e] Step 1 \u2014 Seed DB"
+echo "[run-e2e] Step 1 -- Seed DB"
 echo "  setup_complete=${SETUP_COMPLETE}"
 echo "============================================"
 cd "${BACKEND_DIR}"
@@ -76,10 +76,10 @@ cd "${FRONTEND_DIR}"
 echo ""
 
 # ---------------------------------------------------------------------------
-# Step 2 \u2014 Start proxy
+# Step 2 -- Start proxy
 # ---------------------------------------------------------------------------
 echo "============================================"
-echo "[run-e2e] Step 2 \u2014 Start proxy on :${PROXY_PORT}"
+echo "[run-e2e] Step 2 -- Start proxy on :${PROXY_PORT}"
 echo "============================================"
 
 # Kill any stale proxy on our port
@@ -94,7 +94,7 @@ PROXY_PORT="${PROXY_PORT}" \
 PROXY_PID=$!
 
 # Wait for proxy health
-echo "[run-e2e] Waiting for proxy health on :${PROXY_PORT} \u2026"
+echo "[run-e2e] Waiting for proxy health on :${PROXY_PORT} ..."
 for i in $(seq 1 30); do
   if curl -sf "http://localhost:${PROXY_PORT}/api/auth/setup-status" >/dev/null 2>&1; then
     echo "[run-e2e] Proxy ready on :${PROXY_PORT}"
@@ -110,36 +110,37 @@ done
 echo ""
 
 # ---------------------------------------------------------------------------
-# Step 3 \u2014 Auth state generation (skip-setup mode only)
+# Step 3 -- Auth state generation (skip-setup mode only)
 # ---------------------------------------------------------------------------
 if [ "${SETUP_COMPLETE}" = "true" ]; then
   echo "============================================"
-  echo "[run-e2e] Step 3 \u2014 Generate auth state"
+  echo "[run-e2e] Step 3 -- Generate auth state"
   echo "============================================"
 
   E2E_BASE_URL="${E2E_BASE_URL}" \
     E2E_HR_EMAIL="${E2E_HR_EMAIL:-hr.qa@vroom.example.com}" \
     E2E_HR_PASSWORD="${E2E_HR_PASSWORD:-VroomQA!148#2026}" \
-    ${PLAYWRIGHT} test e2e/login-setup.ts --grep "login and save storage state" \
+    ${PW_CLI} test e2e/login-setup.spec.ts \
+    --grep="login and save storage state" \
     --config=playwright.config.ts \
     --reporter=list \
     --project=vroom-hr-smoke \
     --workers=1 || {
-    echo "[run-e2e] WARNING: Auth state generation failed \u2014 tests may fail" >&2
+    echo "[run-e2e] WARNING: Auth state generation failed -- tests may fail" >&2
   }
 
   echo ""
 fi
 
 # ---------------------------------------------------------------------------
-# Step 4 \u2014 Run Playwright tests
+# Step 4 -- Run Playwright tests
 # ---------------------------------------------------------------------------
 echo "============================================"
-echo "[run-e2e] Step 4 \u2014 Run Playwright tests"
+echo "[run-e2e] Step 4 -- Run Playwright tests"
 echo "============================================"
 
 E2E_BASE_URL="${E2E_BASE_URL}" \
-  ${PLAYWRIGHT} test \
+  ${PW_CLI} test \
   --config=playwright.config.ts \
   --reporter=list \
   "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"
