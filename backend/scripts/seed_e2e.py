@@ -5,12 +5,15 @@ with CASCADE so all dependent rows are cleaned.  Optionally inserts a minimal
 admin user and organization_settings row (``--setup-complete``) for tests that
 need a pre-configured deployment without running the First-Run Setup wizard.
 
+When ``--setup-complete`` is passed, the script also seeds comprehensive E2E
+test data: an employee + employee account, job openings, candidates in various
+statuses, an interview, a published payslip, and a whitelist entry.
+
 Usage::
 
     cd backend
     python scripts/seed_e2e.py                    # setup_complete=false (default)
     python scripts/seed_e2e.py --setup-complete    # setup_complete=true
-
 """
 
 from __future__ import annotations
@@ -34,7 +37,12 @@ CORE_TABLES = [
     "organization_settings",
     "candidates",
     "employees",
-]
+    "job_openings",
+    "interviews",
+    "payslips",
+    "whitelist_entries",
+    "outbound_emails",
+    ]
 
 
 def _get_db_url() -> str:
@@ -66,13 +74,13 @@ def seed(setup_complete: bool = False) -> None:
         print(f"  Truncating: {tables_str}")
         session.execute(text(f"TRUNCATE TABLE {tables_str} CASCADE"))
         session.commit()
-        print("  \u2713 Truncate done.")
+        print("  ✓ Truncate done.")
 
         # ---- Optionally re-seed ---------------------------------------------
         if setup_complete:
             _seed_minimal_data(session)
 
-        print("  \u2713 Seed complete.\n")
+        print("  ✓ Seed complete.\n")
     except Exception:
         session.rollback()
         raise
@@ -96,7 +104,7 @@ def _seed_minimal_data(session) -> None:
     now = datetime.now(UTC)
 
     # ---- organization_settings row (singleton_key='default') ----------------
-    print("  Seeding organization_settings \u2026")
+    print("  Seeding organization_settings …")
     session.execute(
         text("""
             INSERT INTO organization_settings
@@ -119,7 +127,7 @@ def _seed_minimal_data(session) -> None:
     session.commit()
 
     # ---- admin user ---------------------------------------------------------
-    print("  Seeding admin user \u2026")
+    print("  Seeding admin user …")
     password_hash = hash_password("VroomQA!148#2026")
     session.execute(
         text("""
@@ -138,15 +146,10 @@ def _seed_minimal_data(session) -> None:
             "role": "admin",
             "must_change": False,
             "active": True,
-            "now": now,
-        },
-    )
-    session.commit()
-    print("  \u2713 Admin user created (hr.qa@vroom.example.com / VroomQA!148#2026)")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="E2E seed \u2014 reset DB for Playwright tests")
+    parser = argparse.ArgumentParser(description="E2E seed — reset DB for Playwright tests")
     parser.add_argument(
         "--setup-complete",
         action="store_true",
@@ -154,7 +157,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print(f"[seed_e2e] DB reset (setup_complete={args.setup_complete}) \u2026")
+    print(f"[seed_e2e] DB reset (setup_complete={args.setup_complete}) …")
     try:
         seed(setup_complete=args.setup_complete)
     except Exception as exc:

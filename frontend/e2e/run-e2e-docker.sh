@@ -68,6 +68,14 @@ echo "============================================"
 cd "${BACKEND_DIR}"
 if [ "${SETUP_COMPLETE}" = "true" ]; then
   ${SEED_SCRIPT} --setup-complete
+
+
+  # Also populate full demo data via seed_all.py (async)
+  echo "[run-e2e] Running seed_all.py for demo data..."
+  cd "${BACKEND_DIR}"
+  uv run python scripts/seed_all.py 2>&1 | head -15
+  cd "${FRONTEND_DIR}"
+  echo "[run-e2e] seed_all.py done."
 else
   ${SEED_SCRIPT}
 fi
