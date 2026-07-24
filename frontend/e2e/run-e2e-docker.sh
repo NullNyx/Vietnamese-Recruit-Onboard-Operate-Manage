@@ -139,6 +139,9 @@ if [ "${SETUP_COMPLETE}" = "true" ]; then
   }
 
   echo ""
+
+      # Copy auth state for sidebar-ux test (expects admin-sidebar.json)
+      cp "${FRONTEND_DIR}/e2e/.auth/admin.json" "${FRONTEND_DIR}/e2e/.auth/admin-sidebar.json" 2>/dev/null || true
 fi
 
 # ---------------------------------------------------------------------------
